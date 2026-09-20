@@ -1,0 +1,144 @@
+<scroll-view class="page-scroll" scroll-y enhanced show-scrollbar="{{false}}" lower-threshold="160" bindscrolltolower="loadMoreProducts">
+  <view class="page-content">
+    <view class="hero">
+      <view class="hero-title">产品资料库</view>
+      <view class="hero-counts">
+        <text>{{types[0].count}} 功放</text><text class="hero-dot">·</text><text>{{types[1].count}} 音箱</text><text class="hero-dot">·</text><text>{{types[2].count}} 摄像机</text><text class="hero-dot">·</text><text>{{types[3].count}} 灯光设备</text>
+      </view>
+    </view>
+
+    <view class="type-tabs">
+      <view
+        wx:for="{{types}}"
+        wx:key="key"
+        class="type-tab {{index == typeIndex ? 'type-tab-active' : ''}}"
+        data-index="{{index}}"
+        bindtap="onTypeTap"
+      >
+        <view class="type-label">{{item.label}}</view>
+        <view class="type-count">{{item.count}} 款</view>
+      </view>
+    </view>
+
+    <view class="search-card">
+      <view class="search-icon">⌕</view>
+      <input
+        class="search-input"
+        value="{{keyword}}"
+        placeholder="输入型号、设备名称或参数"
+        confirm-type="search"
+        bindinput="onSearchInput"
+        bindconfirm="onSearchConfirm"
+      />
+      <view wx:if="{{keyword}}" class="search-clear" bindtap="clearSearch">×</view>
+    </view>
+
+    <scroll-view class="category-scroll" scroll-x enhanced show-scrollbar="{{false}}">
+      <view class="category-list">
+        <view
+          wx:for="{{categories}}"
+          wx:key="*this"
+          class="category-chip {{index == categoryIndex ? 'category-chip-active' : ''}}"
+          data-index="{{index}}"
+          bindtap="onCategoryTap"
+        >{{item}}</view>
+      </view>
+    </scroll-view>
+
+    <scroll-view class="category-scroll capability-scroll" scroll-x enhanced show-scrollbar="{{false}}">
+      <view class="category-list">
+        <view
+          wx:for="{{capabilityFilters}}"
+          wx:key="key"
+          class="capability-chip {{index == capabilityFilterIndex ? 'capability-chip-active' : ''}}"
+          data-index="{{index}}"
+          bindtap="onCapabilityTap"
+        >{{item.label}}</view>
+      </view>
+    </scroll-view>
+
+    <view wx:if="{{compareSelectedModels.length}}" class="product-comparison-card">
+      <view class="product-comparison-heading">
+        <view>
+          <view class="product-comparison-title">已选择 {{compareSelectedModels.length}} / 3 款</view>
+        </view>
+        <view class="product-comparison-clear" bindtap="clearProductComparison">清除</view>
+      </view>
+      <scroll-view wx:if="{{productComparison}}" class="product-comparison-scroll" scroll-x enhanced show-scrollbar="{{false}}">
+        <view class="product-comparison-table columns-{{productComparison.models.length}}">
+          <view class="product-comparison-row product-comparison-head">
+            <view class="product-comparison-label">参数</view>
+            <view wx:for="{{productComparison.models}}" wx:key="*this" class="product-comparison-value">{{item}}</view>
+          </view>
+          <view wx:for="{{productComparison.rows}}" wx:key="label" wx:for-item="row" class="product-comparison-row {{row.different ? 'product-comparison-different' : ''}}">
+            <view class="product-comparison-label">{{row.label}}</view>
+            <view wx:for="{{row.values}}" wx:key="model" wx:for-item="value" class="product-comparison-value">{{value.text}}</view>
+          </view>
+        </view>
+      </scroll-view>
+      <view wx:else class="product-comparison-tip">再选择一款同类产品即可开始比较。</view>
+    </view>
+
+    <view wx:if="{{showRecent && recentProducts.length}}" class="recent-section">
+      <view class="section-heading">
+        <view>
+          <view class="section-title">最近查看</view>
+        </view>
+      </view>
+      <scroll-view class="recent-scroll" scroll-x enhanced show-scrollbar="{{false}}">
+        <view class="recent-list">
+          <view
+            wx:for="{{recentProducts}}"
+            wx:key="model"
+            class="recent-card"
+            data-model="{{item.model}}"
+            bindtap="openProduct"
+          >
+            <view class="recent-model">{{item.model}}</view>
+            <view class="recent-meta">{{item.category}}</view>
+          </view>
+        </view>
+      </scroll-view>
+    </view>
+
+    <view class="section-heading product-heading">
+      <view>
+        <view class="section-title">{{types[typeIndex].label}}型号</view>
+      </view>
+      <view class="result-count">已显示 {{products.length}} / {{productTotalCount}}</view>
+    </view>
+
+    <view wx:if="{{products.length}}" class="product-list">
+      <view
+        wx:for="{{products}}"
+        wx:key="model"
+        class="product-card"
+        data-model="{{item.model}}"
+        bindtap="openProduct"
+      >
+        <view class="product-mark">{{types[typeIndex].key == 'amplifier' ? 'AMP' : types[typeIndex].key == 'speaker' ? 'SPK' : types[typeIndex].key == 'camera' ? 'CAM' : 'LGT'}}</view>
+        <view class="product-copy">
+          <view class="product-model">{{item.model}}</view>
+          <view class="product-meta">{{item.meta}} · {{item.category}}</view>
+          <view wx:if="{{item.verifiedType}}" class="product-verified-type">{{item.verifiedType}}</view>
+          <view wx:if="{{item.abilityLabels.length}}" class="product-abilities">
+            <text wx:for="{{item.abilityLabels}}" wx:key="*this" class="product-ability">{{item}}</text>
+          </view>
+          <view class="product-status product-status-{{item.statusKey}}">{{item.statusLabel}}</view>
+        </view>
+        <button class="product-compare-button {{item.compareSelected ? 'product-compare-button-active' : ''}}" data-model="{{item.model}}" catchtap="toggleProductCompare">{{item.compareSelected ? '已选' : '对比'}}</button>
+        <view class="product-arrow">›</view>
+      </view>
+    </view>
+
+    <view wx:else class="empty-card">
+      <view class="empty-mark">⌕</view>
+      <view class="empty-title">没有找到匹配型号</view>
+      <view class="empty-text">请缩短关键词，或切换到“全部”分类后再试。</view>
+    </view>
+
+    <button wx:if="{{hasMoreProducts}}" class="load-more-button" bindtap="loadMoreProducts">继续显示更多型号</button>
+
+    <view class="data-note">产品参数以当前资料库复核结果为准；缺少的数据会明确标注，不参与依赖该参数的计算。</view>
+  </view>
+</scroll-view>

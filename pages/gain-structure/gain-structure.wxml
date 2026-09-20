@@ -1,0 +1,203 @@
+<view class="page-root">
+<scroll-view class="page-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+  <view class="page-content">
+    <view class="page-header">
+      <view class="page-title">系统增益架构</view>
+      <view class="calibration-chip">0 dBFS = +18.4 dBu</view>
+    </view>
+
+    <view class="card settings-card">
+      <view class="card-title">功放与现场档位</view>
+
+      <view class="field">
+        <view class="field-label">功放型号</view>
+        <view class="picker-value equipment-value" bindtap="openAmplifierSelector">
+          <view>
+            <view class="equipment-model">{{selectedAmplifier.model}}</view>
+            <view class="equipment-category">{{selectedAmplifier.category}}</view>
+          </view>
+          <text class="picker-arrow">›</text>
+        </view>
+      </view>
+
+      <view class="field field-last">
+        <view class="field-label-row">
+          <view class="field-label">{{stageTypeLabel}}</view>
+        </view>
+        <view class="choice-grid">
+          <view
+            wx:for="{{stageOptions}}"
+            wx:key="value"
+            class="choice-card {{index == stageIndex ? 'choice-card-active' : ''}}"
+            data-index="{{index}}"
+            bindtap="onStageTap"
+          >
+            <view class="choice-label">{{item.label}}</view>
+            <view class="choice-description">{{item.description}}</view>
+          </view>
+        </view>
+      </view>
+
+      <block wx:if="{{showPowerContext}}">
+        <view class="field">
+          <view class="field-label">功放模式</view>
+          <view class="choice-grid">
+            <view
+              wx:for="{{modes}}"
+              wx:key="value"
+              class="choice-card {{index == modeIndex ? 'choice-card-active' : ''}}"
+              data-index="{{index}}"
+              bindtap="onModeTap"
+            >
+              <view class="choice-label">{{item.label}}</view>
+            </view>
+          </view>
+        </view>
+        <view class="field field-last">
+          <view class="field-label-row">
+            <view class="field-label">通道负载阻抗</view>
+          </view>
+          <picker range="{{loadOptions}}" range-key="label" value="{{loadIndex}}" bindchange="onLoadChange">
+            <view class="picker-value {{loadIndex == 0 ? 'picker-placeholder' : ''}}">
+              {{loadOptions[loadIndex].label}}<text class="picker-arrow">›</text>
+            </view>
+          </picker>
+        </view>
+      </block>
+
+    </view>
+
+    <view class="card settings-card">
+      <view class="card-title">标定目标</view>
+
+      <view class="field">
+        <view class="field-label">DSP 目标峰值</view>
+        <view class="choice-grid choice-grid-three">
+          <view
+            wx:for="{{targetPeaks}}"
+            wx:key="value"
+            class="choice-card {{index == targetPeakIndex ? 'choice-card-active' : ''}}"
+            data-index="{{index}}"
+            bindtap="onTargetPeakTap"
+          >
+            <view class="choice-label">{{item.label}}</view>
+            <view class="choice-description">{{item.description}}</view>
+          </view>
+        </view>
+      </view>
+
+    </view>
+
+    <view wx:if="{{result && result.valid}}" class="result-card">
+      <view class="result-heading">
+        <view>
+          <view class="result-label">{{result.primaryLabel}}</view>
+          <view class="result-primary">{{result.primaryValue}}<text class="result-unit"> {{result.primaryUnit}}</text></view>
+        </view>
+        <view class="status-chip status-chip-{{result.statusTone}}">{{result.statusLabel}}</view>
+      </view>
+
+      <view class="result-grid">
+        <view class="metric">
+          <view class="metric-value">{{result.targetPeakDbfs}} dBFS = {{result.targetDspOutputDbu}} dBu</view>
+          <view class="metric-label">DSP 目标峰值与模拟输出</view>
+        </view>
+        <view class="metric">
+          <view class="metric-value">{{result.fullPowerInputDbu}} dBu</view>
+          <view class="metric-label">功放额定输出输入点</view>
+        </view>
+      </view>
+
+      <view class="result-settings">
+        <view class="result-setting-row">
+          <view class="result-setting-label">DSP 输入目标</view>
+          <view class="result-setting-value">{{result.dspInputSetting}}</view>
+        </view>
+        <view class="result-setting-row">
+          <view class="result-setting-label">DSP 最终输出</view>
+          <view class="result-setting-value">{{result.dspOutputSetting}}</view>
+        </view>
+        <view class="result-setting-row">
+          <view class="result-setting-label">功放输入控制</view>
+          <view class="result-setting-value">{{result.amplifierSetting}}</view>
+        </view>
+      </view>
+      <view class="result-execution-note">{{result.placementWarning}}</view>
+    </view>
+
+    <view wx:if="{{result && result.valid}}" class="utility-action-row result-actions-after-main">
+        <view class="result-output-actions">
+          <button class="result-image-button" disabled="{{isGeneratingResultReport}}" bindtap="generateResultReportImage">{{isGeneratingResultReport ? '正在生成…' : '生成结果图片'}}</button>
+          <button class="copy-result-button" bindtap="copyResult">复制文字</button>
+        </view>
+        <view class="result-record-actions">
+          <button class="result-record-button {{currentFavorite ? 'result-record-button-active' : ''}}" bindtap="toggleCurrentFavorite">{{currentFavorite ? '★ 已收藏' : '☆ 收藏常用'}}</button>
+          <button class="result-record-button" bindtap="saveToActiveProject">加入当前项目</button>
+        </view>
+    </view>
+
+    <view wx:elif="{{result}}" class="warning-card">
+      <view class="warning-title">请完成现场档位</view>
+      <view class="warning-text">{{result.warning}}</view>
+    </view>
+
+    <view class="disclaimer">这是系统增益结构的理论起点，不替代现场测试，也不代表不同系统已经具有相同声压级。功放输入电平控制刻度不等于精密衰减值时，应以实测输入/输出电平和限幅状态为准。</view>
+  </view>
+
+  <view wx:if="{{selectorVisible}}" class="selector-mask" catchtap="closeAmplifierSelector">
+    <view class="selector-panel" catchtap="stopTap">
+      <view class="selector-header">
+        <view class="selector-title">选择功放型号</view>
+        <view class="selector-close" catchtap="closeAmplifierSelector">×</view>
+      </view>
+
+      <input
+        class="selector-search"
+        value="{{selectorKeyword}}"
+        placeholder="输入型号关键词，例如 TC-X、KT-P"
+        confirm-type="search"
+        bindinput="onSelectorInput"
+      />
+
+      <scroll-view class="category-scroll" scroll-x>
+        <view class="category-list">
+          <view
+            wx:for="{{amplifierCategories}}"
+            wx:key="label"
+            class="category-chip {{index == selectorCategoryIndex ? 'category-chip-active' : ''}}"
+            data-index="{{index}}"
+            catchtap="onSelectorCategoryTap"
+          >{{item.label}}</view>
+        </view>
+      </scroll-view>
+
+      <view class="selector-count">匹配 {{selectorTotalCount}} 个型号</view>
+
+      <scroll-view class="selector-list" scroll-y bindscrolltolower="appendSelectorItems">
+        <view
+          wx:for="{{selectorItems}}"
+          wx:key="model"
+          class="selector-row"
+          data-index="{{item.index}}"
+          catchtap="selectAmplifier"
+        >
+          <view class="selector-row-copy">
+            <view class="selector-model">{{item.model}}</view>
+            <view class="selector-meta">{{item.category}}</view>
+          </view>
+          <view class="selector-row-actions">
+            <button class="selector-detail" data-model="{{item.model}}" catchtap="openAmplifierDetail">资料</button>
+            <view class="selector-row-arrow">›</view>
+          </view>
+        </view>
+
+        <view wx:if="{{selectorItems.length == 0}}" class="selector-empty">
+          没有匹配型号，请换一个关键词或选择“全部”分类。
+        </view>
+      </scroll-view>
+    </view>
+  </view>
+</scroll-view>
+
+<include src="../../templates/result-report-preview.wxml" />
+</view>

@@ -1,0 +1,203 @@
+<scroll-view class="page-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+  <view wx:if="{{product}}" class="page-content">
+    <view class="hero">
+      <view class="hero-title">{{product.model}}</view>
+      <view class="hero-summary">{{product.summary}}</view>
+      <view class="hero-meta">
+        <view class="hero-category">{{product.category}}</view>
+        <view class="hero-status hero-status-{{product.statusKey}}">{{product.statusLabel}}</view>
+      </view>
+    </view>
+
+    <view wx:if="{{product.type == 'amplifier'}}" class="card">
+      <view class="card-title">输出功率</view>
+      <view class="power-section">
+        <view class="power-title">立体声 / 单通道</view>
+        <view class="power-grid">
+          <view wx:for="{{product.stereoRows}}" wx:key="impedance" class="power-cell">
+            <view class="power-value">{{item.power}} W</view>
+            <view class="power-label">{{item.impedance}} Ω</view>
+          </view>
+        </view>
+      </view>
+      <view class="power-section power-section-last">
+        <view class="power-title">桥接模式</view>
+        <view class="power-grid">
+          <view wx:for="{{product.bridgeRows}}" wx:key="impedance" class="power-cell">
+            <view class="power-value">{{item.power}} W</view>
+            <view class="power-label">{{item.impedance}} Ω</view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view wx:if="{{product.type == 'speaker'}}" class="card">
+      <view class="card-title">基础参数</view>
+      <view wx:if="{{product.bandRows.length}}" class="split-band-warning">该型号采用分通道驱动。下列基础值仅为产品库兼容记录，不代表整箱统一参数；实际设置以下方分频段数据为准。</view>
+      <view class="spec-grid">
+        <view class="spec-cell">
+          <view class="spec-value">{{product.ratedPower}} W</view>
+          <view class="spec-label">{{product.bandRows.length ? '基础记录额定功率' : '额定功率'}}</view>
+        </view>
+        <view class="spec-cell">
+          <view class="spec-value">{{product.powerLimitText}}</view>
+          <view class="spec-label">{{product.bandRows.length ? '基础记录峰值功率' : product.powerLimitLabel}}</view>
+        </view>
+        <view class="spec-cell">
+          <view class="spec-value">{{product.impedance}} Ω</view>
+          <view class="spec-label">{{product.bandRows.length ? '基础记录阻抗' : '标称阻抗'}}</view>
+        </view>
+        <view class="spec-cell">
+          <view class="spec-value">{{product.minimumFrequencyText}}</view>
+          <view class="spec-label">最低工作频率</view>
+        </view>
+        <view class="spec-cell spec-cell-wide">
+          <view class="spec-value">{{product.sensitivityText}}</view>
+          <view class="spec-label">{{product.bandRows.length ? '基础记录灵敏度 @ 1W/1m' : '灵敏度 @ 1W/1m'}}</view>
+        </view>
+      </view>
+    </view>
+
+    <view wx:if="{{product.type == 'camera'}}" class="card">
+      <view class="card-title">摄像机基础参数</view>
+      <view class="spec-grid">
+        <view class="spec-cell spec-cell-wide">
+          <view class="spec-value">{{product.sensor}}</view>
+          <view class="spec-label">图像传感器</view>
+        </view>
+        <view class="spec-cell">
+          <view class="spec-value">{{product.megapixelsText}}</view>
+          <view class="spec-label">有效像素</view>
+        </view>
+        <view class="spec-cell">
+          <view class="spec-value">{{product.viewRows.length}} 组</view>
+          <view class="spec-label">镜头/取景参数</view>
+        </view>
+        <view class="spec-cell spec-cell-wide">
+          <view class="spec-value">{{product.mountLabel}}</view>
+          <view class="spec-label">物理安装结构</view>
+        </view>
+      </view>
+    </view>
+
+    <view wx:if="{{product.type == 'lighting'}}" class="card">
+      <view class="card-title">设备参数</view>
+      <view class="lighting-spec-list">
+        <view wx:for="{{product.specRows}}" wx:key="label" class="lighting-spec-row">
+          <view class="lighting-spec-label">{{item.label}}</view>
+          <view class="lighting-spec-value">{{item.value}}</view>
+        </view>
+      </view>
+    </view>
+
+    <view wx:if="{{product.type == 'lighting' && product.modeRows.length && !product.dmxChannelGuide}}" class="card">
+      <view class="card-title">说明书通道模式</view>
+      <view class="lighting-mode-list">
+        <view wx:for="{{product.modeRows}}" wx:key="value" class="lighting-mode-chip">{{item.label}}</view>
+      </view>
+      <view class="camera-source-rule">自动编址只使用这里列出的厂家通道模式；灯具菜单与控台 Patch 必须选择同一模式。</view>
+    </view>
+
+    <view wx:if="{{product.type == 'lighting' && product.dmxChannelGuide}}" class="card dmx-channel-guide-card">
+      <view class="card-title">灯具通道速查</view>
+      <view class="dmx-guide-mode-summary"><text>通道模式</text><text wx:for="{{product.dmxChannelGuide.modes}}" wx:key="channelCount">{{item.label}}</text></view>
+      <view class="dmx-guide-source">来源：{{product.dmxChannelGuide.source}} · {{product.dmxChannelGuide.sourcePageText}} · {{product.dmxChannelGuide.verificationStatus}}</view>
+      <button class="module-action" bindtap="openDmxChannelGuide">查看完整通道表</button>
+    </view>
+
+    <view wx:if="{{product.type == 'camera'}}" class="card">
+      <view class="card-title">说明书视场角</view>
+      <view class="camera-view-list">
+        <view wx:for="{{product.viewRows}}" wx:key="label" class="camera-view-row">
+          <view class="camera-view-heading">
+            <view class="camera-view-name">{{item.label}}</view>
+            <view class="product-status product-status-{{item.statusKey}}">{{item.statusLabel}}</view>
+          </view>
+          <view class="camera-spec-grid">
+            <view><text>焦距</text><text class="camera-spec-value">{{item.focalText}}</text></view>
+            <view><text>光学变焦</text><text class="camera-spec-value">{{item.zoomText}}</text></view>
+            <view><text>安装结构</text><text class="camera-spec-value">{{item.mountLabel}}</text></view>
+            <view><text>水平视场角</text><text class="camera-spec-value">{{item.horizontalText}}</text></view>
+            <view><text>垂直视场角</text><text class="camera-spec-value">{{item.verticalText}}</text></view>
+          </view>
+          <view wx:if="{{item.missingText}}" class="camera-missing">说明书缺少：{{item.missingText}}</view>
+        </view>
+      </view>
+      <view class="camera-source-rule">完整安装计算只使用说明书同时给出的水平、垂直视场角；只有水平角的型号仅做水平覆盖预估。电子云台属于固定安装，不等同于机械云台。所有模式均不根据画幅比例、对角角度或变焦倍数推算缺失角度。</view>
+    </view>
+
+    <view wx:if="{{product.type == 'speaker'}}" class="card">
+      <view class="card-title">覆盖与最大声压级</view>
+      <view wx:if="{{product.hasCoverageData}}" class="coverage-grid">
+        <view class="coverage-primary">
+          <view class="coverage-value">{{product.maximumSplText}}</view>
+          <view class="coverage-label">{{product.maximumSplLabel}}</view>
+        </view>
+        <view class="coverage-cell">
+          <view class="coverage-value-small">{{product.coverageText}}</view>
+          <view class="coverage-label">水平 × 垂直覆盖角</view>
+        </view>
+        <view wx:if="{{product.profile}}" class="coverage-role">会议室候选角色：{{product.profile.roleText}}</view>
+      </view>
+      <view wx:else class="coverage-empty">当前说明书没有明确给出最大声压级或覆盖角；缺项不会用默认值代替。</view>
+    </view>
+
+    <view wx:if="{{product.bandRows.length}}" class="card">
+      <view class="card-title">分频段 / 分通道参数</view>
+      <view class="band-list">
+        <view wx:for="{{product.bandRows}}" wx:key="key" class="band-row">
+          <view class="band-name">{{item.key}}</view>
+          <view class="band-spec">额定 {{item.ratedPowerText}}</view>
+          <view class="band-spec">峰值 {{item.peakPowerText}}</view>
+          <view class="band-spec">{{item.impedanceText}}</view>
+          <view class="band-spec">{{item.sensitivityText}}</view>
+          <view wx:if="{{item.soundPressureText}}" class="band-spec band-spec-wide">{{item.soundPressureText}}</view>
+        </view>
+      </view>
+      <view class="band-note">该型号不能简单压缩成一组功率和阻抗；计算时应按实际分频通道分别设置。</view>
+    </view>
+
+    <view wx:if="{{product.note}}" class="card data-note-card">
+      <view class="card-kicker">资料说明</view>
+      <view class="data-note-text">{{product.note}}</view>
+    </view>
+
+    <view wx:if="{{product.missingParameters.length}}" class="card missing-card">
+      <view class="card-title">待补充参数</view>
+      <view class="missing-list">
+        <view wx:for="{{product.missingParameters}}" wx:key="*this" class="missing-item">{{item}}</view>
+      </view>
+      <view class="missing-note">缺项不会使用默认值代替；依赖该参数的功能会自动停用或排除该型号。</view>
+    </view>
+
+    <view class="card">
+      <view class="card-title">可用计算模块</view>
+      <view class="module-list">
+        <view wx:for="{{product.modules}}" wx:key="key" class="module-row">
+          <view class="module-copy">
+            <view class="module-title">{{item.label}}</view>
+            <view class="module-description">{{item.description}}</view>
+          </view>
+          <button wx:if="{{item.actionable}}" class="module-action" data-module="{{item.key}}" bindtap="openCalculator">带入计算</button>
+          <view wx:else class="module-info">资料参考</view>
+        </view>
+      </view>
+    </view>
+
+    <view class="source-card">
+      <view class="source-label">产品资料来源</view>
+      <view class="source-text">{{product.source}}</view>
+      <view wx:if="{{product.profile && product.profile.source != product.source}}" class="source-extra">覆盖资料：{{product.profile.source}}</view>
+      <view wx:if="{{product.sourcePageText}}" class="source-extra">{{product.sourcePageText}}</view>
+      <view class="source-review">数据复核日期：{{product.reviewDate}}</view>
+    </view>
+
+    <view class="disclaimer">本页用于说明当前小程序实际录入的数据，不替代最新产品说明书。产品规格调整时，应以公司发布的最新资料为准。</view>
+  </view>
+
+  <view wx:else class="not-found">
+    <view class="not-found-mark">!</view>
+    <view class="not-found-title">未找到产品资料</view>
+    <view class="not-found-text">该型号可能已更名、移除或链接参数不完整，请返回资料库重新选择。</view>
+  </view>
+</scroll-view>

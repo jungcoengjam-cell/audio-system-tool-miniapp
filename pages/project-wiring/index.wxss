@@ -1,0 +1,248 @@
+@import "../../styles/theme-page-shared.wxss";
+
+.wiring-page{position:relative;height:100vh;overflow:hidden;background:#f5f5f7;color:#1d1d1f;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Arial,sans-serif}
+.wiring-scroll{height:100vh;background:#f5f5f7}
+.wiring-content{box-sizing:border-box;padding:16rpx 28rpx calc(190rpx + env(safe-area-inset-bottom))}
+.wiring-heading{padding:8rpx 4rpx 18rpx}
+.wiring-title{color:var(--tx,#1d1d1f);font-size:40rpx;font-weight:700;line-height:1.18;letter-spacing:-.4rpx}
+.wiring-project-row{display:flex;min-width:0;margin-top:7rpx;align-items:center;gap:10rpx}
+.wiring-project-name{min-width:0;flex:1;overflow:hidden;margin:0;color:var(--ts,#6e6e73);font-size:24rpx;line-height:1.4;text-overflow:ellipsis;white-space:nowrap}
+.wiring-project-switch{display:flex;box-sizing:border-box;min-width:44px;min-height:44px;margin:0;padding:0 16rpx;flex:0 0 auto;align-items:center;justify-content:center;border:0;border-radius:999rpx;background:#e6f1ff;color:#006bdc;font-size:24rpx;font-weight:600}
+.wiring-project-switch::after{border:0}
+.wiring-tabs{display:flex;box-sizing:border-box;min-height:max(108rpx,54px);padding:8rpx;align-items:center;border-radius:22rpx;background:rgba(118,118,128,.12)}
+.wiring-tab{display:flex;box-sizing:border-box;height:88rpx;min-height:44px;flex:1;margin:0;padding:0;align-items:center;justify-content:center;border:0;border-radius:18rpx;background:transparent;color:var(--ts,#6e6e73);font-size:27rpx;font-weight:600;line-height:1}
+.wiring-tab::after{border:0}
+.wiring-tab-active{background:#fff;color:#1d1d1f;box-shadow:0 2rpx 8rpx rgba(20,28,48,.1)}
+.wiring-summary-row{display:flex;margin:22rpx 2rpx 14rpx;align-items:baseline;justify-content:space-between;gap:12rpx}
+.wiring-summary-count{display:flex;align-items:baseline;gap:8rpx;color:var(--ts,#6e6e73);font-size:24rpx}
+.wiring-summary-number{color:var(--tx,#1d1d1f);font-size:28rpx;font-weight:700}
+.wiring-summary-status{color:var(--tt,#8e8e93);font-size:22rpx;white-space:nowrap}
+.wiring-search{display:flex;box-sizing:border-box;height:88rpx;min-height:max(88rpx,44px);padding:0 16rpx;align-items:center;border-radius:18rpx;background:#e9e9ed}
+.wiring-search-icon{margin-right:9rpx;color:#85858c;font-size:34rpx;line-height:1}
+.wiring-search-input{min-width:0;height:100%;flex:1;color:var(--tx,#1d1d1f);font-size:26rpx}
+.wiring-search-clear{display:flex;box-sizing:border-box;min-width:44px;min-height:44px;margin:0;padding:0 8rpx;align-items:center;justify-content:center;border:0;background:transparent;color:var(--ta,#007aff);font-size:24rpx}
+.wiring-search-clear::after{border:0}
+.wiring-list{margin-top:14rpx}
+.wiring-line-card,.wiring-material-card{overflow:hidden;margin-bottom:13rpx;padding:20rpx 21rpx;border-radius:21rpx;background:#fff;box-shadow:0 5rpx 18rpx rgba(25,35,55,.055)}
+.wiring-line-top,.wiring-material-card-top{display:flex;min-width:0;align-items:center;justify-content:space-between;gap:12rpx}
+.wiring-line-code{color:#007aff;font-size:28rpx;font-weight:700;letter-spacing:.4rpx}
+.wiring-status{flex:0 0 auto;padding:6rpx 12rpx;border-radius:999rpx;background:#f2f2f7;color:#76767d;font-size:22rpx;font-weight:600}
+.wiring-status-connected{background:#eaf6ee;color:#25834c}
+.wiring-status-checked{background:#eaf2ff;color:#1769c2}
+.wiring-line-purpose{overflow:hidden;margin-top:6rpx;color:#5d5d63;font-size:24rpx;text-overflow:ellipsis;white-space:nowrap}
+.wiring-route{display:flex;margin-top:15rpx;align-items:center;gap:10rpx}
+.wiring-endpoint{min-width:0;flex:1}
+.wiring-endpoint-right{text-align:right}
+.wiring-endpoint-label{color:#96969d;font-size:22rpx}
+.wiring-endpoint-value{overflow:hidden;margin-top:4rpx;color:#25252a;font-size:28rpx;font-weight:650;text-overflow:ellipsis;white-space:nowrap}
+.wiring-endpoint-port{overflow:hidden;margin-top:3rpx;color:#6d6d74;font-size:24rpx;text-overflow:ellipsis;white-space:nowrap}
+.wiring-route-arrow{flex:0 0 auto;color:#a1a1a7;font-size:27rpx}
+.wiring-line-meta{display:flex;margin-top:13rpx;padding-top:11rpx;align-items:center;justify-content:space-between;gap:8rpx;border-top:1rpx solid rgba(60,60,67,.07);color:#85858c;font-size:22rpx}
+.wiring-empty{margin-top:18rpx;padding:52rpx 30rpx;border-radius:23rpx;background:#fff;text-align:center;box-shadow:0 5rpx 18rpx rgba(25,35,55,.045)}
+.wiring-empty-small{padding:34rpx 24rpx}
+.wiring-empty-icon{color:#9abce7;font-size:42rpx;line-height:1.1}
+.wiring-empty-title{margin-top:10rpx;color:#28282e;font-size:28rpx;font-weight:650}
+.wiring-empty-text{margin:8rpx auto 0;color:#85858c;font-size:24rpx;line-height:1.5}
+.wiring-empty-action{display:flex;box-sizing:border-box;min-height:44px;margin:22rpx auto 0;padding:0 26rpx;align-items:center;justify-content:center;border:0;border-radius:16rpx;background:#007aff;color:#fff;font-size:25rpx;font-weight:650}
+.wiring-empty-action::after{border:0}
+.wiring-empty-action-secondary{background:#e6f1ff;color:#006bdc}
+.wiring-material-intro{padding:22rpx 3rpx 15rpx}
+.wiring-material-title{color:var(--tx,#1d1d1f);font-size:30rpx;font-weight:700}
+.wiring-material-subtitle{margin-top:6rpx;color:var(--ts,#6e6e73);font-size:24rpx}
+.wiring-material-list{margin-top:2rpx}
+.wiring-material-name{min-width:0;color:#28282e;font-size:27rpx;font-weight:650;line-height:1.4}
+.wiring-material-count{flex:0 0 auto;padding:5rpx 10rpx;border-radius:999rpx;background:#f2f2f7;color:#6c6c73;font-size:22rpx;font-weight:600}
+.wiring-material-meta{margin-top:7rpx;color:#6e6e73;font-size:24rpx;line-height:1.5;word-break:break-word}
+.wiring-material-codes{margin-top:7rpx;color:#007aff;font-size:24rpx;line-height:1.45;word-break:break-all}
+.wiring-material-empty{margin-top:17rpx}
+.wiring-export-row{display:flex;margin-top:21rpx;align-items:center;gap:10rpx}
+.wiring-export-picker{display:flex;box-sizing:border-box;min-height:44px;padding:0 18rpx;align-items:center;justify-content:space-between;gap:18rpx;border-radius:15rpx;background:#e9e9ed;color:#45454b;font-size:24rpx}
+.wiring-export-image-tag{padding:3rpx 8rpx;border-radius:7rpx;background:rgba(0,0,0,.06);color:#636366;font-size:max(24rpx,12px);white-space:nowrap}
+.wiring-picker-arrow{margin-left:auto;color:#929299;font-size:24rpx;line-height:1}
+.wiring-export-button{display:flex;box-sizing:border-box;height:44px;min-height:44px;flex:1;margin:0;padding:0 16rpx;align-items:center;justify-content:center;border:0;border-radius:15rpx;background:#e6f1ff;color:#0068d9;font-size:25rpx;font-weight:650;line-height:1.15;white-space:normal}
+.wiring-export-button::after{border:0}
+.wiring-bottom-bar{position:fixed;z-index:10;right:0;bottom:0;left:0;display:flex;box-sizing:border-box;padding:14rpx 32rpx calc(16rpx + env(safe-area-inset-bottom));gap:10px;background:rgba(247,247,249,.95);box-shadow:0 -8rpx 28rpx rgba(26,32,45,.065);backdrop-filter:blur(18px)}
+.wiring-bottom-button{display:flex;box-sizing:border-box;height:88rpx;min-height:44px;flex:1;margin:0;padding:0 16rpx;align-items:center;justify-content:center;border:0;border-radius:22rpx;font-size:27rpx;font-weight:600;line-height:1}
+.wiring-bottom-button::after{border:0}
+.wiring-bottom-secondary{background:#e6f1ff;color:#006bdc}
+.wiring-bottom-primary{background:#007aff;color:#fff;box-shadow:0 8rpx 18rpx rgba(0,122,255,.18)}
+.wiring-loading{padding:100rpx 20rpx;color:#7d7d84;font-size:26rpx;text-align:center}
+.wiring-load-error{margin-top:90rpx}
+.wiring-mask{position:fixed;z-index:50;inset:0;display:flex;box-sizing:border-box;padding:calc(12rpx + env(safe-area-inset-top)) 18rpx calc(12rpx + env(safe-area-inset-bottom));align-items:flex-end;justify-content:center}
+.wiring-backdrop{position:absolute;z-index:0;inset:0;background:rgba(20,20,24,.34)}
+.wiring-sheet{position:relative;z-index:1;display:flex;box-sizing:border-box;width:100%;height:calc(94vh - env(safe-area-inset-top) - env(safe-area-inset-bottom));padding:14rpx 22rpx 14rpx;flex-direction:column;overflow:hidden;border-radius:31rpx 31rpx 22rpx 22rpx;background:rgba(250,250,252,.98);box-shadow:0 20rpx 70rpx rgba(20,28,43,.22)}
+.wiring-sheet-handle{width:68rpx;height:7rpx;margin:0 auto 17rpx;border-radius:99rpx;background:#d0d0d5}
+.wiring-sheet-heading{display:flex;padding:0 3rpx 15rpx;flex-shrink:0;align-items:center;justify-content:space-between;gap:10rpx}
+.wiring-sheet-title{color:#1d1d1f;font-size:32rpx;font-weight:700}
+.wiring-sheet-subtitle{overflow:hidden;max-width:480rpx;margin-top:5rpx;color:#85858c;font-size:24rpx;text-overflow:ellipsis;white-space:nowrap}
+.wiring-close-button{display:flex;box-sizing:border-box;min-width:max(88rpx,44px);height:72rpx;min-height:44px;margin:0;padding:0 15rpx;align-items:center;justify-content:center;border:0;border-radius:999rpx;background:#ededf0;color:#5d5d63;font-size:24rpx}
+.wiring-close-button::after{border:0}
+.wiring-sheet-scroll{height:0;min-height:0;flex:1;overflow:hidden}
+.wiring-form-section{margin:0 0 16rpx;padding:17rpx;border-radius:19rpx;background:#fff}
+.wiring-form-section-title{color:#33333a;font-size:27rpx;font-weight:700}
+.wiring-form-section-title text{margin-left:9rpx;color:#8b8b92;font-size:22rpx;font-weight:400}
+.wiring-form-field{min-width:0;margin-top:13rpx}
+.wiring-field-label{margin:0 0 7rpx;color:#77777e;font-size:24rpx}
+.wiring-control{display:flex;box-sizing:border-box;width:100%;min-height:max(88rpx,44px);padding:0 16rpx;align-items:center;border:0;border-radius:14rpx;background:#f2f2f6;color:#24242a;font-size:27rpx;line-height:1.4}
+input.wiring-control{display:block;padding-top:0;padding-bottom:0}
+.wiring-picker-control{justify-content:space-between;gap:10rpx}
+.wiring-custom-connector{margin-top:7rpx}
+.wiring-endpoint-form{display:grid;grid-template-columns:1fr 1fr;gap:11rpx}
+.wiring-endpoint-form-target{margin-top:2rpx}
+.wiring-spec-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8rpx;margin-top:8rpx}
+.wiring-spec-option{position:relative;display:flex;box-sizing:border-box;width:100%;height:96rpx;min-height:48px;min-width:0;margin:0;padding:8rpx 38rpx 8rpx 14rpx;align-items:flex-start;justify-content:center;flex-direction:column;overflow:hidden;border:0;border-radius:15rpx;background:#f1f2f5;color:#35363b;text-align:left;line-height:1.25}
+.wiring-spec-option::after{border:0}
+.wiring-spec-option-pressed{background:#e6e8ed}
+.wiring-spec-option-selected{background:#e8f2ff;color:#1769c2}
+.wiring-spec-option-model{font-size:max(28rpx,13px);font-weight:650}
+.wiring-spec-option-size{margin-top:3rpx;color:#636366;font-size:max(24rpx,12px)}
+.wiring-spec-option-selected .wiring-spec-option-size{color:inherit}
+.wiring-spec-option-check{position:absolute;top:50%;right:12rpx;transform:translateY(-50%);color:#1671d9;font-size:25rpx;font-weight:700;line-height:1}
+.wiring-option-grid{display:grid;grid-template-columns:1fr 1fr;gap:2rpx 11rpx}
+.wiring-field-wide{grid-column:1 / -1}
+.wiring-notes-control{display:block;min-height:135rpx;padding:15rpx 16rpx;line-height:1.5}
+.wiring-form-error,.wiring-save-error{margin:10rpx 4rpx;color:#c0392b;font-size:24rpx;line-height:1.5}
+.wiring-save-error{margin:5rpx 13rpx}
+.wiring-sheet-bottom-space{height:12rpx}
+.wiring-sheet-keyboard-space{flex-shrink:0}
+.wiring-sheet-actions{display:flex;padding-top:13rpx;flex-shrink:0;gap:8rpx}
+.wiring-sheet-action{display:flex;box-sizing:border-box;height:88rpx;min-height:44px;min-width:0;flex:1;margin:0;padding:0 10rpx;align-items:center;justify-content:center;border:0;border-radius:22rpx;font-size:25rpx;font-weight:600}
+.wiring-sheet-action::after{border:0}
+.wiring-sheet-cancel,.wiring-sheet-secondary{background:#ededf1;color:#4d4d53}
+.wiring-sheet-primary{background:#007aff;color:#fff}
+.wiring-sheet-danger{background:#fff0ef;color:#c8372b}
+.wiring-project-picker-sheet{height:calc(82vh - env(safe-area-inset-top) - env(safe-area-inset-bottom))}
+.wiring-project-list{height:0;min-height:0;flex:1;overflow:hidden}
+.wiring-project-options{display:flex;flex-direction:column;gap:8rpx}
+.wiring-project-option{display:flex;box-sizing:border-box;min-height:66px;margin:0;padding:12rpx 16rpx;align-items:center;justify-content:space-between;gap:12rpx;border:0;border-radius:17rpx;background:#fff;text-align:left}
+.wiring-project-option::after{border:0}
+.wiring-project-option-copy{min-width:0;flex:1}
+.wiring-project-option-name{color:#25252a;font-size:max(28rpx,13px);font-weight:650;line-height:1.4;white-space:normal;word-break:break-word}
+.wiring-project-option-meta{display:flex;flex:0 0 auto;align-items:center;gap:10rpx}
+.wiring-project-option-count{color:#77777e;font-size:max(24rpx,12px)}
+.wiring-project-current{padding:5rpx 10rpx;border-radius:999rpx;background:#e6f1ff;color:#006bdc;font-size:max(22rpx,11px)}
+.wiring-project-picker-message{padding:20rpx 4rpx;color:#77777e;font-size:max(24rpx,12px);text-align:center}
+.wiring-project-create{flex:0 0 auto;margin-top:10rpx;padding:12rpx 16rpx;border-radius:18rpx;background:#fff}
+.wiring-project-picker-actions{gap:10px}
+.wiring-batch-sheet{height:calc(92vh - env(safe-area-inset-top) - env(safe-area-inset-bottom))}
+.wiring-batch-preview{margin-top:16rpx;padding:16rpx;border-radius:17rpx;background:#fff}
+.wiring-batch-preview-title{margin-bottom:8rpx;color:#3a3a40;font-size:25rpx;font-weight:700}
+.wiring-batch-preview-row{display:flex;min-height:45rpx;padding:7rpx 0;align-items:flex-start;gap:11rpx;border-top:1rpx solid rgba(60,60,67,.07);color:#6a6a71;font-size:22rpx;line-height:1.4}
+.wiring-batch-preview-row text:first-child{flex:0 0 82rpx;color:#007aff;font-weight:700}
+.wiring-report-canvas{position:fixed;z-index:-1;top:0;left:-2000px;pointer-events:none}
+.wiring-report-mask{z-index:70}
+.wiring-report-sheet{height:calc(90vh - env(safe-area-inset-top) - env(safe-area-inset-bottom))}
+.wiring-report-image-scroll{height:0;min-height:0;flex:1;overflow:hidden;border-radius:17rpx;background:#ededf1}
+.wiring-report-image{display:block;width:100%}
+.wiring-report-page-controls{display:flex;padding-top:8rpx;flex-shrink:0;gap:8rpx}
+.wiring-page-step{display:flex;box-sizing:border-box;height:64rpx;min-height:44px;flex:1;margin:0;padding:0;align-items:center;justify-content:center;border:0;border-radius:15rpx;background:#ededf1;color:#5d5d63;font-size:18rpx}
+.wiring-page-step::after{border:0}
+.wiring-page-step[disabled]{color:#b0b0b7}
+
+.wiring-project-name,.wiring-summary-count,.wiring-summary-status,.wiring-search-clear,.wiring-status,
+.wiring-line-purpose,.wiring-endpoint-label,.wiring-endpoint-port,.wiring-line-meta,.wiring-empty-text,
+.wiring-material-subtitle,.wiring-material-count,.wiring-material-meta,.wiring-material-codes,
+.wiring-export-picker,.wiring-sheet-subtitle,.wiring-close-button,.wiring-form-section-title text,
+.wiring-field-label,.wiring-form-error,.wiring-save-error,.wiring-batch-preview-row,
+.wiring-batch-preview-title,.wiring-search-input,.wiring-tab,.wiring-empty-action,.wiring-sheet-action,
+.wiring-page-step,.wiring-loading,.wiring-export-button{font-size:max(24rpx,12px)}
+.wiring-project-switch{font-size:max(24rpx,12px)}
+.wiring-control{font-size:max(28rpx,13px)}
+.wiring-bottom-button{font-size:max(27rpx,12px)}
+.wiring-line-code,.wiring-endpoint-value,.wiring-material-name,.wiring-form-section-title{font-size:max(28rpx,13px)}
+
+@media (max-width:360px){
+  .wiring-content{padding-right:22rpx;padding-left:22rpx}
+  .wiring-line-card,.wiring-material-card{padding-right:17rpx;padding-left:17rpx}
+  .wiring-endpoint-form{gap:8rpx}
+  .wiring-project-name,.wiring-project-switch,.wiring-summary-count,.wiring-summary-status,.wiring-search-input,.wiring-search-clear,
+  .wiring-status,.wiring-line-purpose,.wiring-endpoint-label,.wiring-endpoint-port,.wiring-line-meta,
+  .wiring-empty-text,.wiring-material-subtitle,.wiring-material-count,.wiring-material-meta,
+  .wiring-material-codes,.wiring-export-picker,.wiring-export-button,.wiring-sheet-subtitle,
+  .wiring-close-button,.wiring-form-section-title text,.wiring-field-label,
+  .wiring-form-error,.wiring-save-error,.wiring-batch-preview-row,.wiring-control{font-size:28rpx}
+  .wiring-control{padding-right:12rpx;padding-left:12rpx}
+  .wiring-project-option{min-height:64px;padding-right:12rpx;padding-left:12rpx}
+  .wiring-spec-option{padding-right:32rpx;padding-left:11rpx}
+}
+
+@media (prefers-color-scheme: dark){
+  .wiring-page,.wiring-scroll{background:var(--theme-page-bg,#000);color:var(--theme-text,#fff)}
+  .wiring-tab-active,.wiring-line-card,.wiring-material-card,.wiring-empty,.wiring-form-section,.wiring-batch-preview{background:var(--theme-surface,#1c1c1e);box-shadow:0 5rpx 18rpx rgba(0,0,0,.18)}
+  .wiring-tab-active,.wiring-title,.wiring-summary-number,.wiring-endpoint-value,.wiring-empty-title,.wiring-material-name,.wiring-form-section-title,.wiring-sheet-title{color:var(--theme-text,#f5f5f7)}
+  .wiring-tabs,.wiring-search,.wiring-export-picker,.wiring-close-button,.wiring-sheet-cancel,.wiring-sheet-secondary,.wiring-page-step,.wiring-report-image-scroll{background:var(--theme-control,#2c2c2e)}
+  .wiring-export-image-tag{background:rgba(255,255,255,.08);color:var(--theme-text-secondary,#aeaeb2)}
+  .wiring-search-input,.wiring-control{color:var(--theme-text,#f5f5f7)}
+  .wiring-control,.wiring-bottom-bar{background:var(--theme-control,#2c2c2e)}
+  .wiring-status,.wiring-material-count{background:var(--theme-control,#2c2c2e);color:var(--theme-text-secondary,#aeaeb2)}
+  .wiring-status-connected{background:rgba(48,209,88,.15);color:#65d887}
+  .wiring-status-checked,.wiring-bottom-secondary{background:rgba(10,132,255,.17);color:#71b4ff}
+  .wiring-sheet{background:rgba(30,30,33,.98)}
+  .wiring-bottom-bar{background:rgba(27,27,30,.96)}
+  .wiring-line-purpose,.wiring-material-meta,.wiring-endpoint-port,.wiring-field-label,.wiring-sheet-subtitle{color:var(--theme-text-secondary,#aeaeb2)}
+  .wiring-line-meta,.wiring-batch-preview-row{border-color:rgba(255,255,255,.08)}
+  .wiring-line-meta,.wiring-empty-text,.wiring-summary-status{color:var(--theme-text-tertiary,#8e8e93)}
+  .wiring-material-count{background:var(--theme-control,#2c2c2e)}
+  .wiring-close-button,.wiring-sheet-cancel,.wiring-sheet-secondary,.wiring-page-step,.wiring-export-picker{color:var(--theme-text-secondary,#aeaeb2)}
+  .wiring-project-option,.wiring-project-create{background:var(--theme-surface,#1c1c1e)}
+  .wiring-project-option-name{color:var(--theme-text,#f5f5f7)}
+  .wiring-project-option-count,.wiring-project-picker-message{color:var(--theme-text-secondary,#aeaeb2)}
+  .wiring-project-current{background:rgba(10,132,255,.18);color:var(--theme-accent-text,#71b4ff)}
+  .wiring-project-switch{background:rgba(10,132,255,.18);color:var(--theme-accent-text,#71b4ff)}
+  .wiring-empty-action-secondary{background:var(--theme-control,#2c2c2e);color:var(--theme-accent-text,#71b4ff)}
+  .wiring-spec-option{background:var(--theme-control,#2c2c2e);color:var(--theme-text,#f5f5f7)}
+  .wiring-spec-option-pressed{background:#39393d}
+  .wiring-spec-option-selected{background:rgba(10,132,255,.18);color:var(--theme-accent-text,#71b4ff)}
+  .wiring-spec-option-size{color:var(--theme-text-secondary,#aeaeb2)}
+  .wiring-spec-option-selected .wiring-spec-option-size{color:var(--theme-accent-text,#71b4ff)}
+  .wiring-spec-option-check{color:var(--theme-accent-text,#71b4ff)}
+  .wiring-page-step[disabled]{color:var(--theme-text-tertiary,#636366);opacity:.55}
+  page .wiring-bottom-button.wiring-bottom-primary{background:var(--theme-primary-fill,#0a84ff);color:#fff}
+  page .wiring-bottom-button.wiring-bottom-secondary{background:var(--theme-accent-soft,rgba(10,132,255,.17));color:var(--theme-accent-text,#71b4ff)}
+}
+
+.wiring-edit-sheet .wiring-sheet-subtitle{color:#1769c2;font-weight:600}
+.wiring-edit-sheet .wiring-control{font-size:max(28rpx,13px)}
+.wiring-edit-sheet .wiring-editor-section{margin-bottom:12rpx;padding:16rpx;border-radius:20rpx}
+.wiring-edit-sheet .wiring-editor-route-stack{display:flex;margin-top:11rpx;flex-direction:column;gap:7rpx}
+.wiring-edit-sheet .wiring-editor-endpoint{min-width:0;padding:12rpx;border-radius:16rpx;background:#f5f5f7}
+.wiring-edit-sheet .wiring-editor-endpoint-title{color:#34343a;font-size:max(28rpx,13px);font-weight:650;line-height:1.35}
+.wiring-edit-sheet .wiring-editor-endpoint-fields{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:8rpx;margin-top:8rpx}
+.wiring-edit-sheet .wiring-editor-input-row{display:flex;min-width:0;align-items:center;gap:4rpx}
+.wiring-edit-sheet .wiring-editor-input-row .wiring-control{min-width:0;flex:1 1 0}
+.wiring-edit-sheet .wiring-edit-history-picker{display:block;flex:0 0 auto}
+.wiring-edit-sheet .wiring-history-picker-trigger{display:flex;box-sizing:border-box;width:max(88rpx,44px);min-width:max(88rpx,44px);height:max(88rpx,44px);min-height:44px;align-items:center;justify-content:center;border:0;border-radius:12rpx;background:transparent;color:var(--theme-accent-text,#007aff);font-size:max(24rpx,12px);white-space:nowrap}
+.wiring-edit-sheet .wiring-editor-endpoint .wiring-control{background:#fff}
+.wiring-edit-sheet .wiring-editor-endpoint-fields .wiring-form-field,.wiring-edit-sheet .wiring-editor-cable-grid .wiring-form-field{margin-top:0}
+.wiring-edit-sheet .wiring-editor-direction{height:22rpx;color:#8b8b92;font-size:30rpx;line-height:22rpx;text-align:center}
+.wiring-edit-sheet .wiring-editor-connector-field{margin-top:10rpx}
+.wiring-edit-sheet .wiring-editor-connector-picker{min-height:max(88rpx,44px);height:auto;padding-top:10rpx;padding-bottom:10rpx}
+.wiring-edit-sheet .wiring-editor-connector-name{min-width:0;flex:1;white-space:normal;word-break:break-word;line-height:1.3}
+.wiring-edit-sheet .wiring-editor-connector-picker .wiring-picker-arrow{flex:0 0 auto}
+.wiring-edit-sheet .wiring-editor-cable-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12rpx 9rpx;margin-top:12rpx}
+.wiring-edit-sheet .wiring-editor-cable-grid .wiring-field-wide{grid-column:1 / -1}
+.wiring-edit-sheet .wiring-editor-cable-grid .wiring-picker-control{min-width:0;padding-right:11rpx;padding-left:11rpx}
+.wiring-edit-sheet .wiring-editor-extra-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10rpx;margin:3rpx 0 10rpx}
+.wiring-edit-sheet .wiring-editor-operation{width:100%;border-radius:20rpx;font-size:max(26rpx,12px)}
+.wiring-edit-sheet .wiring-editor-copy{background:#e6f1ff;color:#006bdc}
+.wiring-edit-sheet .wiring-editor-delete{background:#fff0ef;color:#c8372b}
+.wiring-edit-sheet .wiring-editor-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));padding-top:12rpx;flex:0 0 auto;gap:10rpx}
+.wiring-edit-sheet .wiring-editor-actions .wiring-sheet-action{width:100%;font-size:max(28rpx,13px)}
+
+@media (max-width:360px){
+  .wiring-edit-sheet .wiring-editor-section{padding:13rpx}
+  .wiring-edit-sheet .wiring-editor-endpoint{padding:10rpx}
+  .wiring-edit-sheet .wiring-editor-endpoint-fields{gap:7rpx}
+  .wiring-edit-sheet .wiring-editor-cable-grid{column-gap:7rpx}
+  .wiring-edit-sheet .wiring-editor-cable-grid .wiring-picker-control{padding-right:9rpx;padding-left:9rpx}
+}
+
+@media (prefers-color-scheme: dark){
+  .wiring-edit-sheet .wiring-editor-endpoint{background:var(--theme-control,#2c2c2e)}
+  .wiring-edit-sheet .wiring-editor-endpoint .wiring-control{background:#3a3a3c}
+  .wiring-edit-sheet .wiring-editor-endpoint-title{color:var(--theme-text,#f5f5f7)}
+  .wiring-edit-sheet .wiring-editor-direction{color:var(--theme-text-tertiary,#8e8e93)}
+  .wiring-edit-sheet .wiring-sheet-subtitle{color:var(--theme-accent-text,#71b4ff)}
+  .wiring-edit-sheet .wiring-editor-copy{background:rgba(10,132,255,.18);color:var(--theme-accent-text,#71b4ff)}
+  .wiring-edit-sheet .wiring-editor-delete{background:rgba(255,69,58,.15);color:#ff8b83}
+}

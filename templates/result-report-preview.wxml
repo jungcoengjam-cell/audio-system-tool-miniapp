@@ -1,0 +1,20 @@
+<canvas id="resultReportCanvas" canvas-id="resultReportCanvas" class="result-report-canvas-offscreen" width="{{resultReportCanvasWidth}}" height="{{resultReportCanvasHeight}}" style="width:{{resultReportCanvasWidth}}px;height:{{resultReportCanvasHeight}}px;"></canvas>
+
+<view wx:if="{{resultReportPreviewVisible}}" class="result-report-preview-overlay" bindtap="closeResultReportPreview" catchtouchmove="preventTouchMove">
+  <view class="result-report-preview-sheet" catchtap="stopTap">
+    <view class="result-report-preview-header">
+      <view>
+        <view class="result-report-preview-title">结果图片已生成</view>
+        <view class="result-report-preview-subtitle">点击图片可查看原图</view>
+      </view>
+      <button class="result-report-preview-close" bindtap="closeResultReportPreview">关闭</button>
+    </view>
+    <scroll-view class="result-report-preview-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+      <image class="result-report-preview-image" src="{{resultReportImagePath}}" mode="widthFix" bindtap="previewResultReportImage"></image>
+    </scroll-view>
+    <view class="result-report-preview-actions">
+      <button class="result-report-preview-action result-report-preview-action-primary" bindtap="shareResultReportImage">转发图片</button>
+      <button class="result-report-preview-action result-report-preview-action-secondary" bindtap="saveResultReportImage">保存到相册</button>
+    </view>
+  </view>
+</view>

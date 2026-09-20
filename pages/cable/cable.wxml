@@ -1,0 +1,133 @@
+<view class="page-root">
+<scroll-view class="page-scroll" scroll-y>
+  <view class="page-content">
+    <view class="page-header">
+      <view class="page-title">线材选型</view>
+    </view>
+
+    <view class="mode-tabs">
+      <view
+        wx:for="{{modes}}"
+        wx:key="key"
+        class="mode-tab {{index == modeIndex ? 'mode-tab-active' : ''}}"
+        data-index="{{index}}"
+        bindtap="onModeTap"
+      >
+          <view class="mode-label">{{item.label}}</view>
+          <view class="mode-subtitle">{{item.subtitle}}</view>
+      </view>
+    </view>
+
+    <view class="section-label">线路条件</view>
+    <view wx:if="{{modeIndex == 0}}" class="card settings-card">
+      <view class="field-grid compact-grid parameter-grid">
+        <view class="field">
+          <view class="field-label">总功率</view>
+          <view class="input-wrap">
+            <input class="number-input" type="digit" value="{{constantPowerText}}" placeholder="例如 100" data-field="constantPowerText" bindinput="onInput" bindblur="onInputBlur" />
+            <view class="input-unit">W</view>
+          </view>
+        </view>
+        <view class="field">
+          <view class="field-label">单程距离</view>
+          <view class="input-wrap">
+            <input class="number-input" type="digit" value="{{constantDistanceText}}" placeholder="≤1000" data-field="constantDistanceText" bindinput="onInput" bindblur="onInputBlur" />
+            <view class="input-unit">m</view>
+          </view>
+        </view>
+        <view class="field">
+          <view class="field-label">敷设环境</view>
+          <picker range="{{environments}}" range-key="label" value="{{environmentIndex}}" bindchange="onEnvironmentChange">
+            <view class="picker-value">{{environments[environmentIndex].label}}<text class="picker-arrow">›</text></view>
+          </picker>
+        </view>
+      </view>
+      <view wx:if="{{inputError}}" class="field-error-group">{{inputError}}</view>
+    </view>
+
+    <view wx:else class="card settings-card">
+      <view class="field-grid compact-grid">
+        <view class="field">
+          <view class="field-label">总功率</view>
+          <view class="input-wrap">
+            <input class="number-input" type="digit" value="{{professionalPowerText}}" placeholder="例如 300" data-field="professionalPowerText" bindinput="onInput" bindblur="onInputBlur" />
+            <view class="input-unit">W</view>
+          </view>
+        </view>
+        <view class="field">
+          <view class="field-label">单程距离</view>
+          <view class="input-wrap">
+            <input class="number-input" type="digit" value="{{professionalDistanceText}}" placeholder="≤100" data-field="professionalDistanceText" bindinput="onInput" bindblur="onInputBlur" />
+            <view class="input-unit">m</view>
+          </view>
+        </view>
+      </view>
+      <view wx:if="{{inputError}}" class="field-error-group">{{inputError}}</view>
+    </view>
+
+    <view wx:if="{{result}}" class="result-card">
+      <view class="result-heading">
+        <view>
+          <view class="result-label">推荐线材</view>
+        </view>
+        <view class="status-chip {{result.isWithinStandard ? 'status-chip-good' : 'status-chip-warning'}}">{{result.status}}</view>
+      </view>
+
+      <view class="cable-spec">{{result.spec}}</view>
+      <view class="result-subtitle">{{result.description}}</view>
+
+      <view class="result-grid">
+        <view class="metric">
+          <view class="metric-value">{{result.designPowerW}} W</view>
+          <view class="metric-label">设计带载功率</view>
+        </view>
+        <view class="metric">
+          <view class="metric-value">{{result.distanceMeters}} m</view>
+          <view class="metric-label">最远单程距离</view>
+        </view>
+        <view class="metric">
+          <view class="metric-value">{{result.selectedArea ? result.selectedArea + ' mm²' : '—'}}</view>
+          <view class="metric-label">推荐单芯截面积</view>
+        </view>
+        <view wx:if="{{result.type == 'constant'}}" class="metric">
+          <view class="metric-value">{{result.distanceBracket}} / {{result.powerBracket || '表外'}}</view>
+          <view class="metric-label">采用的公司表格档位</view>
+        </view>
+        <view wx:else class="metric">
+          <view class="metric-value">{{result.currentA ? result.currentA + ' A' : '—'}}</view>
+          <view class="metric-label">对应线材载流量</view>
+        </view>
+      </view>
+      <view class="result-trust">
+        <view class="result-trust-badge">公司标准推荐</view>
+        <view class="result-trust-text">依据公司线材对照表和公式校核推荐；施工仍需结合敷设环境、线缆品牌与当地规范复核。</view>
+      </view>
+    </view>
+
+    <view wx:if="{{result}}" class="utility-action-row result-actions-after-main">
+        <view class="result-output-actions">
+          <button class="result-image-button" disabled="{{isGeneratingResultReport}}" bindtap="generateResultReportImage">{{isGeneratingResultReport ? '正在生成…' : '生成结果图片'}}</button>
+          <button class="copy-result-button" bindtap="copyResult">复制文字</button>
+        </view>
+        <view class="result-record-actions">
+          <button class="result-record-button {{currentFavorite ? 'result-record-button-active' : ''}}" bindtap="toggleCurrentFavorite">{{currentFavorite ? '★ 已收藏' : '☆ 收藏常用'}}</button>
+          <button class="result-record-button" bindtap="saveToActiveProject">加入当前项目</button>
+        </view>
+    </view>
+
+    <view wx:if="{{result && result.hasFormula}}" class="formula-card">
+      <view class="formula-title">公司公式校核</view>
+      <view class="formula-value">S ≥ P × L × 5</view>
+      <view class="formula-text">P 为设计带载功率（kW），L 为最远单程距离（km）。本次公式下限为 <text>{{result.formulaMinimumArea}} mm²</text>；最终优先按上方公司对照表选型。</view>
+    </view>
+
+    <view wx:if="{{result && result.warnings.length}}" class="warning-card">
+      <view class="warning-title">注意</view>
+      <view wx:for="{{result.warnings}}" wx:key="*this" class="warning-text warning-row">{{item}}</view>
+    </view>
+
+  </view>
+</scroll-view>
+
+<include src="../../templates/result-report-preview.wxml" />
+</view>

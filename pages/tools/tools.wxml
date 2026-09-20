@@ -1,0 +1,81 @@
+<scroll-view class="tools-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+  <view class="tools-content">
+    <view class="page-header">
+      <view class="page-title">工具</view>
+    </view>
+
+    <view class="tool-domain">
+      <view class="domain-title">音频</view>
+      <scroll-view class="module-strip" scroll-x enhanced show-scrollbar="{{false}}">
+        <view class="module-track">
+          <navigator wx:for="{{audioModules}}" wx:key="id" class="module-card" url="{{item.path}}" hover-class="card-pressed">
+            <view class="module-visual">
+              <view wx:if="{{item.visual == 'project-wiring'}}" class="project-wiring-visual" aria-hidden="true">
+                <view class="wiring-device wiring-device-source">
+                  <view class="wiring-device-port"></view>
+                  <view class="wiring-device-port"></view>
+                  <view class="wiring-device-port"></view>
+                </view>
+                <view class="wiring-cable wiring-cable-one"><view class="wiring-cable-end"></view></view>
+                <view class="wiring-cable wiring-cable-two"><view class="wiring-cable-end"></view></view>
+                <view class="wiring-cable wiring-cable-three"><view class="wiring-cable-end"></view></view>
+                <view class="wiring-device wiring-device-destination">
+                  <view class="wiring-device-port"></view>
+                  <view class="wiring-device-port"></view>
+                  <view class="wiring-device-port"></view>
+                </view>
+                <view class="wiring-list-mark">
+                  <view class="wiring-list-row"></view>
+                  <view class="wiring-list-row"></view>
+                  <view class="wiring-list-row"></view>
+                </view>
+              </view>
+              <image wx:else class="module-image" src="{{item.image}}" mode="aspectFit" lazy-load aria-label="{{item.title}}配图" />
+            </view>
+            <view class="module-title">{{item.title}}</view>
+          </navigator>
+        </view>
+      </scroll-view>
+    </view>
+
+    <view class="tool-domain">
+      <view class="domain-title">视频</view>
+      <view class="module-row">
+        <navigator wx:for="{{videoModules}}" wx:key="id" class="module-card" url="{{item.path}}" hover-class="card-pressed">
+          <view class="module-visual">
+            <image class="module-image" src="{{item.image}}" mode="aspectFit" lazy-load aria-label="{{item.title}}配图" />
+          </view>
+          <view class="module-title">{{item.title}}</view>
+        </navigator>
+      </view>
+    </view>
+
+    <view class="tool-domain">
+      <view class="domain-title">灯光</view>
+      <view class="module-row">
+        <navigator wx:for="{{lightingModules}}" wx:key="id" class="module-card" url="{{item.path}}" hover-class="card-pressed">
+          <view class="module-visual">
+            <image class="module-image" src="{{item.image}}" mode="aspectFit" lazy-load aria-label="{{item.title}}配图" />
+          </view>
+          <view class="module-title">{{item.title}}</view>
+        </navigator>
+      </view>
+    </view>
+
+    <view class="domain-title library-heading">资料</view>
+    <navigator class="product-library-card" url="/pages/products/library" hover-class="card-pressed">
+      <view class="product-library-copy">
+        <view class="product-library-title">产品资料库</view>
+      </view>
+      <view class="product-library-arrow">›</view>
+    </navigator>
+
+    <view class="tools-footer">
+      <view>版本 {{appVersion}} · 产品数据复核 {{productDataDate}}</view>
+      <view class="footer-actions">
+        <button class="footer-action" open-type="feedback">问题反馈</button>
+        <button class="footer-action footer-action-muted" bindtap="resetPreferences">恢复默认设置</button>
+      </view>
+    </view>
+  </view>
+</scroll-view>

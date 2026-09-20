@@ -1,0 +1,672 @@
+@import "../../styles/theme-page-shared.wxss";
+
+.wiring-page {
+  height: 100vh;
+  overflow: hidden;
+  background: var(--theme-page-bg);
+  color: var(--theme-text);
+}
+
+.wiring-scroll {
+  box-sizing: border-box;
+  height: 100vh;
+  background: var(--theme-page-bg);
+}
+
+.page-content {
+  box-sizing: border-box;
+  padding: 24rpx 32rpx calc(148rpx + env(safe-area-inset-bottom));
+}
+
+.endpoint-row {
+  display: flex;
+  gap: 12rpx;
+  margin-bottom: 18rpx;
+}
+
+.endpoint-card {
+  box-sizing: border-box;
+  min-width: 0;
+  flex: 1;
+  padding: 19rpx 17rpx 16rpx;
+  overflow: hidden;
+  border-radius: 24rpx;
+  background: var(--theme-surface);
+  box-shadow: 0 5rpx 16rpx var(--theme-shadow);
+}
+
+.endpoint-card-pressed {
+  opacity: .84;
+  transform: scale(.99);
+}
+
+.endpoint-card-heading {
+  color: var(--theme-text-secondary);
+  font-size: 29rpx;
+  line-height: 1.35;
+}
+
+.endpoint-image {
+  display: block;
+  width: 100%;
+  height: 196rpx;
+  margin: 4rpx auto 3rpx;
+}
+
+.endpoint-device {
+  overflow: hidden;
+  color: var(--theme-text);
+  font-size: 34rpx;
+  font-weight: 680;
+  line-height: 1.28;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.endpoint-meta-row {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4rpx;
+  margin-top: 5rpx;
+}
+
+.endpoint-meta {
+  flex: 1;
+  min-width: 0;
+  color: var(--theme-text-secondary);
+  font-size: 29rpx;
+  line-height: 1.35;
+}
+
+.endpoint-signal {
+  margin-top: 2rpx;
+  color: var(--theme-text-tertiary);
+  font-size: 29rpx;
+  line-height: 1.3;
+}
+
+.endpoint-chevron {
+  flex: 0 0 auto;
+  color: var(--theme-text-tertiary);
+  font-size: 37rpx;
+  line-height: 23rpx;
+}
+
+.diagram-card,
+.explanation-card {
+  margin-bottom: 18rpx;
+  border-radius: 25rpx;
+  background: var(--theme-surface);
+  box-shadow: 0 5rpx 16rpx var(--theme-shadow);
+}
+
+.diagram-card {
+  padding: 23rpx 22rpx 19rpx;
+}
+
+.diagram-heading {
+  display: flex;
+  min-height: 47rpx;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14rpx;
+}
+
+.diagram-title,
+.explanation-title {
+  color: var(--theme-text);
+  font-size: 38rpx;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.wiring-requirement-list {
+  display: flex;
+  margin-top: 14px;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.wiring-requirement {
+  box-sizing: border-box;
+  padding: 12px;
+  border-radius: 16rpx;
+  background: var(--theme-control);
+}
+
+.wiring-requirement-title {
+  color: var(--theme-text);
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.4;
+}
+
+.wiring-requirement-hint {
+  margin-top: 3px;
+  color: var(--theme-text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.wiring-requirement-options {
+  display: flex;
+  margin-top: 9px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.wiring-requirement-option {
+  position: relative;
+  display: flex;
+  box-sizing: border-box;
+  min-width: 120px;
+  min-height: 44px;
+  padding: 8px 32px 8px 11px;
+  flex: 1 1 calc(50% - 8px);
+  flex-direction: column;
+  justify-content: center;
+  border-radius: 14rpx;
+  background: var(--theme-surface);
+  color: var(--theme-text);
+}
+
+.wiring-requirement-option-active {
+  background: var(--theme-accent-soft);
+  color: var(--theme-accent-text);
+}
+
+.wiring-requirement-option-pressed {
+  opacity: .78;
+}
+
+.wiring-requirement-option-label {
+  font-size: 14px;
+  font-weight: 620;
+  line-height: 1.35;
+}
+
+.wiring-requirement-option-detail {
+  margin-top: 2px;
+  color: var(--theme-text-secondary);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.wiring-requirement-check {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  color: var(--theme-accent-text);
+  font-size: 16px;
+  font-weight: 700;
+  transform: translateY(-50%);
+}
+
+.wiring-critical-notes {
+  display: flex;
+  margin-top: 10px;
+  padding: 9px 11px;
+  flex-direction: column;
+  gap: 4px;
+  border-radius: 14rpx;
+  background: var(--theme-warning-soft);
+}
+
+.wiring-critical-note {
+  color: var(--theme-warning);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.wiring-choice-pending {
+  display: flex;
+  margin-top: 10px;
+  padding: 11px 13px;
+  box-sizing: border-box;
+  flex-direction: column;
+  justify-content: center;
+  border-radius: 16rpx;
+  background: var(--theme-control);
+}
+
+.wiring-choice-pending-copy {
+  color: var(--theme-text-secondary);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.segment-control {
+  display: flex;
+  box-sizing: border-box;
+  width: 100%;
+  margin-top: 18rpx;
+  padding: 5rpx;
+  gap: 5px;
+  border-radius: 18rpx;
+  background: var(--theme-control);
+}
+
+.segment-item {
+  display: flex;
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 44px;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14rpx;
+  color: var(--theme-text-secondary);
+  font-size: 30rpx;
+  font-weight: 550;
+}
+
+.segment-item-active {
+  background: var(--theme-surface);
+  box-shadow: 0 2rpx 7rpx rgba(0, 0, 0, .1);
+  color: var(--theme-accent-text);
+}
+
+.face-control {
+  display: flex;
+  min-height: 48rpx;
+  margin-top: 12rpx;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14rpx;
+}
+
+.face-control-label {
+  color: var(--theme-text-secondary);
+  font-size: 29rpx;
+}
+
+.face-control-options {
+  display: flex;
+  padding: 3rpx;
+  gap: 3rpx;
+  border-radius: 999rpx;
+  background: var(--theme-control);
+}
+
+.face-option {
+  display: flex;
+  box-sizing: border-box;
+  min-width: 86rpx;
+  min-height: 44px;
+  padding: 0 11rpx;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999rpx;
+  color: var(--theme-text-secondary);
+  font-size: 29rpx;
+}
+
+.face-option-active {
+  background: var(--theme-surface);
+  color: var(--theme-accent-text);
+  font-weight: 650;
+}
+
+.diagram-canvas-wrap {
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  margin-top: 12rpx;
+  overflow: hidden;
+  border-radius: 18rpx;
+}
+
+.diagram-canvas {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+}
+
+.unsupported-state {
+  display: flex;
+  min-height: 300rpx;
+  padding: 32rpx 18rpx;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.unsupported-mark {
+  display: flex;
+  width: 62rpx;
+  height: 62rpx;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--theme-warning-soft);
+  color: var(--theme-warning);
+  font-size: 38rpx;
+}
+
+.unsupported-title {
+  margin-top: 16rpx;
+  color: var(--theme-text);
+  font-size: 34rpx;
+  font-weight: 680;
+  line-height: 1.45;
+}
+
+.unsupported-reason,
+.unsupported-tip {
+  margin-top: 8rpx;
+  color: var(--theme-text-secondary);
+  font-size: 29rpx;
+  line-height: 1.55;
+}
+
+.unsupported-tip {
+  color: var(--theme-text-tertiary);
+}
+
+.selected-mapping {
+  display: flex;
+  box-sizing: border-box;
+  margin-top: 11rpx;
+  padding: 14rpx 15rpx;
+  align-items: flex-start;
+  gap: 11rpx;
+  border-radius: 16rpx;
+  background: var(--theme-accent-soft);
+}
+
+.selected-mapping-swatch {
+  width: 20rpx;
+  height: 20rpx;
+  flex: 0 0 20rpx;
+  margin-top: 4rpx;
+  border-radius: 50%;
+}
+
+.selected-mapping-copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.selected-mapping-title {
+  color: var(--theme-accent-text);
+  font-size: 30rpx;
+  font-weight: 700;
+}
+
+.selected-mapping-text {
+  margin-top: 4rpx;
+  color: var(--theme-text-secondary);
+  font-size: 29rpx;
+  line-height: 1.45;
+}
+
+.diagram-footnote {
+  margin-top: 12rpx;
+  color: var(--theme-text-tertiary);
+  font-size: 29rpx;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.explanation-card {
+  overflow: hidden;
+}
+
+.explanation-toggle {
+  display: flex;
+  box-sizing: border-box;
+  min-height: 44px;
+  padding: 0 22rpx;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.explanation-title {
+  font-size: 34rpx;
+}
+
+.explanation-chevron {
+  display: flex;
+  width: 48rpx;
+  height: 48rpx;
+  align-items: center;
+  justify-content: center;
+  color: var(--theme-text-tertiary);
+  font-size: 40rpx;
+  line-height: 1;
+  transform: rotate(0);
+  transition: transform .16s ease;
+}
+
+.explanation-chevron-expanded {
+  transform: rotate(90deg);
+}
+
+.explanation-body {
+  padding: 0 22rpx 19rpx;
+}
+
+.explanation-section-title {
+  margin: 0 0 7rpx;
+  color: var(--theme-text-secondary);
+  font-size: 29rpx;
+  font-weight: 680;
+}
+
+.explanation-text,
+.explanation-note {
+  color: var(--theme-text-secondary);
+  font-size: 29rpx;
+  line-height: 1.58;
+}
+
+.explanation-note {
+  margin-top: 7rpx;
+}
+
+.explanation-sources-title {
+  margin-top: 17rpx;
+}
+
+.source-row + .source-row {
+  margin-top: 9rpx;
+}
+
+.source-name {
+  color: var(--theme-text);
+  font-size: 29rpx;
+  line-height: 1.45;
+}
+
+.source-detail {
+  margin-top: 2rpx;
+  color: var(--theme-text-tertiary);
+  font-size: 29rpx;
+  line-height: 1.45;
+}
+
+.bottom-spacer {
+  height: 1rpx;
+}
+
+.wiring-actions-safe-area {
+  position: fixed;
+  z-index: 10;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  box-sizing: border-box;
+  padding: 13px 0 calc(10px + env(safe-area-inset-bottom));
+  background: var(--theme-page-bg);
+  box-shadow: 0 -5rpx 18rpx rgba(20, 30, 50, .045);
+}
+
+.wiring-actions {
+  width: calc(100% - 64rpx);
+}
+
+.selector-mask {
+  position: fixed;
+  z-index: 100;
+  inset: 0;
+  display: flex;
+  box-sizing: border-box;
+  align-items: flex-end;
+  background: rgba(20, 22, 28, .4);
+}
+
+.selector-panel {
+  display: flex;
+  box-sizing: border-box;
+  width: 100%;
+  max-height: 84vh;
+  padding: 23rpx 24rpx calc(20rpx + env(safe-area-inset-bottom));
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 30rpx 30rpx 0 0;
+  background: var(--theme-surface);
+  box-shadow: 0 -12rpx 40rpx rgba(20, 30, 50, .12);
+}
+
+.selector-header {
+  display: flex;
+  min-height: 58rpx;
+  margin-bottom: 12rpx;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.selector-title {
+  color: var(--theme-text);
+  font-size: 38rpx;
+  font-weight: 700;
+}
+
+.selector-close {
+  display: flex;
+  box-sizing: border-box;
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  margin: 0;
+  padding: 0;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 50%;
+  background: var(--theme-control);
+  color: var(--theme-text-secondary);
+  font-size: 34px;
+  line-height: 1;
+}
+
+.selector-list {
+  box-sizing: border-box;
+  width: 100%;
+  height: 55vh;
+  max-height: 66vh;
+  min-height: 0;
+  flex: 0 1 55vh;
+  overflow: hidden;
+  border-radius: 18rpx;
+  background: var(--theme-control);
+}
+
+.selector-row {
+  display: flex;
+  box-sizing: border-box;
+  min-height: 82rpx;
+  padding: 12rpx 15rpx;
+  align-items: center;
+  gap: 14rpx;
+  background: var(--theme-surface);
+}
+
+.selector-row + .selector-row {
+  border-top: 1rpx solid var(--theme-divider);
+}
+
+.wiring-page .selector-list .selector-row.selector-row-active {
+  background: var(--theme-accent-soft);
+}
+
+.selector-image {
+  display: block;
+  width: 90rpx;
+  height: 68rpx;
+  flex: 0 0 90rpx;
+}
+
+.selector-copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.selector-label {
+  margin-top: 2rpx;
+  color: var(--theme-text);
+  font-size: 30rpx;
+  font-weight: 650;
+}
+
+.selector-signal {
+  margin-top: 3rpx;
+  color: var(--theme-text-tertiary);
+  font-size: 26rpx;
+  line-height: 1.35;
+}
+
+.wiring-page .wiring-actions .wiring-action-disabled {
+  background: var(--theme-control);
+  color: var(--theme-text-tertiary);
+  box-shadow: none;
+  opacity: .62;
+}
+
+.selector-check {
+  flex: 0 0 36rpx;
+  color: var(--theme-accent-text);
+  font-size: 31rpx;
+  text-align: center;
+}
+
+.result-report-preview-title {
+  font-size: 38rpx;
+}
+
+.result-report-preview-subtitle,
+.result-report-preview-close,
+.result-report-preview-action {
+  font-size: 29rpx;
+}
+
+@media (max-width: 360px) {
+  .endpoint-card {
+    padding-right: 13rpx;
+    padding-left: 13rpx;
+  }
+
+  .endpoint-image {
+    height: 174rpx;
+  }
+
+}
+
+.diagram-error {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  display: flex;
+  box-sizing: border-box;
+  padding: 28rpx;
+  align-items: center;
+  justify-content: center;
+  background: var(--theme-surface);
+  color: var(--theme-text-secondary);
+  font-size: 29rpx;
+  line-height: 1.5;
+  text-align: center;
+}

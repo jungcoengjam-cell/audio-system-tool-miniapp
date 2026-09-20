@@ -1,0 +1,87 @@
+<scroll-view class="projects-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+  <view class="projects-content">
+    <view class="page-header">
+      <view class="page-title">项目</view>
+    </view>
+
+    <view class="records-tabs">
+      <view
+        wx:for="{{recordTabs}}"
+        wx:key="*this"
+        class="records-tab {{index == recordTabIndex ? 'records-tab-active' : ''}}"
+        data-index="{{index}}"
+        bindtap="onRecordTabTap"
+      >{{item}}</view>
+    </view>
+
+    <block wx:if="{{recordTabIndex == 1}}">
+      <view wx:if="{{displayRecords.length}}" class="record-list">
+        <view wx:for="{{displayRecords}}" wx:key="id" class="record-card record-card-{{item.theme}}">
+          <view class="record-heading">
+            <view class="record-module">{{item.moduleLabel}}</view>
+            <view class="record-time">{{item.timeText}}</view>
+          </view>
+          <view class="record-title">{{item.title}}</view>
+          <view class="record-summary">{{item.summary}}</view>
+          <view class="record-trust">{{item.trustLabel}}</view>
+          <view wx:if="{{item.projectNames}}" class="record-project">已归入：{{item.projectNames}}</view>
+          <view class="record-actions">
+            <button class="record-action record-action-primary" data-id="{{item.id}}" bindtap="restoreRecord">重新打开</button>
+            <button class="record-action" data-id="{{item.id}}" bindtap="toggleRecordFavorite">{{item.favorite ? '取消收藏' : '收藏常用'}}</button>
+            <button wx:if="{{activeProject}}" class="record-action" data-id="{{item.id}}" bindtap="addRecordToActiveProject">加入当前项目</button>
+            <button class="record-action record-action-danger" data-id="{{item.id}}" bindtap="deleteRecord">删除</button>
+          </view>
+        </view>
+      </view>
+      <view wx:else class="records-empty">
+        <view class="records-empty-mark">★</view>
+        <view class="records-empty-title">还没有常用收藏</view>
+        <view class="records-empty-text">在计算结果页点击“收藏常用”，即可保存在这里。</view>
+      </view>
+    </block>
+
+    <block wx:else>
+      <view class="project-toolbar">
+        <view>
+          <view class="project-toolbar-title">现场项目</view>
+        </view>
+        <button class="project-create" bindtap="createProject">＋ 新建</button>
+      </view>
+
+      <view wx:if="{{activeProject}}" class="active-project-strip">
+        <text class="active-project-label">当前项目</text>
+        <text class="active-project-name">{{activeProject.name}}</text>
+      </view>
+
+      <view wx:if="{{projects.length}}" class="project-list">
+        <view wx:for="{{projects}}" wx:key="id" class="project-card" data-id="{{item.id}}" bindtap="selectProject">
+          <view class="project-card-heading">
+            <view class="project-name">{{item.name}}</view>
+            <view wx:if="{{item.isActive}}" class="project-active-chip">当前</view>
+          </view>
+          <view class="project-meta">{{item.recordCount}} 条计算记录 · {{item.wiringLineCount}} 条线路 · 更新于 {{item.timeText}}</view>
+          <view wx:if="{{item.venueName || item.projectDate || item.engineer}}" class="project-detail-preview">
+            <text>{{item.venueName || '场地未填写'}}</text>
+            <text class="project-detail-preview-dot">·</text>
+            <text>{{item.projectDate || '日期未填写'}}</text>
+            <text wx:if="{{item.engineer}}" class="project-detail-preview-engineer">{{item.engineer}}</text>
+          </view>
+          <view class="project-primary-actions">
+            <button class="project-action project-action-primary" data-id="{{item.id}}" catchtap="openProjectWiring">布线</button>
+            <button class="project-action project-action-secondary" data-id="{{item.id}}" catchtap="openProjectReport">报告</button>
+          </view>
+          <view class="project-actions">
+            <button wx:if="{{!item.isActive}}" class="project-action" data-id="{{item.id}}" catchtap="activateProject">设为当前</button>
+            <button class="project-action project-action-danger" data-id="{{item.id}}" catchtap="deleteProject">删除项目</button>
+          </view>
+        </view>
+      </view>
+
+      <view wx:else class="records-empty records-empty-project">
+        <view class="records-empty-mark">＋</view>
+        <view class="records-empty-title">还没有现场项目</view>
+        <view class="records-empty-text">新建项目，整理线路和计算结果。</view>
+      </view>
+    </block>
+  </view>
+</scroll-view>

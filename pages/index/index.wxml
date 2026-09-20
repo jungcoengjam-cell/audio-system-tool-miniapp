@@ -1,0 +1,38 @@
+<template name="knowledgeScene">
+<view wx:if="{{item.id === 'led-screen-fit'}}" class="scene-led"><view class="led-install"></view><view class="led-contact motion motion-contact"></view><view class="led-panel motion motion-led"><view class="led-grid"></view><view class="led-check motion motion-check"></view></view></view>
+<view wx:elif="{{item.id === 'limiter-threshold'}}" class="scene-limiter"><view class="limit-flow"></view><view class="limit-meter limit-meter-input motion motion-level-input"></view><view class="limit-meter limit-meter-output motion motion-level-output"></view><view class="limit-threshold motion motion-limit-peak"></view><view class="limit-speaker speaker-unit"></view></view>
+<view wx:elif="{{item.id === 'distance-loss'}}" class="scene-distance"><view class="speaker-mark speaker-unit"></view><view class="wave wave-one motion motion-wave"></view><view class="wave wave-two motion motion-wave motion-delay-1"></view><view class="wave wave-three motion motion-wave-far motion-delay-2"></view><view class="listener listener-near"></view><view class="listener listener-far"></view></view>
+<view wx:elif="{{item.id === 'cable-loss'}}" class="scene-cable"><view class="cable-source"></view><view class="cable-line cable-short"></view><view class="cable-line cable-long"></view><view class="pulse pulse-one motion motion-pulse-short"></view><view class="pulse pulse-two motion motion-pulse-long"></view><view class="cable-speaker speaker-unit speaker-short"></view><view class="cable-speaker speaker-unit speaker-long"></view></view>
+<view wx:elif="{{item.id === 'fill-handoff'}}" class="scene-fill"><view class="room-mark"></view><view class="main-speaker speaker-unit"></view><view class="fill-speaker speaker-unit"></view><view class="main-coverage"></view><view class="fill-coverage motion motion-coverage-fill"></view><view class="fill-person front-person-1"></view><view class="fill-person front-person-2"></view><view class="fill-person front-person-3"></view><view class="fill-person back-person-1 motion motion-listener-row"></view><view class="fill-person back-person-2 motion motion-listener-row"></view><view class="fill-person back-person-3 motion motion-listener-row"></view></view>
+<view wx:elif="{{item.id === 'gain-alignment'}}" class="scene-gain"><view class="gain-box gain-dsp"><view class="gain-fader motion motion-fader"></view><view class="gain-meter motion motion-meter-dsp"></view></view><view class="gain-wire"></view><view class="gain-box gain-amp"><view class="gain-knob"></view><view class="gain-meter"></view></view></view>
+<view wx:elif="{{item.id === 'camera-fov-distance'}}" class="scene-camera"><view class="camera-body motion motion-lens"></view><view class="fov-cone motion motion-cone"></view><view class="people"><view class="camera-person person-left"></view><view class="camera-person person-center"></view><view class="camera-person person-right"></view></view></view>
+<view wx:else class="scene-dmx"><view class="dmx-rail"></view><view class="dmx-block block-one"><view class="dmx-lamp lamp-one"></view></view><view class="dmx-block block-two motion motion-block"><view class="dmx-lamp lamp-two"></view><view class="dmx-conflict motion motion-conflict"></view></view><view class="dmx-block block-three"><view class="dmx-lamp lamp-three"></view></view></view>
+</template>
+<scroll-view class="explore-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+<view class="explore-content">
+<view class="explore-header">
+<view class="explore-title">探索</view>
+</view>
+<view class="section-title">学点新鲜的</view>
+<scroll-view class="knowledge-strip" scroll-x enhanced show-scrollbar="{{false}}">
+<view class="knowledge-track">
+<navigator wx:for="{{knowledgeItems}}" wx:key="id" data-index="{{index}}" class="knowledge-card knowledge-card-{{item.categoryKey}} {{item.animationActive ? 'card-active' : ''}}" url="{{item.path}}" hover-class="card-pressed" aria-label="{{item.title}}">
+<view class="knowledge-visual knowledge-visual-{{item.id}}" aria-label="{{item.title}}示意图">
+<template is="knowledgeScene" data="{{item: item}}"/>
+</view>
+<view class="knowledge-reflection" aria-hidden="true"><view class="knowledge-reflection-scene"><template is="knowledgeScene" data="{{item: item}}"/></view></view>
+<view class="knowledge-copy">
+<view class="knowledge-title">{{item.headline}}</view>
+<view class="knowledge-open">阅读文章 ›</view>
+</view>
+</navigator>
+<view class="knowledge-track-end" aria-hidden="true"></view>
+</view>
+</scroll-view>
+<view class="section-title issue-heading">现场遇到问题</view>
+<view class="issue-list">
+<navigator class="issue-card" url="/pages/troubleshoot/index?type=audio" hover-class="issue-pressed" aria-label="音箱没声音，进入现场问题排查"><image class="issue-image" src="/assets/home/issue-audio-silent.png" mode="aspectFit" aria-hidden="true"/><view class="issue-footer"><view class="issue-title">音箱没声音</view><view class="issue-arrow" aria-hidden="true">›</view></view></navigator>
+<navigator class="issue-card" url="/pages/troubleshoot/index?type=lighting" hover-class="issue-pressed" aria-label="灯具不受控，进入现场问题排查"><image class="issue-image" src="/assets/home/issue-lighting-control.png" mode="aspectFit" aria-hidden="true"/><view class="issue-footer"><view class="issue-title">灯具不受控</view><view class="issue-arrow" aria-hidden="true">›</view></view></navigator>
+</view>
+</view>
+</scroll-view>

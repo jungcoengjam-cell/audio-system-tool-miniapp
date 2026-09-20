@@ -1,0 +1,271 @@
+// Official-PDF checked channel profiles (final batch B).
+// Keep this shard independent so the source data can be reviewed separately.
+const range = (rangeText, description) => ({
+  range: rangeText.replace(/^(\d+)-(\d+)$/, '$1–$2'),
+  description,
+})
+const channel = (name, summary, ranges) => ({
+  name,
+  summary,
+  ranges: ranges || [range('0-255', summary)],
+})
+const mode = (channelCount, definitions) => ({
+  channelCount,
+  channels: definitions.map((definition, index) => ({
+    channel: index + 1,
+    ...definition,
+  })),
+})
+const linear = (name, summary) => channel(name, summary)
+const repeat = (count, factory) => Array.from({ length: count }, (_, index) => factory(index + 1))
+const profile = (model, source, sourcePages, sourcePageText, modes) => ({
+  model,
+  source,
+  sourcePages,
+  sourcePageText,
+  verification: 'checked',
+  verificationStatus: '已核对',
+  modes,
+})
+
+const STROBE = [
+  range('0-9', '无频闪'),
+  range('10-99', '频闪由慢到快（0-25Hz）'),
+  range('100-109', '无频闪'),
+  range('110-179', '爆闪'),
+  range('180-189', '无频闪'),
+  range('190-255', '随机闪'),
+]
+const SK_STROBE = [
+  range('0-9', '无频闪'),
+  range('10-99', '频闪由慢到快（0-25Hz）'),
+  range('100-109', '无频闪'),
+  range('110-179', '爆闪'),
+  range('180-189', '无频闪'),
+  range('190-255', '随机闪'),
+]
+const SK_SPEED = [
+  range('0-9', '调光速度由菜单面板设置'),
+  range('10-49', '调光速度 最快'),
+  range('50-99', '调光速度 1'),
+  range('100-149', '调光速度 2'),
+  range('150-199', '调光速度 3'),
+  range('200-255', '调光速度 4 最慢'),
+]
+const SK_PRESET = [
+  range('0-10', '无功能'),
+  range('11-20', 'L106'), range('21-30', 'R05'), range('31-40', 'L194'),
+  range('41-50', 'R54'), range('51-60', 'L019'), range('61-70', 'R08'),
+  range('71-80', 'R89'), range('81-90', 'R86'), range('91-100', 'L213'),
+  range('101-110', 'R377'), range('111-120', 'R80'), range('121-130', 'L202'),
+  range('131-140', 'L328'), range('141-150', 'R3314'), range('151-160', 'L101'),
+  range('161-170', 'L768'), range('171-200', '保留'), range('201-255', '基色时色彩管理无效'),
+]
+const SK_PIXEL_PRESET = [...SK_PRESET.slice(0, 17), range('171-255', '保留')]
+const SK_MACRO = [
+  range('0-10', '无功能'),
+  range('11-30', '宏功能 1'), range('31-50', '宏功能 2'), range('51-70', '宏功能 3'),
+  range('71-90', '宏功能 4'), range('91-110', '宏功能 5'), range('111-130', '宏功能 6'),
+  range('131-150', '宏功能 7'), range('151-170', '宏功能 8'), range('171-195', '全亮（R=255,G=255,B=255）'),
+  range('196-200', '2700K 色温'), range('201-205', '3000K 色温'), range('206-210', '3200K 色温'),
+  range('211-215', '3500K 色温'), range('216-220', '4000K 色温'), range('221-225', '4200K 色温'),
+  range('226-230', '4500K 色温'), range('231-235', '5600K 色温'), range('236-240', '6000K 色温'),
+  range('241-245', '6500K 色温'), range('246-250', '7200K 色温'), range('251-255', '8000K 色温'),
+]
+const skLinear = (name, summary) => linear(name, summary)
+const skPreset = (name, ranges = SK_PRESET) => channel(name, name, ranges)
+const skMacro = (name = 'LED宏功能') => channel(name, name, SK_MACRO)
+
+const skHsic = mode(7, [
+  channel('亮度', '亮度 0-100%'), channel('色度', '色度 0-360度'), channel('色度16BIT', '色度16位微调'),
+  channel('对比度', '对比度 0-100%'), channel('色温', '色温', [
+    range('0-10', '无功能'), range('11-30', '2700K'), range('31-50', '3000K'), range('51-70', '3200K'),
+    range('71-90', '3500K'), range('91-110', '4000K'), range('111-130', '4200K'), range('131-150', '4500K'),
+    range('151-170', '5600K'), range('171-190', '6000K'), range('191-210', '6500K'), range('211-230', '7200K'), range('231-255', '8000K'),
+  ]), channel('频闪', '频闪', SK_STROBE), channel('调光速度', '调光速度', SK_SPEED),
+])
+const skPixel1 = mode(9, [
+  skLinear('调光', '调光 0-100%'), skLinear('红色 1', '灯头1红色 0-100%'), skLinear('绿色 1', '灯头1绿色 0-100%'),
+  skLinear('蓝色 1', '灯头1蓝色 0-100%'), skPreset('预置颜色 1', SK_PIXEL_PRESET),
+  skLinear('红色 2', '灯头2红色 0-100%'), skLinear('绿色 2', '灯头2绿色 0-100%'),
+  skLinear('蓝色 2', '灯头2蓝色 0-100%'), skPreset('预置颜色 2', SK_PIXEL_PRESET),
+])
+const skSsp = mode(11, [
+  skLinear('调光', '调光 0-100%'), skLinear('红色', '红色 0-100%'), skLinear('绿色', '绿色 0-100%'),
+  skLinear('蓝色', '蓝色 0-100%'), skLinear('青柠色', '青柠色 0-100%'), skLinear('琥珀色', '琥珀色 0-100%'),
+  skLinear('青色', '青色 0-100%'), skLinear('深蓝色', '深蓝色 0-100%'), skPreset('预置颜色'),
+  channel('频闪', '频闪', SK_STROBE), channel('调光速度', '调光速度', SK_SPEED),
+])
+const skTour = mode(14, [
+  skLinear('调光', '调光 0-100%'), skLinear('红色', '红色 0-100%'), skLinear('绿色', '绿色 0-100%'),
+  skLinear('蓝色', '蓝色 0-100%'), skLinear('青柠色', '青柠色 0-100%'), skLinear('琥珀色', '琥珀色 0-100%'),
+  skLinear('青色', '青色 0-100%'), skLinear('深蓝色', '深蓝色 0-100%'), skPreset('预置颜色'), skMacro(),
+  channel('频闪', '频闪', SK_STROBE), channel('自动', '自动', [range('0-9', '无功能'), range('10-127', '自动跳变'), range('128-255', '自动渐变')]),
+  channel('自动速度', '自动速度 由快到慢'), channel('调光速度', '调光速度', SK_SPEED),
+])
+const skPixel2 = mode(17, [
+  skLinear('调光', '调光 0-100%'), skLinear('红色 1', '灯头1红色 0-100%'), skLinear('绿色 1', '灯头1绿色 0-100%'),
+  skLinear('蓝色 1', '灯头1蓝色 0-100%'), skLinear('青柠色 1', '灯头1青柠色 0-100%'), skLinear('琥珀色 1', '灯头1琥珀色 0-100%'),
+  skLinear('青色 1', '灯头1青色 0-100%'), skLinear('深蓝色 1', '灯头1深蓝色 0-100%'), skPreset('预置颜色 1'),
+  skLinear('红色 2', '灯头2红色 0-100%'), skLinear('绿色 2', '灯头2绿色 0-100%'), skLinear('蓝色 2', '灯头2蓝色 0-100%'),
+  skLinear('青柠色 2', '灯头2青柠色 0-100%'), skLinear('琥珀色 2', '灯头2琥珀色 0-100%'),
+  skLinear('青色 2', '灯头2青色 0-100%'), skLinear('深蓝色 2', '灯头2深蓝色 0-100%'), skPreset('预置颜色 2'),
+])
+const skTour16 = mode(22, [
+  skLinear('调光', '调光 0-100%'), skLinear('调光微调', '调光微调'), skLinear('红色', '红色 0-100%'), skLinear('红色微调', '红色微调'),
+  skLinear('绿色', '绿色 0-100%'), skLinear('绿色微调', '绿色微调'), skLinear('蓝色', '蓝色 0-100%'), skLinear('蓝色微调', '蓝色微调'),
+  skLinear('青柠色', '青柠色 0-100%'), skLinear('青柠色微调', '青柠色微调'), skLinear('琥珀色', '琥珀色 0-100%'), skLinear('琥珀色微调', '琥珀色微调'),
+  skLinear('青色', '青色 0-100%'), skLinear('青色微调', '青色微调'), skLinear('深蓝色', '深蓝色 0-100%'), skLinear('深蓝色微调', '深蓝色微调'),
+  skPreset('预置颜色'), skMacro(), channel('频闪', '频闪', SK_STROBE), channel('自动', '自动', [range('0-9', '无功能'), range('10-127', '自动跳变'), range('128-255', '自动渐变')]),
+  channel('自动速度', '自动速度 由快到慢'), channel('调光速度', '调光速度', SK_SPEED),
+])
+
+const sl193Strobe = [
+  range('0-5', 'Strobe open 开灯'), range('6-10', 'Strobe closed 关灯'), range('11-33', 'Puls Random, slow -> fast 随机脉冲'),
+  range('34-56', 'Ramp up Random, slow -> fast 快进慢出'), range('57-79', 'Ramp down Random, slow -> fast 慢进快出'),
+  range('80-102', 'Random Strobe Effect, slow -> fast 随机频闪'), range('103-127', 'Strobe Break Effekt, 5s.....1s 脉冲效果'),
+  range('128-250', 'Strobe slow -> fast 0Hz - 20Hz 常规频闪'), range('251-255', 'Strobe open 开灯'),
+]
+const sl193Color = [
+  range('0-13', '白光'), range('14-27', 'Color 1-白光'), range('28-41', 'Color 1'), range('42-54', 'Color 1-2'),
+  range('55-68', 'Color 2'), range('69-82', 'Color 2-3'), range('83-95', 'Color 3'), range('96-109', 'Color 3-4'),
+  range('110-123', 'Color 4'), range('124-137', 'Color 4-5'), range('138-150', 'Color 5'), range('151-164', 'Color 5-6'),
+  range('165-178', 'Color 6'), range('179-191', 'Color 6-白光'), range('192-222', '正向快到慢'), range('223-224', '停止'), range('225-255', '反向慢到快'),
+]
+const sl193FixedGobo = [range('0-11', '圆孔'), ...repeat(7, (n) => range(`${12 + (n - 1) * 12}-${23 + (n - 1) * 12}`, `Gobo ${n}`)),
+  range('96-107', 'Gobo 7 抖动'), range('108-119', 'Gobo 6 抖动'), range('120-131', 'Gobo 5 抖动'), range('132-143', 'Gobo 4 抖动'),
+  range('144-155', 'Gobo 3 抖动'), range('156-167', 'Gobo 2 抖动'), range('168-179', 'Gobo 1 抖动'), range('180-191', '圆孔'),
+  range('192-222', '正向快到慢'), range('223-224', '停止'), range('225-255', '反向慢到快')]
+const sl193RotateGobo = [range('0-13', '圆孔'), range('14-27', 'Gobo 1'), range('28-41', 'Gobo 2'), range('42-54', 'Gobo 3'), range('55-68', 'Gobo 4'), range('69-82', 'Gobo 5'), range('83-95', 'Gobo 6'),
+  range('96-109', 'Gobo 6 抖动'), range('110-123', 'Gobo 5 抖动'), range('124-137', 'Gobo 4 抖动'), range('138-150', 'Gobo 3 抖动'),
+  range('151-164', 'Gobo 2 抖动'), range('165-178', 'Gobo 1 抖动'), range('179-191', '圆孔'), range('192-222', '正向快到慢'),
+  range('223-224', '停止'), range('225-255', '反向慢到快')]
+const sl193GoboRotate = [range('0-191', 'Gobo Index'), range('192-222', 'Left Rotation(Max To Min)'), range('223-224', 'Stop'), range('225-255', 'Right Rotation(Min To Max)')]
+const sl193Fog = [range('0-63', 'No Effect 无效果'), range('64-127', 'Fog1 Inserted 雾化1插入'), range('128-191', 'Fog2 Inserted 雾化2插入'), range('192-255', 'Fog1 and 2 Inserted 雾化1和2插入')]
+const sl193Prism = [range('0-127', 'No Effect 无效果'), range('128-255', 'Prism Inserted 棱镜插入')]
+const sl193PrismRotate = [range('0-191', 'Prism Index'), range('192-222', 'Left Rotation(Max To Min)'), range('223-224', 'Stop'), range('225-255', 'Right Rotation(Min To Max)')]
+const sl193Cut = [range('0-31', '1357表示切片位置，2468表示切片倾斜'), range('32-63', '8个电机单独调节'), range('64-127', '1表示正方形大小，78表示水平垂直倾斜'), range('128-159', '12表示长方形的长和宽，78表示水平垂直倾斜'), range('160-191', '1234表示长方形的4边，78表示水平垂直倾斜'), range('192-255', '钻石：1表示大小，2表示方向')]
+const sl193Control = [range('0-249', '其它：无功能'), range('250-255', '复位全部')]
+const sl193Common15 = [
+  linear('调光', '线性调光'), channel('频闪', 'Shutter频闪', sl193Strobe), channel('灯具控制', '灯具控制', sl193Control), channel('颜色', 'Color颜色', sl193Color),
+  channel('固定图案', 'Fixed Gobo 固定图案', sl193FixedGobo), channel('旋转图案', 'Rotate Gobo 旋转图案', sl193RotateGobo), channel('图案旋转', '图案旋转', sl193GoboRotate),
+  channel('效果盘', '效果盘', [range('0-11', '圆孔'), range('12-95', '效果盘索引'), range('96-179', '效果盘抖动'), range('180-191', '圆孔'), range('192-222', '正向快到慢'), range('223-224', '停止'), range('225-255', '反向慢到快')]),
+  linear('Focus调焦', '线性调焦'), linear('放大', '保留/未定义'), channel('Prism棱镜', '棱镜', sl193Prism), channel('Prism Rotation/Index棱镜旋转/索引', '棱镜旋转/索引', sl193PrismRotate),
+  channel('Fog雾化', '雾化', sl193Fog), linear('X轴', '保留/未定义'), linear('Y轴', '保留/未定义'),
+]
+const sl193ThirtyEight = mode(38, [
+  linear('调光', '线性调光'), linear('调光微调', '线性调光微调'), channel('Shutter频闪', 'Shutter频闪', sl193Strobe), channel('灯具控制', '灯具控制', sl193Control),
+  channel('Color颜色', 'Color颜色', sl193Color), linear('色温', '浅->深'), linear('青色/红色', '浅->深'), linear('品红/绿色', '浅->深'), linear('黄色/蓝色', '浅->深'), channel('CMY宏', '慢到快', [range('0-127', '无效'), range('128-255', '慢到快')]),
+  channel('固定图案', 'Fixed Gobo 固定图案', sl193FixedGobo), channel('旋转图案', 'Rotate Gobo 旋转图案', sl193RotateGobo), channel('图案旋转', '图案旋转', sl193GoboRotate), channel('切割模式', '切割模式', sl193Cut),
+  ...repeat(8, (n) => linear(`切割片${n}`, '由切割模式决定功能')), linear('切割旋转', '0->90度'), linear('光圈', '大->小'),
+  channel('效果盘', '效果盘', [range('0-11', '圆孔'), range('12-95', '效果盘索引'), range('96-179', '效果盘抖动'), range('180-191', '圆孔'), range('192-222', '正向快到慢'), range('223-224', '停止'), range('225-255', '反向慢到快')]),
+  channel('切割宏', '慢到快', [range('0-127', '无效'), range('128-255', '慢到快')]), linear('Focus调焦', '线性调焦'), linear('放大', '保留/未定义'),
+  channel('Prism棱镜', '棱镜', sl193Prism), channel('Prism Rotation/Index棱镜旋转/索引', '棱镜旋转/索引', sl193PrismRotate), channel('Fog雾化', '雾化', sl193Fog),
+  linear('X轴', '保留/未定义'), linear('X轴微调', '保留/未定义'), linear('Y轴', '保留/未定义'), linear('Y轴微调', '保留/未定义'), linear('X/Y轴速度', '快到慢'),
+  channel('AutoFocus自动调焦', '自动调焦', [range('0-29', '自动调焦关闭'), range('30-255', '3米到25米,5')]), channel('陀螺仪', '陀螺仪', [range('0-69', '其它：无功能'), range('70-74', '陀螺仪关'), range('75-79', '保留/未定义'), range('80-84', '陀螺仪开'), range('85-255', '保留/未定义')]),
+])
+const sl193Fifteen = mode(15, sl193Common15)
+
+const sl3101Color = [
+  range('0-69', '白-红-蓝-粉-青-黄-绿（固定颜色选择）'), range('70-79', '整体颜色换色（流水速度由CH3控制）'), range('80-89', '图案初始颜色（流水速度由CH3控制）'), range('90-92', '七彩虹颜色（流水速度由CH3控制）'),
+  range('93-110', '2分段颜色选择 3数值步进（流水速度由CH3控制）'), range('111-131', '3分段颜色选择 3数值步进（流水速度由CH3控制）'), range('132-149', '4分段颜色选择 3数值步进（流水速度由CH3控制）'),
+  range('150-182', '8分段颜色选择 3数值步进（流水速度由CH3控制）'), range('183-218', '16分段颜色选择3数值步进（流水速度由CH3控制）'), range('219-253', '32分段颜色选择3数值步进（流水速度由CH3控制）'), range('254-255', '颜色渐绘（流水速度由CH3控制）'),
+]
+const sl3101Group = [range('0-49', '内置静态图形组别 1（基本直线类几何图案）'), range('50-99', '内置静态图形组别 2（基本圆弧类几何图案）'), range('100-149', '内置静态图案组别 3（边缘亮点图案）'), range('150-199', '内置静态图形组别 4（打点图案）'), range('200-255', '内置动画图形组别 5（动画图案）')]
+const sl3101Dynamic = [range('0-1', '无功能'), range('2-179', '内置动态效果选择，速度由CH7控制，颜色CH2控制，CH2=0系统默认颜色'), range('180-189', '几何图案随机自走'), range('190-199', '动画图案随机自走'), range('200-209', '所有图案随机自走'), range('210-219', '几何图案随机声控'), range('220-229', '动画图案随机声控'), range('230-255', '所有图案随机声控')]
+const sl3101Seven = mode(7, [
+  channel('开关灯', '开关灯', [range('0-9', '激光闭光'), range('10-255', '激光开光')]), channel('颜色', '颜色', sl3101Color),
+  channel('颜色流水速度', '颜色流水速度', [range('0-1', '颜色不流水'), range('2-9', '保留/未定义'), range('10-127', '颜色正向流水，速度由慢到快'), range('128-255', '颜色反向流水，速度由慢到快')]),
+  channel('图形组别选择', '图形组别选择', sl3101Group), linear('图形选择', '图案选择（图案分组由CH4控制）'), channel('内置动态效果', '内置动态效果', sl3101Dynamic),
+  channel('内置动态效果速度', '内置动态效果速度', [range('0-1', '系统默认速度'), range('2-255', '手动调节，内置效果速度由慢到快')]),
+])
+const sl3101Sixteen = mode(16, [
+  ...sl3101Seven.channels.map(({ channel: ignored, ...definition }) => definition),
+  channel('图案大小', '图案大小手动选择'), channel('图案自动缩放', '图案自动缩放', [range('0-15', '图案大小选择'), range('16-55', '由小到大速度选择'), range('56-95', '由大到小速度选择'), range('96-135', '大小缩放速度选择'), range('136-175', '两分不规则循环缩放'), range('176-255', '四分不规则循环缩放')]),
+  channel('图案绕中心旋转', '图案绕中心旋转', [range('0-127', '旋转角度选择'), range('128-180', '保留/未定义'), range('181-191', '正旋转速度选择'), range('192-255', '反旋转速度选择')]),
+  channel('图案绕X轴旋转', '图案绕X轴旋转', [range('0-127', '水平翻转位置选择'), range('128-255', '水平翻转速度选择')]), channel('图案绕Y轴旋转', '图案绕Y轴旋转', [range('0-127', '垂直翻转位置选择'), range('128-255', '垂直翻转速度选择')]),
+  channel('水平移动', '水平移动', [range('0-127', '水平位置选择'), range('128-255', '水平移动速度由慢到快')]), channel('垂直移动', '垂直移动', [range('0-127', '垂直位置选择'), range('128-255', '垂直移动速度由慢到快')]),
+  channel('X方向波浪', 'X方向波浪', [range('0-1', '无波浪'), range('2-255', '波浪幅度和速度调节（幅度由小到大，速度由慢到快，每32个数值一个档）')]), channel('图案渐绘', '图案渐绘', [range('0-1', '无渐绘'), range('2-63', '手动渐绘1'), range('64-127', '手动渐绘2'), range('128-153', '自动渐绘（增）'), range('154-179', '自动渐绘（减）'), range('180-205', '自动渐绘（先增后减-反向）'), range('205-255', '自动渐绘（先增后减-同向）')]),
+])
+
+const sl534PatternMode = [range('0-31', '闭光（Black）'), range('32-63', '手动选图'), range('64-95', '自走宏功能'), range('96-127', '声控触发自走宏功能'), range('128-255', '预留')]
+const sl534Page = [range('0-255', '图案模式：每32个数值为一个图案组，共8页；宏功能效果选择：0数值循环所有，1-255每3个数值为一个宏功能效果，共85个')]
+const sl534Pattern = [range('0-15', '闭光（Black）'), range('16-255', '图案模式：每12个数值为一个图案，共20个')]
+const sl534Color = [range('0-7', '默认'), range('8-15', '白'), range('16-23', '红'), range('24-31', '黄'), range('32-39', '绿'), range('40-47', '青'), range('48-55', '蓝'), range('56-63', '紫'), range('64-127', '颜色效果（每8个数值为一个效果，共8个）'), range('128-143', '宏功能1'), range('144-159', '宏功能2'), range('160-175', '宏功能3'), range('176-191', '宏功能4'), range('192-207', '宏功能5'), range('208-223', '宏功能6'), range('224-239', '宏功能7'), range('240-255', '宏功能8')]
+const sl534Deform = [range('0-15', '无效'), ...repeat(13, (n) => range(`${16 + (n - 1) * 16}-${31 + (n - 1) * 16}`, `宏功能${n}（配合缩放通道）`)), range('224-255', '默认')]
+const sl534Wave = [range('0', '无效'), range('1-39', '宏功能1'), range('40-79', '宏功能2'), range('80-119', '宏功能3'), range('120-159', '宏功能4'), range('160-199', '宏功能5'), range('200-255', '宏功能6')]
+const sl534Macro8 = [range('0', '无效'), ...repeat(8, (n) => range(`${1 + (n - 1) * 32}-${n === 8 ? 255 : n * 32}`, `宏功能${n}`))]
+const sl534Five = mode(5, [channel('图案模式', '图案模式', sl534PatternMode), linear('总调光', '总亮度调节'), channel('图案页', '图案页', sl534Page), channel('图案', '图案', sl534Pattern), linear('图案缩放', '由大到小')])
+const sl534Seventeen = mode(17, [channel('图案模式', '图案模式', sl534PatternMode), linear('总亮度', '总亮度调节'), linear('红光亮度', '红光亮度调节'), linear('绿光亮度', '绿光亮度调节'), linear('蓝光亮度', '蓝光亮度调节'), channel('图案页', '图案页', sl534Page), channel('图案', '图案', sl534Pattern), linear('图案X水平位置', '由左往右移动（128为调试中心）'), linear('图案Y垂直位置', '由下向上移动（128为调试中心）'), linear('图案旋转', '顺时针旋转角度旋转（0°-360°）'), linear('图案缩放', '由大到小'), linear('图案X水平翻转', '由左往右翻转'), linear('图案Y垂直翻转', '由下向上翻转'), channel('颜色', '颜色', sl534Color), linear('图案渐绘', '可见点100%-0'), channel('图案形变', '图案形变', sl534Deform), channel('波浪模式', '波浪模式', sl534Wave)])
+const sl534Eighteen = mode(18, [channel('图案模式', '图案模式', sl534PatternMode), linear('总调光', '总亮度调节'), channel('图案页', '图案页', sl534Page), channel('图案', '图案', sl534Pattern), linear('图案X水平位置', '由左往右移动（128为调试中心）'), linear('图案Y垂直位置', '由下向上移动（128为调试中心）'), linear('图案缩放', '由大到小'), linear('图案X水平翻转', '由左往右翻转'), linear('图案Y垂直翻转', '由下向上翻转'), channel('颜色', '颜色', sl534Color), channel('图案形变', '图案形变', sl534Deform), channel('波浪模式', '波浪模式', sl534Wave), channel('X水平位置', 'X水平位置宏功能', sl534Macro8), channel('Y垂直位置', 'Y垂直位置宏功能', sl534Macro8), channel('Z旋转', 'Z旋转宏功能', sl534Macro8), channel('缩放', '缩放宏功能', sl534Macro8), channel('X轴翻转', 'X轴翻转宏功能', sl534Macro8), channel('Y轴翻转', 'Y轴翻转宏功能', sl534Macro8)])
+const sl534Single27 = [
+  channel('图案模式', '图案模式', sl534PatternMode), linear('总亮度', '总亮度调节'), linear('红光亮度', '红光亮度调节'), linear('绿光亮度', '绿光亮度调节'), linear('蓝光亮度', '蓝光亮度调节'), channel('图案页', '图案页', sl534Page), channel('图案', '图案', sl534Pattern),
+  linear('图案水平位置', '图案水平位置（128为调试中心）'), linear('图案水平位置微调', '图案水平位置微调'), linear('图案垂直位置', '图案垂直位置（128为调试中心）'), linear('图案垂直位置微调', '图案垂直位置微调'), linear('图案旋转', '图案旋转'), linear('图案旋转微调', '图案旋转微调'), linear('图案大小', '图案大小调节，由大到小'), linear('图案X轴翻转', '图案X轴翻转（由左往右翻转）'), linear('图案Y轴翻转', '图案Y轴翻转（由下向上翻转）'), channel('图案颜色选择', '图案颜色选择', sl534Color), linear('图案渐绘', '图案渐绘，可见点100%-0'), channel('图案变形', '图案变形', sl534Deform), channel('波浪模式', '波浪模式（数值为0时无效）', sl534Wave), channel('图案渐绘宏功能', '图案渐绘宏功能（数值为0时无效）', [range('0', '无效'), range('1-42', '宏功能1'), range('43-84', '宏功能2'), range('85-126', '宏功能3'), range('127-255', '频闪效果（由慢到快）')]), channel('X水平位置宏功能', 'X水平位置宏功能（数值为0时无效）', sl534Macro8), channel('Y垂直位置宏功能', 'Y垂直位置宏功能（数值为0时无效）', sl534Macro8), channel('图案旋转宏功能', '图案旋转宏功能（数值为0时无效）', sl534Macro8), channel('图案缩放宏功能', '图案缩放宏功能（数值为0时无效）', sl534Macro8), channel('图案水平翻转宏功能', '图案水平翻转宏功能（数值为0时无效）', sl534Macro8), channel('图案垂直翻转宏功能', '图案垂直翻转宏功能（数值为0时无效）', sl534Macro8),
+]
+const sl534TwentyEight = [...sl534Single27, channel('扫描速度', '扫描速度')]
+const sl534DoubleExtra = [linear('红光亮度2', '红光亮度调节'), linear('绿光亮度2', '绿光亮度调节'), linear('蓝光亮度2', '蓝光亮度调节'), channel('图案页2', '图案页选择', sl534Page), channel('图案2', '图案选择', sl534Pattern), linear('图案2水平位置', '图案水平位置（128为调试中心）'), linear('图案2水平位置微调', '图案水平位置微调'), linear('图案2垂直位置', '图案垂直位置（128为调试中心）'), linear('图案2垂直位置微调', '图案垂直位置微调'), linear('图案2旋转', '图案旋转'), linear('图案2旋转微调', '图案旋转微调'), linear('图案2大小', '图案大小调节，由大到小'), linear('图案2X轴翻转', '图案X轴翻转（由左往右翻转）'), linear('图案2Y轴翻转', '图案Y轴翻转（由下向上翻转）'), channel('图案2颜色选择', '图案颜色选择', sl534Color), linear('图案2渐绘', '图案渐绘，可见点100%-0'), channel('图案2变形', '图案变形', sl534Deform), channel('图案2波浪模式', '波浪模式（数值为0时无效）', sl534Wave), channel('图案2渐绘宏功能', '图案渐绘宏功能（数值为0时无效）', [range('0', '无效'), range('1-42', '宏功能1'), range('43-84', '宏功能2'), range('85-126', '宏功能3'), range('127-255', '频闪效果（由慢到快）')]), channel('图案2X水平位置宏功能', 'X水平位置宏功能', sl534Macro8), channel('图案2Y垂直位置宏功能', 'Y垂直位置宏功能', sl534Macro8), channel('图案2旋转宏功能', '图案旋转宏功能', sl534Macro8), channel('图案2缩放宏功能', '图案缩放宏功能', sl534Macro8), channel('图案2水平翻转宏功能', '图案水平翻转宏功能', sl534Macro8), channel('图案2垂直翻转宏功能', '图案垂直翻转宏功能', sl534Macro8), channel('扫描速度', '扫描速度')]
+const sl534FiftyThree = mode(53, [...sl534Single27, ...sl534DoubleExtra])
+const sl534TwentySeven = mode(27, sl534Single27)
+const sl534TwentyEightMode = mode(28, sl534TwentyEight)
+
+const sm3601Strobe = [range('0-7', '闭光'), range('8-15', '开光'), range('16-131', '频闪，由慢到快'), range('132-139', '开光'), range('140-181', '慢开快关，由慢到快'), range('182-189', '开光'), range('190-231', '快开慢关，由慢到快'), range('232-239', '开光'), range('240-247', '随机频闪，由慢到快'), range('248-255', '开光')]
+const sm3601Special = [range('0-29', '无'), range('30-39', '调光曲线：线性'), range('40-49', '调光曲线：平方率'), range('50-59', '调光曲线：反平方率'), range('60-69', '调光曲线：S曲线'), range('70-139', '无'), range('140-149', 'Y轴复位'), range('150-159', '头部电机复位'), range('160-199', '无'), range('200-209', '所有电机复位'), range('210-219', '调光速度：快速'), range('220-229', '调光速度：平滑'), range('230-255', '无')]
+const sm3601Effect = [range('0-7', '无'), ...repeat(23, (n) => range(`${8 + (n - 1) * 8}-${15 + (n - 1) * 8}`, `效果${n}`)), range('192-255', '无')]
+const sm3601Color = [range('0-7', '无'), range('8-255', '内置颜色选择')]
+const sm3601Temp = [range('0-67', '无'), range('68-247', '6500K-2600K线性色温调节'), range('248-255', '无')]
+const sm3601Speed = [range('0-127', '由慢到快（无淡出效果）'), range('128-255', '由慢到快（淡出效果）')]
+const sm3601Base = [linear('Y轴', '0-270度'), linear('Y轴微调', '16bit可调'), linear('调焦', '由宽变窄线性调节'), linear('调光', '从暗到亮进行线性调光'), channel('主灯频闪', '主灯频闪', sm3601Strobe), channel('频闪白光频闪', '频闪白光频闪', sm3601Strobe), channel('频闪彩光频闪', '频闪彩光频闪', sm3601Strobe), channel('特殊功能', '特殊功能', sm3601Special)]
+const sm3601MainPixel = (start, count, prefix = '主灯') => repeat(count, (n) => [linear(`${prefix}红色${n}`, '红色从暗到亮进行线性调光'), linear(`${prefix}绿色${n}`, '绿色从暗到亮进行线性调光'), linear(`${prefix}蓝色${n}`, '蓝色从暗到亮进行线性调光'), linear(`${prefix}白色${n}`, '白色从暗到亮进行线性调光')]).flat()
+const sm3601WhitePixel = (count) => repeat(count, (n) => [linear(`频闪灯冷白${n}`, '冷白从暗到亮进行线性调光'), linear(`频闪灯暖白${n}`, '暖白从暗到亮进行线性调光')]).flat()
+const sm3601ColorPixel = (count) => repeat(count, (n) => [linear(`频闪灯红色${n}`, '红色从暗到亮进行线性调光'), linear(`频闪灯绿色${n}`, '绿色从暗到亮进行线性调光'), linear(`频闪灯蓝色${n}`, '蓝色从暗到亮进行线性调光')]).flat()
+const sm3601Normal17 = mode(17, [...sm3601Base, linear('主灯红色', '红色从暗到亮进行线性调光'), linear('主灯绿色', '绿色从暗到亮进行线性调光'), linear('主灯蓝色', '蓝色从暗到亮进行线性调光'), linear('主灯白色', '白色从暗到亮进行线性调光'), channel('主灯色温', '主灯色温', [range('0', '无'), range('1-255', '8000K-2500K线性色温调节')]), channel('主灯颜色', '主灯颜色', [range('0-7', '无'), range('8-255', '内置颜色选择')]), channel('主灯内置效果', '主灯内置效果', sm3601Effect), channel('主灯效果速度', '主灯效果速度', sm3601Speed), channel('频闪白光色温', '频闪白光色温', sm3601Temp)])
+const sm3601Normal27 = mode(27, [...sm3601Normal17.channels.map(({ channel: ignored, ...definition }) => definition), linear('频闪灯冷白', '冷白从暗到亮进行线性调光'), linear('频闪灯暖白', '暖白从暗到亮进行线性调光'), channel('频闪白光内置效果', '频闪白光内置效果', sm3601Effect), channel('频闪白光效果速度', '频闪白光效果速度', sm3601Speed), linear('频闪灯红色', '红色从暗到亮进行线性调光'), linear('频闪灯绿色', '绿色从暗到亮进行线性调光'), linear('频闪灯蓝色', '蓝色从暗到亮进行线性调光'), channel('频闪彩光颜色', '频闪彩光颜色', sm3601Color), channel('频闪彩光内置效果', '频闪彩光内置效果', sm3601Effect), channel('频闪彩光效果速度', '频闪彩光效果速度', sm3601Speed)])
+const sm3601Large = (count, whiteCount, colorCount) => [...sm3601Base, ...sm3601MainPixel(9, 10), ...sm3601WhitePixel(whiteCount), ...sm3601ColorPixel(colorCount)]
+const sm3601Mode99 = mode(99, sm3601Large(99, 24, 1))
+const sm3601Mode108 = mode(108, sm3601Large(108, 12, 12))
+const sm3601Mode168 = mode(168, sm3601Large(168, 24, 24))
+const sm3601Mode170 = mode(170, [linear('Y轴', '0-270度'), linear('Y轴微调', '16bit可调'), linear('调焦', '由宽变窄线性调节'), linear('主灯调光', '从暗到亮进行线性调光'), linear('频闪白光调光', '从暗到亮进行线性调光'), linear('频闪彩光调光', '从暗到亮进行线性调光'), channel('主灯频闪', '主灯频闪', sm3601Strobe), channel('频闪白光频闪', '频闪白光频闪', sm3601Strobe), channel('频闪彩光频闪', '频闪彩光频闪', sm3601Strobe), channel('特殊功能', '特殊功能', sm3601Special), ...sm3601MainPixel(11, 10), ...sm3601WhitePixel(24), ...sm3601ColorPixel(24)])
+
+const sm9002Strobe = [range('0-10', '关'), range('11-21', '开'), range('22-62', '频闪，由慢到快'), range('63-73', '开'), range('74-114', '快开慢关，由慢到快'), range('115-125', '开'), range('126-166', '快关慢开，由慢到快'), range('167-177', '开'), range('178-218', '随机频闪'), range('219-255', '开')]
+const sm9002ColorMacro = [range('0-10', '无功能'), ...repeat(15, (n) => range(`${11 + (n - 1) * 6}-${16 + (n - 1) * 6}`, `颜色${n}`)), ...repeat(25, (n) => range(`${101 + (n - 1) * 6}-${n === 25 ? 250 : 106 + (n - 1) * 6}`, `自走效果${n}`)), range('251-255', '自走效果26')]
+const sm9002AuxMacro = [range('0-10', '无功能'), ...repeat(24, (n) => range(`${11 + (n - 1) * 10}-${20 + (n - 1) * 10}`, `自走效果${n}`)), range('251-255', '自走效果25')]
+const sm9002Macro = [range('0-10', '无功能'), range('11-21', '无功能'), range('22-27', '无功能'), range('28-33', '无功能'), range('34-42', '无功能'), range('43-48', '平方曲线'), range('49-54', '反曲线'), range('55-60', '线性曲线'), range('61-66', 'S型曲线'), range('67-72', '散热模式：标准'), range('73-78', '散热模式：低速'), range('79-84', '散热模式：静音'), range('85-105', '无功能'), range('106-111', '无功能'), range('112-117', '无功能'), range('118-123', '全部复位'), range('124-129', '灯头电机复位'), range('130-135', 'XY轴电机复位'), range('136-145', '无功能'), range('146-151', '无功能'), range('152-157', '无功能'), range('158-163', '无功能'), range('164-184', '无功能'), range('185-190', '无功能'), range('191-199', '无功能'), range('200-210', '无功能'), range('211-255', '无功能')]
+const sm9002Base25 = [linear('X轴', '保留/未定义'), linear('X轴微调', '保留/未定义'), linear('Y轴', '保留/未定义'), linear('Y轴微调', '保留/未定义'), linear('XY轴速度', '速度快到慢'), linear('总调光', '暗到亮'), channel('频闪', '频闪', sm9002Strobe)]
+const sm9002Common25 = [...sm9002Base25, linear('红色', '暗到亮'), linear('绿色', '暗到亮'), linear('蓝色', '暗到亮'), linear('琥珀色', '暗到亮'), linear('青色', '暗到亮'), linear('柠檬黄色', '暗到亮'), channel('色温', '色温', [range('0-10', '无功能'), range('11-255', '色温由低到高')]), channel('颜色宏和自走', '颜色宏和自走', sm9002ColorMacro), linear('自走速度', '由慢到快'), linear('辅光总调', '暗到亮'), linear('辅光红色', '暗到亮'), linear('辅光绿色', '暗到亮'), linear('辅光蓝色', '暗到亮'), channel('辅光颜色自走', '辅光颜色自走', sm9002AuxMacro), linear('辅光自走速度', '由慢到快'), linear('放大', '保留/未定义'), linear('放大微调', '保留/未定义'), channel('宏功能', '宏功能', sm9002Macro)]
+const sm9002Mode25 = mode(25, sm9002Common25)
+const sm9002Mode61 = mode(61, [...sm9002Base25, ...repeat(7, (n) => [linear(`红色${n}`, '暗到亮'), linear(`绿色${n}`, '暗到亮'), linear(`蓝色${n}`, '暗到亮'), linear(`琥珀色${n}`, '暗到亮'), linear(`青色${n}`, '暗到亮'), linear(`柠檬黄色${n}`, '暗到亮')]).flat(), channel('色温', '色温', [range('0-10', '无功能'), range('11-255', '色温由低到高')]), channel('颜色宏和自走', '颜色宏和自走', sm9002ColorMacro), linear('自走速度', '由慢到快'), linear('辅光总调', '暗到亮'), linear('辅光红色', '暗到亮'), linear('辅光绿色', '暗到亮'), linear('辅光蓝色', '暗到亮'), channel('辅光颜色自走', '辅光颜色自走', sm9002AuxMacro), linear('辅光自走速度', '由慢到快'), linear('放大', '保留/未定义'), linear('放大微调', '保留/未定义'), channel('宏功能', '宏功能', sm9002Macro)])
+
+const sv3106Prism = [range('0-31', '无'), range('32-249', '插入棱镜'), range('250-255', '棱镜自转')]
+const sv3106Strobe = [range('0-25', '默认功能'), range('26-57', '随机频闪效果'), range('58-89', '频闪收光模式'), range('90-121', '频闪出光模式'), range('122-153', '频闪收光到出光模式'), range('154-209', '频闪效果5秒到1秒'), range('210-255', '频闪效果1Hz-20Hz由慢到快')]
+const sv3106Pattern = [range('0-9', '白光'), ...repeat(10, (n) => range(`${10 + (n - 1) * 10}-${19 + (n - 1) * 10}`, `图案${n}`)), range('110-255', '自动图案切换由慢到快')]
+const sv3106Color = [range('0-9', '颜色1白'), range('10-19', '颜色2 红'), range('20-29', '颜色3 橙'), range('30-39', '颜色4 黄'), range('40-49', '颜色5绿'), range('50-59', '颜色6 冰蓝'), range('60-69', '颜色7深蓝'), range('70-79', '颜色8紫'), range('80-89', '颜色9深橙'), range('90-255', '自动颜色切换由慢到快')]
+const sv3106Auto = [range('0-7', '无功能'), range('8-230', '每20个数值1个自走效果，共11个'), range('231-240', '声控效果1'), range('241-251', '声控效果2'), range('252-255', '声控效果3')]
+const sv3106BandEffect = [range('0-15', '无效果'), range('16-255', '每8个数值换一种效果（每个数值一种颜色）')]
+const sv3106BandSpeed = [range('0-127', '由快到慢正向流水'), range('128-255', '由慢到快反向流水')]
+const sv3106Reset = [range('0-200', '无'), range('201-240', '全部复位'), range('241-255', '无')]
+const sv3106Standard = mode(21, [linear('X轴', 'X轴电机0-540°'), linear('X轴微调', 'X轴电机0-2°'), linear('Y轴', 'Y轴电机0-195°'), linear('Y轴微调', 'Y轴电机0-1°'), linear('XY电机速度', '保留/未定义'), channel('棱镜', '棱镜', sv3106Prism), linear('棱镜1自转', '由快到慢'), channel('频闪', '频闪', sv3106Strobe), linear('图案灯珠调光', '0-100%'), channel('图案选择', '图案选择', sv3106Pattern), channel('颜色', '颜色', sv3106Color), linear('雾化', '雾化0-100%'), channel('宏功能', '宏功能', sv3106Auto), linear('内置模式速度和声控灵敏度', '保留/未定义'), linear('灯带调光', '0-100%调光 灯带调光'), linear('灯带.R', '0-100%调光 灯带.R'), linear('灯带.G', '0-100%调光 灯带.G'), linear('灯带.B', '0-100%调光 灯带.B'), channel('灯带效果', '灯带效果', sv3106BandEffect), channel('灯带效果速度', '灯带效果速度', sv3106BandSpeed), channel('复位', '复位', sv3106Reset)])
+const sv3106Compact = mode(19, [linear('X轴', 'X轴电机0-540°'), linear('Y轴', 'Y轴电机0-195°'), linear('XY电机速度', '保留/未定义'), channel('棱镜', '棱镜', sv3106Prism), linear('棱镜1自转', '由快到慢'), channel('频闪', '频闪', sv3106Strobe), linear('图案灯珠调光', '0-100%'), channel('图案选择', '图案选择', sv3106Pattern), channel('颜色', '颜色', sv3106Color), linear('雾化', '雾化0-100%'), channel('宏功能', '宏功能', sv3106Auto), linear('内置模式速度和声控灵敏度', '保留/未定义'), linear('灯带调光', '0-100%调光 灯带调光'), linear('灯带.R', '0-100%调光 灯带.R'), linear('灯带.G', '0-100%调光 灯带.G'), linear('灯带.B', '0-100%调光 灯带.B'), channel('灯带效果', '灯带效果', sv3106BandEffect), channel('灯带效果速度', '灯带效果速度', sv3106BandSpeed), channel('复位', '复位', sv3106Reset)])
+
+const sv6302Strobe = sm3601Strobe
+const sv6302Effect = [range('0-4', '无效'), ...repeat(50, (n) => range(`${5 + (n - 1) * 5}-${n === 50 ? 255 : 9 + (n - 1) * 5}`, `效果${n}`))]
+const sv6302Color = [range('0-7', '无'), range('8-255', '内置颜色选择')]
+const sv6302WhiteEffect = [range('0-7', '无'), ...repeat(23, (n) => range(`${8 + (n - 1) * 8}-${15 + (n - 1) * 8}`, `效果${n}`)), range('192-255', '无')]
+const sv6302WhiteTemp = sm3601Temp
+const sv6302Reset = [range('0-239', '无效'), range('240-255', '全部复位')]
+const sv6302Mode28 = mode(28, [linear('Y轴', '0-270度'), linear('Y轴微调', '0-1度'), linear('调焦', '由远到近'), linear('Y轴速度', '由快到慢'), linear('总调光', '0-100%调光'), channel('主灯频闪', '主灯频闪', sv6302Strobe), channel('频闪白光频闪', '频闪白光频闪', sv6302Strobe), channel('频闪彩光频闪', '频闪彩光频闪', sv6302Strobe), linear('主灯红色', '0-100%红色调光'), linear('主灯绿色', '0-100%绿色调光'), linear('主灯蓝色', '0-100%蓝色调光'), linear('主灯白色', '0-100%白色调光'), channel('主灯色温', '主灯色温', [range('0', '无'), range('1-255', '8000K-2500K线性色温调节')]), channel('主灯颜色', '主灯颜色', sv6302Color), channel('效果', '效果', sv6302Effect), channel('速度', '速度', [range('0-127', '正向跑动速度由慢到快'), range('128-255', '反向跑动速度由慢到快')]), linear('频闪灯冷白', '冷白从暗到亮进行线性调光'), linear('频闪灯暖白', '暖白从暗到亮进行线性调光'), channel('频闪白光色温', '频闪白光色温', sv6302WhiteTemp), channel('频闪白光内置效果', '频闪白光内置效果', sv6302WhiteEffect), channel('频闪白光效果速度', '频闪白光效果速度', [range('0-127', '由慢到快（无淡出效果）'), range('128-255', '由慢到快（淡出效果）')]), linear('频闪灯红色', '红色从暗到亮进行线性调光'), linear('频闪灯绿色', '绿色从暗到亮进行线性调光'), linear('频闪灯蓝色', '蓝色从暗到亮进行线性调光'), channel('频闪彩光颜色', '频闪彩光颜色', sv6302Color), channel('频闪彩光内置效果', '频闪彩光内置效果', sv6302WhiteEffect), channel('频闪彩光效果速度', '频闪彩光效果速度', [range('0-127', '由慢到快（无淡出效果）'), range('128-255', '由慢到快（淡出效果）')]), channel('复位', '复位', sv6302Reset)])
+const sv6302Pixel = repeat(12, (n) => [linear(`LED${n}-R`, `LED${n}红色调光从暗到亮`), linear(`LED${n}-G`, `LED${n}绿色调光从暗到亮`), linear(`LED${n}-B`, `LED${n}蓝色调光从暗到亮`), linear(`LED${n}-W`, `LED${n}白色调光从暗到亮`)]).flat()
+const sv6302Mode67 = mode(67, [linear('Y轴', '0-270度'), linear('Y轴微调', '0-1度'), linear('Y轴速度', '由快到慢'), linear('调焦', '由远到近'), linear('总调光', '0-100%调光'), channel('主灯频闪', '主灯频闪', sv6302Strobe), channel('频闪白光频闪', '频闪白光频闪', sv6302Strobe), channel('频闪彩光频闪', '频闪彩光频闪', sv6302Strobe), ...sv6302Pixel, linear('频闪灯冷白', '冷白从暗到亮进行线性调光'), linear('频闪灯暖白', '暖白从暗到亮进行线性调光'), channel('频闪白光色温', '频闪白光色温', sv6302WhiteTemp), channel('频闪白光内置效果', '频闪白光内置效果', sv6302WhiteEffect), channel('频闪白光效果速度', '频闪白光效果速度', [range('0-127', '由慢到快（无淡出效果）'), range('128-255', '由慢到快（淡出效果）')]), linear('频闪灯红色', '红色从暗到亮进行线性调光'), linear('频闪灯绿色', '绿色从暗到亮进行线性调光'), linear('频闪灯蓝色', '蓝色从暗到亮进行线性调光'), channel('频闪彩光颜色', '频闪彩光颜色', sv6302Color), channel('频闪彩光内置效果', '频闪彩光内置效果', sv6302WhiteEffect), channel('频闪彩光效果速度', '频闪彩光效果速度', [range('0-127', '由慢到快（无淡出效果）'), range('128-255', '由慢到快（淡出效果）')])])
+
+const stageLightingChannelProfilesFinalB = {
+  'TL-SK9401': profile('TL-SK9401', 'itc产品说明书 TL-SK9401-UM-CN@V20241030.pdf', [9, 10, 11, 12, 13, 14, 15, 16, 17], 'PDF第9–17页', [skHsic, skPixel1, skSsp, skTour, skPixel2, skTour16]),
+  'TL-SL193': profile('TL-SL193', 'TL-SL193-UM-CN.pdf', [6, 7, 8], 'PDF第6–8页', [sl193ThirtyEight, sl193Fifteen]),
+  'TL-SL3101': profile('TL-SL3101', 'itc产品说明书 TL-SL3101-UM-CN@V20250719.pdf', [8, 9, 10], 'PDF第8–10页', [sl3101Seven, sl3101Sixteen]),
+  'TL-SL534': profile('TL-SL534', 'itc产品说明书 TL-SL534-UM-CN@V20241119.pdf', [15, 16, 17, 18, 19, 20, 21, 22], 'PDF第15–22页', [sl534Five, sl534Seventeen, sl534Eighteen, sl534TwentySeven, sl534TwentyEightMode, sl534FiftyThree]),
+  'TL-SL612': profile('TL-SL612', 'itc产品说明书 TL-SL612-UM-CN@V20241207.pdf', [3], 'PDF第3页', [mode(4, [channel('总通道', '总通道', [range('0-199', '总通道关'), range('200-255', '总通道开')]), linear('烟雾量', '烟雾量'), linear('风量', '风量'), channel('保留', '保留/未定义')])]),
+  'TL-SM3601': profile('TL-SM3601', 'itc产品说明书 TL-SM3601-UM-CN@V20240925.pdf', [11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21], 'PDF第11–21页', [sm3601Normal17, sm3601Normal27, sm3601Mode99, sm3601Mode108, sm3601Mode168, sm3601Mode170]),
+  'TL-SM9002': profile('TL-SM9002', 'itc产品说明书 TL-SM9002-UM-CN@V20250719.pdf', [14, 15, 16, 17], 'PDF第14–17页', [sm9002Mode25, sm9002Mode61]),
+  'TL-SV3106': profile('TL-SV3106', 'itc产品说明书 TL-SV3106-UM-CN.pdf', [8, 9, 10, 11], 'PDF第8–11页', [sv3106Compact, sv3106Standard]),
+  'TL-SV6302': profile('TL-SV6302', 'itc产品说明书 TL-SV6302-UM-CN.pdf', [11, 12, 13, 14, 15], 'PDF第11–15页', [sv6302Mode28, sv6302Mode67]),
+}
+
+module.exports = { stageLightingChannelProfilesFinalB }

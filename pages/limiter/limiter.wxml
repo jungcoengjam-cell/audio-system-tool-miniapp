@@ -1,0 +1,191 @@
+<view class="page-root">
+<scroll-view class="page-scroll" scroll-y>
+  <view class="page-content">
+    <view class="page-header">
+      <view class="page-title">限幅器</view>
+      <view class="calibration-chip">0 dBFS = +18.4 dBu</view>
+    </view>
+
+    <view class="section-label">设备与连接</view>
+    <view class="card settings-card">
+
+      <view class="field-grid equipment-grid">
+        <view class="field field-half">
+          <view class="field-label">功放</view>
+          <view class="picker-value equipment-value" data-type="amplifier" bindtap="openEquipmentSelector">
+            <view class="equipment-model">{{selectedAmplifier.model}}</view>
+            <text class="picker-arrow">›</text>
+          </view>
+        </view>
+        <view class="field field-half">
+          <view class="field-label">音箱</view>
+          <view class="picker-value equipment-value" data-type="speaker" bindtap="openEquipmentSelector">
+            <view class="equipment-model">{{selectedSpeaker.model}}</view>
+            <text class="picker-arrow">›</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="field-grid compact-grid">
+        <view class="field field-half">
+          <view class="field-label">每通道音箱数量</view>
+          <picker range="{{counts}}" value="{{countIndex}}" data-field="countIndex" bindchange="onPickerChange">
+            <view class="picker-value">{{counts[countIndex]}} 只<text class="picker-arrow">›</text></view>
+          </picker>
+        </view>
+        <view wx:if="{{showWiring}}" class="field field-half">
+          <view class="field-label">连接方式</view>
+          <picker range="{{wirings}}" range-key="label" value="{{wiringIndex}}" data-field="wiringIndex" bindchange="onPickerChange">
+            <view class="picker-value">{{wirings[wiringIndex].label}}<text class="picker-arrow">›</text></view>
+          </picker>
+        </view>
+      </view>
+
+      <view class="field-grid compact-grid parameter-grid">
+        <view class="field field-half">
+          <view class="field-label">功放模式</view>
+          <picker range="{{modes}}" range-key="label" value="{{modeIndex}}" data-field="modeIndex" bindchange="onPickerChange">
+            <view class="picker-value">{{modes[modeIndex].label}}<text class="picker-arrow">›</text></view>
+          </picker>
+        </view>
+        <view class="field field-half">
+          <view class="field-label">输入灵敏度</view>
+          <picker range="{{sensitivities}}" range-key="label" value="{{sensitivityIndex}}" data-field="sensitivityIndex" bindchange="onPickerChange">
+            <view class="picker-value">{{sensitivities[sensitivityIndex].label}}<text class="picker-arrow">›</text></view>
+          </picker>
+        </view>
+        <view class="field field-half">
+          <view class="field-label">HPF</view>
+          <picker range="{{highPassFrequencies}}" range-key="label" value="{{highPassFrequencyIndex}}" data-field="highPassFrequencyIndex" bindchange="onPickerChange">
+            <view class="picker-value">{{highPassFrequencies[highPassFrequencyIndex].label}}<text class="picker-arrow">›</text></view>
+          </picker>
+        </view>
+      </view>
+    </view>
+
+    <view wx:if="{{result && result.valid}}" class="result-card">
+      <view class="result-heading">
+        <view>
+          <view class="result-label">限幅阈值</view>
+          <view class="threshold">{{result.thresholdDbfs}}<text class="threshold-unit"> dBFS</text></view>
+        </view>
+        <view class="status-chip">负载匹配</view>
+      </view>
+
+      <view class="result-grid">
+        <view class="metric">
+          <view class="metric-value">{{result.loadImpedance}} Ω</view>
+          <view class="metric-label">总阻抗</view>
+        </view>
+        <view class="metric">
+          <view class="metric-value">{{result.totalRatedPower}} W</view>
+          <view class="metric-label">音箱总额定功率</view>
+        </view>
+        <view class="metric">
+          <view class="metric-value">{{result.targetOutputVoltage}} V</view>
+          <view class="metric-label">目标输出电压</view>
+        </view>
+        <view class="metric">
+          <view class="metric-value">{{result.limiterInputDbu}} dBu</view>
+          <view class="metric-label">DSP模拟输出</view>
+        </view>
+      </view>
+
+      <view class="result-note">{{result.statusText}}</view>
+
+      <view wx:if="{{result.timingReady}}" class="result-timing">
+        <view class="result-timing-heading">
+          <view class="result-timing-title">保护时间</view>
+          <view class="result-timing-band">{{result.timingBand}}</view>
+        </view>
+        <view class="result-time-grid">
+          <view class="result-time-item">
+            <view class="result-time-label">建立时间</view>
+            <view class="result-time-value">{{result.attackTimeMs}}<text> ms</text></view>
+          </view>
+          <view class="result-time-item">
+            <view class="result-time-label">释放时间</view>
+            <view class="result-time-value">{{result.releaseTimeMs}}<text> ms</text></view>
+          </view>
+        </view>
+        <view class="result-time-source">按 HPF {{result.highPassFrequency}} Hz 推荐 · Release = Attack × 16</view>
+      </view>
+    </view>
+
+      <view wx:elif="{{result}}" class="warning-card">
+        <view class="warning-title">暂时无法计算</view>
+        <view class="warning-text">{{result.warning}}</view>
+        <view class="warning-guide">请核对数量、连接方式与功放模式。</view>
+        <view wx:if="{{result.loadImpedance}}" class="warning-data">当前总阻抗：{{result.loadImpedance}} Ω</view>
+    </view>
+
+    <view wx:if="{{result && result.valid}}" class="utility-action-row">
+      <view class="result-output-actions">
+        <button class="result-image-button" disabled="{{isGeneratingResultReport}}" bindtap="generateResultReportImage">{{isGeneratingResultReport ? '正在生成…' : '生成结果图片'}}</button>
+        <button class="copy-result-button" bindtap="copyResult">复制文字</button>
+      </view>
+      <view class="result-record-actions">
+        <button class="result-record-button {{currentFavorite ? 'result-record-button-active' : ''}}" bindtap="toggleCurrentFavorite">{{currentFavorite ? '★ 已收藏' : '☆ 收藏常用'}}</button>
+        <button class="result-record-button" bindtap="saveToActiveProject">加入当前项目</button>
+      </view>
+    </view>
+
+  </view>
+
+  <view wx:if="{{selectorVisible}}" class="selector-mask" catchtap="closeEquipmentSelector">
+    <view class="selector-panel" catchtap="stopTap">
+      <view class="selector-header">
+        <view class="selector-title">{{selectorTitle}}</view>
+        <view class="selector-close" catchtap="closeEquipmentSelector">×</view>
+      </view>
+
+      <input
+        class="selector-search"
+        value="{{selectorKeyword}}"
+        placeholder="输入型号关键词，例如 TC-X、TS-803"
+        confirm-type="search"
+        bindinput="onSelectorInput"
+      />
+
+      <scroll-view class="category-scroll" scroll-x>
+        <view class="category-list">
+          <view
+            wx:for="{{selectorCategories}}"
+            wx:key="label"
+            class="category-chip {{index == selectorCategoryIndex ? 'category-chip-active' : ''}}"
+            data-index="{{index}}"
+            catchtap="onSelectorCategoryTap"
+          >{{item.label}}</view>
+        </view>
+      </scroll-view>
+
+      <view class="selector-count">匹配 {{selectorTotalCount}} 个型号</view>
+
+      <scroll-view class="selector-list" scroll-y bindscrolltolower="appendSelectorItems">
+        <view
+          wx:for="{{selectorItems}}"
+          wx:key="model"
+          class="selector-row"
+          data-index="{{item.index}}"
+          catchtap="selectEquipment"
+        >
+          <view class="selector-row-copy">
+            <view class="selector-model">{{item.model}}</view>
+            <view class="selector-meta">{{item.category}}</view>
+          </view>
+          <view class="selector-row-actions">
+            <button class="selector-detail" data-model="{{item.model}}" catchtap="openEquipmentDetail">资料</button>
+            <view class="selector-row-arrow">›</view>
+          </view>
+        </view>
+
+        <view wx:if="{{selectorItems.length == 0}}" class="selector-empty">
+          没有匹配型号，请换一个关键词或选择“全部”分类。
+        </view>
+      </scroll-view>
+    </view>
+  </view>
+</scroll-view>
+
+<include src="../../templates/result-report-preview.wxml" />
+</view>

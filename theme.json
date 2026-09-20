@@ -1,0 +1,36 @@
+{
+  "light": {
+    "navBgColor": "#f2f2f7",
+    "navTextColor": "black",
+    "bgTextStyle": "dark",
+    "pageBgColor": "#f2f2f7",
+    "pageTextColor": "#1d1d1f",
+    "tabBgColor": "#ffffff",
+    "tabTextColor": "#636366",
+    "tabSelectedColor": "#0066cc",
+    "tabBorderColor": "black",
+    "exploreIcon": "assets/tabbar/explore.png",
+    "exploreSelectedIcon": "assets/tabbar/explore-selected.png",
+    "toolsIcon": "assets/tabbar/tools.png",
+    "toolsSelectedIcon": "assets/tabbar/tools-selected.png",
+    "projectsIcon": "assets/tabbar/projects.png",
+    "projectsSelectedIcon": "assets/tabbar/projects-selected.png"
+  },
+  "dark": {
+    "navBgColor": "#1c1c1e",
+    "navTextColor": "white",
+    "bgTextStyle": "light",
+    "exploreIcon": "assets/tabbar/explore.png",
+    "exploreSelectedIcon": "assets/tabbar/explore-selected.png",
+    "toolsIcon": "assets/tabbar/tools.png",
+    "toolsSelectedIcon": "assets/tabbar/tools-selected.png",
+    "projectsIcon": "assets/tabbar/projects.png",
+    "projectsSelectedIcon": "assets/tabbar/projects-selected.png",
+    "pageBgColor": "#000000",
+    "pageTextColor": "#ffffff",
+    "tabBgColor": "#1c1c1e",
+    "tabTextColor": "#aeaeb2",
+    "tabSelectedColor": "#0a84ff",
+    "tabBorderColor": "white"
+  }
+}

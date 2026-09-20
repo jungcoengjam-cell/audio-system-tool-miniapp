@@ -1,0 +1,49 @@
+<scroll-view class="ts-scroll" scroll-y scroll-top="{{scrollTop}}">
+  <view class="ts-page">
+    <view wx:if="{{invalid}}" class="ts-error">
+      <view class="ts-error-title">暂时无法识别这类问题</view>
+      <view class="ts-error-text">请从探索页重新选择现场问题。</view>
+      <navigator class="ts-back" open-type="switchTab" url="/pages/index/index">返回探索</navigator>
+    </view>
+    <block wx:else>
+      <view class="ts-title">{{title}}</view>
+      <view wx:if="{{result}}" class="ts-result">
+        <view class="ts-result-title">建议先检查</view>
+        <view class="ts-action">{{result.action}}</view>
+        <view wx:for="{{result.checks}}" wx:key="*this" class="ts-check"><text class="ts-check-mark">{{index + 1}}</text><text>{{item}}</text></view>
+        <button wx:if="{{result.tool}}" class="ts-tool" bindtap="openTool">打开灯具地址码</button>
+        <view wx:if="{{result.feedbackEnabled}}" class="ts-feedback">
+          <view class="ts-feedback-title">核对后的情况</view>
+          <view class="ts-feedback-actions">
+            <button class="ts-feedback-button {{feedback === 'restored' ? 'ts-feedback-selected' : ''}}" data-node="{{node}}" data-state="restored" bindtap="feedback">已恢复</button>
+            <button class="ts-feedback-button {{feedback === 'ongoing' ? 'ts-feedback-selected' : ''}}" data-node="{{node}}" data-state="ongoing" bindtap="feedback">仍异常</button>
+          </view>
+          <view wx:if="{{feedback === 'restored'}}" class="ts-feedback-note">你已确认恢复。请按现场流程复核相关设备。</view>
+          <view wx:if="{{feedback === 'ongoing'}}" class="ts-feedback-note">当前流程暂不能确定故障点，请保留现有设置，记录型号、异常范围与面板提示，联系现场维护人员。</view>
+        </view>
+        <button class="ts-path-toggle" data-node="{{node}}" bindtap="togglePath">
+          <text>排查路径 · {{history.length}}项</text><text>{{pathExpanded ? '收起' : '展开'}} ›</text>
+        </button>
+        <view wx:if="{{pathExpanded}}" class="ts-path-list">
+          <button wx:for="{{history}}" wx:key="id" class="ts-path-row" data-node="{{node}}" data-step="{{index}}" bindtap="editStep">
+            <view class="ts-path-question">{{index + 1}}. {{item.question}}</view>
+            <view class="ts-path-answer">答案：{{item.label}}</view>
+            <text class="ts-edit-label">修改 ›</text>
+          </button>
+        </view>
+      </view>
+      <view wx:else>
+        <view class="ts-step">第{{step}}步 · {{category}}</view>
+        <view class="ts-card">
+          <view class="ts-question">{{question}}</view>
+          <view wx:if="{{hint}}" class="ts-hint">{{hint}}</view>
+        </view>
+        <button wx:for="{{options}}" wx:key="index" class="ts-option {{item.selected ? 'ts-option-selected' : ''}}" data-node="{{node}}" data-index="{{index}}" bindtap="answer">
+          <text>{{item.label}}</text><text wx:if="{{item.selected}}" class="ts-selected-label">上次选择</text><text wx:else class="ts-arrow">›</text>
+        </button>
+      </view>
+      <view wx:if="{{history.length}}" class="ts-actions"><button class="ts-action-button" bindtap="back">返回上一步</button><button class="ts-action-button" bindtap="restart">重新开始</button></view>
+      <view class="ts-safe">仅引导观察；接线前静音并断开相关设备电源，不拆机。</view>
+    </block>
+  </view>
+</scroll-view>

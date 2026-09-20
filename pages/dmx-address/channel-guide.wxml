@@ -1,0 +1,30 @@
+<scroll-view class="page" scroll-y enhanced show-scrollbar="{{false}}">
+  <view class="content">
+    <view wx:if="{{guide}}" class="hero">
+      <view class="title">{{model}}</view>
+      <view wx:if="{{productName}}" class="product-name">{{productName}}</view>
+      <view class="meta">{{guide.source}} · {{guide.sourcePageText}} · {{guide.verificationStatus}}</view>
+    </view>
+
+    <view wx:if="{{guide}}" class="card">
+      <view class="section-title">通道模式</view>
+      <view class="modes">
+        <view wx:for="{{guide.modes}}" wx:key="channelCount" class="mode {{item.selected ? 'mode-active' : ''}}" data-channel-count="{{item.channelCount}}" bindtap="switchMode">{{item.label}}</view>
+      </view>
+      <view class="channel-list">
+        <view wx:for="{{guide.channels}}" wx:key="channel" class="channel">
+          <text class="channel-number">CH{{item.channel}}</text>
+          <text class="channel-name">{{item.name}}</text>
+          <view class="range-list">
+            <block wx:if="{{item.ranges.length}}">
+              <view wx:for="{{item.ranges}}" wx:for-item="range" wx:key="range" class="range"><text>{{range.range}}</text><text>{{range.description}}</text></view>
+            </block>
+            <text wx:else class="range-empty">{{item.summary || '—'}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view wx:else class="empty">暂无已核对的逐通道资料</view>
+  </view>
+</scroll-view>

@@ -1,0 +1,137 @@
+<scroll-view class="knowledge-scroll" scroll-y enhanced show-scrollbar="{{false}}" wx:if="{{article}}">
+  <view class="knowledge-content">
+    <view class="article-hero">
+      <image class="article-hero-image" src="{{article.image}}" mode="aspectFill" aria-label="{{article.title}}配图" />
+      <view class="article-hero-shade"></view>
+      <view class="article-hero-copy">
+        <view class="article-tag">{{article.tag}}</view>
+        <view class="article-title">{{article.title}}</view>
+      </view>
+    </view>
+
+    <view class="article-lead">{{article.intro}}</view>
+
+    <view wx:if="{{article.visualConclusionLead && article.visualConclusion}}" class="article-principle-note">
+      <text class="article-principle-note-lead">先记住这一点</text>
+      <text class="article-principle-note-main">{{article.visualConclusionLead}}</text>
+      <text class="article-principle-note-value">{{article.visualConclusion}}</text>
+    </view>
+
+    <view
+      wx:if="{{article.visualType}}"
+      class="distance-visual-card principle-visual-card principle-visual-{{article.visualType}} {{principleAnimationActive ? 'principle-animation-active' : ''}}"
+      aria-label="{{article.visualTitle}}动画图解"
+    >
+      <view class="distance-visual-kicker">动画图解</view>
+      <view class="distance-visual-title">{{demo ? demo.title : article.visualTitle}}</view>
+
+      <view wx:if="{{demo}}" class="demo-card">
+        <view class="demo-card-note">{{demo.note}}</view>
+        <include src="./demo-scenes.wxml" />
+        <view class="demo-caption">{{demoFrame.caption}}</view>
+        <view class="demo-steps">
+          <button wx:for="{{demo.steps}}" wx:key="label" data-index="{{index}}" bindtap="selectDemoStep" class="demo-step {{demoIndex === index ? 'demo-step-active' : ''}}">{{item.label}}</button>
+        </view>
+      </view>
+
+      <view wx:if="{{article.visualType === 'fill'}}" class="fill-scene">
+        <view class="fill-front-label">主扩安装面</view>
+        <view class="fill-main-field" aria-hidden="true"></view>
+        <view class="fill-source fill-source-main-left">M</view>
+        <view class="fill-source fill-source-main-right">M</view>
+        <view class="fill-handoff-zone">接力区</view>
+        <view class="fill-support-field" aria-hidden="true"></view>
+        <view class="fill-source fill-source-support-left">F</view>
+        <view class="fill-source fill-source-support-right">F</view>
+        <view class="fill-listener fill-listener-one"></view>
+        <view class="fill-listener fill-listener-two"></view>
+        <view class="fill-listener fill-listener-three"></view>
+        <view class="fill-listener fill-listener-four"></view>
+        <view class="fill-back-label">后场听音区</view>
+      </view>
+
+      <view wx:if="{{!demo}}" class="distance-conclusion">
+        <text class="distance-conclusion-main">{{article.visualConclusionLead}}</text>
+        <text class="distance-conclusion-value">{{article.visualConclusion}}</text>
+      </view>
+
+      <view class="distance-actions {{demo ? 'distance-actions-demo' : ''}}">
+        <button wx:if="{{!demo}}" class="distance-action-button demo-action-button" bindtap="replayPrincipleAnimation">重新演示</button>
+        <button wx:if="{{demo}}" class="distance-action-button demo-action-button" bindtap="toggleDemoPlayback">{{demoPlaying ? '暂停' : '播放'}}</button>
+        <button wx:if="{{demo}}" class="distance-action-button demo-action-button" bindtap="replayDemo">重新演示</button>
+        <button class="distance-action-button demo-action-button" bindtap="toggleFormula">
+          {{formulaExpanded ? '收起计算公式' : '查看计算公式'}}
+        </button>
+      </view>
+
+      <view wx:if="{{formulaExpanded}}" class="distance-formula-detail">
+        <block wx:for="{{article.sections}}" wx:key="title" wx:for-item="formulaSection">
+          <text wx:if="{{formulaSection.formulas.length}}" class="distance-formula-section">{{formulaSection.title}}</text>
+          <text
+            wx:for="{{formulaSection.formulas}}"
+            wx:key="*this"
+            wx:for-item="formula"
+            class="distance-formula-line"
+            selectable
+          >{{formula}}</text>
+        </block>
+        <text class="distance-formula-note">{{article.formulaNote}}</text>
+      </view>
+    </view>
+
+    <view
+      wx:for="{{article.sections}}"
+      wx:key="title"
+      wx:for-item="section"
+      class="article-section"
+    >
+      <view class="section-heading">
+        <view class="section-number">0{{index + 1}}</view>
+        <view class="section-title">{{section.title}}</view>
+      </view>
+
+      <view
+        wx:for="{{section.paragraphs}}"
+        wx:key="*this"
+        wx:for-item="paragraph"
+        class="section-paragraph"
+      >{{paragraph}}</view>
+
+      <view wx:if="{{section.formulas.length && !article.visualType}}" class="formula-box">
+        <text
+          wx:for="{{section.formulas}}"
+          wx:key="*this"
+          wx:for-item="formula"
+          class="formula-line"
+          selectable
+        >{{formula}}</text>
+      </view>
+
+      <view wx:if="{{section.bullets.length}}" class="bullet-list">
+        <view
+          wx:for="{{section.bullets}}"
+          wx:key="*this"
+          wx:for-item="bullet"
+          class="bullet-item"
+        ><text class="bullet-dot"></text><text class="bullet-text">{{bullet}}</text></view>
+      </view>
+    </view>
+
+    <view class="caution-card">
+      <view class="caution-label">现场核对边界</view>
+      <view class="caution-text">{{article.caution}}</view>
+    </view>
+
+    <button class="related-button" bindtap="openRelatedTool">
+      <text class="related-label">{{article.relatedLabel}}</text>
+      <text class="related-arrow">›</text>
+    </button>
+  </view>
+</scroll-view>
+
+<view wx:else class="knowledge-error">
+  <view class="knowledge-error-mark">!</view>
+  <view class="knowledge-error-title">内容暂时无法打开</view>
+  <view class="knowledge-error-text">{{loadError}}</view>
+  <button class="knowledge-error-button" bindtap="goBack">返回音频工具</button>
+</view>

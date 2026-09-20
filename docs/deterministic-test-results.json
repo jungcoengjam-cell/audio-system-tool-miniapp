@@ -1,0 +1,880 @@
+{
+  "legacyReleaseCheck": {
+    "status": "passed",
+    "exitCode": 0,
+    "output": "发布包门禁：总计 2050.9 KiB / 2051.0 KiB；主包 JS 793.3 KiB / 794.0 KiB；分包 pages/dmx-address JS 236.5 KiB / 794.0 KiB；分包 pages/audio-wiring JS 96.5 KiB / 794.0 KiB；分包 pages/project-wiring JS 72.1 KiB / 794.0 KiB；WXSS 260.3 KiB / 261.0 KiB；WXML 245.7 KiB / 246.0 KiB；最大 JS pages/dmx-address/data/stage-lighting-channels.js 87.3 KiB / 100.0 KiB。\n页面清单门禁：17 个主包页面、4 个分包页面、3 个 tabBar 页面均完整。\n敏感 API 静态扫描：0 命中；用户触发的剪贴板、相册保存、震动与 Canvas API 保持允许。\n产品资料库懒加载：module 3.94 ms；total 6.25 ms；6 modules；78.1 KiB；默认功放无关资料 0。\n产品资料库列表提交：追加 2792 bytes；对比1 62 bytes；对比2 1309 bytes；清空 89 bytes。\n产品详情视图载荷：amplifier 667/796 bytes；speaker 862/1287 bytes；speaker 1395/2365 bytes；speaker 1094/1653 bytes；camera 845/1239 bytes；camera 1043/1345 bytes；lighting 1154/1574 bytes；lighting 774/1064 bytes。\nAstra runtime regression checks passed\naudit-dmx-regression: 5 checks passed\nLED regression audit passed\nLED records regression passed\nknowledge demo numerical geometry PASS\ntroubleshoot tree and controller PASS\n审查修复回归通过：偏好写入三态、产品最近记录净化及共享报告绘图基础均正常。\nDMX layout model tests passed\nDMX layout renderer tests passed\nDMX layout overlap tests passed (64 cases)\nDMX 结果视图专项通过：跨域、手动分域、分页、通道入口与输入不可变性正常。\nreport drawing regression passed\ndmx-group-input-test: ok\nproduct detail route handling PASS\nreport lifecycle regression passed\ndmx-lifecycle-regression: 5 checks passed\n{\"normalDebounceDelay\":120,\"consecutiveInputTimerCount\":1,\"hiddenAfter\":{\"patchCount\":0,\"payloadBytes\":0},\"showRecoveryPayloadBytes\":1686,\"cases\":7}\npage lifecycle regression PASS\ncalculator renderer regression PASS\nvenue heatmap renderer regression PASS\nvenue plan controller regression PASS\nvenue lifecycle regression PASS\ncalculation boundary regression PASS\nvenue handoff regression PASS\nvenue report accuracy regression PASS\nvenue discussion accuracy regression passed: 20 deterministic cases\nvenue PAG/NAG regression passed\nvenue pag/nag page regression passed\nvenue PAG performance regression PASS\nvenue pag/nag guide regression passed\nvenue PAG/NAG multiple-speaker regression passed\naudio wiring model and renderer regression passed\naudio wiring page tests passed (strict 2D canvas/selector query/export mocks; WeChat native layers and album permissions not exercised)\naudio wiring renderer regression passed\nproject wiring model test passed\nproject wiring storage test passed\nproject wiring page tests passed (entry routing, fixed project ownership, compact history picker, picker cancellation, dirty-form guard, project creation/failures, stale exports, add/edit/search, batch, save retention and delete/copy numbering)\nproject wiring keyboard tests passed (editor and batch fields, viewport sizing, minimal scroll correction, focus transfer, keyboard close, late callback guards)\nproject wiring report tests passed\n项目布线双入口与项目首页专项通过。\n开发工作区自检通过：十个工具入口（含八个计算模块、接线助手与通道线缆入口）、38 款功放、148 款音箱、26 款摄像机、149 款舞台灯光设备及既有数值基准均正常。",
+    "assertionCount": null,
+    "classification": null,
+    "basis": "Existing release-check failures are classified as test problems until triaged.",
+    "issue": null,
+    "expected": "exit code 0 with no blocked network attempts",
+    "actual": "exit code 0",
+    "error": null
+  },
+  "newSuiteCaseCount": 86,
+  "passedCaseCount": 86,
+  "failedCaseCount": 0,
+  "totalFailureCount": 0,
+  "results": [
+    {
+      "name": "harness records every failed assertion and continues to later tests",
+      "status": "passed",
+      "classification": "test problem",
+      "basis": "The test harness must aggregate failures and continue execution.",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "finiteTree rejects non-finite values at nested object paths",
+      "status": "passed",
+      "classification": "test problem",
+      "basis": "Numerical tests must reject NaN and infinity recursively.",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "caught mocked network calls are recorded for distinct wx objects and make the child exit nonzero",
+      "status": "passed",
+      "classification": "test problem",
+      "basis": "The offline guard must detect attempted API calls even when caught and must patch each independent page mock.",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "offline preload blocks Node HTTP, socket, and constructible WebSocket attempts without connecting",
+      "status": "passed",
+      "classification": "test problem",
+      "basis": "The offline guard must intercept common Node networking entry points before any socket connects.",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "Windows minimal-environment bootstrap can preload the offline guard",
+      "status": "passed",
+      "classification": "test problem",
+      "basis": "The runner must bootstrap successfully on Windows with its minimal environment and quoted preload path.",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "runner exits nonzero after an isolated deterministic failure",
+      "status": "passed",
+      "classification": "test problem",
+      "basis": "The runner contract requires a nonzero process exit and expected/actual failure detail for any failed case.",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "report serialization preserves non-finite numbers and handles optional, bigint, and cyclic values",
+      "status": "passed",
+      "classification": "test problem",
+      "basis": "Machine reports must not silently turn non-finite numbers into null or crash on optional, bigint, and cyclic data.",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "effective production package excludes developer tests and documentation",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "The resolved mini-program package must exclude development-only folders and root instructions after applying configured ignore rules.",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "all effective shipped JavaScript and JSON sources avoid development and network client imports",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "Every effective shipped JS and JSON file is scanned for prohibited imports and executable runtime network calls; source URLs used as metadata are allowed.",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "existing release checks include audio and project wiring coverage",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "The legacy release run must retain established audio-wiring and project-wiring coverage.",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "limiter matches an independent 0 dBu and dBFS golden case",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "docs/calculation.md §4–9; utils/limiter.js calculateLimiter",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "limiter preserves power across series and parallel load invariants",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "docs/calculation.md §2, §5; utils/limiter.js findRatedPower",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "limiter rejects negative speaker rated power instead of returning valid NaN results",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "utils/limiter.js calculateLimiter input validation",
+      "issue": "AUDIO-LIMITER-NEGATIVE-POWER",
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "limiter rejects nonpositive or noninteger speaker counts",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "utils/limiter.js calculateLimiter input validation",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "limiter rejects missing amplifier or speaker records",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "utils/limiter.js calculateLimiter input validation",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "limiter rejects zero speaker impedance",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "utils/limiter.js calculateLimiter input validation",
+      "issue": "AUDIO-LIMITER-ZERO-IMPEDANCE",
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "limiter rejects zero speaker rated power",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "utils/limiter.js calculateLimiter input validation",
+      "issue": "AUDIO-LIMITER-ZERO-POWER",
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "limiter rejects nonpositive and nonfinite speaker power and impedance domains",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "utils/limiter.js calculateLimiter requires finite positive rated power and impedance",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "limiter rejects zero or nonfinite input sensitivity",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "utils/limiter.js calculateLimiter input validation",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "HPF timing bands retain the implemented inclusive upper bounds",
+      "status": "passed",
+      "classification": "engineering-rule ambiguity",
+      "basis": "docs/calculation.md §11 labels “1–2 kHz” and “≥2 kHz” overlap at 2 kHz; utils/limiter.js calculateTiming",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "limiter timing is absent for zero, negative, or nonfinite HPF without invalidating the threshold",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "docs/calculation.md §11; utils/limiter.js calculateLimiter",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "SPL matches an independent rated-power and inverse-distance golden case",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "docs/spl-calculation.md §2; utils/spl.js calculateSplAtDistance",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "SPL summation gains are 3 dB distributed and 6 dB coherent for two speakers",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "docs/spl-calculation.md §3; utils/spl.js calculateSpeakerSpl",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "SPL zero rated power is rejected instead of emitting negative infinity",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "utils/spl.js calculateSplAtDistance positive-power domain",
+      "issue": "AUDIO-SPL-ZERO-POWER",
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "SPL negative rated power is rejected instead of emitting NaN",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "utils/spl.js calculateSplAtDistance positive-power domain",
+      "issue": "AUDIO-SPL-NEGATIVE-POWER",
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "SPL rejects nonpositive and nonfinite rated power in both calculation entry points",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "utils/spl.js calculateSplAtDistance/calculateSpeakerSpl require finite positive rated power",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "SPL rejects invalid distance and speaker count inputs",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "docs/spl-calculation.md §2–3; utils/spl.js calculateSplAtDistance/getSummationGainDb",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "SPL changes by -20 dB for tenfold distance and +10 dB for tenfold power",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "docs/spl-calculation.md §2; utils/spl.js calculateSplAtDistance",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "SPL core accepts distances above the page 1000 m input cap as a mathematical estimate",
+      "status": "passed",
+      "classification": "engineering-rule ambiguity",
+      "basis": "docs/spl-calculation.md §2 identifies 1–1000 m as first-version input scope; core helper has no product-domain cap",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "constant-voltage cable follows the table bracket and reports its formula floor",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "docs/cable-selection.md; utils/cable.js calculateConstantVoltageCable",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "constant-voltage cable selects every distance bracket at the exact edge and just above it",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "docs/cable-selection.md distance bracket rules; utils/cable.js calculateConstantVoltageCable",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "outdoor constant-voltage cable rounds up to the next standard area",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "docs/cable-selection.md outdoor cable rule; utils/cable.js findStandardArea",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "outdoor constant-voltage cable rounds a 2 mm² indoor selection upward to 4 mm²",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "docs/cable-selection.md outdoor cable rule; utils/cable.js findStandardArea",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "constant-voltage formula independently converts watts to kW and meters to km above table power",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "docs/cable-selection.md company formula and over-1500 W rule; utils/cable.js calculateConstantVoltageCable",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "professional speaker cable table boundaries choose the first sufficient row",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "docs/cable-selection.md professional cable rules; utils/cable.js calculateProfessionalSpeakerCable",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "professional speaker cable changes table rows just below and above each rounded power threshold",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "docs/cable-selection.md professional power rows; utils/cable.js one-decimal design-power rounding",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "professional cable over 100 m flags review and keeps the power-selected row",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "docs/cable-selection.md professional cable rules; utils/cable.js calculateProfessionalSpeakerCable",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "constant-voltage power brackets use raw design power while displayed power remains rounded",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "docs/cable-selection.md requires unrounded design power for bracket selection; utils/cable.js rounds display only",
+      "issue": "AUDIO-CABLE-DESIGN-ROUNDING",
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "constant-voltage raw design power selects every table threshold exactly, below, and above",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "docs/cable-selection.md raw design-power threshold policy and independent company table constants; utils/cable.js calculateConstantVoltageCable",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "constant-voltage formula selects standard areas from raw formula values",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "docs/cable-selection.md raw formula minimum controls standard-area ceiling; independent S=(P/1000)*(L/1000)*5",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "cable calculators reject nonpositive and nonfinite required measurements",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "docs/cable-selection.md boundaries; utils/cable.js cable input validation",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "dBu and Vrms conversions round-trip with the 0.775 V reference",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "docs/gain-structure-calculation.md §1–2; utils/gain-structure.js voltageToDbu/dbuToVoltage",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "gain structure matches the independent DSP alignment arithmetic",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "docs/gain-structure-calculation.md §1–5; utils/gain-structure.js calculateGainStructure",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "gain structure rejects zero input voltage rather than returning a valid infinite result",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "utils/gain-structure.js resolveFullPowerInput requires a positive physical voltage",
+      "issue": "AUDIO-GAIN-ZERO-VOLTAGE",
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "gain structure rejects negative input voltage rather than returning a valid NaN result",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "utils/gain-structure.js resolveFullPowerInput requires a positive physical voltage",
+      "issue": "AUDIO-GAIN-NEGATIVE-VOLTAGE",
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "gain structure rejects nonpositive or nonfinite converted sensitivity voltage but accepts valid negative dBu",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "utils/gain-structure.js inputSensitivity must validate converted physical voltage; dBu-to-voltage uses 0.775*10^(dBu/20)",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "voltage-gain amplifier back-calculates rated input from independent output voltage",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "docs/gain-structure-calculation.md §2.2; utils/gain-structure.js resolveFullPowerInput",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "gain alignment applies the 0.05 dB deadband on each side",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "utils/gain-structure.js ALIGNMENT_TOLERANCE_DB",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "gain structure validates stage choices and digital input boundaries",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "docs/gain-structure-calculation.md §3–5; utils/gain-structure.js resolveStageValue/calculateGainStructure",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "unknown limiter enum values currently follow the documented code fallback paths",
+      "status": "passed",
+      "classification": "engineering-rule ambiguity",
+      "basis": "utils/limiter.js calculateLimiter/getLoadImpedance and utils/spl.js getSummationGainDb; enum validation/default policy is not specified by calculation docs",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "amplifier and speaker product data used by audio math has valid numeric calculation inputs",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "tests/release-check.js product input invariants; data/equipment.js and data/amplifier-input-stages.js",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "SPL-enabled product data has sensitivity and missing-sensitivity speakers stay unavailable for SPL only",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "docs/spl-calculation.md §1, §5; utils/spl.js calculateSpeakerSpl and data/equipment.js",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "camera FOV angle mode and sensor mode agree with independent geometry",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "camera FOV equations: 2 atan(sensor dimension / (2 focal length)) and diagonal from tangent axes",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "camera coverage distance and target-width modes are inverse in metres",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "camera coverage uses width/height = 2 × distance × tan(FOV/2)",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "camera plane and ground placement obey independent horizontal lower bounds and margin scaling",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "camera plane/ground geometry and explicit 0.2 margin input; assertions use unrounded trigonometric reference",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "camera vertical-plane high fixed camera selects the first feasible far branch when width start is forbidden",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "Independent atan2 envelope and tan width boundary; both axes must pass at the raw solution and the near-side horizontal start is vertically forbidden.",
+      "issue": "CAMERA-HIGH-FIXED-HEIGHT",
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "camera full placements cover both axes across a deterministic geometry and optics matrix",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "A deterministic matrix checks raw two-axis coverage for plane/ground, auto/fixed, high/center/low cameras, zero/existing margins, angle/sensor optics, narrow vertical FOV, and every complete catalog FOV in both scene and height modes.",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "horizontal-only camera placements omit vertical verification and retain finite horizontal geometry",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "horizontal-only placement contract: use horizontal FOV and explicitly leave vertical coverage unverified",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "camera Infinity target dimensions are rejected or yield finite outputs",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "spatial calculations must reject nonfinite physical dimensions; reproducible current case: plane widthMeters=Infinity",
+      "issue": "CAMERA-NONFINITE-DIMENSION",
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "camera sensor mode rejects nonfinite physical dimensions and keeps finite optics",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "sensor FOV inputs are physical dimensions and must be finite positive numbers",
+      "issue": "CAMERA-NONFINITE-DIMENSION",
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "camera coverage rejects nonfinite selected distance and target width",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "coverage must reject nonfinite selected physical inputs while retaining mode-specific ignored inputs",
+      "issue": "CAMERA-NONFINITE-DIMENSION",
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "camera ground placement rejects nonfinite dimensions and fixed camera height",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "ground placement dimensions and selected fixed camera height must be finite; auto mode ignores supplied camera height",
+      "issue": "CAMERA-NONFINITE-DIMENSION",
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "camera vertical plane rejects nonfinite dimensions while accepting a zero bottom height",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "plane dimensions must be finite, bottom height remains nonnegative so zero is valid, and fixed camera height must be finite",
+      "issue": "CAMERA-NONFINITE-DIMENSION",
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "camera full placements reject invalid two-axis FOV and numerical overflow",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "A complete placement requires valid positive horizontal and vertical angles and finite derived boundaries; invalid or overflowed geometry must yield null rather than a verified result.",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "horizontal-only camera placement rejects nonfinite fields for both scene types",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "horizontal-only placement validates all used physical dimensions and selected camera height; auto mode ignores cameraHeightMeters",
+      "issue": "CAMERA-NONFINITE-DIMENSION",
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "LED wall plan converts module dimensions, metres and pixel pitch consistently",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "LED unit specs are millimetres; plan fields are metres and pixel counts are millimetres divided by pitch in millimetres",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "LED recommended pitch boundaries use the documented 1.7 multiplier and viewing thresholds",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "LED viewing policy: minimum distance=pitch; comfortable range=1.7× to 3× pitch; recommended pitch uses 1.7× boundary",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "DMX automatic and manual allocation preserve fixture boundaries and channel totals",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "DMX slots are inclusive, one fixture cannot cross a universe boundary, and auto allocation resumes at address 1",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "DMX caps accept each exact limit and reject the next unit",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "DMX limits exported by utils/dmx-address.js: 20 groups, 200 per group, 500 total and 512 channels per universe",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "venue estimate and discussion estimate produce finite coordinates inside the room",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "venue geometry outputs speaker coordinates in metres bounded by room width and length",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "handoff path length and arrival time use three-dimensional metres and seconds-to-milliseconds conversion",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "Euclidean path in metres; arrival delta is distance difference divided by 343 m/s and multiplied by 1000 ms/s",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "venue handoff review marks a known common coverage point and keeps finite timing",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "handoff review samples the common listening region and reports finite acoustic arrival differences",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "PAG/NAG single-speaker reference matches independent logarithmic arithmetic and scales by microphone count",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "PAG=20log10(d1*d0/(d2*ds))-10log10(NOM)-6; NAG=20log10(d0/dn)",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "PAG/NAG multiple-speaker geometry and distance scaling preserve finite acoustic result",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "PAG/NAG logarithmic distance ratios are invariant under common distance scaling; multiple-speaker geometry has its own consistency rule",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "limiter page output, copied text, and record payload agree",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "Each real calculator page should keep its calculation, copied text, and record text consistent.",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "spl page output, copied text, and record payload agree",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "Each real calculator page should keep its calculation, copied text, and record text consistent.",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "cable page output, copied text, and record payload agree",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "Each real calculator page should keep its calculation, copied text, and record text consistent.",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "venue page output, copied text, and record payload agree",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "Each real calculator page should keep its calculation, copied text, and record text consistent.",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "camera page output, copied text, and record payload agree",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "Each real calculator page should keep its calculation, copied text, and record text consistent.",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "led-screen page output, copied text, and record payload agree",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "Each real calculator page should keep its calculation, copied text, and record text consistent.",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "gain-structure page output, copied text, and record payload agree",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "Each real calculator page should keep its calculation, copied text, and record text consistent.",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "dmx-address page output, copied text, and record payload agree",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "Each real calculator page should keep its calculation, copied text, and record text consistent.",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "calculator mode changes recalculate from current fields without leaking the other mode",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "Switching calculator modes must calculate using that mode’s own fields and return consistently when switched back.",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "camera page scene-mode switch recalculates through its actual page method",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "Camera scene mode is a real input mode and must recalculate the displayed result through the page handler.",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "camera page case #9 keeps raw and displayed two-axis coverage through copy and record",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "The actual camera page must preserve the raw and displayed case #9 coverage result through its copy and record paths.",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "name": "LED frame width input uses centimeters and invalid input clears the displayed result",
+      "status": "passed",
+      "classification": "implementation bug",
+      "basis": "The LED page displays frame width in centimeters, converts it to meters for calculation, and clears stale results on invalid input.",
+      "issue": null,
+      "error": null,
+      "expected": null,
+      "actual": null
+    }
+  ]
+}

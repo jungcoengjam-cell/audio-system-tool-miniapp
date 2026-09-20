@@ -1,0 +1,235 @@
+<view class="page-root">
+<scroll-view class="page-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+  <view class="page-content">
+    <view class="page-header">
+      <view class="page-title">摄像机安装计算</view>
+    </view>
+
+    <view class="card settings-card input-card">
+      <view class="input-section input-section-first">
+        <view class="segment-control source-segment">
+          <view wx:for="{{sourceModes}}" wx:key="*this" class="segment-item {{index == sourceModeIndex ? 'segment-item-active' : ''}}" data-index="{{index}}" bindtap="onSourceModeTap">{{item}}</view>
+        </view>
+
+        <block wx:if="{{sourceModeIndex == 0}}">
+          <view class="field">
+            <view class="field-label">摄像机型号</view>
+            <view class="picker-value equipment-value" bindtap="openCameraSelector">
+              <view>
+                <view class="equipment-model">{{selectedCamera.model}}</view>
+                <view class="equipment-category">{{selectedCamera.category}} · {{selectedMountLabel}} · {{selectedCamera.sensor}}</view>
+              </view>
+              <view class="picker-arrow">›</view>
+            </view>
+          </view>
+          <view wx:if="{{viewOptions.length > 1}}" class="field">
+            <view class="field-label">摄像机视角</view>
+            <view class="choice-grid">
+              <view wx:for="{{viewOptions}}" wx:key="label" class="choice-item {{index == viewIndex ? 'choice-item-active' : ''}}" data-index="{{index}}" bindtap="onViewTap">{{item.label}}</view>
+            </view>
+          </view>
+        </block>
+
+        <block wx:else>
+          <view class="field">
+            <view class="field-label">安装结构</view>
+            <view class="choice-grid">
+              <view wx:for="{{customMountTypes}}" wx:key="value" class="choice-item {{index == customMountTypeIndex ? 'choice-item-active' : ''}}" data-index="{{index}}" bindtap="onCustomMountTypeTap">{{item.label}}</view>
+            </view>
+          </view>
+           <view class="field-label definition-label">参数来源</view>
+           <view class="choice-grid definition-choice">
+            <view wx:for="{{definitionModes}}" wx:key="value" class="choice-item {{index == definitionModeIndex ? 'choice-item-active' : ''}}" data-index="{{index}}" bindtap="onDefinitionModeTap">{{item.label}}</view>
+          </view>
+          <block wx:if="{{definitionModeIndex == 0}}">
+            <view class="field-grid">
+              <view class="field field-half"><view class="field-label">水平视场角</view><view class="input-wrap"><input type="digit" value="{{customHorizontalFovText}}" data-field="customHorizontalFovText" bindinput="onFieldInput" bindblur="onFieldBlur" /><text>°</text></view></view>
+              <view class="field field-half"><view class="field-label">垂直视场角</view><view class="input-wrap"><input type="digit" value="{{customVerticalFovText}}" placeholder="例如 45" data-field="customVerticalFovText" bindinput="onFieldInput" bindblur="onFieldBlur" /><text>°</text></view></view>
+            </view>
+            <view class="field-tip">水平角与垂直角均为必填，不再按画幅比例推算。</view>
+          </block>
+          <block wx:else>
+            <view class="field-grid">
+              <view class="field field-half"><view class="field-label">有效宽度</view><view class="input-wrap"><input type="digit" value="{{customSensorWidthText}}" data-field="customSensorWidthText" bindinput="onFieldInput" bindblur="onFieldBlur" /><text>mm</text></view></view>
+              <view class="field field-half"><view class="field-label">有效高度</view><view class="input-wrap"><input type="digit" value="{{customSensorHeightText}}" data-field="customSensorHeightText" bindinput="onFieldInput" bindblur="onFieldBlur" /><text>mm</text></view></view>
+            </view>
+            <view class="field field-last"><view class="field-label">实际焦距</view><view class="input-wrap"><input type="digit" value="{{customFocalLengthText}}" data-field="customFocalLengthText" bindinput="onFieldInput" bindblur="onFieldBlur" /><text>mm</text></view></view>
+            <view class="field-tip">请填写有效成像尺寸，不能把 1/2.8 英寸等光学格式直接当作传感器宽度。</view>
+          </block>
+        </block>
+      </view>
+
+      <view class="input-section">
+        <view class="compact-control-row">
+          <view class="compact-row-label">拍摄场景</view>
+          <view class="choice-grid scene-choice compact-row-control">
+            <view wx:for="{{sceneModes}}" wx:key="value" class="choice-item {{index == sceneModeIndex ? 'choice-item-active' : ''}}" data-index="{{index}}" bindtap="onSceneModeTap">{{item.label}}</view>
+          </view>
+        </view>
+        <block wx:if="{{sceneModeIndex == 0}}">
+          <view class="field-grid field-grid-three compact-dimension-grid">
+            <view class="field field-third"><view class="field-label">宽度</view><view class="input-wrap"><input type="digit" value="{{groundWidthText}}" data-field="groundWidthText" bindinput="onFieldInput" bindblur="onFieldBlur" /><text>m</text></view></view>
+            <view class="field field-third"><view class="field-label">纵深</view><view class="input-wrap"><input type="digit" value="{{groundDepthText}}" data-field="groundDepthText" bindinput="onFieldInput" bindblur="onFieldBlur" /><text>m</text></view></view>
+            <view class="field field-third"><view class="field-label">最高点</view><view class="input-wrap"><input type="digit" value="{{subjectHeightText}}" data-field="subjectHeightText" bindinput="onFieldInput" bindblur="onFieldBlur" /><text>m</text></view></view>
+          </view>
+        </block>
+        <block wx:else>
+          <view class="field-grid field-grid-three compact-dimension-grid">
+            <view class="field field-third"><view class="field-label">宽度</view><view class="input-wrap"><input type="digit" value="{{planeWidthText}}" data-field="planeWidthText" bindinput="onFieldInput" bindblur="onFieldBlur" /><text>m</text></view></view>
+            <view class="field field-third"><view class="field-label">高度</view><view class="input-wrap"><input type="digit" value="{{planeHeightText}}" data-field="planeHeightText" bindinput="onFieldInput" bindblur="onFieldBlur" /><text>m</text></view></view>
+            <view class="field field-third"><view class="field-label">底边离地</view><view class="input-wrap"><input type="digit" value="{{planeBottomHeightText}}" data-field="planeBottomHeightText" bindinput="onFieldInput" bindblur="onFieldBlur" /><text>m</text></view></view>
+          </view>
+        </block>
+      </view>
+
+      <view class="input-section">
+        <view class="installation-control-grid">
+          <view class="installation-mode-field">
+            <view class="field-label">安装高度</view>
+            <view class="choice-grid height-choice">
+              <view wx:for="{{heightModes}}" wx:key="value" class="choice-item {{index == heightModeIndex ? 'choice-item-active' : ''}}" data-index="{{index}}" bindtap="onHeightModeTap">{{item.label}}</view>
+            </view>
+          </view>
+          <view class="field margin-field">
+            <view class="field-label">构图余量</view>
+            <picker range="{{marginOptions}}" value="{{marginIndex}}" bindchange="onMarginChange">
+              <view class="picker-value"><text>{{marginOptions[marginIndex]}}%</text><view class="picker-arrow">›</view></view>
+            </picker>
+          </view>
+        </view>
+        <view wx:if="{{heightModeIndex == 1}}" class="field fixed-height-field">
+          <view class="field-label">镜头中心高度</view>
+          <view class="input-wrap"><input type="digit" value="{{fixedCameraHeightText}}" data-field="fixedCameraHeightText" bindinput="onFieldInput" bindblur="onFieldBlur" /><text>m</text></view>
+        </view>
+      </view>
+      <view wx:if="{{calculationError}}" class="warning-card"><view class="warning-title">暂时无法计算</view><view class="warning-text">{{calculationError}}</view></view>
+    </view>
+
+    <view wx:if="{{result}}" class="result-card">
+      <view class="result-heading">
+        <view><view class="result-label">安装建议</view><view class="result-title">{{result.displayModel}} · {{result.sceneLabel}} · {{result.endpointLabel}}</view></view>
+        <view class="status-chip">余量 {{result.marginPercent}}%</view>
+      </view>
+      <view class="primary-result-grid">
+        <view class="primary-result-item">
+          <view class="primary-result-label">{{result.distanceMeaning}}</view>
+          <view class="coverage-value">{{result.primaryDistanceMeters}}<text> m</text></view>
+        </view>
+        <view class="primary-result-item">
+          <view class="primary-result-label">{{result.horizontalOnly ? '参考镜头中心高度' : '建议镜头中心高度'}}</view>
+          <view class="coverage-value">{{result.cameraHeightMeters}}<text> m</text></view>
+        </view>
+      </view>
+      <view class="result-grid">
+        <view class="metric"><view class="metric-value">{{result.aimValue}}</view><view class="metric-label">{{result.aimLabel}} · {{result.mountLabel}}</view></view>
+      </view>
+    </view>
+
+    <view wx:if="{{result}}" class="utility-action-row">
+      <view class="result-output-actions">
+        <button class="result-image-button" disabled="{{isGeneratingResultReport}}" bindtap="generateResultReportImage">{{isGeneratingResultReport ? '正在生成…' : '生成结果图片'}}</button>
+        <button class="copy-result-button" bindtap="copyResult">复制文字</button>
+      </view>
+      <view class="result-record-actions"><button class="result-record-button {{currentFavorite ? 'result-record-button-active' : ''}}" bindtap="toggleCurrentFavorite">{{currentFavorite ? '★ 已收藏' : '☆ 收藏常用'}}</button><button class="result-record-button" bindtap="saveToActiveProject">加入当前项目</button></view>
+    </view>
+
+    <view wx:if="{{result}}" class="card preview-card">
+      <view class="preview-toggle" bindtap="togglePreviewDetails" role="button" aria-expanded="{{previewExpanded}}">
+        <view class="preview-heading-copy"><view class="card-title">安装与覆盖示意</view><view class="preview-distance">{{result.sceneLabel}}</view></view>
+        <view class="preview-chevron {{previewExpanded ? 'preview-chevron-expanded' : ''}}">›</view>
+      </view>
+      <view wx:if="{{previewExpanded}}" class="preview-body">
+        <canvas type="2d" id="cameraFovCanvas" class="fov-canvas"></canvas>
+        <view class="preview-legend">
+          <view class="preview-legend-item"><view class="preview-swatch preview-swatch-camera"></view>摄像机</view>
+          <view class="preview-legend-item"><view class="preview-swatch preview-swatch-coverage"></view>镜头覆盖</view>
+          <view class="preview-legend-item"><view class="preview-swatch preview-swatch-target"></view>目标区域</view>
+        </view>
+        <view class="preview-rule">看图判断：绿色目标完全落入蓝色覆盖范围，才表示可以拍全。</view>
+        <view class="field-tip">{{result.horizontalOnly ? '此型号缺少垂直视场角，侧视图只提示待校核，不生成虚构范围。' : '示意按本次输入尺寸比例生成。'}}最终点位仍需结合墙面、遮挡和样机画面复核。</view>
+      </view>
+    </view>
+
+    <view wx:if="{{result}}" class="card calculation-card">
+      <view class="calculation-toggle" bindtap="toggleCalculationDetails" role="button" aria-expanded="{{calculationExpanded}}">
+        <view class="calculation-heading-copy"><view class="card-title">图解计算过程</view><view class="calculation-intro">示意图不按比例绘制，标注数值来自本次输入与说明书参数。</view></view>
+        <view class="calculation-chevron {{calculationExpanded ? 'calculation-chevron-expanded' : ''}}">›</view>
+      </view>
+
+      <view wx:if="{{calculationExpanded}}" class="calculation-body">
+        <view class="geometry-section">
+        <view class="geometry-step-label">01 · 俯视</view>
+        <view class="geometry-board horizontal-geometry">
+          <view class="diagram-camera"><view class="diagram-lens"></view></view>
+          <view class="diagram-camera-label">摄像机</view>
+          <view class="diagram-axis"></view>
+          <view class="diagram-ray diagram-ray-top"></view>
+          <view class="diagram-ray diagram-ray-bottom"></view>
+          <view class="diagram-target-line"></view>
+          <view class="diagram-target-label">有效宽度 {{result.effectiveWidthMeters}} m</view>
+          <view class="diagram-angle">θₕ / 2</view>
+          <view class="diagram-distance">水平距离 Dₕ = {{result.horizontalMinimumDistanceMeters}} m</view>
+          <view class="diagram-half-width">对边 = W有效 / 2</view>
+        </view>
+        <view class="geometry-explanation">画面左右对称，取其中一半就是一个直角三角形：对边是有效宽度的一半，邻边是摄像机距离，摄像机处的夹角是水平视场角的一半。</view>
+        <view class="equation-card">
+          <view>tan(θₕ ÷ 2) = (W有效 ÷ 2) ÷ Dₕ</view>
+          <view class="equation-emphasis">Dₕ = {{result.effectiveWidthMeters}} ÷ [2 × tan({{result.horizontalFov}}° ÷ 2)] = {{result.horizontalMinimumDistanceMeters}} m</view>
+        </view>
+        </view>
+
+        <view class="geometry-section">
+        <view class="geometry-step-label">02 · 侧视</view>
+        <view class="geometry-title">垂直视场角检查“上下边界能不能同时入画”</view>
+        <view wx:if="{{!result.horizontalOnly}}" class="geometry-board vertical-geometry">
+          <view class="diagram-camera side-camera"><view class="diagram-lens"></view></view>
+          <view class="side-floor"></view>
+          <view class="side-target"></view>
+          <view class="side-ray side-ray-top"></view>
+          <view class="side-ray side-ray-bottom"></view>
+          <view class="side-camera-height">镜头高 {{result.cameraHeightMeters}} m</view>
+          <view class="side-angle-label">垂直包络角 ≤ {{result.verticalFov}}°</view>
+          <view class="side-distance-label">Dᵥ（水平约束后）= {{result.verticalMinimumDistanceMeters}} m</view>
+        </view>
+        <view wx:if="{{!result.horizontalOnly}}" class="geometry-explanation">从水平最低距离起检查上下边界的垂直包络；超出垂直视场角时继续增距至通过。Dᵥ是满足水平条件后的校核距离。</view>
+        <view wx:else class="vertical-missing-visual"><view class="vertical-missing-icon">!</view><view><view class="vertical-missing-title">缺少说明书垂直视场角</view><view class="vertical-missing-text">无法画出可信的上下覆盖边界，因此不生成 Dᵥ，也不把水平结果称为完整安装距离。</view></view></view>
+        </view>
+
+        <view class="geometry-section comparison-section">
+        <view class="geometry-step-label">03 · 取值</view>
+        <view class="geometry-title">{{result.horizontalOnly ? '仅按水平视场角计算覆盖距离' : '水平下限起校核垂直包络，得到当前模型理论最小距离'}}</view>
+        <view class="distance-bars">
+          <view class="distance-bar-row"><view class="distance-bar-label">水平 Dₕ</view><view class="distance-bar-track"><view class="distance-bar distance-bar-horizontal" style="width: {{result.calculationVisual.horizontalBarPercent}}%;"></view></view><view class="distance-bar-value">{{result.horizontalMinimumDistanceMeters}} m</view></view>
+          <view wx:if="{{!result.horizontalOnly}}" class="distance-bar-row"><view class="distance-bar-label">校核 Dᵥ</view><view class="distance-bar-track"><view class="distance-bar distance-bar-vertical" style="width: {{result.calculationVisual.verticalBarPercent}}%;"></view></view><view class="distance-bar-value">{{result.verticalMinimumDistanceMeters}} m</view></view>
+          <view wx:else class="distance-bar-row distance-bar-unavailable"><view class="distance-bar-label">垂直 Dᵥ</view><view class="distance-bar-track"><view class="distance-bar-missing">说明书未提供</view></view></view>
+        </view>
+        <view class="limiting-chip">{{result.calculationVisual.limitingAxisLabel}}：{{result.calculationVisual.limitingDistanceMeters}} m</view>
+        <view class="final-distance-equation">
+          <view class="final-equation-part"><text>约束距离</text><text class="final-equation-value">{{result.calculationVisual.limitingDistanceMeters}} m</text></view>
+          <view wx:if="{{result.calculationVisual.hasDepthMargin}}" class="final-equation-symbol">+</view>
+          <view wx:if="{{result.calculationVisual.hasDepthMargin}}" class="final-equation-part"><text>纵深方向构图余量</text><text class="final-equation-value">{{result.calculationVisual.depthMarginMeters}} m</text></view>
+          <view class="final-equation-symbol">=</view>
+          <view class="final-equation-part final-equation-result"><text>{{result.horizontalOnly ? '水平参考距离' : '理论最小距离'}}</text><text class="final-equation-value">{{result.primaryDistanceMeters}} m</text></view>
+        </view>
+        <view class="calculation-conclusion">{{result.calculationConclusion}}</view>
+        </view>
+      </view>
+    </view>
+
+  </view>
+
+  <view wx:if="{{selectorVisible}}" class="selector-mask" catchtap="closeCameraSelector">
+    <view class="selector-panel" catchtap="stopTap">
+      <view class="selector-header"><view class="selector-title">选择摄像机型号</view><view class="selector-close" catchtap="closeCameraSelector">×</view></view>
+      <input class="selector-search" value="{{selectorKeyword}}" placeholder="输入型号，例如 TV-620、TS-0663" confirm-type="search" bindinput="onSelectorInput" />
+      <view class="selector-count">显示 {{cameraCount}} 个具备厂家水平视场角的型号；缺少垂直角的仅做水平预估。当前筛选 {{selectorItems.length}} 个</view>
+      <scroll-view class="selector-list" scroll-y>
+        <view wx:for="{{selectorItems}}" wx:key="model" class="selector-row" data-index="{{item.index}}" catchtap="selectCamera"><view><view class="selector-model">{{item.model}}</view><view class="selector-meta">{{item.category}} · {{item.sensor}}</view></view><view class="selector-row-arrow">›</view></view>
+        <view wx:if="{{selectorItems.length == 0}}" class="selector-empty">没有匹配型号，请尝试缩短关键词。</view>
+      </scroll-view>
+    </view>
+  </view>
+</scroll-view>
+
+<include src="../../templates/result-report-preview.wxml" />
+</view>

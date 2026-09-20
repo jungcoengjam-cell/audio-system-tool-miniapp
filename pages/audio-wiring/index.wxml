@@ -1,0 +1,126 @@
+<view class="wiring-page">
+  <scroll-view class="wiring-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+    <view class="page-content">
+      <view class="endpoint-row">
+        <view class="endpoint-card" data-side="output" bindtap="openEndpointSelector" hover-class="endpoint-card-pressed">
+          <view class="endpoint-card-heading">输出端</view>
+          <image class="endpoint-image" src="{{model.output.image}}" mode="aspectFit" lazy-load></image>
+          <view class="endpoint-device">{{model.output.deviceLabel}}</view>
+          <view class="endpoint-meta-row">
+            <view class="endpoint-meta"><view>{{model.output.connectorType}}</view><view class="endpoint-signal">{{outputSignalSummary}}</view></view>
+            <view class="endpoint-chevron">›</view>
+          </view>
+        </view>
+        <view class="endpoint-card" data-side="input" bindtap="openEndpointSelector" hover-class="endpoint-card-pressed">
+          <view class="endpoint-card-heading">输入端</view>
+          <image class="endpoint-image" src="{{model.input.image}}" mode="aspectFit" lazy-load></image>
+          <view class="endpoint-device">{{model.input.deviceLabel}}</view>
+          <view class="endpoint-meta-row">
+            <view class="endpoint-meta"><view>{{model.input.connectorType}}</view><view class="endpoint-signal">{{inputSignalSummary}}</view></view>
+            <view class="endpoint-chevron">›</view>
+          </view>
+        </view>
+      </view>
+
+      <view class="diagram-card">
+        <view class="diagram-heading">
+          <view class="diagram-title">接线图</view>
+        </view>
+        <view wx:if="{{requirements.length}}" class="wiring-requirement-list">
+          <view wx:for="{{requirements}}" wx:for-item="requirement" wx:key="id" class="wiring-requirement">
+            <view class="wiring-requirement-title">{{requirement.title}}</view>
+            <view wx:if="{{requirement.hint}}" class="wiring-requirement-hint">{{requirement.hint}}</view>
+            <view class="wiring-requirement-options">
+              <view wx:for="{{requirement.options}}" wx:for-item="option" wx:key="id" class="wiring-requirement-option {{requirement.value === option.id ? 'wiring-requirement-option-active' : ''}}" data-requirement-id="{{requirement.id}}" data-option-id="{{option.id}}" bindtap="selectWiringRequirement" hover-class="wiring-requirement-option-pressed" aria-pressed="{{requirement.value === option.id}}">
+                <view class="wiring-requirement-option-label">{{option.label}}</view>
+                <view wx:if="{{option.detail}}" class="wiring-requirement-option-detail">{{option.detail}}</view>
+                <view wx:if="{{requirement.value === option.id}}" class="wiring-requirement-check">✓</view>
+              </view>
+            </view>
+          </view>
+        </view>
+        <view wx:if="{{criticalNotes.length}}" class="wiring-critical-notes">
+          <view wx:for="{{criticalNotes}}" wx:key="index" class="wiring-critical-note">{{item}}</view>
+        </view>
+        <view wx:if="{{supported}}" class="segment-control">
+          <view class="segment-item {{viewMode === 'wiring' ? 'segment-item-active' : ''}}" data-mode="wiring" bindtap="selectViewMode">连线图</view>
+          <view class="segment-item {{viewMode === 'connectors' ? 'segment-item-active' : ''}}" data-mode="connectors" bindtap="selectViewMode">接头视角</view>
+        </view>
+        <view wx:if="{{viewMode === 'connectors' && supported}}" class="face-control">
+          <view class="face-control-label">针脚观察面</view>
+          <view class="face-control-options">
+            <view class="face-option {{face === 'mating' ? 'face-option-active' : ''}}" data-face="mating" bindtap="selectConnectorFace">插接面</view>
+            <view class="face-option {{face === 'solder' ? 'face-option-active' : ''}}" data-face="solder" bindtap="selectConnectorFace">焊接面</view>
+          </view>
+        </view>
+        <view wx:if="{{supported}}" class="diagram-canvas-wrap" style="height:{{diagramCanvasHeight}}px;">
+          <canvas type="2d" id="wiringDiagramCanvas" class="diagram-canvas" style="height:{{diagramCanvasHeight}}px;" hidden="{{selectorVisible || resultReportPreviewVisible || diagramError}}" bindtouchstart="onDiagramTouchStart" bindtouchend="onDiagramTouchEnd" bindtouchcancel="onDiagramTouchCancel"></canvas>
+          <view wx:if="{{diagramError}}" class="diagram-error" bindtap="retryDiagram">{{diagramError}} · 点按重试</view>
+        </view>
+        <view wx:elif="{{wiringStatus === 'needs-choice'}}" class="wiring-choice-pending">
+          <view class="wiring-choice-pending-copy">请核对两台设备说明书并确认上方接线条件后生成接线图。</view>
+        </view>
+        <view wx:else class="unsupported-state">
+          <view class="unsupported-mark">↔</view>
+          <view class="unsupported-title">此组合暂未提供接法</view>
+          <view class="unsupported-reason">{{model.reason}}</view>
+          <view class="unsupported-tip">请分别选择输出端与输入端，查看可用的接口和信号类型。</view>
+        </view>
+        <view wx:if="{{selectedConnection}}" class="selected-mapping">
+          <view class="selected-mapping-swatch" style="background:{{selectedConnection.color}};"></view>
+          <view class="selected-mapping-copy">
+            <view class="selected-mapping-title">{{selectedConnection.label}}</view>
+            <view class="selected-mapping-text">{{selectedConnection.mappingText}}</view>
+          </view>
+        </view>
+        <view wx:if="{{supported}}" class="diagram-footnote">按设备端子标识核对后再通电</view>
+      </view>
+
+      <view class="explanation-card">
+        <view class="explanation-toggle" bindtap="toggleExplanation" aria-expanded="{{explanationExpanded}}">
+          <view class="explanation-title">接线说明</view>
+          <view class="explanation-chevron {{explanationExpanded ? 'explanation-chevron-expanded' : ''}}">›</view>
+        </view>
+        <view wx:if="{{explanationExpanded}}" class="explanation-body">
+          <view class="explanation-section-title">适用条件</view>
+          <view class="explanation-text">{{model.cableSummary}}</view>
+          <view wx:for="{{noteItems}}" wx:key="index" class="explanation-note">{{item.text}}</view>
+          <view wx:if="{{sourceItems.length}}" class="explanation-section-title explanation-sources-title">资料来源</view>
+          <view wx:for="{{sourceItems}}" wx:key="index" class="source-row">
+            <view class="source-name">{{item.text}}</view>
+            <view wx:if="{{item.detail}}" class="source-detail">{{item.detail}}</view>
+          </view>
+        </view>
+      </view>
+      <view class="bottom-spacer"></view>
+    </view>
+  </scroll-view>
+
+  <view class="wiring-actions-safe-area">
+    <view class="result-output-actions wiring-actions">
+      <button class="result-image-button {{!supported || isGeneratingResultReport ? 'wiring-action-disabled' : ''}}" disabled="{{!supported || isGeneratingResultReport}}" bindtap="generateResultReportImage">{{isGeneratingResultReport ? '正在生成…' : '生成接线图'}}</button>
+      <button class="copy-result-button {{!supported ? 'wiring-action-disabled' : ''}}" disabled="{{!supported}}" bindtap="copyConnection">复制接法</button>
+    </view>
+  </view>
+
+  <view wx:if="{{selectorVisible}}" class="selector-mask" bindtap="closeEndpointSelector" catchtouchmove="preventTouchMove">
+    <view class="selector-panel" catchtap="stopTap">
+      <view class="selector-header">
+        <view class="selector-title">{{selectorTitle}}</view>
+        <button class="selector-close" bindtap="closeEndpointSelector">×</button>
+      </view>
+      <scroll-view class="selector-list" scroll-y enhanced show-scrollbar="{{false}}" style="height:55vh;">
+        <view wx:for="{{selectorOptions}}" wx:key="id" class="selector-row {{item.id === (selectorSide === 'input' ? inputId : outputId) ? 'selector-row-active' : ''}}" data-id="{{item.id}}" bindtap="selectEndpointOption">
+          <image class="selector-image" src="{{item.image}}" mode="aspectFit"></image>
+          <view class="selector-copy">
+            <view class="selector-label">{{item.label}}</view>
+            <view class="selector-signal">{{item.signalLabel}}</view>
+          </view>
+          <view class="selector-check">{{item.id === (selectorSide === 'input' ? inputId : outputId) ? '✓' : '›'}}</view>
+        </view>
+      </scroll-view>
+    </view>
+  </view>
+
+  <include src="../../templates/result-report-preview.wxml" />
+</view>

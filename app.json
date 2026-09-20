@@ -1,0 +1,82 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/tools/tools",
+    "pages/projects/projects",
+    "pages/limiter/limiter",
+    "pages/spl/spl",
+    "pages/cable/cable",
+    "pages/venue/venue",
+    "pages/camera/camera",
+    "pages/led-screen/led-screen",
+    "pages/gain-structure/gain-structure",
+    "pages/dmx-layout/dmx-layout",
+    "pages/dmx-layout-landscape/dmx-layout-landscape",
+    "pages/products/library",
+    "pages/products/detail",
+    "pages/records/project",
+    "pages/knowledge/detail",
+    "pages/troubleshoot/index"
+  ],
+  "subPackages": [
+    {
+      "root": "pages/dmx-address",
+      "pages": [
+        "dmx-address",
+        "channel-guide"
+      ]
+    },
+    {
+      "root": "pages/audio-wiring",
+      "pages": [
+        "index"
+      ]
+    },
+    {
+      "root": "pages/project-wiring",
+      "pages": [
+        "index"
+      ]
+    }
+  ],
+  "window": {
+    "navigationBarTextStyle": "@navTextColor",
+    "navigationBarTitleText": "音频工具",
+    "navigationBarBackgroundColor": "@navBgColor",
+    "backgroundColor": "@pageBgColor",
+    "backgroundTextStyle": "@bgTextStyle"
+  },
+  "style": "v2",
+  "darkmode": true,
+  "themeLocation": "theme.json",
+  "componentFramework": "glass-easel",
+  "tabBar": {
+    "color": "@tabTextColor",
+    "selectedColor": "@tabSelectedColor",
+    "backgroundColor": "@tabBgColor",
+    "borderStyle": "@tabBorderColor",
+    "position": "bottom",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "探索",
+        "iconPath": "@exploreIcon",
+        "selectedIconPath": "@exploreSelectedIcon"
+      },
+      {
+        "pagePath": "pages/tools/tools",
+        "text": "工具",
+        "iconPath": "@toolsIcon",
+        "selectedIconPath": "@toolsSelectedIcon"
+      },
+      {
+        "pagePath": "pages/projects/projects",
+        "text": "项目",
+        "iconPath": "@projectsIcon",
+        "selectedIconPath": "@projectsSelectedIcon"
+      }
+    ]
+  },
+  "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents"
+}
