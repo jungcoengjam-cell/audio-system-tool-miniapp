@@ -1,0 +1,21 @@
+{
+  "version": "1.0.0",
+  "dataset_sha256": "b4f7c2de6036c0dee0c1d00bdde5c7158baad18d5bebb9dd9e045c4e9a618c00",
+  "files": {
+    ".gitignore": "0d3d154e51e69716d7d69b276d39b5c1d00dee4a7f11c0582f495417d6477508",
+    "README.md": "1b73296e20938f62e6ea2e1a440ac8ecc1e3520ac758dfff2741dda1574d08a6",
+    "common.cjs": "9d921e14aaf86e306095ec081c5b0b0fda3743460d5ee88bfcab770c59890a88",
+    "common.test.cjs": "291cc7db980e01bdecd6101ec3609aefee940cb0805f50e30e118729d729c3f6",
+    "context.json": "6c723a8e3d5a9efa4d7dfd15eb7f1b007bb3e2f1ffbc669160fa1ec1bfc06651",
+    "evaluate.cjs": "ada079162a3fdab3b6ca8af3c56798f03366bc9a89d1c2a325d459df0e4b6772",
+    "evaluate.test.cjs": "46d51fdc65079ceef1eda21ac673e6ca2888973861b33757587a9e9cddcee481",
+    "freeze.cjs": "65b41922074739241bc2889b5c849ae4889939db214886115a1c5602578053f8",
+    "protocol.json": "f1ecfe8a8697cf698566281feaa1563a25c45abbbed3d3ad24464ef2edc7762c",
+    "runner.cjs": "3792dceb0b778fc018173732d6ec8973d01c88cb61c2d316fa58550988030c5a",
+    "runner.test.cjs": "eb4a5b55326564209246729112c0ced5ad4565d681e80e35a7f56e8d48c1e255",
+    "scope.json": "1531f30c36218ec9457e6d2d89b031e5645a3a0a19e10d68ae04f8f7cc23216e",
+    "stimuli.json": "4ff89d3194eec58ee4c46112f7b8fbe643792c91676667b5c350e3a82086853e",
+    "validate.cjs": "24bef8306563072132eb5de3ad04d0203872ebb6b53be122ae654e0233b3cf7f"
+  },
+  "protocol_sha256": "13378af75e069d6e6f74185bf1268bb5e9d96597138584a057c97d8454aade8b"
+}

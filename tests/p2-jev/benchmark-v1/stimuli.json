@@ -1,0 +1,578 @@
+[
+  {
+    "id": "AW-001",
+    "user_utterance": "调音台的 XLR 平衡输出接处理器的 XLR 平衡输入，请给我对应接线图。"
+  },
+  {
+    "id": "AW-002",
+    "user_utterance": "电脑 3.5 耳机口接功放单个 RCA 输入，我只要左声道，怎么接？"
+  },
+  {
+    "id": "AW-003",
+    "user_utterance": "Mixer 的 XLR 平衡 mono out 到 DSP 的平衡 terminal in，画一下接法。"
+  },
+  {
+    "id": "AW-004",
+    "user_utterance": "请画 6.35 mm TRS balanced LINE OUT 到 XLR balanced LINE IN 的 wiring。"
+  },
+  {
+    "id": "AW-005",
+    "user_utterance": "四分之一英寸 TRS 平衡输出接三针 XLR 平衡输入，想核对针脚。"
+  },
+  {
+    "id": "AW-006",
+    "user_utterance": "调音台 XLR 平衡 LINE 输出接 RCA 非平衡 LINE 输入，设备手册已确认允许冷端与屏蔽在输入端汇接，请按手册画接现图。"
+  },
+  {
+    "id": "AW-007",
+    "user_utterance": "电脑 3.5 mm 立体声输出接功放的单声道 XLR 平衡输入，给我接线图。"
+  },
+  {
+    "id": "AW-008",
+    "user_utterance": "平衡 XLR 输出接 RCA 单声道输入，冷端按常规接屏蔽，帮我出接法。"
+  },
+  {
+    "id": "AW-009",
+    "user_utterance": "电脑 3.5 mm 立体声输出接双 RCA 立体声输入，L 对 L、R 对 R。日期 2026-09-20，会议有 36 人。"
+  },
+  {
+    "id": "AW-010",
+    "user_utterance": "6.35 mm TRS 立体声耳机口有三段触点，所以它肯定是平衡单声道输出；接 XLR 输入怎么焊？"
+  },
+  {
+    "id": "CAB-001",
+    "user_utterance": "给一间小楼的定压广播选线：喇叭总额定功率 180 W，功放到最远喇叭单程 80 m，线路在室内。"
+  },
+  {
+    "id": "CAB-002",
+    "user_utterance": "帮我看看专业音箱定阻那路该配什么线？这组总额定 420 瓦，最远单程 36 米。"
+  },
+  {
+    "id": "CAB-003",
+    "user_utterance": "100 V 广播回路，P总=520 W，单程 L=240 m，室外走线；请按现有线材规则给规格。"
+  },
+  {
+    "id": "CAB-004",
+    "user_utterance": "For the professional speaker line, 总额定功率是 760 W，one-way run 65 m，麻烦按定阻音箱那路看一下。"
+  },
+  {
+    "id": "CAB-005",
+    "user_utterance": "园区定压广播总功率 0.9 kW，最远单程 350 ft，室内布线，按这两个标注单位换算后选线。"
+  },
+  {
+    "id": "CAB-006",
+    "user_utterance": "定阻专业音箱总额定功率 300 W，最远单程布线距力 42 米，室内机房外的线路也按专业音箱档帮我看下。"
+  },
+  {
+    "id": "CAB-007",
+    "user_utterance": "走定压广播，室外，总负载功率 250 W；最远那只离机柜大概多少米还没量。"
+  },
+  {
+    "id": "CAB-008",
+    "user_utterance": "专业定阻音箱线，总额定功率在 250 到 400 W 之间，最远单程 55 m；这批是按一个固定功率档配的。"
+  },
+  {
+    "id": "CAB-009",
+    "user_utterance": "定压广播总额定功率 640 W，单程 480 m，室内。项目有 9 间房、每间 6 张桌，按这一路的线材规则给建议。"
+  },
+  {
+    "id": "CAB-010",
+    "user_utterance": "专业定阻线路最远单程 45 m；音箱额定功率我只知道每只 300 W，但现场接了几只还没清点；请按总额定功率选线。"
+  },
+  {
+    "id": "CAM-001",
+    "user_utterance": "用库内 TS-0650JSM 教师特写广角拍地面活动区，宽 8 m、纵深 5 m、人物最高点 1.7 m，自动建议安装高度，构图余量 10%。"
+  },
+  {
+    "id": "CAM-002",
+    "user_utterance": "TS-0663XP 对着背景屏，屏宽 5 m、高 2.4 m，底边离地 0.8 m，镜头固定在 2.6 m，边上留 15%。"
+  },
+  {
+    "id": "CAM-003",
+    "user_utterance": "自定义枪机 HFOV 78°、VFOV 48°，拍地面宽 6 m、纵深 4 m、人物高 1.8 m，auto height，margin 10%。"
+  },
+  {
+    "id": "CAM-004",
+    "user_utterance": "Custom sensor：有效宽 6.4 mm、高 3.6 mm，focal length 4.5 mm；拍 4.8 m × 2.4 m 背景墙，底边 0.6 m，余量 10%。"
+  },
+  {
+    "id": "CAM-005",
+    "user_utterance": "用 TS-0663XP 拍墙面，宽 480 cm、高 240 cm，底边离地 80 cm，自动建议镜头高度，构图余量 5%。"
+  },
+  {
+    "id": "CAM-006",
+    "user_utterance": "请安照 TS-0650JSM 教师特写广角拍墙，宽 4.5m、高 2m，低边离地 0.8m，镜头中心固定高 2.2m，余量 10%。"
+  },
+  {
+    "id": "CAM-007",
+    "user_utterance": "自定义摄像机水平视场角 75°，请算完整地面区域的安装距离：宽 6 m、纵深 4 m、人物最高点 1.8 m，自动高度、余量 10%。"
+  },
+  {
+    "id": "CAM-008",
+    "user_utterance": "展示区宽 6 m，另一个尺寸是 3 m；用库里的摄像机算一下该怎么装。"
+  },
+  {
+    "id": "CAM-009",
+    "user_utterance": "TS-0663JS 按水平角拍宽 4 m、高 2 m、底边离地 0.8 m 的展示板，auto 安装、留 10%；摄像机到板面水平距离已量 20 m，请核对横向能否拍全。日期 2026-09-20，预算 3000 元。"
+  },
+  {
+    "id": "CAM-010",
+    "user_utterance": "光学格式是 1/2.8 英寸，焦距 4.5 mm；拿这两个数当传感器宽和焦距，算一面宽 4m、高 2m、底边 0.5m 的墙。"
+  },
+  {
+    "id": "CROSS-001",
+    "user_utterance": "8 Ω 音箱额定 200 W，功放在 8 Ω 下额定 250 W，帮我算一下这套系统的“最大值”。"
+  },
+  {
+    "id": "CROSS-002",
+    "user_utterance": "会议背景墙宽 6 m，想给它配一台摄像机，帮我算下方案。"
+  },
+  {
+    "id": "CROSS-003",
+    "user_utterance": "TL-SL333 灯具不受控，控台通道值会变化；我还没决定要重新排地址表，还是进入故障排查，请先帮我选入口。"
+  },
+  {
+    "id": "CROSS-004",
+    "user_utterance": "项目“展厅改造”中调音台 Main L 到 DSP Input 1 的信息帮我查一下，是看线路台账还是查看项目计算记录？"
+  },
+  {
+    "id": "CROSS-005",
+    "user_utterance": "XLR 公母头的 1、2、3 针怎么接？我还没确定是只查针脚定义，还是按两端设备画接线图。"
+  },
+  {
+    "id": "CROSS-006",
+    "user_utterance": "专业定阻主扩系统总额定功率 1000 W、最远单程 35 m；帮我定扬声器线规格，或者把线材需求登记到项目“巡演扩声”的线路表。"
+  },
+  {
+    "id": "CROSS-007",
+    "user_utterance": "请用产品库里的两只 TS-803C（常规叠加，听音距离 4 m）估算声压；另按专业定阻音箱线总额定功率 600 W、单程 45 m 估算线径。"
+  },
+  {
+    "id": "CROSS-008",
+    "user_utterance": "先比较产品库里的两款摄像机 TS-0650JSM 和 TS-0663XP，再按 TS-0650JSM 教师特写广角拍地面区域，宽 6 m、纵深 4 m、人物最高点 1.8 m、自动高度、余量 10%，算安装距离。"
+  },
+  {
+    "id": "DMX-001",
+    "user_utterance": "把 8 台面光灯 TL-SL333 按 6 通道模式，从 A 域地址 A001 自动连续编址。"
+  },
+  {
+    "id": "DMX-002",
+    "user_utterance": "染色灯 12 台，每台 18ch，从 B101 往后自动排。"
+  },
+  {
+    "id": "DMX-003",
+    "user_utterance": "面光组 TL-SL333，6ch、8台，universe C，start 001，auto address。"
+  },
+  {
+    "id": "DMX-004",
+    "user_utterance": "Moving head 6 台，18-channel mode，从 D001 start address，按 manual allocation 给我排。"
+  },
+  {
+    "id": "DMX-005",
+    "user_utterance": "沿用“黑匣子场地”现有编址方案，舞台宽 1200 cm、纵深 800 cm，做顶光加面光布局，前沿在下方，顶光杆 3 排、侧光 2 对。"
+  },
+  {
+    "id": "DMX-006",
+    "user_utterance": "4台染色灯，每台12通道，从A01O开始自动排，A后面是零一字母O。"
+  },
+  {
+    "id": "DMX-007",
+    "user_utterance": "4 台 TL-SL333 面光灯从 A001 开始自动编址，按灯具型号的通道模式排。"
+  },
+  {
+    "id": "DMX-008",
+    "user_utterance": "沿用现有编址表给舞台宽 12 m、纵深 8 m 画顶光加面光的 3 排灯位；图纸舞台前沿标在上方，但观众席在下方，按前沿方向布置。"
+  },
+  {
+    "id": "DMX-009",
+    "user_utterance": "查一下 TL-SL333 的 6 通道模式功能表，演出日期 2026-09-20，灯具编号 1001。"
+  },
+  {
+    "id": "DMX-010",
+    "user_utterance": "TL-SL333 电源是 220V，帮我查它每个 DMX 通道控制什么。"
+  },
+  {
+    "id": "GAIN-001",
+    "user_utterance": "请按功放 TC-2350B 的输入灵敏度档计算系统增益结构：实际档位 1 V，DSP 目标峰值 -6 dBFS。"
+  },
+  {
+    "id": "GAIN-002",
+    "user_utterance": "帮我对一下 TC-22000 的电压增益吧，我现场拨在 39 dB，立体声，接 4 欧负载，峰值先按 -9 dBFS。"
+  },
+  {
+    "id": "GAIN-003",
+    "user_utterance": "TC-4500B：Input Sensitivity=2 V；DSP Peak=-3 dBFS。按输入灵敏度档给我对齐参考。"
+  },
+  {
+    "id": "GAIN-004",
+    "user_utterance": "TC-23000 的 Gain 设为 41 dB，amp mode 是 bridge，load 8 Ω；DSP target peak 用 -6 dBFS。"
+  },
+  {
+    "id": "GAIN-005",
+    "user_utterance": "TC-22000 用电压增益档 36 dB，立体声工作，负载标牌写 0.008 kΩ，目标峰值 -6 dBFS。"
+  },
+  {
+    "id": "GAIN-006",
+    "user_utterance": "TC-2350B 功放输入灵敏度选 2 V，DSP 峰值设成 -6 dbfs，帮我算一下对齐量，说明书档位我已经核过。"
+  },
+  {
+    "id": "GAIN-007",
+    "user_utterance": "TC-22000，按电压增益模式、立体声、4 Ω 负载和 -6 dBFS 目标峰值算；我忘了现在的增益档是多少。"
+  },
+  {
+    "id": "GAIN-008",
+    "user_utterance": "TC-22000 电压增益现在可能在 33 到 39 dB，立体声、4 Ω，DSP 峰值目标 -6 dBFS，按一个当前档值出参考。"
+  },
+  {
+    "id": "GAIN-009",
+    "user_utterance": "TC-2350B 输入灵敏度实际选 1 V，DSP 目标峰值 -9 dBFS。机柜是 12U，音频线有 6 根，这次只核系统电平对齐。"
+  },
+  {
+    "id": "GAIN-010",
+    "user_utterance": "功放是 TC-X2200B，DSP 目标峰值 -6 dBFS；现在旋钮显示衰减 -6 dB，但我没查到输入灵敏度实际在 1 V 还是 2 V。"
+  },
+  {
+    "id": "LED-001",
+    "user_utterance": "墙面宽 8 m、高 4 m，上下各留 0.2 m，边框宽 0.05 m；目标比例 16:9，常规箱体，最近观看 5 m，点间距 P2.0。"
+  },
+  {
+    "id": "LED-002",
+    "user_utterance": "墙上能放 6 米宽、3 米高的屏，想用常规箱体，大概算下。"
+  },
+  {
+    "id": "LED-003",
+    "user_utterance": "墙宽 7.2m、高 4.2m，目标 16:9，最近视距 4m，P1.86，模组拼。"
+  },
+  {
+    "id": "LED-004",
+    "user_utterance": "LED screen 墙体 6000 mm × 3375 mm，aspect ratio 16:9，nearest viewing distance 3 m，cabinet 用 600 × 337.5 mm 的高端 A 系列。"
+  },
+  {
+    "id": "LED-005",
+    "user_utterance": "墙宽 720 cm、高 405 cm，上边留 20 cm、下边留 15 cm，最近观看 450 cm，按 16:9 算。"
+  },
+  {
+    "id": "LED-006",
+    "user_utterance": "屏体估算：墙宽 6m、高 3m，顶边留 20 公分、底边留 15 公分，最近视距 4m，anpect ratio 16:9。"
+  },
+  {
+    "id": "LED-007",
+    "user_utterance": "这面墙宽 6 m，想估一下能拼多大 LED 屏，用 640 × 480 mm 常规箱体。"
+  },
+  {
+    "id": "LED-008",
+    "user_utterance": "墙宽 6 m、高 3.5 m，任务单上目标比例写 16:9，改版消息又写 4:3，我还没决定采用哪一个；请排箱体。"
+  },
+  {
+    "id": "LED-009",
+    "user_utterance": "墙宽 8 m、高 4.5 m，最近观看 6 m，按 16:9、模组计算。验收日期 2026-09-20，采购单 18 号。"
+  },
+  {
+    "id": "LED-010",
+    "user_utterance": "墙宽 4.8 m、高 2.7 m，屏亮度要 2500 nit，按这个亮度帮我选点间距。"
+  },
+  {
+    "id": "LIM-001",
+    "user_utterance": "请计算限幅阈值：功放 TC-2500，音箱 TS-803C，每只额定 300 W、4 Ω；每通道两只并联，功放立体声模式，在 2 Ω 额定输出 1300 W，输入灵敏度 1 V。"
+  },
+  {
+    "id": "LIM-002",
+    "user_utterance": "我这套 TC-X2200B 带 TS-803C，每路两只串着接，功放开桥接、灵敏度切到 2 V，帮我把 limiter threshold 定一下。"
+  },
+  {
+    "id": "LIM-003",
+    "user_utterance": "TC-2350B + TS-803C；N=2/CH，series，bridge；speaker 300 W/4 Ω，amp 8 Ω rated 1200 W，input 1 V，HPF 80 Hz。请给 threshold、Attack/Release。"
+  },
+  {
+    "id": "LIM-004",
+    "user_utterance": "For limiter threshold，功放 TC-2500B 配 TS-803C；每通道 2 只串联，stereo mode，输入灵敏度 2 V。"
+  },
+  {
+    "id": "LIM-005",
+    "user_utterance": "TC-2500 配 TS-803C，每通道 2 只串联；音箱每只额定 0.3 kW、阻抗 0.004 kΩ，功放立体声 8 Ω 额定 0.5 kW，灵敏度 1000 mV，HPF 31 Hz；也请给 Attack/Release。"
+  },
+  {
+    "id": "LIM-006",
+    "user_utterance": "把限幅阈只先算一下：TC-2350B 配 TS-803C，每通道两只串联，立体声档、输入灵敏度 1V。"
+  },
+  {
+    "id": "LIM-007",
+    "user_utterance": "TC-2350B 接 TS-803C，每通道两只串联，桥接模式；输入灵敏度档位我没记下来，先帮我算阈值。"
+  },
+  {
+    "id": "LIM-008",
+    "user_utterance": "TC-2350B 配两只 TS-803C/通道，桥接，输入灵敏度 1 V；接线照片一处说“串联”，另一处写“并联”，按现场接法算阈值。"
+  },
+  {
+    "id": "LIM-009",
+    "user_utterance": "会议厅有 32 个座位、层高 4 m；音响是 TC-2500 配 TS-803C，每通道 2 只并联，立体声，输入 2 V，请按这套音响的目录规格核限幅阈值。"
+  },
+  {
+    "id": "LIM-010",
+    "user_utterance": "我只知道某音箱峰值功率 1200 W，功放 TC-2350B 立体声、每通道接两只并联、输入灵敏度 1 V；请按音箱额定功率算限幅阈值。"
+  },
+  {
+    "id": "OTHER-001",
+    "user_utterance": "把这段通知改写得正式一点：会议延期到周五下午。"
+  },
+  {
+    "id": "OTHER-002",
+    "user_utterance": "帮我翻译成英文：请于明天上午九点到场。"
+  },
+  {
+    "id": "OTHER-003",
+    "user_utterance": "给年会开场写一句轻松的主持词。"
+  },
+  {
+    "id": "OTHER-004",
+    "user_utterance": "今天上海天气怎么样？"
+  },
+  {
+    "id": "OTHER-005",
+    "user_utterance": "帮我做一个下周的个人健身计划。"
+  },
+  {
+    "id": "OTHER-006",
+    "user_utterance": "推荐三本适合入门的历史书。"
+  },
+  {
+    "id": "PW-001",
+    "user_utterance": "在项目“东馆扩声”登记一条线路：调音台 Main L 输出到 DSP Input 1，成品平衡音频线，RVPE 2×0.5 mm²，两端 XLR 母头到 XLR 公头，长 8 m，状态待施工。"
+  },
+  {
+    "id": "PW-002",
+    "user_utterance": "在“序厅音响”里记一根调音台 OUT1 到处理器 IN1 的平衡成品线，长度先留空，状态待施工。"
+  },
+  {
+    "id": "PW-003",
+    "user_utterance": "项目“报告厅改造”：Mixer Main L OUT → DSP IN1，1条成品 balanced audio cable，RVPE 2×0.5 mm²，8m，已连接。"
+  },
+  {
+    "id": "PW-004",
+    "user_utterance": "在 project “春季发布会”里新增 one finished speaker cable：功放 Channel A 到左主扩 NL4，长度 12 m，status connected。"
+  },
+  {
+    "id": "PW-005",
+    "user_utterance": "项目“多功能厅”登记一根成品扬声器线：功放 A 输出到主扩输入，长度 850 cm，状态已连接。"
+  },
+  {
+    "id": "PW-006",
+    "user_utterance": "项目“巡展音响”，调音台 OUT1 接 DPS IN1，做一条平横音频成品线，长 6 m，状态已连接。"
+  },
+  {
+    "id": "PW-007",
+    "user_utterance": "在项目“会议室改造”登记一条线：调音台到 DSP，平衡音频线，长度 5 m，待施工。"
+  },
+  {
+    "id": "PW-008",
+    "user_utterance": "项目“舞台扩声”同一条调音台 OUT2 到 DSP IN2 的成品平衡线，在施工单记 8 m、材料单记 10 m；尚未确认哪一个是单条线路长度。"
+  },
+  {
+    "id": "PW-009",
+    "user_utterance": "项目“西厅改造”添加一条：调音台 OUT1 到功放 CH1，成品平衡音频线，6 m，待施工。订单号 20260920，设备编号 18。"
+  },
+  {
+    "id": "PW-010",
+    "user_utterance": "项目“巡演”里有调音台 OUT1 到 DSP IN1 的 3 条散线。材料汇总写总用量 30 m，但我不知道每条单长，能否直接用总长填每条线路长度？"
+  },
+  {
+    "id": "SPL-001",
+    "user_utterance": "估算两只 TS-803C 在 4 m 处按常规叠加工作的声压级，按型号库额定参数计算即可。"
+  },
+  {
+    "id": "SPL-002",
+    "user_utterance": "我有 4 只 TS-715H，走得比较齐、相位也对过了，想看 6 米位置的理想同相声压大概多少。"
+  },
+  {
+    "id": "SPL-003",
+    "user_utterance": "TS-803C：Sensitivity 95 dB @ 1W/1m，额定功率 300 W；N=2，测距 5 m，distributed summation。"
+  },
+  {
+    "id": "SPL-004",
+    "user_utterance": "For two TS-803C speakers，测量点 distance 是 3 m，按 distributed summation 估算额定功率下的 SPL。"
+  },
+  {
+    "id": "SPL-005",
+    "user_utterance": "TS-803C 两只按常规叠加，听音点距箱 12 ft；请按这个英制距离估一下额定功率声压。"
+  },
+  {
+    "id": "SPL-006",
+    "user_utterance": "帮我估下 TS-803C 两只常规叠加，测距 7 米，按额定工况的声压级大约是多小？"
+  },
+  {
+    "id": "SPL-007",
+    "user_utterance": "TS-803C 当前接了 0 只音箱，按额定功率估一下声压；测量距离我还没量。"
+  },
+  {
+    "id": "SPL-008",
+    "user_utterance": "TS-715H 三只常规叠加，听音位置大约在 4 到 8 m；需要按一个确定测距出额定声压估算。"
+  },
+  {
+    "id": "SPL-009",
+    "user_utterance": "TS-803C 两只常规叠加，距离 4 m，按额定功率估 SPL。房间摆了 8 张桌，墙上屏幕 120 英寸。"
+  },
+  {
+    "id": "SPL-010",
+    "user_utterance": "音箱最大声压级是 120 dB，测距 5 m、单只、按常规叠加；请把 120 dB 当灵敏度算一下。"
+  },
+  {
+    "id": "SUPPORT-001",
+    "user_utterance": "产品库里有哪些可用于限幅器的功放？"
+  },
+  {
+    "id": "SUPPORT-002",
+    "user_utterance": "请比较产品库中的 TS-0650JSM 和 TS-0663XP 两款摄像机。"
+  },
+  {
+    "id": "SUPPORT-003",
+    "user_utterance": "音箱全部没声音，播放时输入电平表有信号，但对应输出电平表无信号，按步骤帮我排查。"
+  },
+  {
+    "id": "SUPPORT-004",
+    "user_utterance": "一组灯具不受控，灯具显示没有收到 DMX 信号，按故障排查流程带我检查。"
+  },
+  {
+    "id": "SUPPORT-005",
+    "user_utterance": "XLR 三针里 1、2、3 脚分别是什么？"
+  },
+  {
+    "id": "SUPPORT-006",
+    "user_utterance": "查看项目“合唱厅改造”里保存的 DMX 编址计算记录。"
+  },
+  {
+    "id": "V2-AUD-001",
+    "user_utterance": "功放输入灵敏度档按 -10 dBu，DSP 目标峰值 -6 dBFS，帮我核系统增益结构。"
+  },
+  {
+    "id": "V2-AUD-002",
+    "user_utterance": "这台功放灵敏度是 -10 dBV，换算成输入电压后，目标峰值按 -6 dBFS。"
+  },
+  {
+    "id": "V2-AUD-003",
+    "user_utterance": "功放输入灵敏度标注 -18 dBFS，DSP 目标峰值 -6 dBFS，按这个灵敏度帮我算增益结构。"
+  },
+  {
+    "id": "V2-AUD-004",
+    "user_utterance": "功放输入灵敏度为 0 V，DSP 目标峰值 -3 dBFS；功放型号 TC-2350B，请直接给对齐量。"
+  },
+  {
+    "id": "V2-AUD-005",
+    "user_utterance": "报告厅预估：房间宽 8 m、高 4 m；目标二级，音箱短边前置，首排 2 m、末排 10 m，听音区宽 7 m。"
+  },
+  {
+    "id": "V2-AUD-006",
+    "user_utterance": "报告厅预估：房间长 12 m、高 4 m；目标一级，主扩短边前置，首排 3 m、末排 11 m，听音区宽 8 m。"
+  },
+  {
+    "id": "V2-AUD-007",
+    "user_utterance": "报告厅预估：房间长 12 m、宽 8 m；目标二级，主扩短边前置，首排 2 m、末排 10 m，听音区宽 7 m。"
+  },
+  {
+    "id": "V2-AUD-008",
+    "user_utterance": "输入灵敏度档写 775 mV，DSP 目标峰值 -6 dBFS，请换成伏特后核对齐量。"
+  },
+  {
+    "id": "V2-AUD-009",
+    "user_utterance": "功放输入灵敏度档是 1 V，按默认 DSP 目标峰值算一下系统对齐量。"
+  },
+  {
+    "id": "V2-AUD-010",
+    "user_utterance": "复核单音箱单链路 PAG/NAG：嘴至话筒 ds=0.5 m，发言人到远端 d0=6 m、最近听众 dn=2 m，话筒至实际送声音箱 d1=3 m、同一远端到该音箱 d2=4 m；同时开放 NOM 在 1 到 3 支间波动，请按上下端点评估。"
+  },
+  {
+    "id": "V2-AUD-011",
+    "user_utterance": "TC-22000 电压增益旋钮记着 36 dB，调试表里又写 39 dB；立体声接 8 Ω，目标峰值 -6 dBFS，按现场档值计算。"
+  },
+  {
+    "id": "V2-AUD-012",
+    "user_utterance": "TS-715H 两只，听音点 6 m，按常规叠加；手头没抄灵敏度和额定功率，请按型号目录查值估算额定声压级。"
+  },
+  {
+    "id": "V2-AV-001",
+    "user_utterance": "自定义镜头 HFOV 72°，只核对距墙 8 m 时能否覆盖 10 m 宽；不要做垂直构图校核。"
+  },
+  {
+    "id": "V2-AV-002",
+    "user_utterance": "镜头对角视场角 DFOV 90°，请据此算水平视场角和 12 m 处横向覆盖宽度。"
+  },
+  {
+    "id": "V2-AV-003",
+    "user_utterance": "自定义传感器宽 6.4 mm、高 3.6 mm，焦距 4.5 mm，算理论 HFOV、VFOV 和 DFOV。"
+  },
+  {
+    "id": "V2-AV-004",
+    "user_utterance": "现场单写“展市区”，宽 6 m，另一个尺寸 3 m 没标是高还是纵深；自定义 HFOV 80°、VFOV 50°，帮我算覆盖。"
+  },
+  {
+    "id": "V2-AV-005",
+    "user_utterance": "自定义镜头 VFOV 48°，摄像机距墙 10 m；墙宽 8 m，我要核对横向能否拍全。"
+  },
+  {
+    "id": "V2-AV-006",
+    "user_utterance": "图纸把舞台前沿标在上方、观众席在下方；方向有冲突时以舞台前沿为准，请只确认前沿方向，不排具体灯位。"
+  },
+  {
+    "id": "V2-AV-007",
+    "user_utterance": "平衡 XLR 输出接 RCA 输入，请按我要求把冷端接屏蔽并出图。"
+  },
+  {
+    "id": "V2-AV-008",
+    "user_utterance": "平衡 XLR 输出接 RCA 输入；两台设备的手册都确认允许冷端与屏蔽在 RCA 输入端汇接，请据此画接线图。"
+  },
+  {
+    "id": "V2-AV-009",
+    "user_utterance": "墙宽 6 m、高 3 m，采用常规箱体拼 LED，按 16:9 排箱。"
+  },
+  {
+    "id": "V2-AV-010",
+    "user_utterance": "镜头 HFOV 0°，要算距墙 5 m 时覆盖多宽。"
+  },
+  {
+    "id": "V2-AV-011",
+    "user_utterance": "查产品库 TS-0663XP 的主镜头水平视场角，并计算距墙 10 m 时横向覆盖宽度。"
+  },
+  {
+    "id": "V2-AV-012",
+    "user_utterance": "给 4 台、每台 12 通道的灯具从 A001 连续编址；A 是 universe 还是地址文本的一部分由我另行填写。"
+  },
+  {
+    "id": "VEN-001",
+    "user_utterance": "按报告/培训型预估：房间长 12 m、宽 8 m、高 4 m，目标二级；主扩在短边前置，首排距前墙 3 m、末排 11 m，听音区宽 7 m。"
+  },
+  {
+    "id": "VEN-002",
+    "user_utterance": "培训室大概 10 米长、7 米宽、3.5 米高，想按一级看看；音箱放在短墙这边，第一排 2 米、最后排 8 米，实际听众横向占 5 米。"
+  },
+  {
+    "id": "VEN-003",
+    "user_utterance": "报告型，L=9.5m，W=6m，H=3.2m；目标 I 级；主扩 front=short wall；first row 1.8m、last row 7.5m、listening width 4.8m。"
+  },
+  {
+    "id": "VEN-004",
+    "user_utterance": "围桌 Discussion 模式，room 长 9 m、宽 7 m、高 3.4 m，目标二级；rectangular table 长 4 m、宽 1.5 m，10 位参会，ceiling blocked，按顶面不可安装处理。"
+  },
+  {
+    "id": "VEN-005",
+    "user_utterance": "围桌讨论：会议室 20 ft × 16 ft × 10 ft，圆桌直径 8 ft，10 人参加，平顶可装吸顶，按二级预估。"
+  },
+  {
+    "id": "VEN-006",
+    "user_utterance": "围桌讨论型帮我预估一下方按：房间长 8 m、宽 7 m、高 3.5 m，矩形桌长 4 m、宽 1.5 m，8 人，顶面不可安装，目标一级。"
+  },
+  {
+    "id": "VEN-007",
+    "user_utterance": "先复核单音箱 PAG/NAG：嘴到话筒 0.5 m，发言人到远端 6 m、最近听众 2 m，话筒到实际送声音箱 3 m，NOM 同时开 1 支；音箱到同一远端听众的距离没量。"
+  },
+  {
+    "id": "VEN-008",
+    "user_utterance": "做多音箱取点 PAG/NAG：ds=0.5 m，d0=7 m，dn=2 m，A 是离话筒最近、且当前确实播放这支话筒信号的音箱，d1=3 m；B 是离同一最远听众最近、且当前确实播放这支话筒信号的音箱，d2=5 m；NOM 同时开 1 到 2 支。"
+  },
+  {
+    "id": "VEN-009",
+    "user_utterance": "单音箱单链路复核：ds 0.4 m，d0 6 m，dn 1.5 m，d1 3 m，d2 4 m，同时开放话筒 2 支。会议共有 12 位参会者、桌面长 4 m。"
+  },
+  {
+    "id": "VEN-010",
+    "user_utterance": "单音箱 PAG/NAG，ds 0.5 m、d0 6 m、dn 2 m、d1 3 m、d2 4 m；会议有 12 名参会者，但同时开放的话筒数还没统计。"
+  }
+]

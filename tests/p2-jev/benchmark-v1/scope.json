@@ -1,0 +1,1858 @@
+[
+  {
+    "case_id": "AW-001",
+    "parameters": [
+      "audio_wiring.cold_end_permission",
+      "audio_wiring.destination_channel",
+      "audio_wiring.input_connector",
+      "audio_wiring.input_signal_type",
+      "audio_wiring.output_connector",
+      "audio_wiring.output_signal_type",
+      "audio_wiring.source_channel"
+    ]
+  },
+  {
+    "case_id": "AW-002",
+    "parameters": [
+      "audio_wiring.cold_end_permission",
+      "audio_wiring.destination_channel",
+      "audio_wiring.input_connector",
+      "audio_wiring.input_signal_type",
+      "audio_wiring.output_connector",
+      "audio_wiring.output_signal_type",
+      "audio_wiring.source_channel"
+    ]
+  },
+  {
+    "case_id": "AW-003",
+    "parameters": [
+      "audio_wiring.cold_end_permission",
+      "audio_wiring.destination_channel",
+      "audio_wiring.input_connector",
+      "audio_wiring.input_signal_type",
+      "audio_wiring.output_connector",
+      "audio_wiring.output_signal_type",
+      "audio_wiring.source_channel"
+    ]
+  },
+  {
+    "case_id": "AW-004",
+    "parameters": [
+      "audio_wiring.cold_end_permission",
+      "audio_wiring.destination_channel",
+      "audio_wiring.input_connector",
+      "audio_wiring.input_signal_type",
+      "audio_wiring.output_connector",
+      "audio_wiring.output_signal_type",
+      "audio_wiring.source_channel"
+    ]
+  },
+  {
+    "case_id": "AW-005",
+    "parameters": [
+      "audio_wiring.cold_end_permission",
+      "audio_wiring.destination_channel",
+      "audio_wiring.input_connector",
+      "audio_wiring.input_signal_type",
+      "audio_wiring.output_connector",
+      "audio_wiring.output_signal_type",
+      "audio_wiring.source_channel"
+    ]
+  },
+  {
+    "case_id": "AW-006",
+    "parameters": [
+      "audio_wiring.cold_end_permission",
+      "audio_wiring.destination_channel",
+      "audio_wiring.input_connector",
+      "audio_wiring.input_signal_type",
+      "audio_wiring.output_connector",
+      "audio_wiring.output_signal_type",
+      "audio_wiring.source_channel"
+    ]
+  },
+  {
+    "case_id": "AW-007",
+    "parameters": [
+      "audio_wiring.cold_end_permission",
+      "audio_wiring.destination_channel",
+      "audio_wiring.input_connector",
+      "audio_wiring.input_signal_type",
+      "audio_wiring.output_connector",
+      "audio_wiring.output_signal_type",
+      "audio_wiring.source_channel"
+    ]
+  },
+  {
+    "case_id": "AW-008",
+    "parameters": [
+      "audio_wiring.cold_end_permission",
+      "audio_wiring.cold_end_requested",
+      "audio_wiring.destination_channel",
+      "audio_wiring.input_connector",
+      "audio_wiring.input_signal_type",
+      "audio_wiring.output_connector",
+      "audio_wiring.output_signal_type",
+      "audio_wiring.source_channel"
+    ]
+  },
+  {
+    "case_id": "AW-009",
+    "parameters": [
+      "audio_wiring.cold_end_permission",
+      "audio_wiring.destination_channel",
+      "audio_wiring.input_connector",
+      "audio_wiring.input_signal_type",
+      "audio_wiring.output_connector",
+      "audio_wiring.output_signal_type",
+      "audio_wiring.source_channel"
+    ]
+  },
+  {
+    "case_id": "AW-010",
+    "parameters": [
+      "audio_wiring.cold_end_permission",
+      "audio_wiring.destination_channel",
+      "audio_wiring.input_connector",
+      "audio_wiring.input_signal_type",
+      "audio_wiring.output_connector",
+      "audio_wiring.output_signal_type",
+      "audio_wiring.source_channel"
+    ]
+  },
+  {
+    "case_id": "CAB-001",
+    "parameters": [
+      "cable.circuit_type",
+      "cable.environment",
+      "cable.one_way_distance_m",
+      "cable.total_rated_power_w"
+    ]
+  },
+  {
+    "case_id": "CAB-002",
+    "parameters": [
+      "cable.circuit_type",
+      "cable.one_way_distance_m",
+      "cable.total_rated_power_w"
+    ]
+  },
+  {
+    "case_id": "CAB-003",
+    "parameters": [
+      "cable.circuit_type",
+      "cable.environment",
+      "cable.one_way_distance_m",
+      "cable.total_rated_power_w"
+    ]
+  },
+  {
+    "case_id": "CAB-004",
+    "parameters": [
+      "cable.circuit_type",
+      "cable.one_way_distance_m",
+      "cable.total_rated_power_w"
+    ]
+  },
+  {
+    "case_id": "CAB-005",
+    "parameters": [
+      "cable.circuit_type",
+      "cable.environment",
+      "cable.one_way_distance_m",
+      "cable.total_rated_power_w"
+    ]
+  },
+  {
+    "case_id": "CAB-006",
+    "parameters": [
+      "cable.circuit_type",
+      "cable.one_way_distance_m",
+      "cable.total_rated_power_w"
+    ]
+  },
+  {
+    "case_id": "CAB-007",
+    "parameters": [
+      "cable.circuit_type",
+      "cable.environment",
+      "cable.one_way_distance_m",
+      "cable.total_rated_power_w"
+    ]
+  },
+  {
+    "case_id": "CAB-008",
+    "parameters": [
+      "cable.circuit_type",
+      "cable.one_way_distance_m",
+      "cable.total_rated_power_w"
+    ]
+  },
+  {
+    "case_id": "CAB-009",
+    "parameters": [
+      "cable.circuit_type",
+      "cable.environment",
+      "cable.one_way_distance_m",
+      "cable.total_rated_power_w"
+    ]
+  },
+  {
+    "case_id": "CAB-010",
+    "parameters": [
+      "cable.circuit_type",
+      "cable.one_way_distance_m",
+      "cable.total_rated_power_w"
+    ]
+  },
+  {
+    "case_id": "CAM-001",
+    "parameters": [
+      "camera_fov.area_depth_m",
+      "camera_fov.camera_height_m",
+      "camera_fov.camera_model",
+      "camera_fov.camera_target_distance_m",
+      "camera_fov.focal_length_mm",
+      "camera_fov.height_mode",
+      "camera_fov.hfov_deg",
+      "camera_fov.margin_percent",
+      "camera_fov.scene_type",
+      "camera_fov.sensor_height_mm",
+      "camera_fov.sensor_width_mm",
+      "camera_fov.subject_height_m",
+      "camera_fov.target_bottom_height_m",
+      "camera_fov.target_height_m",
+      "camera_fov.target_width_m",
+      "camera_fov.vfov_deg"
+    ]
+  },
+  {
+    "case_id": "CAM-002",
+    "parameters": [
+      "camera_fov.area_depth_m",
+      "camera_fov.camera_height_m",
+      "camera_fov.camera_model",
+      "camera_fov.camera_target_distance_m",
+      "camera_fov.focal_length_mm",
+      "camera_fov.height_mode",
+      "camera_fov.hfov_deg",
+      "camera_fov.margin_percent",
+      "camera_fov.scene_type",
+      "camera_fov.sensor_height_mm",
+      "camera_fov.sensor_width_mm",
+      "camera_fov.subject_height_m",
+      "camera_fov.target_bottom_height_m",
+      "camera_fov.target_height_m",
+      "camera_fov.target_width_m",
+      "camera_fov.vfov_deg"
+    ]
+  },
+  {
+    "case_id": "CAM-003",
+    "parameters": [
+      "camera_fov.area_depth_m",
+      "camera_fov.camera_height_m",
+      "camera_fov.camera_model",
+      "camera_fov.camera_target_distance_m",
+      "camera_fov.focal_length_mm",
+      "camera_fov.height_mode",
+      "camera_fov.hfov_deg",
+      "camera_fov.margin_percent",
+      "camera_fov.scene_type",
+      "camera_fov.sensor_height_mm",
+      "camera_fov.sensor_width_mm",
+      "camera_fov.subject_height_m",
+      "camera_fov.target_bottom_height_m",
+      "camera_fov.target_height_m",
+      "camera_fov.target_width_m",
+      "camera_fov.vfov_deg"
+    ]
+  },
+  {
+    "case_id": "CAM-004",
+    "parameters": [
+      "camera_fov.area_depth_m",
+      "camera_fov.camera_height_m",
+      "camera_fov.camera_model",
+      "camera_fov.camera_target_distance_m",
+      "camera_fov.focal_length_mm",
+      "camera_fov.height_mode",
+      "camera_fov.hfov_deg",
+      "camera_fov.margin_percent",
+      "camera_fov.scene_type",
+      "camera_fov.sensor_height_mm",
+      "camera_fov.sensor_width_mm",
+      "camera_fov.subject_height_m",
+      "camera_fov.target_bottom_height_m",
+      "camera_fov.target_height_m",
+      "camera_fov.target_width_m",
+      "camera_fov.vfov_deg"
+    ]
+  },
+  {
+    "case_id": "CAM-005",
+    "parameters": [
+      "camera_fov.area_depth_m",
+      "camera_fov.camera_height_m",
+      "camera_fov.camera_model",
+      "camera_fov.camera_target_distance_m",
+      "camera_fov.focal_length_mm",
+      "camera_fov.height_mode",
+      "camera_fov.hfov_deg",
+      "camera_fov.margin_percent",
+      "camera_fov.scene_type",
+      "camera_fov.sensor_height_mm",
+      "camera_fov.sensor_width_mm",
+      "camera_fov.subject_height_m",
+      "camera_fov.target_bottom_height_m",
+      "camera_fov.target_height_m",
+      "camera_fov.target_width_m",
+      "camera_fov.vfov_deg"
+    ]
+  },
+  {
+    "case_id": "CAM-006",
+    "parameters": [
+      "camera_fov.area_depth_m",
+      "camera_fov.camera_height_m",
+      "camera_fov.camera_model",
+      "camera_fov.camera_target_distance_m",
+      "camera_fov.focal_length_mm",
+      "camera_fov.height_mode",
+      "camera_fov.hfov_deg",
+      "camera_fov.margin_percent",
+      "camera_fov.scene_type",
+      "camera_fov.sensor_height_mm",
+      "camera_fov.sensor_width_mm",
+      "camera_fov.subject_height_m",
+      "camera_fov.target_bottom_height_m",
+      "camera_fov.target_height_m",
+      "camera_fov.target_width_m",
+      "camera_fov.vfov_deg"
+    ]
+  },
+  {
+    "case_id": "CAM-007",
+    "parameters": [
+      "camera_fov.area_depth_m",
+      "camera_fov.camera_height_m",
+      "camera_fov.camera_model",
+      "camera_fov.camera_target_distance_m",
+      "camera_fov.focal_length_mm",
+      "camera_fov.height_mode",
+      "camera_fov.hfov_deg",
+      "camera_fov.margin_percent",
+      "camera_fov.scene_type",
+      "camera_fov.sensor_height_mm",
+      "camera_fov.sensor_width_mm",
+      "camera_fov.subject_height_m",
+      "camera_fov.target_bottom_height_m",
+      "camera_fov.target_height_m",
+      "camera_fov.target_width_m",
+      "camera_fov.vfov_deg"
+    ]
+  },
+  {
+    "case_id": "CAM-008",
+    "parameters": [
+      "camera_fov.area_depth_m",
+      "camera_fov.camera_height_m",
+      "camera_fov.camera_model",
+      "camera_fov.camera_target_distance_m",
+      "camera_fov.focal_length_mm",
+      "camera_fov.height_mode",
+      "camera_fov.hfov_deg",
+      "camera_fov.margin_percent",
+      "camera_fov.scene_type",
+      "camera_fov.sensor_height_mm",
+      "camera_fov.sensor_width_mm",
+      "camera_fov.subject_height_m",
+      "camera_fov.target_bottom_height_m",
+      "camera_fov.target_height_m",
+      "camera_fov.target_width_m",
+      "camera_fov.unresolved_dimension_1",
+      "camera_fov.vfov_deg"
+    ]
+  },
+  {
+    "case_id": "CAM-009",
+    "parameters": [
+      "camera_fov.area_depth_m",
+      "camera_fov.camera_height_m",
+      "camera_fov.camera_model",
+      "camera_fov.camera_target_distance_m",
+      "camera_fov.focal_length_mm",
+      "camera_fov.height_mode",
+      "camera_fov.hfov_deg",
+      "camera_fov.margin_percent",
+      "camera_fov.scene_type",
+      "camera_fov.sensor_height_mm",
+      "camera_fov.sensor_width_mm",
+      "camera_fov.subject_height_m",
+      "camera_fov.target_bottom_height_m",
+      "camera_fov.target_height_m",
+      "camera_fov.target_width_m",
+      "camera_fov.vfov_deg"
+    ]
+  },
+  {
+    "case_id": "CAM-010",
+    "parameters": [
+      "camera_fov.area_depth_m",
+      "camera_fov.camera_height_m",
+      "camera_fov.camera_model",
+      "camera_fov.camera_target_distance_m",
+      "camera_fov.focal_length_mm",
+      "camera_fov.height_mode",
+      "camera_fov.hfov_deg",
+      "camera_fov.margin_percent",
+      "camera_fov.scene_type",
+      "camera_fov.sensor_height_mm",
+      "camera_fov.sensor_width_mm",
+      "camera_fov.subject_height_m",
+      "camera_fov.target_bottom_height_m",
+      "camera_fov.target_height_m",
+      "camera_fov.target_width_m",
+      "camera_fov.vfov_deg"
+    ]
+  },
+  {
+    "case_id": "CROSS-001",
+    "parameters": [
+      "limiter.amplifier_rated_power_w",
+      "limiter.speaker_impedance_ohm",
+      "limiter.speaker_rated_power_w",
+      "spl.listening_distance_m",
+      "spl.rated_power_w",
+      "spl.sensitivity_1w1m_db",
+      "spl.speaker_count",
+      "spl.summation_mode"
+    ]
+  },
+  {
+    "case_id": "CROSS-002",
+    "parameters": [
+      "camera_fov.camera_model",
+      "camera_fov.hfov_deg",
+      "camera_fov.scene_type",
+      "camera_fov.target_bottom_height_m",
+      "camera_fov.target_height_m",
+      "camera_fov.target_width_m",
+      "camera_fov.vfov_deg",
+      "product_catalog.comparison_models",
+      "product_catalog.model",
+      "product_catalog.product_category"
+    ]
+  },
+  {
+    "case_id": "CROSS-003",
+    "parameters": [
+      "dmx_address.channels_per_fixture",
+      "dmx_address.fixture_count",
+      "dmx_address.fixture_model",
+      "dmx_address.fixture_name",
+      "dmx_address.start_address",
+      "dmx_address.target_universe",
+      "troubleshoot.fault_type",
+      "troubleshoot.observation"
+    ]
+  },
+  {
+    "case_id": "CROSS-004",
+    "parameters": [
+      "project_records.operation",
+      "project_records.project_name",
+      "project_records.record_tool",
+      "project_wiring.from_device",
+      "project_wiring.from_port",
+      "project_wiring.project_name",
+      "project_wiring.status",
+      "project_wiring.to_device",
+      "project_wiring.to_port"
+    ]
+  },
+  {
+    "case_id": "CROSS-005",
+    "parameters": [
+      "audio_wiring.input_connector",
+      "audio_wiring.input_signal_type",
+      "audio_wiring.output_connector",
+      "audio_wiring.output_signal_type",
+      "knowledge.topic"
+    ]
+  },
+  {
+    "case_id": "CROSS-006",
+    "parameters": [
+      "cable.circuit_type",
+      "cable.environment",
+      "cable.one_way_distance_m",
+      "cable.total_rated_power_w",
+      "project_wiring.cable_spec",
+      "project_wiring.cable_type",
+      "project_wiring.from_device",
+      "project_wiring.from_port",
+      "project_wiring.length_m",
+      "project_wiring.line_count",
+      "project_wiring.project_name",
+      "project_wiring.to_device",
+      "project_wiring.to_port"
+    ]
+  },
+  {
+    "case_id": "CROSS-007",
+    "parameters": [
+      "cable.circuit_type",
+      "cable.environment",
+      "cable.one_way_distance_m",
+      "cable.total_rated_power_w",
+      "spl.listening_distance_m",
+      "spl.rated_power_w",
+      "spl.sensitivity_1w1m_db",
+      "spl.speaker_count",
+      "spl.speaker_model",
+      "spl.summation_mode"
+    ]
+  },
+  {
+    "case_id": "CROSS-008",
+    "parameters": [
+      "camera_fov.area_depth_m",
+      "camera_fov.camera_height_m",
+      "camera_fov.camera_model",
+      "camera_fov.height_mode",
+      "camera_fov.hfov_deg",
+      "camera_fov.margin_percent",
+      "camera_fov.scene_type",
+      "camera_fov.subject_height_m",
+      "camera_fov.target_bottom_height_m",
+      "camera_fov.target_height_m",
+      "camera_fov.target_width_m",
+      "camera_fov.vfov_deg",
+      "product_catalog.comparison_models",
+      "product_catalog.model",
+      "product_catalog.product_category"
+    ]
+  },
+  {
+    "case_id": "DMX-001",
+    "parameters": [
+      "dmx_address.allocation_mode",
+      "dmx_address.channels_per_fixture",
+      "dmx_address.existing_address_plan",
+      "dmx_address.fixture_count",
+      "dmx_address.fixture_model",
+      "dmx_address.fixture_name",
+      "dmx_address.front_orientation",
+      "dmx_address.lighting_layout",
+      "dmx_address.side_pairs",
+      "dmx_address.stage_depth_m",
+      "dmx_address.stage_width_m",
+      "dmx_address.start_address",
+      "dmx_address.target_universe",
+      "dmx_address.truss_rows"
+    ]
+  },
+  {
+    "case_id": "DMX-002",
+    "parameters": [
+      "dmx_address.allocation_mode",
+      "dmx_address.channels_per_fixture",
+      "dmx_address.existing_address_plan",
+      "dmx_address.fixture_count",
+      "dmx_address.fixture_model",
+      "dmx_address.fixture_name",
+      "dmx_address.front_orientation",
+      "dmx_address.lighting_layout",
+      "dmx_address.side_pairs",
+      "dmx_address.stage_depth_m",
+      "dmx_address.stage_width_m",
+      "dmx_address.start_address",
+      "dmx_address.target_universe",
+      "dmx_address.truss_rows"
+    ]
+  },
+  {
+    "case_id": "DMX-003",
+    "parameters": [
+      "dmx_address.allocation_mode",
+      "dmx_address.channels_per_fixture",
+      "dmx_address.existing_address_plan",
+      "dmx_address.fixture_count",
+      "dmx_address.fixture_model",
+      "dmx_address.fixture_name",
+      "dmx_address.front_orientation",
+      "dmx_address.lighting_layout",
+      "dmx_address.side_pairs",
+      "dmx_address.stage_depth_m",
+      "dmx_address.stage_width_m",
+      "dmx_address.start_address",
+      "dmx_address.target_universe",
+      "dmx_address.truss_rows"
+    ]
+  },
+  {
+    "case_id": "DMX-004",
+    "parameters": [
+      "dmx_address.allocation_mode",
+      "dmx_address.channels_per_fixture",
+      "dmx_address.existing_address_plan",
+      "dmx_address.fixture_count",
+      "dmx_address.fixture_model",
+      "dmx_address.fixture_name",
+      "dmx_address.front_orientation",
+      "dmx_address.lighting_layout",
+      "dmx_address.side_pairs",
+      "dmx_address.stage_depth_m",
+      "dmx_address.stage_width_m",
+      "dmx_address.start_address",
+      "dmx_address.target_universe",
+      "dmx_address.truss_rows"
+    ]
+  },
+  {
+    "case_id": "DMX-005",
+    "parameters": [
+      "dmx_address.allocation_mode",
+      "dmx_address.channels_per_fixture",
+      "dmx_address.existing_address_plan",
+      "dmx_address.fixture_count",
+      "dmx_address.fixture_model",
+      "dmx_address.fixture_name",
+      "dmx_address.front_orientation",
+      "dmx_address.lighting_layout",
+      "dmx_address.side_pairs",
+      "dmx_address.stage_depth_m",
+      "dmx_address.stage_width_m",
+      "dmx_address.start_address",
+      "dmx_address.target_universe",
+      "dmx_address.truss_rows"
+    ]
+  },
+  {
+    "case_id": "DMX-006",
+    "parameters": [
+      "dmx_address.allocation_mode",
+      "dmx_address.channels_per_fixture",
+      "dmx_address.existing_address_plan",
+      "dmx_address.fixture_count",
+      "dmx_address.fixture_model",
+      "dmx_address.fixture_name",
+      "dmx_address.front_orientation",
+      "dmx_address.lighting_layout",
+      "dmx_address.side_pairs",
+      "dmx_address.stage_depth_m",
+      "dmx_address.stage_width_m",
+      "dmx_address.start_address",
+      "dmx_address.target_universe",
+      "dmx_address.truss_rows"
+    ]
+  },
+  {
+    "case_id": "DMX-007",
+    "parameters": [
+      "dmx_address.allocation_mode",
+      "dmx_address.channels_per_fixture",
+      "dmx_address.existing_address_plan",
+      "dmx_address.fixture_count",
+      "dmx_address.fixture_model",
+      "dmx_address.fixture_name",
+      "dmx_address.front_orientation",
+      "dmx_address.lighting_layout",
+      "dmx_address.side_pairs",
+      "dmx_address.stage_depth_m",
+      "dmx_address.stage_width_m",
+      "dmx_address.start_address",
+      "dmx_address.target_universe",
+      "dmx_address.truss_rows"
+    ]
+  },
+  {
+    "case_id": "DMX-008",
+    "parameters": [
+      "dmx_address.allocation_mode",
+      "dmx_address.channels_per_fixture",
+      "dmx_address.existing_address_plan",
+      "dmx_address.fixture_count",
+      "dmx_address.fixture_model",
+      "dmx_address.fixture_name",
+      "dmx_address.front_orientation",
+      "dmx_address.lighting_layout",
+      "dmx_address.side_pairs",
+      "dmx_address.stage_depth_m",
+      "dmx_address.stage_width_m",
+      "dmx_address.start_address",
+      "dmx_address.target_universe",
+      "dmx_address.truss_rows"
+    ]
+  },
+  {
+    "case_id": "DMX-009",
+    "parameters": [
+      "dmx_address.allocation_mode",
+      "dmx_address.channels_per_fixture",
+      "dmx_address.existing_address_plan",
+      "dmx_address.fixture_count",
+      "dmx_address.fixture_model",
+      "dmx_address.fixture_name",
+      "dmx_address.front_orientation",
+      "dmx_address.lighting_layout",
+      "dmx_address.side_pairs",
+      "dmx_address.stage_depth_m",
+      "dmx_address.stage_width_m",
+      "dmx_address.start_address",
+      "dmx_address.target_universe",
+      "dmx_address.truss_rows"
+    ]
+  },
+  {
+    "case_id": "DMX-010",
+    "parameters": [
+      "dmx_address.allocation_mode",
+      "dmx_address.channels_per_fixture",
+      "dmx_address.existing_address_plan",
+      "dmx_address.fixture_count",
+      "dmx_address.fixture_model",
+      "dmx_address.fixture_name",
+      "dmx_address.front_orientation",
+      "dmx_address.lighting_layout",
+      "dmx_address.side_pairs",
+      "dmx_address.stage_depth_m",
+      "dmx_address.stage_width_m",
+      "dmx_address.start_address",
+      "dmx_address.target_universe",
+      "dmx_address.truss_rows"
+    ]
+  },
+  {
+    "case_id": "GAIN-001",
+    "parameters": [
+      "gain_structure.amplifier_model",
+      "gain_structure.input_stage_type",
+      "gain_structure.input_stage_value",
+      "gain_structure.target_peak_dbfs"
+    ]
+  },
+  {
+    "case_id": "GAIN-002",
+    "parameters": [
+      "gain_structure.amplifier_mode",
+      "gain_structure.amplifier_model",
+      "gain_structure.input_stage_type",
+      "gain_structure.input_stage_value",
+      "gain_structure.load_impedance_ohm",
+      "gain_structure.target_peak_dbfs"
+    ]
+  },
+  {
+    "case_id": "GAIN-003",
+    "parameters": [
+      "gain_structure.amplifier_model",
+      "gain_structure.input_stage_type",
+      "gain_structure.input_stage_value",
+      "gain_structure.target_peak_dbfs"
+    ]
+  },
+  {
+    "case_id": "GAIN-004",
+    "parameters": [
+      "gain_structure.amplifier_mode",
+      "gain_structure.amplifier_model",
+      "gain_structure.input_stage_type",
+      "gain_structure.input_stage_value",
+      "gain_structure.load_impedance_ohm",
+      "gain_structure.target_peak_dbfs"
+    ]
+  },
+  {
+    "case_id": "GAIN-005",
+    "parameters": [
+      "gain_structure.amplifier_mode",
+      "gain_structure.amplifier_model",
+      "gain_structure.input_stage_type",
+      "gain_structure.input_stage_value",
+      "gain_structure.load_impedance_ohm",
+      "gain_structure.target_peak_dbfs"
+    ]
+  },
+  {
+    "case_id": "GAIN-006",
+    "parameters": [
+      "gain_structure.amplifier_model",
+      "gain_structure.input_stage_type",
+      "gain_structure.input_stage_value",
+      "gain_structure.target_peak_dbfs"
+    ]
+  },
+  {
+    "case_id": "GAIN-007",
+    "parameters": [
+      "gain_structure.amplifier_mode",
+      "gain_structure.amplifier_model",
+      "gain_structure.input_stage_type",
+      "gain_structure.input_stage_value",
+      "gain_structure.load_impedance_ohm",
+      "gain_structure.target_peak_dbfs"
+    ]
+  },
+  {
+    "case_id": "GAIN-008",
+    "parameters": [
+      "gain_structure.amplifier_mode",
+      "gain_structure.amplifier_model",
+      "gain_structure.input_stage_type",
+      "gain_structure.input_stage_value",
+      "gain_structure.load_impedance_ohm",
+      "gain_structure.target_peak_dbfs"
+    ]
+  },
+  {
+    "case_id": "GAIN-009",
+    "parameters": [
+      "gain_structure.amplifier_model",
+      "gain_structure.input_stage_type",
+      "gain_structure.input_stage_value",
+      "gain_structure.target_peak_dbfs"
+    ]
+  },
+  {
+    "case_id": "GAIN-010",
+    "parameters": [
+      "gain_structure.amplifier_model",
+      "gain_structure.input_stage_type",
+      "gain_structure.input_stage_value",
+      "gain_structure.target_peak_dbfs"
+    ]
+  },
+  {
+    "case_id": "LED-001",
+    "parameters": [
+      "led_screen.aspect_ratio",
+      "led_screen.assembly_unit",
+      "led_screen.assembly_unit_height_mm",
+      "led_screen.assembly_unit_width_mm",
+      "led_screen.border_width_m",
+      "led_screen.bottom_clearance_m",
+      "led_screen.nearest_viewing_distance_m",
+      "led_screen.pixel_pitch",
+      "led_screen.top_clearance_m",
+      "led_screen.wall_height_m",
+      "led_screen.wall_width_m"
+    ]
+  },
+  {
+    "case_id": "LED-002",
+    "parameters": [
+      "led_screen.aspect_ratio",
+      "led_screen.assembly_unit",
+      "led_screen.assembly_unit_height_mm",
+      "led_screen.assembly_unit_width_mm",
+      "led_screen.border_width_m",
+      "led_screen.bottom_clearance_m",
+      "led_screen.nearest_viewing_distance_m",
+      "led_screen.pixel_pitch",
+      "led_screen.top_clearance_m",
+      "led_screen.wall_height_m",
+      "led_screen.wall_width_m"
+    ]
+  },
+  {
+    "case_id": "LED-003",
+    "parameters": [
+      "led_screen.aspect_ratio",
+      "led_screen.assembly_unit",
+      "led_screen.assembly_unit_height_mm",
+      "led_screen.assembly_unit_width_mm",
+      "led_screen.border_width_m",
+      "led_screen.bottom_clearance_m",
+      "led_screen.nearest_viewing_distance_m",
+      "led_screen.pixel_pitch",
+      "led_screen.top_clearance_m",
+      "led_screen.wall_height_m",
+      "led_screen.wall_width_m"
+    ]
+  },
+  {
+    "case_id": "LED-004",
+    "parameters": [
+      "led_screen.aspect_ratio",
+      "led_screen.assembly_unit",
+      "led_screen.assembly_unit_height_mm",
+      "led_screen.assembly_unit_width_mm",
+      "led_screen.border_width_m",
+      "led_screen.bottom_clearance_m",
+      "led_screen.nearest_viewing_distance_m",
+      "led_screen.pixel_pitch",
+      "led_screen.top_clearance_m",
+      "led_screen.wall_height_m",
+      "led_screen.wall_width_m"
+    ]
+  },
+  {
+    "case_id": "LED-005",
+    "parameters": [
+      "led_screen.aspect_ratio",
+      "led_screen.assembly_unit",
+      "led_screen.assembly_unit_height_mm",
+      "led_screen.assembly_unit_width_mm",
+      "led_screen.border_width_m",
+      "led_screen.bottom_clearance_m",
+      "led_screen.nearest_viewing_distance_m",
+      "led_screen.pixel_pitch",
+      "led_screen.top_clearance_m",
+      "led_screen.wall_height_m",
+      "led_screen.wall_width_m"
+    ]
+  },
+  {
+    "case_id": "LED-006",
+    "parameters": [
+      "led_screen.aspect_ratio",
+      "led_screen.assembly_unit",
+      "led_screen.assembly_unit_height_mm",
+      "led_screen.assembly_unit_width_mm",
+      "led_screen.border_width_m",
+      "led_screen.bottom_clearance_m",
+      "led_screen.nearest_viewing_distance_m",
+      "led_screen.pixel_pitch",
+      "led_screen.top_clearance_m",
+      "led_screen.wall_height_m",
+      "led_screen.wall_width_m"
+    ]
+  },
+  {
+    "case_id": "LED-007",
+    "parameters": [
+      "led_screen.aspect_ratio",
+      "led_screen.assembly_unit",
+      "led_screen.assembly_unit_height_mm",
+      "led_screen.assembly_unit_width_mm",
+      "led_screen.border_width_m",
+      "led_screen.bottom_clearance_m",
+      "led_screen.nearest_viewing_distance_m",
+      "led_screen.pixel_pitch",
+      "led_screen.top_clearance_m",
+      "led_screen.wall_height_m",
+      "led_screen.wall_width_m"
+    ]
+  },
+  {
+    "case_id": "LED-008",
+    "parameters": [
+      "led_screen.aspect_ratio",
+      "led_screen.assembly_unit",
+      "led_screen.assembly_unit_height_mm",
+      "led_screen.assembly_unit_width_mm",
+      "led_screen.border_width_m",
+      "led_screen.bottom_clearance_m",
+      "led_screen.nearest_viewing_distance_m",
+      "led_screen.pixel_pitch",
+      "led_screen.top_clearance_m",
+      "led_screen.wall_height_m",
+      "led_screen.wall_width_m"
+    ]
+  },
+  {
+    "case_id": "LED-009",
+    "parameters": [
+      "led_screen.aspect_ratio",
+      "led_screen.assembly_unit",
+      "led_screen.assembly_unit_height_mm",
+      "led_screen.assembly_unit_width_mm",
+      "led_screen.border_width_m",
+      "led_screen.bottom_clearance_m",
+      "led_screen.nearest_viewing_distance_m",
+      "led_screen.pixel_pitch",
+      "led_screen.top_clearance_m",
+      "led_screen.wall_height_m",
+      "led_screen.wall_width_m"
+    ]
+  },
+  {
+    "case_id": "LED-010",
+    "parameters": [
+      "led_screen.aspect_ratio",
+      "led_screen.assembly_unit",
+      "led_screen.border_width_m",
+      "led_screen.bottom_clearance_m",
+      "led_screen.brightness_nit",
+      "led_screen.nearest_viewing_distance_m",
+      "led_screen.pixel_pitch",
+      "led_screen.top_clearance_m",
+      "led_screen.wall_height_m",
+      "led_screen.wall_width_m"
+    ]
+  },
+  {
+    "case_id": "LIM-001",
+    "parameters": [
+      "limiter.amplifier_mode",
+      "limiter.amplifier_model",
+      "limiter.amplifier_rated_power_w",
+      "limiter.input_sensitivity_v",
+      "limiter.speaker_impedance_ohm",
+      "limiter.speaker_model",
+      "limiter.speaker_rated_power_w",
+      "limiter.speakers_per_channel",
+      "limiter.wiring_mode"
+    ]
+  },
+  {
+    "case_id": "LIM-002",
+    "parameters": [
+      "limiter.amplifier_mode",
+      "limiter.amplifier_model",
+      "limiter.amplifier_rated_power_w",
+      "limiter.input_sensitivity_v",
+      "limiter.speaker_impedance_ohm",
+      "limiter.speaker_model",
+      "limiter.speaker_rated_power_w",
+      "limiter.speakers_per_channel",
+      "limiter.wiring_mode"
+    ]
+  },
+  {
+    "case_id": "LIM-003",
+    "parameters": [
+      "limiter.amplifier_mode",
+      "limiter.amplifier_model",
+      "limiter.amplifier_rated_power_w",
+      "limiter.hpf_hz",
+      "limiter.input_sensitivity_v",
+      "limiter.speaker_impedance_ohm",
+      "limiter.speaker_model",
+      "limiter.speaker_rated_power_w",
+      "limiter.speakers_per_channel",
+      "limiter.wiring_mode"
+    ]
+  },
+  {
+    "case_id": "LIM-004",
+    "parameters": [
+      "limiter.amplifier_mode",
+      "limiter.amplifier_model",
+      "limiter.amplifier_rated_power_w",
+      "limiter.input_sensitivity_v",
+      "limiter.speaker_impedance_ohm",
+      "limiter.speaker_model",
+      "limiter.speaker_rated_power_w",
+      "limiter.speakers_per_channel",
+      "limiter.wiring_mode"
+    ]
+  },
+  {
+    "case_id": "LIM-005",
+    "parameters": [
+      "limiter.amplifier_mode",
+      "limiter.amplifier_model",
+      "limiter.amplifier_rated_power_w",
+      "limiter.hpf_hz",
+      "limiter.input_sensitivity_v",
+      "limiter.speaker_impedance_ohm",
+      "limiter.speaker_model",
+      "limiter.speaker_rated_power_w",
+      "limiter.speakers_per_channel",
+      "limiter.wiring_mode"
+    ]
+  },
+  {
+    "case_id": "LIM-006",
+    "parameters": [
+      "limiter.amplifier_mode",
+      "limiter.amplifier_model",
+      "limiter.amplifier_rated_power_w",
+      "limiter.input_sensitivity_v",
+      "limiter.speaker_impedance_ohm",
+      "limiter.speaker_model",
+      "limiter.speaker_rated_power_w",
+      "limiter.speakers_per_channel",
+      "limiter.wiring_mode"
+    ]
+  },
+  {
+    "case_id": "LIM-007",
+    "parameters": [
+      "limiter.amplifier_mode",
+      "limiter.amplifier_model",
+      "limiter.amplifier_rated_power_w",
+      "limiter.input_sensitivity_v",
+      "limiter.speaker_impedance_ohm",
+      "limiter.speaker_model",
+      "limiter.speaker_rated_power_w",
+      "limiter.speakers_per_channel",
+      "limiter.wiring_mode"
+    ]
+  },
+  {
+    "case_id": "LIM-008",
+    "parameters": [
+      "limiter.amplifier_mode",
+      "limiter.amplifier_model",
+      "limiter.amplifier_rated_power_w",
+      "limiter.input_sensitivity_v",
+      "limiter.speaker_impedance_ohm",
+      "limiter.speaker_model",
+      "limiter.speaker_rated_power_w",
+      "limiter.speakers_per_channel",
+      "limiter.wiring_mode"
+    ]
+  },
+  {
+    "case_id": "LIM-009",
+    "parameters": [
+      "limiter.amplifier_mode",
+      "limiter.amplifier_model",
+      "limiter.amplifier_rated_power_w",
+      "limiter.input_sensitivity_v",
+      "limiter.speaker_impedance_ohm",
+      "limiter.speaker_model",
+      "limiter.speaker_rated_power_w",
+      "limiter.speakers_per_channel",
+      "limiter.wiring_mode"
+    ]
+  },
+  {
+    "case_id": "LIM-010",
+    "parameters": [
+      "limiter.amplifier_mode",
+      "limiter.amplifier_model",
+      "limiter.amplifier_rated_power_w",
+      "limiter.input_sensitivity_v",
+      "limiter.speaker_impedance_ohm",
+      "limiter.speaker_model",
+      "limiter.speaker_rated_power_w",
+      "limiter.speakers_per_channel",
+      "limiter.wiring_mode"
+    ]
+  },
+  {
+    "case_id": "OTHER-001",
+    "parameters": []
+  },
+  {
+    "case_id": "OTHER-002",
+    "parameters": []
+  },
+  {
+    "case_id": "OTHER-003",
+    "parameters": []
+  },
+  {
+    "case_id": "OTHER-004",
+    "parameters": []
+  },
+  {
+    "case_id": "OTHER-005",
+    "parameters": []
+  },
+  {
+    "case_id": "OTHER-006",
+    "parameters": []
+  },
+  {
+    "case_id": "PW-001",
+    "parameters": [
+      "project_wiring.build_type",
+      "project_wiring.cable_spec",
+      "project_wiring.cable_type",
+      "project_wiring.from_connector",
+      "project_wiring.from_device",
+      "project_wiring.from_port",
+      "project_wiring.length_m",
+      "project_wiring.line_count",
+      "project_wiring.project_name",
+      "project_wiring.status",
+      "project_wiring.to_connector",
+      "project_wiring.to_device",
+      "project_wiring.to_port"
+    ]
+  },
+  {
+    "case_id": "PW-002",
+    "parameters": [
+      "project_wiring.build_type",
+      "project_wiring.cable_spec",
+      "project_wiring.cable_type",
+      "project_wiring.from_connector",
+      "project_wiring.from_device",
+      "project_wiring.from_port",
+      "project_wiring.length_m",
+      "project_wiring.line_count",
+      "project_wiring.project_name",
+      "project_wiring.status",
+      "project_wiring.to_connector",
+      "project_wiring.to_device",
+      "project_wiring.to_port"
+    ]
+  },
+  {
+    "case_id": "PW-003",
+    "parameters": [
+      "project_wiring.build_type",
+      "project_wiring.cable_spec",
+      "project_wiring.cable_type",
+      "project_wiring.from_connector",
+      "project_wiring.from_device",
+      "project_wiring.from_port",
+      "project_wiring.length_m",
+      "project_wiring.line_count",
+      "project_wiring.project_name",
+      "project_wiring.status",
+      "project_wiring.to_connector",
+      "project_wiring.to_device",
+      "project_wiring.to_port"
+    ]
+  },
+  {
+    "case_id": "PW-004",
+    "parameters": [
+      "project_wiring.build_type",
+      "project_wiring.cable_spec",
+      "project_wiring.cable_type",
+      "project_wiring.from_connector",
+      "project_wiring.from_device",
+      "project_wiring.from_port",
+      "project_wiring.length_m",
+      "project_wiring.line_count",
+      "project_wiring.project_name",
+      "project_wiring.status",
+      "project_wiring.to_connector",
+      "project_wiring.to_device",
+      "project_wiring.to_port"
+    ]
+  },
+  {
+    "case_id": "PW-005",
+    "parameters": [
+      "project_wiring.build_type",
+      "project_wiring.cable_spec",
+      "project_wiring.cable_type",
+      "project_wiring.from_connector",
+      "project_wiring.from_device",
+      "project_wiring.from_port",
+      "project_wiring.length_m",
+      "project_wiring.line_count",
+      "project_wiring.project_name",
+      "project_wiring.status",
+      "project_wiring.to_connector",
+      "project_wiring.to_device",
+      "project_wiring.to_port"
+    ]
+  },
+  {
+    "case_id": "PW-006",
+    "parameters": [
+      "project_wiring.build_type",
+      "project_wiring.cable_spec",
+      "project_wiring.cable_type",
+      "project_wiring.from_connector",
+      "project_wiring.from_device",
+      "project_wiring.from_port",
+      "project_wiring.length_m",
+      "project_wiring.line_count",
+      "project_wiring.project_name",
+      "project_wiring.status",
+      "project_wiring.to_connector",
+      "project_wiring.to_device",
+      "project_wiring.to_port"
+    ]
+  },
+  {
+    "case_id": "PW-007",
+    "parameters": [
+      "project_wiring.build_type",
+      "project_wiring.cable_spec",
+      "project_wiring.cable_type",
+      "project_wiring.from_connector",
+      "project_wiring.from_device",
+      "project_wiring.from_port",
+      "project_wiring.length_m",
+      "project_wiring.line_count",
+      "project_wiring.project_name",
+      "project_wiring.status",
+      "project_wiring.to_connector",
+      "project_wiring.to_device",
+      "project_wiring.to_port"
+    ]
+  },
+  {
+    "case_id": "PW-008",
+    "parameters": [
+      "project_wiring.build_type",
+      "project_wiring.cable_spec",
+      "project_wiring.cable_type",
+      "project_wiring.from_connector",
+      "project_wiring.from_device",
+      "project_wiring.from_port",
+      "project_wiring.length_m",
+      "project_wiring.line_count",
+      "project_wiring.project_name",
+      "project_wiring.status",
+      "project_wiring.to_connector",
+      "project_wiring.to_device",
+      "project_wiring.to_port"
+    ]
+  },
+  {
+    "case_id": "PW-009",
+    "parameters": [
+      "project_wiring.build_type",
+      "project_wiring.cable_spec",
+      "project_wiring.cable_type",
+      "project_wiring.from_connector",
+      "project_wiring.from_device",
+      "project_wiring.from_port",
+      "project_wiring.length_m",
+      "project_wiring.line_count",
+      "project_wiring.project_name",
+      "project_wiring.status",
+      "project_wiring.to_connector",
+      "project_wiring.to_device",
+      "project_wiring.to_port"
+    ]
+  },
+  {
+    "case_id": "PW-010",
+    "parameters": [
+      "project_wiring.build_type",
+      "project_wiring.cable_spec",
+      "project_wiring.cable_type",
+      "project_wiring.from_connector",
+      "project_wiring.from_device",
+      "project_wiring.from_port",
+      "project_wiring.length_m",
+      "project_wiring.line_count",
+      "project_wiring.project_name",
+      "project_wiring.status",
+      "project_wiring.to_connector",
+      "project_wiring.to_device",
+      "project_wiring.to_port"
+    ]
+  },
+  {
+    "case_id": "SPL-001",
+    "parameters": [
+      "spl.listening_distance_m",
+      "spl.rated_power_w",
+      "spl.sensitivity_1w1m_db",
+      "spl.speaker_count",
+      "spl.speaker_model",
+      "spl.summation_mode"
+    ]
+  },
+  {
+    "case_id": "SPL-002",
+    "parameters": [
+      "spl.listening_distance_m",
+      "spl.rated_power_w",
+      "spl.sensitivity_1w1m_db",
+      "spl.speaker_count",
+      "spl.speaker_model",
+      "spl.summation_mode"
+    ]
+  },
+  {
+    "case_id": "SPL-003",
+    "parameters": [
+      "spl.listening_distance_m",
+      "spl.rated_power_w",
+      "spl.sensitivity_1w1m_db",
+      "spl.speaker_count",
+      "spl.speaker_model",
+      "spl.summation_mode"
+    ]
+  },
+  {
+    "case_id": "SPL-004",
+    "parameters": [
+      "spl.listening_distance_m",
+      "spl.rated_power_w",
+      "spl.sensitivity_1w1m_db",
+      "spl.speaker_count",
+      "spl.speaker_model",
+      "spl.summation_mode"
+    ]
+  },
+  {
+    "case_id": "SPL-005",
+    "parameters": [
+      "spl.listening_distance_m",
+      "spl.rated_power_w",
+      "spl.sensitivity_1w1m_db",
+      "spl.speaker_count",
+      "spl.speaker_model",
+      "spl.summation_mode"
+    ]
+  },
+  {
+    "case_id": "SPL-006",
+    "parameters": [
+      "spl.listening_distance_m",
+      "spl.rated_power_w",
+      "spl.sensitivity_1w1m_db",
+      "spl.speaker_count",
+      "spl.speaker_model",
+      "spl.summation_mode"
+    ]
+  },
+  {
+    "case_id": "SPL-007",
+    "parameters": [
+      "spl.listening_distance_m",
+      "spl.rated_power_w",
+      "spl.sensitivity_1w1m_db",
+      "spl.speaker_count",
+      "spl.speaker_model"
+    ]
+  },
+  {
+    "case_id": "SPL-008",
+    "parameters": [
+      "spl.listening_distance_m",
+      "spl.rated_power_w",
+      "spl.sensitivity_1w1m_db",
+      "spl.speaker_count",
+      "spl.speaker_model",
+      "spl.summation_mode"
+    ]
+  },
+  {
+    "case_id": "SPL-009",
+    "parameters": [
+      "spl.listening_distance_m",
+      "spl.rated_power_w",
+      "spl.sensitivity_1w1m_db",
+      "spl.speaker_count",
+      "spl.speaker_model",
+      "spl.summation_mode"
+    ]
+  },
+  {
+    "case_id": "SPL-010",
+    "parameters": [
+      "spl.listening_distance_m",
+      "spl.rated_power_w",
+      "spl.sensitivity_1w1m_db",
+      "spl.speaker_count",
+      "spl.speaker_model",
+      "spl.summation_mode"
+    ]
+  },
+  {
+    "case_id": "SUPPORT-001",
+    "parameters": [
+      "product_catalog.comparison_models",
+      "product_catalog.model",
+      "product_catalog.product_category"
+    ]
+  },
+  {
+    "case_id": "SUPPORT-002",
+    "parameters": [
+      "product_catalog.comparison_models",
+      "product_catalog.model",
+      "product_catalog.product_category"
+    ]
+  },
+  {
+    "case_id": "SUPPORT-003",
+    "parameters": [
+      "troubleshoot.fault_type",
+      "troubleshoot.observation"
+    ]
+  },
+  {
+    "case_id": "SUPPORT-004",
+    "parameters": [
+      "troubleshoot.fault_type",
+      "troubleshoot.observation"
+    ]
+  },
+  {
+    "case_id": "SUPPORT-005",
+    "parameters": [
+      "knowledge.topic"
+    ]
+  },
+  {
+    "case_id": "SUPPORT-006",
+    "parameters": [
+      "project_records.operation",
+      "project_records.project_name",
+      "project_records.record_tool"
+    ]
+  },
+  {
+    "case_id": "V2-AUD-001",
+    "parameters": [
+      "gain_structure.input_stage_type",
+      "gain_structure.input_stage_value",
+      "gain_structure.target_peak_dbfs"
+    ]
+  },
+  {
+    "case_id": "V2-AUD-002",
+    "parameters": [
+      "gain_structure.input_stage_type",
+      "gain_structure.input_stage_value",
+      "gain_structure.target_peak_dbfs"
+    ]
+  },
+  {
+    "case_id": "V2-AUD-003",
+    "parameters": [
+      "gain_structure.input_stage_type",
+      "gain_structure.input_stage_value",
+      "gain_structure.target_peak_dbfs"
+    ]
+  },
+  {
+    "case_id": "V2-AUD-004",
+    "parameters": [
+      "gain_structure.amplifier_model",
+      "gain_structure.input_stage_type",
+      "gain_structure.input_stage_value",
+      "gain_structure.target_peak_dbfs"
+    ]
+  },
+  {
+    "case_id": "V2-AUD-005",
+    "parameters": [
+      "venue.first_row_distance_m",
+      "venue.front_wall_layout",
+      "venue.last_row_distance_m",
+      "venue.listening_width_m",
+      "venue.room_height_m",
+      "venue.room_length_m",
+      "venue.room_width_m",
+      "venue.scene_type",
+      "venue.target_grade"
+    ]
+  },
+  {
+    "case_id": "V2-AUD-006",
+    "parameters": [
+      "venue.first_row_distance_m",
+      "venue.front_wall_layout",
+      "venue.last_row_distance_m",
+      "venue.listening_width_m",
+      "venue.room_height_m",
+      "venue.room_length_m",
+      "venue.room_width_m",
+      "venue.scene_type",
+      "venue.target_grade"
+    ]
+  },
+  {
+    "case_id": "V2-AUD-007",
+    "parameters": [
+      "venue.first_row_distance_m",
+      "venue.front_wall_layout",
+      "venue.last_row_distance_m",
+      "venue.listening_width_m",
+      "venue.room_height_m",
+      "venue.room_length_m",
+      "venue.room_width_m",
+      "venue.scene_type",
+      "venue.target_grade"
+    ]
+  },
+  {
+    "case_id": "V2-AUD-008",
+    "parameters": [
+      "gain_structure.input_stage_type",
+      "gain_structure.input_stage_value",
+      "gain_structure.target_peak_dbfs"
+    ]
+  },
+  {
+    "case_id": "V2-AUD-009",
+    "parameters": [
+      "gain_structure.input_stage_type",
+      "gain_structure.input_stage_value",
+      "gain_structure.target_peak_dbfs"
+    ]
+  },
+  {
+    "case_id": "V2-AUD-010",
+    "parameters": [
+      "venue.d0_m",
+      "venue.d1_m",
+      "venue.d2_m",
+      "venue.dn_m",
+      "venue.ds_m",
+      "venue.nom",
+      "venue.pag_speaker_mode"
+    ]
+  },
+  {
+    "case_id": "V2-AUD-011",
+    "parameters": [
+      "gain_structure.amplifier_mode",
+      "gain_structure.amplifier_model",
+      "gain_structure.input_stage_type",
+      "gain_structure.input_stage_value",
+      "gain_structure.load_impedance_ohm",
+      "gain_structure.target_peak_dbfs"
+    ]
+  },
+  {
+    "case_id": "V2-AUD-012",
+    "parameters": [
+      "spl.listening_distance_m",
+      "spl.rated_power_w",
+      "spl.sensitivity_1w1m_db",
+      "spl.speaker_count",
+      "spl.speaker_model",
+      "spl.summation_mode"
+    ]
+  },
+  {
+    "case_id": "V2-AV-001",
+    "parameters": [
+      "camera_fov.camera_target_distance_m",
+      "camera_fov.hfov_deg",
+      "camera_fov.target_width_m",
+      "camera_fov.vfov_deg"
+    ]
+  },
+  {
+    "case_id": "V2-AV-002",
+    "parameters": [
+      "camera_fov.aspect_ratio",
+      "camera_fov.camera_target_distance_m",
+      "camera_fov.dfov_deg",
+      "camera_fov.hfov_deg",
+      "camera_fov.sensor_height_mm",
+      "camera_fov.sensor_width_mm"
+    ]
+  },
+  {
+    "case_id": "V2-AV-003",
+    "parameters": [
+      "camera_fov.dfov_deg",
+      "camera_fov.focal_length_mm",
+      "camera_fov.hfov_deg",
+      "camera_fov.sensor_height_mm",
+      "camera_fov.sensor_width_mm",
+      "camera_fov.vfov_deg"
+    ]
+  },
+  {
+    "case_id": "V2-AV-004",
+    "parameters": [
+      "camera_fov.camera_model",
+      "camera_fov.hfov_deg",
+      "camera_fov.scene_type",
+      "camera_fov.target_width_m",
+      "camera_fov.unresolved_dimension_1",
+      "camera_fov.vfov_deg"
+    ]
+  },
+  {
+    "case_id": "V2-AV-005",
+    "parameters": [
+      "camera_fov.camera_target_distance_m",
+      "camera_fov.hfov_deg",
+      "camera_fov.target_width_m",
+      "camera_fov.vfov_deg"
+    ]
+  },
+  {
+    "case_id": "V2-AV-006",
+    "parameters": [
+      "dmx_address.front_orientation",
+      "dmx_address.operation"
+    ]
+  },
+  {
+    "case_id": "V2-AV-007",
+    "parameters": [
+      "audio_wiring.cold_end_permission",
+      "audio_wiring.cold_end_requested",
+      "audio_wiring.input_connector",
+      "audio_wiring.output_connector",
+      "audio_wiring.output_signal_type"
+    ]
+  },
+  {
+    "case_id": "V2-AV-008",
+    "parameters": [
+      "audio_wiring.cold_end_permission",
+      "audio_wiring.cold_end_requested",
+      "audio_wiring.input_connector",
+      "audio_wiring.output_connector",
+      "audio_wiring.output_signal_type"
+    ]
+  },
+  {
+    "case_id": "V2-AV-009",
+    "parameters": [
+      "led_screen.aspect_ratio",
+      "led_screen.assembly_unit",
+      "led_screen.assembly_unit_height_mm",
+      "led_screen.assembly_unit_width_mm",
+      "led_screen.wall_height_m",
+      "led_screen.wall_width_m"
+    ]
+  },
+  {
+    "case_id": "V2-AV-010",
+    "parameters": [
+      "camera_fov.camera_target_distance_m",
+      "camera_fov.hfov_deg"
+    ]
+  },
+  {
+    "case_id": "V2-AV-011",
+    "parameters": [
+      "camera_fov.camera_model",
+      "camera_fov.camera_target_distance_m",
+      "camera_fov.coverage_width_m",
+      "camera_fov.hfov_deg"
+    ]
+  },
+  {
+    "case_id": "V2-AV-012",
+    "parameters": [
+      "dmx_address.channels_per_fixture",
+      "dmx_address.fixture_count",
+      "dmx_address.start_address",
+      "dmx_address.target_universe"
+    ]
+  },
+  {
+    "case_id": "VEN-001",
+    "parameters": [
+      "venue.first_row_distance_m",
+      "venue.front_wall_layout",
+      "venue.last_row_distance_m",
+      "venue.listening_width_m",
+      "venue.room_height_m",
+      "venue.room_length_m",
+      "venue.room_width_m",
+      "venue.scene_type",
+      "venue.target_grade"
+    ]
+  },
+  {
+    "case_id": "VEN-002",
+    "parameters": [
+      "venue.first_row_distance_m",
+      "venue.front_wall_layout",
+      "venue.last_row_distance_m",
+      "venue.listening_width_m",
+      "venue.room_height_m",
+      "venue.room_length_m",
+      "venue.room_width_m",
+      "venue.scene_type",
+      "venue.target_grade"
+    ]
+  },
+  {
+    "case_id": "VEN-003",
+    "parameters": [
+      "venue.first_row_distance_m",
+      "venue.front_wall_layout",
+      "venue.last_row_distance_m",
+      "venue.listening_width_m",
+      "venue.room_height_m",
+      "venue.room_length_m",
+      "venue.room_width_m",
+      "venue.scene_type",
+      "venue.target_grade"
+    ]
+  },
+  {
+    "case_id": "VEN-004",
+    "parameters": [
+      "venue.installation_condition",
+      "venue.participant_count",
+      "venue.room_height_m",
+      "venue.room_length_m",
+      "venue.room_width_m",
+      "venue.scene_type",
+      "venue.table_length_m",
+      "venue.table_shape",
+      "venue.table_width_m",
+      "venue.target_grade"
+    ]
+  },
+  {
+    "case_id": "VEN-005",
+    "parameters": [
+      "venue.installation_condition",
+      "venue.participant_count",
+      "venue.room_height_m",
+      "venue.room_length_m",
+      "venue.room_width_m",
+      "venue.scene_type",
+      "venue.table_diameter_m",
+      "venue.table_shape",
+      "venue.target_grade"
+    ]
+  },
+  {
+    "case_id": "VEN-006",
+    "parameters": [
+      "venue.installation_condition",
+      "venue.participant_count",
+      "venue.room_height_m",
+      "venue.room_length_m",
+      "venue.room_width_m",
+      "venue.scene_type",
+      "venue.table_length_m",
+      "venue.table_shape",
+      "venue.table_width_m",
+      "venue.target_grade"
+    ]
+  },
+  {
+    "case_id": "VEN-007",
+    "parameters": [
+      "venue.d0_m",
+      "venue.d1_m",
+      "venue.d2_m",
+      "venue.dn_m",
+      "venue.ds_m",
+      "venue.nom",
+      "venue.pag_speaker_mode"
+    ]
+  },
+  {
+    "case_id": "VEN-008",
+    "parameters": [
+      "venue.d0_m",
+      "venue.d1_m",
+      "venue.d2_m",
+      "venue.dn_m",
+      "venue.ds_m",
+      "venue.nom",
+      "venue.pag_speaker_mode"
+    ]
+  },
+  {
+    "case_id": "VEN-009",
+    "parameters": [
+      "venue.d0_m",
+      "venue.d1_m",
+      "venue.d2_m",
+      "venue.dn_m",
+      "venue.ds_m",
+      "venue.nom",
+      "venue.pag_speaker_mode"
+    ]
+  },
+  {
+    "case_id": "VEN-010",
+    "parameters": [
+      "venue.d0_m",
+      "venue.d1_m",
+      "venue.d2_m",
+      "venue.dn_m",
+      "venue.ds_m",
+      "venue.nom",
+      "venue.pag_speaker_mode"
+    ]
+  }
+]

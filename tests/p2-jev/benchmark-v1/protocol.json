@@ -1,0 +1,52 @@
+{
+  "version": "1.0.0",
+  "dataset_sha256": "b4f7c2de6036c0dee0c1d00bdde5c7158baad18d5bebb9dd9e045c4e9a618c00",
+  "dataset_commit": "1e843d63f7d3c94770be690af58f616382ed7f53",
+  "endpoint": "https://api.typesafe.ai/v1/systemone",
+  "model": "jev-1.13.0",
+  "request_policy": {
+    "timeout_ms": 30000,
+    "max_attempts": 3,
+    "retry_statuses": [408, 429, "network", "timeout", "5xx"],
+    "backoff_ms": [1000, 2000],
+    "retry_malformed_2xx": false,
+    "retry_model_mismatch": false,
+    "unauthorized_or_forbidden": "abort the live run immediately",
+    "other_http_errors": "record and continue without retry",
+    "concurrency": 1,
+    "max_attempts_includes_initial": true
+  },
+  "response_policy": {
+    "choice": {"shape": {"type": "choice", "choice": "string", "probabilities": "object", "confidence": "number"}, "confidence": "API confidence"},
+    "noul": {"shape": {"type": "noul", "noul": "number"}, "positive_probability": "noul"},
+    "noul_certainty": "max(p, 1-p), derived certainty distinct from API confidence",
+    "boolean_threshold": 0.5,
+    "bands": [{"name":"very_low","min":0,"max":0.5},{"name":"low","min":0.5,"max":0.7},{"name":"medium","min":0.7,"max":0.9},{"name":"high","min":0.9,"max":1}],
+    "high_confidence_min": 0.9,
+    "low_confidence_max_exclusive": 0.7,
+    "confidence_bands_are_descriptive": true
+  },
+  "judgments": ["routing", "intent_ambiguous", "clarification_required", "user_present", "validity", "sufficient"],
+  "routing_choices": ["camera_fov", "gain_structure", "venue", "audio_wiring", "cable", "spl", "led_screen", "project_wiring", "limiter", "dmx_address", "knowledge", "troubleshoot", "product_catalog", "project_records", "other", "multiple", "unclear"],
+  "validity_choices": ["valid", "invalid", "unknown"],
+  "minimum_per_tool_recall_support": 5,
+  "acceptance_threshold": null,
+  "reporting": ["coverage", "errors", "all_disagreements", "requested_slices", "per_tool_recall"],
+  "metrics": {
+    "routing": ["17-option exact confusion matrix", "per-tool recall when support >= 5"],
+    "binary_judgments": ["TP", "TN", "FP", "FN", "accuracy", "precision", "recall", "F1"],
+    "validity": "3-option confusion matrix",
+    "coverage_errors": "Report missing and malformed responses separately; never count missing responses as labels.",
+    "confidence": "Report agreement and errors by frozen descriptive confidence band.",
+    "disagreements": "Include every disagreement and references to its immutable raw request/attempt/response record.",
+    "slices": "Evaluate only predeclared slices computed from frozen ground-truth metadata offline; do not send slice membership to the model."
+  },
+  "runner_storage": {
+    "raw_runs_immutable": true,
+    "exclusive_create": true,
+    "redact_api_key_from_requests_and_responses": true,
+    "key_echo_fails_closed": true,
+    "analysis_outside_raw_run": true
+  },
+  "api_docs": "https://docs.typesafe.ai/api"
+}
