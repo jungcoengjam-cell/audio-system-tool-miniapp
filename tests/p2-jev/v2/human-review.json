@@ -1,0 +1,53 @@
+{
+  "purpose": "记录已由人工给定的30条V2语义审查决定；它不表示其余114条已逐条人工审查。每条的schema标签由撰写者按决定落实，仍需主线程独立审阅。",
+  "human_reviewed_ids": ["CROSS-001","CROSS-002","CROSS-003","CROSS-004","CROSS-005","CROSS-006","CROSS-008","SUPPORT-001","SUPPORT-005","DMX-009","CAM-004","CAM-009","CAM-010","LIM-010","GAIN-010","CAB-007","VEN-005","AW-002","DMX-006","SPL-007","CAM-008","LED-002","LED-010","PW-006","PW-010","AW-008","SPL-002","LIM-007","VEN-008","DMX-008"],
+  "decisions": [
+    {"id":"CROSS-001","A":"YES","B":"YES","C":"YES","D":"YES","rationale":"V1原始理由：‘最大值’可能指限幅保护上限，也可能指音箱在听音位置的最大声压；当前信息不足以确定用户要哪类结果。人工审查保留这项unclear结论。"},
+    {"id":"CROSS-002","A":"YES","B":"YES","C":"YES","D":"YES","rationale":"V1原始理由：用户可能在找合适摄像机型号，也可能在指定已有镜头后计算背景墙的拍摄距离；尚未选定型号。人工审查保留原有两种解释。"},
+    {"id":"CROSS-003","A":"NO","B":"YES","C":"NO","D":"NO","tool":"troubleshoot","clarify":false,"legacy_ambiguity_level":1,"rationale":"用户报告主动设备控制故障，先走 troubleshoot；修复后再核对地址。"},
+    {"id":"CROSS-004","A":"NO","B":"YES","C":"NO","D":"NO","tool":"project_wiring","clarify":false,"legacy_ambiguity_level":0,"rationale":"用户提供源/目标设备与端口并询问连接，属于线路台账查询；不是project_records中的计算记录。"},
+    {"id":"CROSS-005","A":"NO","B":"YES","C":"NO","D":"NO","tool":"knowledge","clarify":false,"legacy_ambiguity_level":1,"rationale":"用户要查针脚，当前信息足够回答该查询；若后续要针对具体设备生成接线图，仍需设备端口角色。"},
+    {"id":"CROSS-006","A":"NO","B":"YES","C":"NO","D":"NO","tool":"cable","clarify":false,"legacy_ambiguity_level":1,"rationale":"线缆规格未知，先计算选型，再记录project_wiring。"},
+    {"id":"CROSS-008","A":"YES","B":"YES","C":"YES","D":"YES","rationale":"V1原始理由：产品比较和指定型号的安装距离计算是两个分别说明清楚的请求。"},
+    {"id":"SUPPORT-001","A":"YES","B":"YES","C":"YES","D":"YES","rationale":"V1原始理由：用户要浏览特定能力分类的产品，不需要先指定型号。人工审查确认宽泛措辞仍可按产品目录浏览处理。"},
+    {"id":"SUPPORT-005","A":"YES","B":"YES","C":"YES","D":"YES","rationale":"V1原始理由：这是接线知识点查询，没有要求针对具体设备生成线路方案。"},
+    {"id":"DMX-009","A":"NO","B":"YES","C":"YES","D":"YES","tool":"knowledge","confirmed":true,"rationale":"型号与6通道模式足以查询该灯具功能表/手册；这是knowledge请求，不是地址分配。"},
+    {"id":"CAM-004","A":"YES","B":"YES","C":"YES","D":"YES","condition":"sensor dimensions and focal length suffice theoretically without height mode","confirmed":true,"rationale":"有效传感器物理尺寸和焦距可理论推导HFOV/VFOV；这不等于完成实际安装覆盖校验，后者按模式要求高度信息。"},
+    {"id":"CAM-009","A":"YES","B":"YES","C":"YES","D":"YES","rationale":"V1原始理由：日期和预算不是拍摄尺寸或镜头距离；缺失的VFOV对水平单轴请求无需追问。"},
+    {"id":"CAM-010","A":"YES","B":"CONDITIONAL_NO","C":"YES","D":"YES","condition":"width candidate is present but invalid and insufficient","rationale":"1/2.8英寸光学格式作为sensor_width候选，属于已提供但无效且不足；还缺有效物理传感器尺寸。"},
+    {"id":"LIM-010","A":"YES","B":"YES","C":"YES","D":"YES","rationale":"V1原始理由：峰值功率不能代替额定功率，且未给音箱型号以便查目录；音箱模型及其可用规格仍缺。"},
+    {"id":"GAIN-010","A":"YES","B":"YES","C":"YES","D":"YES","rationale":"V1原始理由：1 V与2 V是可选灵敏度档位但未说明现场实际档位；旋钮的衰减dB也不能代替输入灵敏度。"},
+    {"id":"CAB-007","A":"YES","B":"YES","C":"YES","D":"YES","rationale":"V1原始理由：缺少定压线路的单程距离，不能选对应距离档。"},
+    {"id":"VEN-005","A":"YES","B":"YES","C":"YES","D":"YES","rationale":"V1原始理由：各尺寸用同一英制单位明确给出，可转换为米；圆桌分支只需要直径。"},
+    {"id":"AW-002","A":"YES","B":"YES","C":"YES","D":"YES","rationale":"V1原始理由：用户明确只取左声道；单个输入不需要猜测合并左右声道。"},
+    {"id":"DMX-006","A":"YES","B":"NO","C":"YES","D":"YES","condition":"invalid start address and missing universe; no A-syntax confirmation","rationale":"A01O明确无效，起始地址已提供但值无效；Universe缺失。没有获批的地址前缀规则可推断Universe。"},
+    {"id":"SPL-007","A":"YES","B":"CONDITIONAL_NO","C":"YES","D":"YES","condition":"zero count invalid; clarify invalid value and missing distance","rationale":"0只为已提供但无效的数量；测量距离缺失。分别记录invalid_parameter与missing_required_information两个追问原因。"},
+    {"id":"CAM-008","A":"YES","B":"NO","C":"YES","D":"YES","condition":"scene provided and 3m valid; semantic role unresolved","rationale":"场景‘展示区’已提供，3m有效，但其表示纵深还是竖向尺寸仍未说明；保留原值并标记semantic_role unresolved。"},
+    {"id":"LED-002","A":"YES","B":"CONDITIONAL_NO","C":"CONDITIONAL_YES","D":"YES","condition":"no hidden cabinet default; clarify only when sizes are required","confirmed":true,"rationale":"‘常规箱体’不等于明确的箱体尺寸，不允许隐式采用500×500；当拼装尺寸对当前操作必需时才追问。"},
+    {"id":"LED-010","A":"YES","B":"YES","C":"YES","D":"YES","rationale":"V1原始理由：亮度不能代替最近观看距离；若要按观看条件推荐点间距还需给出视距。"},
+    {"id":"PW-006","A":"YES","B":"CONDITIONAL_NO","C":"YES","D":"CONDITIONAL_NO","condition":"typo is present; preserve raw value, leave validity unknown, and do not silently correct even though the user's intent is clear","rationale":"保留原始DPS与‘平横’字符串；用户意图清楚，但参数validity未知，不自动更正。"},
+    {"id":"PW-010","A":"YES","B":"YES","C":"YES","D":"YES","condition":"aggregate 30m cannot be assigned per line or divided by three without assuming equal lengths","rationale":"30m是汇总长度，不能当成每条线长度，也不能在没有等长依据时除以3；线路长度可待确认。"},
+    {"id":"AW-008","A":"YES","B":"CONDITIONAL_NO","C":"YES","D":"YES","condition":"request to tie shield is not permission confirmation","rationale":"用户要求把冷端接屏蔽，不等于两端设备手册已经许可该接法；冷端权限需单独确认。"},
+    {"id":"SPL-002","A":"YES","B":"YES","C":"YES","D":"YES","condition":"catalog values are not user-provided","rationale":"V1原始理由：型号、数量、距离和用户明确给出的理想同相条件齐全，规格按目录取值。目录规格来源必须标为product_catalog。"},
+    {"id":"LIM-007","A":"YES","B":"YES","C":"YES","D":"YES","condition":"catalog values are not user-provided","rationale":"V1原始理由：当前实际输入灵敏度是阈值计算的必要输入，目录有多个可选档，不能默认采用。"},
+    {"id":"VEN-008","A":"YES","B":"CONDITIONAL_YES","C":"CONDITIONAL_NO","D":"NO","condition":"NOM valid range 1..2; documented supported endpoints; worst-case evaluation; no forced scalar","confirmed":true,"rationale":"1..2是V2样例语言中的有效运行范围；按已支持端点应用现有公式并取最坏结果，不强迫用户选择一个标量。此规则不声称生产解析器接受range对象。"},
+    {"id":"DMX-008","A":"YES","B":"YES","C":"NO","D":"NO","condition":"legacy ambiguity level 1; explicit follow-front direction resolves conflict; intent unambiguous","rationale":"正面方向信息表面冲突仍须如实记录并告知；用户已明确要求follow-front，故按前沿继续，不追问且intent_ambiguous=false。"}
+  ],
+  "confirmed_product_decisions": [
+    {"topic":"DMX-009","decision":"route to knowledge","confirmed":true},
+    {"topic":"CAM-004","decision":"sensor dimensions and focal length suffice theoretically without height mode","confirmed":true},
+    {"topic":"DMX-006","decision":"invalid start address and missing universe do not imply A-syntax permission","confirmed":true},
+    {"topic":"LED-002","decision":"no hidden cabinet default; clarify only if dimensions are required","confirmed":true},
+    {"topic":"VEN-008","decision":"NOM range 1..2 is valid; supported endpoints use existing worst-case equation without forced scalar","confirmed":true}
+  ],
+  "source_rules_and_runtime_limits": [
+    {"topic":"gain_structure.default_target_peak_dbfs","decision":"documented_default source may use -6 dBFS when omitted","evidence":"utils/gain-structure.js DEFAULT_TARGET_PEAK_DBFS=-6"},
+    {"topic":"venue.nom_range","decision":"a user-provided range such as 1..2 is a valid V2 annotation/evaluation contract; evaluate supported endpoints and select the existing-equation worst case","limits":"The production venue parser currently accepts a scalar positive integer; do not describe production as accepting range objects.","equation":"NOM penalty is -10log10(NOM); the upper endpoint lowers PAG/margin."}
+  ],
+  "propagated_policy_decisions_not_additional_individual_reviews": [
+    {"topic":"dmx.universe_prefix","decision":"address-prefix cases where no universe is supplied follow the explicit prefix rule","case_ids":["DMX-002","DMX-004","DMX-007"]},
+    {"topic":"dmx.knowledge","decision":"knowledge route policy applies","case_ids":["DMX-010"]},
+    {"topic":"led.required_dimensions","decision":"request required dimensions for unit-dimension cases as needed","case_ids":["LED-001","LED-003","LED-005","LED-006","LED-008","LED-009"]},
+    {"topic":"spl.invalid_sensitivity_candidate","decision":"an invalid sensitivity candidate remains invalid","case_ids":["SPL-010"]}
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "version": "1.0",
+  "phase": "P2-A",
+  "baseCommit": "e89d57a492bb776fed35809eed91741715e828b0",
+  "caseCount": 120,
+  "datasetSha256": "ba93006d321f4db247cbb01ef5f75b6a7c9c13361ca1c83fd75820f00a2ab134",
+  "canonicalization": "Cases sorted by id; recursively sort object keys; preserve array order; compact UTF-8 JSON with final LF",
+  "inferenceExecuted": false,
+  "files": {
+    "dataset/audio.cases.json": "f7a8d09d507f0f9e89add045fe435d01c7c5b383fcf9e158de03112b442be708",
+    "dataset/av-and-controls.cases.json": "6081187c953216637b8450d4e53265bb60060126262cdf05e26407f5c5f13626",
+    "rubric.v1.json": "c0678afb0755f16472c637d019dc967c37be217f9e21223d5764e1a414f21477",
+    "questions.v1.json": "a6c5babee54ee68a27977e7355c8cbaaf1af0b7f957a1e357d81efcebc66860b",
+    "validate.cjs": "ea377286aa7e47db4b34a50c19da12d4ec7407b476082ae700d9e0da27448800",
+    "freeze.cjs": "364fae8ec3bab069e02ec7fcef643d66d4fb2976653f0bd10f72403b2df473b8",
+    "README.md": "802632dbd934ac485d5c17e0dd2c26c4bf765cd509abfcd2d5ffeb218afeb702"
+  }
+}

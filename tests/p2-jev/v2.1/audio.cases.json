@@ -1,0 +1,3799 @@
+[
+  {
+    "id": "CAB-001",
+    "category": "cable",
+    "mode": "constant_voltage",
+    "case_type": "standard",
+    "tags": [
+      "standard"
+    ],
+    "user_utterance": "给一间小楼的定压广播选线：喇叭总额定功率 180 W，功放到最远喇叭单程 80 m，线路在室内。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "cable",
+      "intent_ambiguous": false,
+      "parameters": {
+        "cable.circuit_type": {
+          "user_present": true,
+          "value": "定压广播",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "定压广播"
+        },
+        "cable.total_rated_power_w": {
+          "user_present": true,
+          "value": "总额定功率 180 W",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "总额定功率 180 W"
+        },
+        "cable.one_way_distance_m": {
+          "user_present": true,
+          "value": "单程 80 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "单程 80 m"
+        },
+        "cable.environment": {
+          "user_present": true,
+          "value": "室内",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "室内"
+        }
+      },
+      "clarification": {
+        "required": false,
+        "reasons": []
+      },
+      "rationale": "定压线路的总功率、单程距离和室内条件都已明说。"
+    }
+  },
+  {
+    "id": "CAB-002",
+    "category": "cable",
+    "mode": "professional_speaker",
+    "case_type": "casual",
+    "tags": [
+      "casual"
+    ],
+    "user_utterance": "帮我看看专业音箱定阻那路该配什么线？这组总额定 420 瓦，最远单程 36 米。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "cable",
+      "intent_ambiguous": false,
+      "parameters": {
+        "cable.circuit_type": {
+          "user_present": true,
+          "value": "专业音箱定阻",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "专业音箱定阻"
+        },
+        "cable.total_rated_power_w": {
+          "user_present": true,
+          "value": "总额定 420 瓦",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "总额定 420 瓦"
+        },
+        "cable.one_way_distance_m": {
+          "user_present": true,
+          "value": "最远单程 36 米",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "最远单程 36 米"
+        }
+      },
+      "clarification": {
+        "required": false,
+        "reasons": []
+      },
+      "rationale": "口语表达仍明确是专业定阻线，且总功率和单程距离齐全。"
+    }
+  },
+  {
+    "id": "CAB-003",
+    "category": "cable",
+    "mode": "constant_voltage",
+    "case_type": "abbreviation",
+    "tags": [
+      "abbreviation"
+    ],
+    "user_utterance": "100 V 广播回路，P总=520 W，单程 L=240 m，室外走线；请按现有线材规则给规格。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "cable",
+      "intent_ambiguous": false,
+      "parameters": {
+        "cable.circuit_type": {
+          "user_present": true,
+          "value": "100 V 广播",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "100 V 广播"
+        },
+        "cable.total_rated_power_w": {
+          "user_present": true,
+          "value": "P总=520 W",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "P总=520 W"
+        },
+        "cable.one_way_distance_m": {
+          "user_present": true,
+          "value": "单程 L=240 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "单程 L=240 m"
+        },
+        "cable.environment": {
+          "user_present": true,
+          "value": "室外",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "室外"
+        }
+      },
+      "clarification": {
+        "required": false,
+        "reasons": []
+      },
+      "rationale": "P总、L 和 100 V 广播均是清楚的字段缩写或模式表达。"
+    }
+  },
+  {
+    "id": "CAB-004",
+    "category": "cable",
+    "mode": "professional_speaker",
+    "case_type": "mixed_language",
+    "tags": [
+      "mixed_language"
+    ],
+    "user_utterance": "For the professional speaker line, 总额定功率是 760 W，one-way run 65 m，麻烦按定阻音箱那路看一下。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "cable",
+      "intent_ambiguous": false,
+      "parameters": {
+        "cable.circuit_type": {
+          "user_present": true,
+          "value": "professional speaker line",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "professional speaker line"
+        },
+        "cable.total_rated_power_w": {
+          "user_present": true,
+          "value": "总额定功率是 760 W",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "总额定功率是 760 W"
+        },
+        "cable.one_way_distance_m": {
+          "user_present": true,
+          "value": "one-way run 65 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "one-way run 65 m"
+        }
+      },
+      "clarification": {
+        "required": false,
+        "reasons": []
+      },
+      "rationale": "中英文混用没有改变线路类型、总功率或单程距离的含义。"
+    }
+  },
+  {
+    "id": "CAB-005",
+    "category": "cable",
+    "mode": "constant_voltage",
+    "case_type": "alternative_units",
+    "tags": [
+      "alternative_units"
+    ],
+    "user_utterance": "园区定压广播总功率 0.9 kW，最远单程 350 ft，室内布线，按这两个标注单位换算后选线。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "cable",
+      "intent_ambiguous": false,
+      "parameters": {
+        "cable.circuit_type": {
+          "user_present": true,
+          "value": "定压广播",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "定压广播"
+        },
+        "cable.total_rated_power_w": {
+          "user_present": true,
+          "value": "0.9 kW",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "0.9 kW"
+        },
+        "cable.one_way_distance_m": {
+          "user_present": true,
+          "value": "350 ft",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "350 ft"
+        },
+        "cable.environment": {
+          "user_present": true,
+          "value": "室内",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "室内"
+        }
+      },
+      "clarification": {
+        "required": false,
+        "reasons": []
+      },
+      "rationale": "kW 和 ft 是可明确换算的功率、长度单位，来源值仍算明示。"
+    }
+  },
+  {
+    "id": "CAB-006",
+    "category": "cable",
+    "mode": "professional_speaker",
+    "case_type": "typo",
+    "tags": [
+      "typo"
+    ],
+    "user_utterance": "定阻专业音箱总额定功率 300 W，最远单程布线距力 42 米，室内机房外的线路也按专业音箱档帮我看下。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "cable",
+      "intent_ambiguous": false,
+      "parameters": {
+        "cable.circuit_type": {
+          "user_present": true,
+          "value": "定阻专业音箱",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "定阻专业音箱"
+        },
+        "cable.total_rated_power_w": {
+          "user_present": true,
+          "value": "总额定功率 300 W",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "总额定功率 300 W"
+        },
+        "cable.one_way_distance_m": {
+          "user_present": true,
+          "value": "最远单程布线距力 42 米",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "最远单程布线距力 42 米"
+        }
+      },
+      "clarification": {
+        "required": false,
+        "reasons": []
+      },
+      "rationale": "“距力”是“距离”的明显错字，不影响 42 米的单程线路参数识别。"
+    }
+  },
+  {
+    "id": "CAB-007",
+    "category": "cable",
+    "mode": "constant_voltage",
+    "case_type": "missing_parameters",
+    "tags": [
+      "missing_parameters"
+    ],
+    "user_utterance": "走定压广播，室外，总负载功率 250 W；最远那只离机柜大概多少米还没量。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "cable",
+      "intent_ambiguous": false,
+      "parameters": {
+        "cable.circuit_type": {
+          "user_present": true,
+          "value": "定压广播",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "定压广播"
+        },
+        "cable.total_rated_power_w": {
+          "user_present": true,
+          "value": "总负载功率 250 W",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "总负载功率 250 W"
+        },
+        "cable.one_way_distance_m": {
+          "user_present": false,
+          "source": "missing",
+          "valid": null,
+          "sufficient": false,
+          "evidence": ""
+        },
+        "cable.environment": {
+          "user_present": true,
+          "value": "室外",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "室外"
+        }
+      },
+      "clarification": {
+        "required": true,
+        "reasons": [
+          {
+            "code": "missing_required_information",
+            "parameters": [
+              "cable.one_way_distance_m"
+            ]
+          }
+        ]
+      },
+      "rationale": "缺少定压线路的单程距离，不能选对应距离档。"
+    }
+  },
+  {
+    "id": "CAB-008",
+    "category": "cable",
+    "mode": "professional_speaker",
+    "case_type": "ambiguous_parameters",
+    "tags": [
+      "ambiguous_parameters",
+      "range_requires_choice"
+    ],
+    "user_utterance": "专业定阻音箱线，总额定功率在 250 到 400 W 之间，最远单程 55 m；这批是按一个固定功率档配的。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "cable",
+      "intent_ambiguous": false,
+      "parameters": {
+        "cable.circuit_type": {
+          "user_present": true,
+          "value": "专业定阻音箱线",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "专业定阻音箱线"
+        },
+        "cable.total_rated_power_w": {
+          "user_present": true,
+          "value": {
+            "min": 250,
+            "max": 400
+          },
+          "source": "user",
+          "valid": true,
+          "sufficient": false,
+          "evidence": "250 到 400 W"
+        },
+        "cable.one_way_distance_m": {
+          "user_present": true,
+          "value": "最远单程 55 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "最远单程 55 m"
+        }
+      },
+      "clarification": {
+        "required": true,
+        "reasons": [
+          {
+            "code": "uncertain_parameter",
+            "parameters": [
+              "cable.total_rated_power_w"
+            ]
+          }
+        ]
+      },
+      "rationale": "总功率范围跨越档位且用户要求按固定档选线，需要确认实际总额定功率。"
+    }
+  },
+  {
+    "id": "CAB-009",
+    "category": "cable",
+    "mode": "constant_voltage",
+    "case_type": "irrelevant_numbers",
+    "tags": [
+      "irrelevant_numbers"
+    ],
+    "user_utterance": "定压广播总额定功率 640 W，单程 480 m，室内。项目有 9 间房、每间 6 张桌，按这一路的线材规则给建议。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "cable",
+      "intent_ambiguous": false,
+      "parameters": {
+        "cable.circuit_type": {
+          "user_present": true,
+          "value": "定压广播",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "定压广播"
+        },
+        "cable.total_rated_power_w": {
+          "user_present": true,
+          "value": "总额定功率 640 W",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "总额定功率 640 W"
+        },
+        "cable.one_way_distance_m": {
+          "user_present": true,
+          "value": "单程 480 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "单程 480 m"
+        },
+        "cable.environment": {
+          "user_present": true,
+          "value": "室内",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "室内"
+        }
+      },
+      "clarification": {
+        "required": false,
+        "reasons": []
+      },
+      "rationale": "房间数和桌数不是该回路线材表的输入，四个有效字段已齐。"
+    }
+  },
+  {
+    "id": "CAB-010",
+    "category": "cable",
+    "mode": "professional_speaker",
+    "case_type": "wrong_parameter",
+    "tags": [
+      "wrong_parameter",
+      "wrong_kind_parameter"
+    ],
+    "user_utterance": "专业定阻线路最远单程 45 m；音箱额定功率我只知道每只 300 W，但现场接了几只还没清点；请按总额定功率选线。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "cable",
+      "intent_ambiguous": false,
+      "parameters": {
+        "cable.circuit_type": {
+          "user_present": true,
+          "value": "专业定阻线路",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "专业定阻线路"
+        },
+        "cable.total_rated_power_w": {
+          "user_present": false,
+          "source": "missing",
+          "valid": null,
+          "sufficient": false,
+          "evidence": ""
+        },
+        "cable.one_way_distance_m": {
+          "user_present": true,
+          "value": "最远单程 45 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "最远单程 45 m"
+        }
+      },
+      "clarification": {
+        "required": true,
+        "reasons": [
+          {
+            "code": "missing_required_information",
+            "parameters": [
+              "cable.total_rated_power_w"
+            ]
+          }
+        ]
+      },
+      "rationale": "每只额定功率正确，但未给数量或合计，不能形成总额定功率输入，需补充总值或音箱只数。"
+    }
+  },
+  {
+    "id": "GAIN-001",
+    "category": "gain_structure",
+    "mode": "input_sensitivity",
+    "case_type": "standard",
+    "tags": [
+      "standard"
+    ],
+    "user_utterance": "请按功放 TC-2350B 的输入灵敏度档计算系统增益结构：实际档位 1 V，DSP 目标峰值 -6 dBFS。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "gain_structure",
+      "intent_ambiguous": false,
+      "parameters": {
+        "gain_structure.amplifier_model": {
+          "user_present": true,
+          "value": "TC-2350B",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "TC-2350B"
+        },
+        "gain_structure.input_stage_type": {
+          "user_present": true,
+          "value": "输入灵敏度档",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "输入灵敏度档"
+        },
+        "gain_structure.input_stage_value": {
+          "user_present": true,
+          "value": "1 V",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "1 V"
+        },
+        "gain_structure.target_peak_dbfs": {
+          "user_present": true,
+          "value": "-6 dBFS",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "-6 dBFS"
+        }
+      },
+      "clarification": {
+        "required": false,
+        "reasons": []
+      },
+      "rationale": "功放型号、输入灵敏度档和值及目标峰值均明确；灵敏度模式不需要负载或功放模式。"
+    }
+  },
+  {
+    "id": "GAIN-002",
+    "category": "gain_structure",
+    "mode": "voltage_gain",
+    "case_type": "casual",
+    "tags": [
+      "casual"
+    ],
+    "user_utterance": "帮我对一下 TC-22000 的电压增益吧，我现场拨在 39 dB，立体声，接 4 欧负载，峰值先按 -9 dBFS。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "gain_structure",
+      "intent_ambiguous": false,
+      "parameters": {
+        "gain_structure.amplifier_model": {
+          "user_present": true,
+          "value": "TC-22000",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "TC-22000"
+        },
+        "gain_structure.input_stage_type": {
+          "user_present": true,
+          "value": "电压增益",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "电压增益"
+        },
+        "gain_structure.input_stage_value": {
+          "user_present": true,
+          "value": "39 dB",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "39 dB"
+        },
+        "gain_structure.target_peak_dbfs": {
+          "user_present": true,
+          "value": "-9 dBFS",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "-9 dBFS"
+        },
+        "gain_structure.amplifier_mode": {
+          "user_present": true,
+          "value": "立体声",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "立体声"
+        },
+        "gain_structure.load_impedance_ohm": {
+          "user_present": true,
+          "value": "4 欧负载",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "4 欧负载"
+        }
+      },
+      "clarification": {
+        "required": false,
+        "reasons": []
+      },
+      "rationale": "口语请求已给出电压增益模式所需的型号、档位、工作模式、负载和峰值。"
+    }
+  },
+  {
+    "id": "GAIN-003",
+    "category": "gain_structure",
+    "mode": "input_sensitivity",
+    "case_type": "abbreviation",
+    "tags": [
+      "abbreviation"
+    ],
+    "user_utterance": "TC-4500B：Input Sensitivity=2 V；DSP Peak=-3 dBFS。按输入灵敏度档给我对齐参考。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "gain_structure",
+      "intent_ambiguous": false,
+      "parameters": {
+        "gain_structure.amplifier_model": {
+          "user_present": true,
+          "value": "TC-4500B",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "TC-4500B"
+        },
+        "gain_structure.input_stage_type": {
+          "user_present": true,
+          "value": "Input Sensitivity",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "Input Sensitivity"
+        },
+        "gain_structure.input_stage_value": {
+          "user_present": true,
+          "value": "2 V",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "2 V"
+        },
+        "gain_structure.target_peak_dbfs": {
+          "user_present": true,
+          "value": "-3 dBFS",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "-3 dBFS"
+        }
+      },
+      "clarification": {
+        "required": false,
+        "reasons": []
+      },
+      "rationale": "英文档位名和 Peak 缩写分别指输入灵敏度与 DSP 峰值，角色清楚。"
+    }
+  },
+  {
+    "id": "GAIN-004",
+    "category": "gain_structure",
+    "mode": "voltage_gain",
+    "case_type": "mixed_language",
+    "tags": [
+      "mixed_language"
+    ],
+    "user_utterance": "TC-23000 的 Gain 设为 41 dB，amp mode 是 bridge，load 8 Ω；DSP target peak 用 -6 dBFS。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "gain_structure",
+      "intent_ambiguous": false,
+      "parameters": {
+        "gain_structure.amplifier_model": {
+          "user_present": true,
+          "value": "TC-23000",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "TC-23000"
+        },
+        "gain_structure.input_stage_type": {
+          "user_present": true,
+          "value": "Gain",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "Gain"
+        },
+        "gain_structure.input_stage_value": {
+          "user_present": true,
+          "value": "41 dB",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "41 dB"
+        },
+        "gain_structure.target_peak_dbfs": {
+          "user_present": true,
+          "value": "-6 dBFS",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "-6 dBFS"
+        },
+        "gain_structure.amplifier_mode": {
+          "user_present": true,
+          "value": "bridge",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "bridge"
+        },
+        "gain_structure.load_impedance_ohm": {
+          "user_present": true,
+          "value": "8 Ω",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "8 Ω"
+        }
+      },
+      "clarification": {
+        "required": false,
+        "reasons": []
+      },
+      "rationale": "中英混用的 gain、bridge 和 load 仍能唯一映射到电压增益分支。"
+    }
+  },
+  {
+    "id": "GAIN-005",
+    "category": "gain_structure",
+    "mode": "voltage_gain",
+    "case_type": "alternative_units",
+    "tags": [
+      "alternative_units"
+    ],
+    "user_utterance": "TC-22000 用电压增益档 36 dB，立体声工作，负载标牌写 0.008 kΩ，目标峰值 -6 dBFS。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "gain_structure",
+      "intent_ambiguous": false,
+      "parameters": {
+        "gain_structure.amplifier_model": {
+          "user_present": true,
+          "value": "TC-22000",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "TC-22000"
+        },
+        "gain_structure.input_stage_type": {
+          "user_present": true,
+          "value": "电压增益档",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "电压增益档"
+        },
+        "gain_structure.input_stage_value": {
+          "user_present": true,
+          "value": "36 dB",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "36 dB"
+        },
+        "gain_structure.target_peak_dbfs": {
+          "user_present": true,
+          "value": "-6 dBFS",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "-6 dBFS"
+        },
+        "gain_structure.amplifier_mode": {
+          "user_present": true,
+          "value": "立体声",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "立体声"
+        },
+        "gain_structure.load_impedance_ohm": {
+          "user_present": true,
+          "value": "0.008 kΩ",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "0.008 kΩ"
+        }
+      },
+      "clarification": {
+        "required": false,
+        "reasons": []
+      },
+      "rationale": "0.008 kΩ 可直接换算为 8 Ω，其他电压增益分支条件均明示。"
+    }
+  },
+  {
+    "id": "GAIN-006",
+    "category": "gain_structure",
+    "mode": "input_sensitivity",
+    "case_type": "typo",
+    "tags": [
+      "typo"
+    ],
+    "user_utterance": "TC-2350B 功放输入灵敏度选 2 V，DSP 峰值设成 -6 dbfs，帮我算一下对齐量，说明书档位我已经核过。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "gain_structure",
+      "intent_ambiguous": false,
+      "parameters": {
+        "gain_structure.amplifier_model": {
+          "user_present": true,
+          "value": "TC-2350B",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "TC-2350B"
+        },
+        "gain_structure.input_stage_type": {
+          "user_present": true,
+          "value": "输入灵敏度",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "输入灵敏度"
+        },
+        "gain_structure.input_stage_value": {
+          "user_present": true,
+          "value": "2 V",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "2 V"
+        },
+        "gain_structure.target_peak_dbfs": {
+          "user_present": true,
+          "value": "-6 dbfs",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "-6 dbfs"
+        }
+      },
+      "clarification": {
+        "required": false,
+        "reasons": []
+      },
+      "rationale": "dbfs 的大小写错写不改变其 dBFS 单位语义，设备与档位选择明确。"
+    }
+  },
+  {
+    "id": "GAIN-007",
+    "category": "gain_structure",
+    "mode": "voltage_gain",
+    "case_type": "missing_parameters",
+    "tags": [
+      "missing_parameters",
+      "catalog_lookup"
+    ],
+    "user_utterance": "TC-22000，按电压增益模式、立体声、4 Ω 负载和 -6 dBFS 目标峰值算；我忘了现在的增益档是多少。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "gain_structure",
+      "intent_ambiguous": false,
+      "parameters": {
+        "gain_structure.amplifier_model": {
+          "user_present": true,
+          "value": "TC-22000",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "TC-22000"
+        },
+        "gain_structure.input_stage_type": {
+          "user_present": true,
+          "value": "电压增益模式",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "电压增益模式"
+        },
+        "gain_structure.input_stage_value": {
+          "user_present": false,
+          "source": "missing",
+          "valid": null,
+          "sufficient": false,
+          "evidence": ""
+        },
+        "gain_structure.target_peak_dbfs": {
+          "user_present": true,
+          "value": "-6 dBFS",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "-6 dBFS"
+        },
+        "gain_structure.amplifier_mode": {
+          "user_present": true,
+          "value": "立体声",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "立体声"
+        },
+        "gain_structure.load_impedance_ohm": {
+          "user_present": true,
+          "value": "4 Ω 负载",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "4 Ω 负载"
+        }
+      },
+      "clarification": {
+        "required": true,
+        "reasons": [
+          {
+            "code": "missing_required_information",
+            "parameters": [
+              "gain_structure.input_stage_value"
+            ]
+          }
+        ]
+      },
+      "rationale": "电压增益模式需要当前实际档位；型号目录列出多个选项，不能替用户猜档。"
+    }
+  },
+  {
+    "id": "GAIN-008",
+    "category": "gain_structure",
+    "mode": "voltage_gain",
+    "case_type": "ambiguous_parameters",
+    "tags": [
+      "ambiguous_parameters",
+      "range_requires_choice"
+    ],
+    "user_utterance": "TC-22000 电压增益现在可能在 33 到 39 dB，立体声、4 Ω，DSP 峰值目标 -6 dBFS，按一个当前档值出参考。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "gain_structure",
+      "intent_ambiguous": false,
+      "parameters": {
+        "gain_structure.amplifier_model": {
+          "user_present": true,
+          "value": "TC-22000",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "TC-22000"
+        },
+        "gain_structure.input_stage_type": {
+          "user_present": true,
+          "value": "电压增益",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "电压增益"
+        },
+        "gain_structure.input_stage_value": {
+          "user_present": true,
+          "value": {
+            "min": 33,
+            "max": 39
+          },
+          "source": "user",
+          "valid": true,
+          "sufficient": false,
+          "evidence": "33 到 39 dB"
+        },
+        "gain_structure.target_peak_dbfs": {
+          "user_present": true,
+          "value": "-6 dBFS",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "-6 dBFS"
+        },
+        "gain_structure.amplifier_mode": {
+          "user_present": true,
+          "value": "立体声",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "立体声"
+        },
+        "gain_structure.load_impedance_ohm": {
+          "user_present": true,
+          "value": "4 Ω",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "4 Ω"
+        }
+      },
+      "clarification": {
+        "required": true,
+        "reasons": [
+          {
+            "code": "uncertain_parameter",
+            "parameters": [
+              "gain_structure.input_stage_value"
+            ]
+          }
+        ]
+      },
+      "rationale": "33 到 39 dB 是范围而非当前单档；按单一档位计算前须确认实际值。"
+    }
+  },
+  {
+    "id": "GAIN-009",
+    "category": "gain_structure",
+    "mode": "input_sensitivity",
+    "case_type": "irrelevant_numbers",
+    "tags": [
+      "irrelevant_numbers"
+    ],
+    "user_utterance": "TC-2350B 输入灵敏度实际选 1 V，DSP 目标峰值 -9 dBFS。机柜是 12U，音频线有 6 根，这次只核系统电平对齐。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "gain_structure",
+      "intent_ambiguous": false,
+      "parameters": {
+        "gain_structure.amplifier_model": {
+          "user_present": true,
+          "value": "TC-2350B",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "TC-2350B"
+        },
+        "gain_structure.input_stage_type": {
+          "user_present": true,
+          "value": "输入灵敏度",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "输入灵敏度"
+        },
+        "gain_structure.input_stage_value": {
+          "user_present": true,
+          "value": "1 V",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "1 V"
+        },
+        "gain_structure.target_peak_dbfs": {
+          "user_present": true,
+          "value": "-9 dBFS",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "-9 dBFS"
+        }
+      },
+      "clarification": {
+        "required": false,
+        "reasons": []
+      },
+      "rationale": "机柜高度和线缆根数与电气增益对齐无关，四个所需字段明确。"
+    }
+  },
+  {
+    "id": "GAIN-010",
+    "category": "gain_structure",
+    "mode": "input_sensitivity",
+    "case_type": "wrong_parameter",
+    "tags": [
+      "wrong_parameter",
+      "wrong_kind_parameter"
+    ],
+    "user_utterance": "功放是 TC-X2200B，DSP 目标峰值 -6 dBFS；现在旋钮显示衰减 -6 dB，但我没查到输入灵敏度实际在 1 V 还是 2 V。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "gain_structure",
+      "intent_ambiguous": false,
+      "parameters": {
+        "gain_structure.amplifier_model": {
+          "user_present": true,
+          "value": "TC-X2200B",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "TC-X2200B"
+        },
+        "gain_structure.input_stage_type": {
+          "user_present": true,
+          "value": "输入灵敏度",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "输入灵敏度"
+        },
+        "gain_structure.input_stage_value": {
+          "user_present": true,
+          "value": [
+            "1 V",
+            "2 V"
+          ],
+          "source": "user",
+          "valid": true,
+          "sufficient": false,
+          "evidence": "1 V 还是 2 V"
+        },
+        "gain_structure.target_peak_dbfs": {
+          "user_present": true,
+          "value": "-6 dBFS",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "-6 dBFS"
+        }
+      },
+      "clarification": {
+        "required": true,
+        "reasons": [
+          {
+            "code": "uncertain_parameter",
+            "parameters": [
+              "gain_structure.input_stage_value"
+            ]
+          }
+        ]
+      },
+      "rationale": "1 V 与 2 V 是可选灵敏度档位但未说明现场实际档位；旋钮的衰减 dB 也不能代替输入灵敏度。"
+    }
+  },
+  {
+    "id": "LIM-001",
+    "category": "limiter",
+    "mode": "threshold",
+    "case_type": "standard",
+    "tags": [
+      "standard"
+    ],
+    "user_utterance": "请计算限幅阈值：功放 TC-2500，音箱 TS-803C，每只额定 300 W、4 Ω；每通道两只并联，功放立体声模式，在 2 Ω 额定输出 1300 W，输入灵敏度 1 V。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "limiter",
+      "intent_ambiguous": false,
+      "parameters": {
+        "limiter.amplifier_model": {
+          "user_present": true,
+          "value": "TC-2500",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "TC-2500"
+        },
+        "limiter.speaker_model": {
+          "user_present": true,
+          "value": "TS-803C",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "TS-803C"
+        },
+        "limiter.speaker_rated_power_w": {
+          "user_present": true,
+          "value": "每只额定 300 W",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "每只额定 300 W"
+        },
+        "limiter.speaker_impedance_ohm": {
+          "user_present": true,
+          "value": "4 Ω",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "4 Ω"
+        },
+        "limiter.amplifier_rated_power_w": {
+          "user_present": true,
+          "value": "2 Ω 额定输出 1300 W",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "2 Ω 额定输出 1300 W"
+        },
+        "limiter.speakers_per_channel": {
+          "user_present": true,
+          "value": "每通道两只",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "每通道两只"
+        },
+        "limiter.wiring_mode": {
+          "user_present": true,
+          "value": "并联",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "并联"
+        },
+        "limiter.amplifier_mode": {
+          "user_present": true,
+          "value": "立体声模式",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "立体声模式"
+        },
+        "limiter.input_sensitivity_v": {
+          "user_present": true,
+          "value": "1 V",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "1 V"
+        }
+      },
+      "clarification": {
+        "required": false,
+        "reasons": []
+      },
+      "rationale": "输入的单只额定功率、阻抗和所选功放负载功率点彼此对应，阈值条件齐全。"
+    }
+  },
+  {
+    "id": "LIM-002",
+    "category": "limiter",
+    "mode": "threshold",
+    "case_type": "casual",
+    "tags": [
+      "casual",
+      "catalog_lookup"
+    ],
+    "user_utterance": "我这套 TC-X2200B 带 TS-803C，每路两只串着接，功放开桥接、灵敏度切到 2 V，帮我把 limiter threshold 定一下。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "limiter",
+      "intent_ambiguous": false,
+      "parameters": {
+        "limiter.amplifier_model": {
+          "user_present": true,
+          "value": "TC-X2200B",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "TC-X2200B"
+        },
+        "limiter.speaker_model": {
+          "user_present": true,
+          "value": "TS-803C",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "TS-803C"
+        },
+        "limiter.speaker_rated_power_w": {
+          "user_present": false,
+          "value": "300 W",
+          "source": "product_catalog",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "data/equipment.js: TS-803C ratedPower=300 W, impedance=4 ohm, sensitivityDb=95; source itc产品说明书 TS-603C、TS-803C、TS-1203C 中文.pdf"
+        },
+        "limiter.speaker_impedance_ohm": {
+          "user_present": false,
+          "value": "4 Ω",
+          "source": "product_catalog",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "data/equipment.js: TS-803C ratedPower=300 W, impedance=4 ohm, sensitivityDb=95; source itc产品说明书 TS-603C、TS-803C、TS-1203C 中文.pdf"
+        },
+        "limiter.amplifier_rated_power_w": {
+          "user_present": false,
+          "value": "750 W",
+          "source": "product_catalog",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "data/equipment.js: TC-X2200B bridgePower[8]=750 W; series pair of 4-ohm TS-803C gives 8 ohm bridged load; source itc产品说明书 TC-X2200B TC-X2350B TC-X2500B TC-X2700B@V20250326.pdf"
+        },
+        "limiter.speakers_per_channel": {
+          "user_present": true,
+          "value": "每路两只",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "每路两只"
+        },
+        "limiter.wiring_mode": {
+          "user_present": true,
+          "value": "串着接",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "串着接"
+        },
+        "limiter.amplifier_mode": {
+          "user_present": true,
+          "value": "桥接",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "桥接"
+        },
+        "limiter.input_sensitivity_v": {
+          "user_present": true,
+          "value": "2 V",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "2 V"
+        }
+      },
+      "clarification": {
+        "required": false,
+        "reasons": []
+      },
+      "rationale": "口语中的每路两只串联、桥接和 2 V 档明确；其余额定规格可按已知型号查目录。"
+    }
+  },
+  {
+    "id": "LIM-003",
+    "category": "limiter",
+    "mode": "threshold_and_timing",
+    "case_type": "abbreviation",
+    "tags": [
+      "abbreviation"
+    ],
+    "user_utterance": "TC-2350B + TS-803C；N=2/CH，series，bridge；speaker 300 W/4 Ω，amp 8 Ω rated 1200 W，input 1 V，HPF 80 Hz。请给 threshold、Attack/Release。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "limiter",
+      "intent_ambiguous": false,
+      "parameters": {
+        "limiter.amplifier_model": {
+          "user_present": true,
+          "value": "TC-2350B",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "TC-2350B"
+        },
+        "limiter.speaker_model": {
+          "user_present": true,
+          "value": "TS-803C",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "TS-803C"
+        },
+        "limiter.speaker_rated_power_w": {
+          "user_present": true,
+          "value": "speaker 300 W",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "speaker 300 W"
+        },
+        "limiter.speaker_impedance_ohm": {
+          "user_present": true,
+          "value": "4 Ω",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "4 Ω"
+        },
+        "limiter.amplifier_rated_power_w": {
+          "user_present": true,
+          "value": "8 Ω rated 1200 W",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "8 Ω rated 1200 W"
+        },
+        "limiter.speakers_per_channel": {
+          "user_present": true,
+          "value": "N=2/CH",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "N=2/CH"
+        },
+        "limiter.wiring_mode": {
+          "user_present": true,
+          "value": "series",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "series"
+        },
+        "limiter.amplifier_mode": {
+          "user_present": true,
+          "value": "bridge",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "bridge"
+        },
+        "limiter.input_sensitivity_v": {
+          "user_present": true,
+          "value": "input 1 V",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "input 1 V"
+        },
+        "limiter.hpf_hz": {
+          "user_present": true,
+          "value": "HPF 80 Hz",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "HPF 80 Hz"
+        }
+      },
+      "clarification": {
+        "required": false,
+        "reasons": []
+      },
+      "rationale": "缩写 N/CH、series、bridge 与 HPF 均可唯一解释；Attack/Release 请求使 HPF 成为必需。"
+    }
+  },
+  {
+    "id": "LIM-004",
+    "category": "limiter",
+    "mode": "threshold",
+    "case_type": "mixed_language",
+    "tags": [
+      "mixed_language",
+      "catalog_lookup"
+    ],
+    "user_utterance": "For limiter threshold，功放 TC-2500B 配 TS-803C；每通道 2 只串联，stereo mode，输入灵敏度 2 V。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "limiter",
+      "intent_ambiguous": false,
+      "parameters": {
+        "limiter.amplifier_model": {
+          "user_present": true,
+          "value": "TC-2500B",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "TC-2500B"
+        },
+        "limiter.speaker_model": {
+          "user_present": true,
+          "value": "TS-803C",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "TS-803C"
+        },
+        "limiter.speaker_rated_power_w": {
+          "user_present": false,
+          "value": "300 W",
+          "source": "product_catalog",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "data/equipment.js: TS-803C ratedPower=300 W, impedance=4 ohm, sensitivityDb=95; source itc产品说明书 TS-603C、TS-803C、TS-1203C 中文.pdf"
+        },
+        "limiter.speaker_impedance_ohm": {
+          "user_present": false,
+          "value": "4 Ω",
+          "source": "product_catalog",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "data/equipment.js: TS-803C ratedPower=300 W, impedance=4 ohm, sensitivityDb=95; source itc产品说明书 TS-603C、TS-803C、TS-1203C 中文.pdf"
+        },
+        "limiter.amplifier_rated_power_w": {
+          "user_present": false,
+          "value": "500 W",
+          "source": "product_catalog",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "data/equipment.js: TC-2500B stereoPower[8]=500 W; series pair of 4-ohm TS-803C gives 8 ohm per channel; source itc产品说明书 TC-2200B TC-2350B TC-2500B@V20251125.pdf"
+        },
+        "limiter.speakers_per_channel": {
+          "user_present": true,
+          "value": "每通道 2 只",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "每通道 2 只"
+        },
+        "limiter.wiring_mode": {
+          "user_present": true,
+          "value": "串联",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "串联"
+        },
+        "limiter.amplifier_mode": {
+          "user_present": true,
+          "value": "stereo mode",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "stereo mode"
+        },
+        "limiter.input_sensitivity_v": {
+          "user_present": true,
+          "value": "2 V",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "2 V"
+        }
+      },
+      "clarification": {
+        "required": false,
+        "reasons": []
+      },
+      "rationale": "中英文术语仍能确定功放、音箱、每通道数量、接法、模式和灵敏度；型号规格可查目录。"
+    }
+  },
+  {
+    "id": "LIM-005",
+    "category": "limiter",
+    "mode": "threshold_and_timing",
+    "case_type": "alternative_units",
+    "tags": [
+      "alternative_units"
+    ],
+    "user_utterance": "TC-2500 配 TS-803C，每通道 2 只串联；音箱每只额定 0.3 kW、阻抗 0.004 kΩ，功放立体声 8 Ω 额定 0.5 kW，灵敏度 1000 mV，HPF 31 Hz；也请给 Attack/Release。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "limiter",
+      "intent_ambiguous": false,
+      "parameters": {
+        "limiter.amplifier_model": {
+          "user_present": true,
+          "value": "TC-2500",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "TC-2500"
+        },
+        "limiter.speaker_model": {
+          "user_present": true,
+          "value": "TS-803C",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "TS-803C"
+        },
+        "limiter.speaker_rated_power_w": {
+          "user_present": true,
+          "value": "0.3 kW",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "0.3 kW"
+        },
+        "limiter.speaker_impedance_ohm": {
+          "user_present": true,
+          "value": "0.004 kΩ",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "0.004 kΩ"
+        },
+        "limiter.amplifier_rated_power_w": {
+          "user_present": true,
+          "value": "8 Ω 额定 0.5 kW",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "8 Ω 额定 0.5 kW"
+        },
+        "limiter.speakers_per_channel": {
+          "user_present": true,
+          "value": "每通道 2 只",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "每通道 2 只"
+        },
+        "limiter.wiring_mode": {
+          "user_present": true,
+          "value": "串联",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "串联"
+        },
+        "limiter.amplifier_mode": {
+          "user_present": true,
+          "value": "立体声",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "立体声"
+        },
+        "limiter.input_sensitivity_v": {
+          "user_present": true,
+          "value": "1000 mV",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "1000 mV"
+        },
+        "limiter.hpf_hz": {
+          "user_present": true,
+          "value": "HPF 31 Hz",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "HPF 31 Hz"
+        }
+      },
+      "clarification": {
+        "required": false,
+        "reasons": []
+      },
+      "rationale": "kW、kΩ 和 mV 可无歧义换算为 W、Ω 和 V；同时给出 Attack/Release 所需的 HPF。"
+    }
+  },
+  {
+    "id": "LIM-006",
+    "category": "limiter",
+    "mode": "threshold",
+    "case_type": "typo",
+    "tags": [
+      "typo",
+      "catalog_lookup"
+    ],
+    "user_utterance": "把限幅阈只先算一下：TC-2350B 配 TS-803C，每通道两只串联，立体声档、输入灵敏度 1V。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "limiter",
+      "intent_ambiguous": false,
+      "parameters": {
+        "limiter.amplifier_model": {
+          "user_present": true,
+          "value": "TC-2350B",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "TC-2350B"
+        },
+        "limiter.speaker_model": {
+          "user_present": true,
+          "value": "TS-803C",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "TS-803C"
+        },
+        "limiter.speaker_rated_power_w": {
+          "user_present": false,
+          "value": "300 W",
+          "source": "product_catalog",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "data/equipment.js: TS-803C ratedPower=300 W, impedance=4 ohm, sensitivityDb=95; source itc产品说明书 TS-603C、TS-803C、TS-1203C 中文.pdf"
+        },
+        "limiter.speaker_impedance_ohm": {
+          "user_present": false,
+          "value": "4 Ω",
+          "source": "product_catalog",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "data/equipment.js: TS-803C ratedPower=300 W, impedance=4 ohm, sensitivityDb=95; source itc产品说明书 TS-603C、TS-803C、TS-1203C 中文.pdf"
+        },
+        "limiter.amplifier_rated_power_w": {
+          "user_present": false,
+          "value": "350 W",
+          "source": "product_catalog",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "data/equipment.js: TC-2350B stereoPower[8]=350 W; series pair of 4-ohm TS-803C gives 8 ohm per channel; source itc产品说明书 TC-2200B TC-2350B TC-2500B@V20251125.pdf"
+        },
+        "limiter.speakers_per_channel": {
+          "user_present": true,
+          "value": "每通道两只",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "每通道两只"
+        },
+        "limiter.wiring_mode": {
+          "user_present": true,
+          "value": "串联",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "串联"
+        },
+        "limiter.amplifier_mode": {
+          "user_present": true,
+          "value": "立体声档",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "立体声档"
+        },
+        "limiter.input_sensitivity_v": {
+          "user_present": true,
+          "value": "1V",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "1V"
+        }
+      },
+      "clarification": {
+        "required": false,
+        "reasons": []
+      },
+      "rationale": "“阈只”是“阈值”的明显错字；接线和电气档位清楚，规格由型号目录补充。"
+    }
+  },
+  {
+    "id": "LIM-007",
+    "category": "limiter",
+    "mode": "threshold",
+    "case_type": "missing_parameters",
+    "tags": [
+      "missing_parameters",
+      "catalog_lookup"
+    ],
+    "user_utterance": "TC-2350B 接 TS-803C，每通道两只串联，桥接模式；输入灵敏度档位我没记下来，先帮我算阈值。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "limiter",
+      "intent_ambiguous": false,
+      "parameters": {
+        "limiter.amplifier_model": {
+          "user_present": true,
+          "value": "TC-2350B",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "TC-2350B"
+        },
+        "limiter.speaker_model": {
+          "user_present": true,
+          "value": "TS-803C",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "TS-803C"
+        },
+        "limiter.speaker_rated_power_w": {
+          "user_present": false,
+          "value": "300 W",
+          "source": "product_catalog",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "data/equipment.js: TS-803C ratedPower=300 W; source itc产品说明书 TS-603C、TS-803C、TS-1203C 中文.pdf"
+        },
+        "limiter.speaker_impedance_ohm": {
+          "user_present": false,
+          "value": "4 Ω",
+          "source": "product_catalog",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "data/equipment.js: TS-803C impedance=4 Ω; source itc产品说明书 TS-603C、TS-803C、TS-1203C 中文.pdf"
+        },
+        "limiter.amplifier_rated_power_w": {
+          "user_present": false,
+          "value": "1200 W",
+          "source": "product_catalog",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "data/equipment.js: TC-2350B bridgePower[8]=1200 W; two series TS-803C units produce an 8 Ω bridge load; source itc产品说明书 TC-2200B TC-2350B TC-2500B@V20251125.pdf"
+        },
+        "limiter.speakers_per_channel": {
+          "user_present": true,
+          "value": "每通道两只",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "每通道两只"
+        },
+        "limiter.wiring_mode": {
+          "user_present": true,
+          "value": "串联",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "串联"
+        },
+        "limiter.amplifier_mode": {
+          "user_present": true,
+          "value": "桥接模式",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "桥接模式"
+        },
+        "limiter.input_sensitivity_v": {
+          "user_present": false,
+          "source": "missing",
+          "valid": null,
+          "sufficient": false,
+          "evidence": ""
+        }
+      },
+      "clarification": {
+        "required": true,
+        "reasons": [
+          {
+            "code": "missing_required_information",
+            "parameters": [
+              "limiter.input_sensitivity_v"
+            ]
+          }
+        ]
+      },
+      "rationale": "音箱额定功率、阻抗及桥接负载下功放额定输出可由明确型号和串联接法查得；实际输入灵敏度有多个档位，仍需确认。"
+    }
+  },
+  {
+    "id": "LIM-008",
+    "category": "limiter",
+    "mode": "threshold",
+    "case_type": "ambiguous_parameters",
+    "tags": [
+      "ambiguous_parameters"
+    ],
+    "user_utterance": "TC-2350B 配两只 TS-803C/通道，桥接，输入灵敏度 1 V；接线照片一处说“串联”，另一处写“并联”，按现场接法算阈值。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "limiter",
+      "intent_ambiguous": false,
+      "parameters": {
+        "limiter.amplifier_model": {
+          "user_present": true,
+          "value": "TC-2350B",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "TC-2350B"
+        },
+        "limiter.speaker_model": {
+          "user_present": true,
+          "value": "TS-803C",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "TS-803C"
+        },
+        "limiter.speaker_rated_power_w": {
+          "user_present": false,
+          "value": "300 W",
+          "source": "product_catalog",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "data/equipment.js: TS-803C ratedPower=300 W, impedance=4 ohm, sensitivityDb=95; source itc产品说明书 TS-603C、TS-803C、TS-1203C 中文.pdf"
+        },
+        "limiter.speaker_impedance_ohm": {
+          "user_present": false,
+          "value": "4 Ω",
+          "source": "product_catalog",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "data/equipment.js: TS-803C ratedPower=300 W, impedance=4 ohm, sensitivityDb=95; source itc产品说明书 TS-603C、TS-803C、TS-1203C 中文.pdf"
+        },
+        "limiter.amplifier_rated_power_w": {
+          "user_present": false,
+          "source": "missing",
+          "valid": null,
+          "sufficient": false,
+          "evidence": ""
+        },
+        "limiter.speakers_per_channel": {
+          "user_present": true,
+          "value": "两只 TS-803C/通道",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "两只 TS-803C/通道"
+        },
+        "limiter.wiring_mode": {
+          "user_present": true,
+          "value": "“串联”，另一处写“并联”",
+          "source": "user",
+          "valid": true,
+          "sufficient": false,
+          "evidence": "“串联”，另一处写“并联”",
+          "conflict": {
+            "resolution": null
+          }
+        },
+        "limiter.amplifier_mode": {
+          "user_present": true,
+          "value": "桥接",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "桥接"
+        },
+        "limiter.input_sensitivity_v": {
+          "user_present": true,
+          "value": "输入灵敏度 1 V",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "输入灵敏度 1 V"
+        }
+      },
+      "clarification": {
+        "required": true,
+        "reasons": [
+          {
+            "code": "unresolved_conflict",
+            "parameters": [
+              "limiter.wiring_mode"
+            ]
+          }
+        ]
+      },
+      "rationale": "串联与并联的现场记录相互冲突；虽然接法字段已被提及，但负载和功放功率点无法唯一确定。"
+    }
+  },
+  {
+    "id": "LIM-009",
+    "category": "limiter",
+    "mode": "threshold",
+    "case_type": "irrelevant_numbers",
+    "tags": [
+      "irrelevant_numbers",
+      "catalog_lookup"
+    ],
+    "user_utterance": "会议厅有 32 个座位、层高 4 m；音响是 TC-2500 配 TS-803C，每通道 2 只并联，立体声，输入 2 V，请按这套音响的目录规格核限幅阈值。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "limiter",
+      "intent_ambiguous": false,
+      "parameters": {
+        "limiter.amplifier_model": {
+          "user_present": true,
+          "value": "TC-2500",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "TC-2500"
+        },
+        "limiter.speaker_model": {
+          "user_present": true,
+          "value": "TS-803C",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "TS-803C"
+        },
+        "limiter.speaker_rated_power_w": {
+          "user_present": false,
+          "value": "300 W",
+          "source": "product_catalog",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "data/equipment.js: TS-803C ratedPower=300 W, impedance=4 ohm, sensitivityDb=95; source itc产品说明书 TS-603C、TS-803C、TS-1203C 中文.pdf"
+        },
+        "limiter.speaker_impedance_ohm": {
+          "user_present": false,
+          "value": "4 Ω",
+          "source": "product_catalog",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "data/equipment.js: TS-803C ratedPower=300 W, impedance=4 ohm, sensitivityDb=95; source itc产品说明书 TS-603C、TS-803C、TS-1203C 中文.pdf"
+        },
+        "limiter.amplifier_rated_power_w": {
+          "user_present": false,
+          "value": "1300 W",
+          "source": "product_catalog",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "data/equipment.js: TC-2500 stereoPower[2]=1300 W; parallel pair of 4-ohm TS-803C gives 2 ohm per channel; source itc产品说明书 TC-2500 TC-2700@V20240507.pdf"
+        },
+        "limiter.speakers_per_channel": {
+          "user_present": true,
+          "value": "每通道 2 只",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "每通道 2 只"
+        },
+        "limiter.wiring_mode": {
+          "user_present": true,
+          "value": "并联",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "并联"
+        },
+        "limiter.amplifier_mode": {
+          "user_present": true,
+          "value": "立体声",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "立体声"
+        },
+        "limiter.input_sensitivity_v": {
+          "user_present": true,
+          "value": "输入 2 V",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "输入 2 V"
+        }
+      },
+      "clarification": {
+        "required": false,
+        "reasons": []
+      },
+      "rationale": "座位数和层高与限幅器阈值无关；有效模式和档位明确，其它规格可查目录。"
+    }
+  },
+  {
+    "id": "LIM-010",
+    "category": "limiter",
+    "mode": "threshold",
+    "case_type": "wrong_parameter",
+    "tags": [
+      "wrong_parameter",
+      "wrong_kind_parameter",
+      "catalog_lookup"
+    ],
+    "user_utterance": "我只知道某音箱峰值功率 1200 W，功放 TC-2350B 立体声、每通道接两只并联、输入灵敏度 1 V；请按音箱额定功率算限幅阈值。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "limiter",
+      "intent_ambiguous": false,
+      "parameters": {
+        "limiter.amplifier_model": {
+          "user_present": true,
+          "value": "TC-2350B",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "TC-2350B"
+        },
+        "limiter.speaker_model": {
+          "user_present": false,
+          "source": "missing",
+          "valid": null,
+          "sufficient": false,
+          "evidence": ""
+        },
+        "limiter.speaker_rated_power_w": {
+          "user_present": false,
+          "source": "missing",
+          "valid": null,
+          "sufficient": false,
+          "evidence": ""
+        },
+        "limiter.speaker_impedance_ohm": {
+          "user_present": false,
+          "source": "missing",
+          "valid": null,
+          "sufficient": false,
+          "evidence": ""
+        },
+        "limiter.amplifier_rated_power_w": {
+          "user_present": false,
+          "source": "missing",
+          "valid": null,
+          "sufficient": false,
+          "evidence": ""
+        },
+        "limiter.speakers_per_channel": {
+          "user_present": true,
+          "value": "每通道接两只",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "每通道接两只"
+        },
+        "limiter.wiring_mode": {
+          "user_present": true,
+          "value": "并联",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "并联"
+        },
+        "limiter.amplifier_mode": {
+          "user_present": true,
+          "value": "立体声",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "立体声"
+        },
+        "limiter.input_sensitivity_v": {
+          "user_present": true,
+          "value": "1 V",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "1 V"
+        }
+      },
+      "clarification": {
+        "required": true,
+        "reasons": [
+          {
+            "code": "missing_required_information",
+            "parameters": [
+              "limiter.speaker_rated_power_w",
+              "limiter.speaker_impedance_ohm",
+              "limiter.amplifier_rated_power_w"
+            ]
+          }
+        ]
+      },
+      "rationale": "1200 W 是峰值功率，不能代替额定功率；缺少音箱额定功率与阻抗，无法确定对应负载下的功放额定输出。"
+    }
+  },
+  {
+    "id": "SPL-001",
+    "category": "spl",
+    "mode": "distance_estimate",
+    "case_type": "standard",
+    "tags": [
+      "standard"
+    ],
+    "user_utterance": "估算两只 TS-803C 在 4 m 处按常规叠加工作的声压级，按型号库额定参数计算即可。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "spl",
+      "intent_ambiguous": false,
+      "parameters": {
+        "spl.speaker_model": {
+          "user_present": true,
+          "value": "TS-803C",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "TS-803C"
+        },
+        "spl.sensitivity_1w1m_db": {
+          "user_present": false,
+          "value": "95 dB @ 1W/1m",
+          "source": "product_catalog",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "data/equipment.js: TS-803C ratedPower=300 W, impedance=4 ohm, sensitivityDb=95; source itc产品说明书 TS-603C、TS-803C、TS-1203C 中文.pdf"
+        },
+        "spl.rated_power_w": {
+          "user_present": false,
+          "value": "300 W",
+          "source": "product_catalog",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "data/equipment.js: TS-803C ratedPower=300 W, impedance=4 ohm, sensitivityDb=95; source itc产品说明书 TS-603C、TS-803C、TS-1203C 中文.pdf"
+        },
+        "spl.listening_distance_m": {
+          "user_present": true,
+          "value": "4 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "4 m"
+        },
+        "spl.speaker_count": {
+          "user_present": true,
+          "value": "两只",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "两只"
+        },
+        "spl.summation_mode": {
+          "user_present": true,
+          "value": "常规叠加",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "常规叠加"
+        }
+      },
+      "clarification": {
+        "required": false,
+        "reasons": []
+      },
+      "rationale": "音箱型号可查已登记的灵敏度和额定功率；距离、数量和叠加方式明示。"
+    }
+  },
+  {
+    "id": "SPL-002",
+    "category": "spl",
+    "mode": "distance_estimate",
+    "case_type": "casual",
+    "tags": [
+      "casual",
+      "catalog_lookup"
+    ],
+    "user_utterance": "我有 4 只 TS-715H，走得比较齐、相位也对过了，想看 6 米位置的理想同相声压大概多少。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "spl",
+      "intent_ambiguous": false,
+      "parameters": {
+        "spl.speaker_model": {
+          "user_present": true,
+          "value": "TS-715H",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "TS-715H"
+        },
+        "spl.sensitivity_1w1m_db": {
+          "user_present": false,
+          "value": "100 dB @ 1W/1m",
+          "source": "product_catalog",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "data/equipment.js: TS-715H ratedPower=500 W, sensitivityDb=100; docs/sensitivity-data-2026-07-10.md: TS-715H 100 dB @ 1W/1m; source itc产品说明书 TS-715H@V20231228.pdf"
+        },
+        "spl.rated_power_w": {
+          "user_present": false,
+          "value": "500 W",
+          "source": "product_catalog",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "data/equipment.js: TS-715H ratedPower=500 W, sensitivityDb=100; docs/sensitivity-data-2026-07-10.md: TS-715H 100 dB @ 1W/1m; source itc产品说明书 TS-715H@V20231228.pdf"
+        },
+        "spl.listening_distance_m": {
+          "user_present": true,
+          "value": "6 米",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "6 米"
+        },
+        "spl.speaker_count": {
+          "user_present": true,
+          "value": "4 只",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "4 只"
+        },
+        "spl.summation_mode": {
+          "user_present": true,
+          "value": "理想同相",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "理想同相"
+        }
+      },
+      "clarification": {
+        "required": false,
+        "reasons": []
+      },
+      "rationale": "型号、数量、距离和用户明确给出的理想同相条件齐全，规格按目录取值。"
+    }
+  },
+  {
+    "id": "SPL-003",
+    "category": "spl",
+    "mode": "distance_estimate",
+    "case_type": "abbreviation",
+    "tags": [
+      "abbreviation"
+    ],
+    "user_utterance": "TS-803C：Sensitivity 95 dB @ 1W/1m，额定功率 300 W；N=2，测距 5 m，distributed summation。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "spl",
+      "intent_ambiguous": false,
+      "parameters": {
+        "spl.speaker_model": {
+          "user_present": true,
+          "value": "TS-803C",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "TS-803C"
+        },
+        "spl.sensitivity_1w1m_db": {
+          "user_present": true,
+          "value": "Sensitivity 95 dB @ 1W/1m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "Sensitivity 95 dB @ 1W/1m"
+        },
+        "spl.rated_power_w": {
+          "user_present": true,
+          "value": "额定功率 300 W",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "额定功率 300 W"
+        },
+        "spl.listening_distance_m": {
+          "user_present": true,
+          "value": "测距 5 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "测距 5 m"
+        },
+        "spl.speaker_count": {
+          "user_present": true,
+          "value": "N=2",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "N=2"
+        },
+        "spl.summation_mode": {
+          "user_present": true,
+          "value": "distributed summation",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "distributed summation"
+        }
+      },
+      "clarification": {
+        "required": false,
+        "reasons": []
+      },
+      "rationale": "灵敏度的 1W/1m 口径、额定功率、N、距离和常规叠加均明确。"
+    }
+  },
+  {
+    "id": "SPL-004",
+    "category": "spl",
+    "mode": "distance_estimate",
+    "case_type": "mixed_language",
+    "tags": [
+      "mixed_language",
+      "catalog_lookup"
+    ],
+    "user_utterance": "For two TS-803C speakers，测量点 distance 是 3 m，按 distributed summation 估算额定功率下的 SPL。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "spl",
+      "intent_ambiguous": false,
+      "parameters": {
+        "spl.speaker_model": {
+          "user_present": true,
+          "value": "TS-803C",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "TS-803C"
+        },
+        "spl.sensitivity_1w1m_db": {
+          "user_present": false,
+          "value": "95 dB @ 1W/1m",
+          "source": "product_catalog",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "data/equipment.js: TS-803C ratedPower=300 W, impedance=4 ohm, sensitivityDb=95; source itc产品说明书 TS-603C、TS-803C、TS-1203C 中文.pdf"
+        },
+        "spl.rated_power_w": {
+          "user_present": false,
+          "value": "300 W",
+          "source": "product_catalog",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "data/equipment.js: TS-803C ratedPower=300 W, impedance=4 ohm, sensitivityDb=95; source itc产品说明书 TS-603C、TS-803C、TS-1203C 中文.pdf"
+        },
+        "spl.listening_distance_m": {
+          "user_present": true,
+          "value": "3 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "3 m"
+        },
+        "spl.speaker_count": {
+          "user_present": true,
+          "value": "two",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "two"
+        },
+        "spl.summation_mode": {
+          "user_present": true,
+          "value": "distributed summation",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "distributed summation"
+        }
+      },
+      "clarification": {
+        "required": false,
+        "reasons": []
+      },
+      "rationale": "中英文夹杂仍明确为两只指定型号、测距 3 m 与常规叠加，规格可查目录。"
+    }
+  },
+  {
+    "id": "SPL-005",
+    "category": "spl",
+    "mode": "distance_estimate",
+    "case_type": "alternative_units",
+    "tags": [
+      "alternative_units",
+      "catalog_lookup"
+    ],
+    "user_utterance": "TS-803C 两只按常规叠加，听音点距箱 12 ft；请按这个英制距离估一下额定功率声压。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "spl",
+      "intent_ambiguous": false,
+      "parameters": {
+        "spl.speaker_model": {
+          "user_present": true,
+          "value": "TS-803C",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "TS-803C"
+        },
+        "spl.sensitivity_1w1m_db": {
+          "user_present": false,
+          "value": "95 dB @ 1W/1m",
+          "source": "product_catalog",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "data/equipment.js: TS-803C ratedPower=300 W, impedance=4 ohm, sensitivityDb=95; source itc产品说明书 TS-603C、TS-803C、TS-1203C 中文.pdf"
+        },
+        "spl.rated_power_w": {
+          "user_present": false,
+          "value": "300 W",
+          "source": "product_catalog",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "data/equipment.js: TS-803C ratedPower=300 W, impedance=4 ohm, sensitivityDb=95; source itc产品说明书 TS-603C、TS-803C、TS-1203C 中文.pdf"
+        },
+        "spl.listening_distance_m": {
+          "user_present": true,
+          "value": "12 ft",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "12 ft"
+        },
+        "spl.speaker_count": {
+          "user_present": true,
+          "value": "两只",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "两只"
+        },
+        "spl.summation_mode": {
+          "user_present": true,
+          "value": "常规叠加",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "常规叠加"
+        }
+      },
+      "clarification": {
+        "required": false,
+        "reasons": []
+      },
+      "rationale": "12 ft 是明确的距离单位，可换算为米；其余输入和目录数据足以估算。"
+    }
+  },
+  {
+    "id": "SPL-006",
+    "category": "spl",
+    "mode": "distance_estimate",
+    "case_type": "typo",
+    "tags": [
+      "typo"
+    ],
+    "user_utterance": "帮我估下 TS-803C 两只常规叠加，测距 7 米，按额定工况的声压级大约是多小？",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "spl",
+      "intent_ambiguous": false,
+      "parameters": {
+        "spl.speaker_model": {
+          "user_present": true,
+          "value": "TS-803C",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "TS-803C"
+        },
+        "spl.sensitivity_1w1m_db": {
+          "user_present": false,
+          "value": "95 dB @ 1W/1m",
+          "source": "product_catalog",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "data/equipment.js: TS-803C ratedPower=300 W, impedance=4 ohm, sensitivityDb=95; source itc产品说明书 TS-603C、TS-803C、TS-1203C 中文.pdf"
+        },
+        "spl.rated_power_w": {
+          "user_present": false,
+          "value": "300 W",
+          "source": "product_catalog",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "data/equipment.js: TS-803C ratedPower=300 W, impedance=4 ohm, sensitivityDb=95; source itc产品说明书 TS-603C、TS-803C、TS-1203C 中文.pdf"
+        },
+        "spl.listening_distance_m": {
+          "user_present": true,
+          "value": "测距 7 米",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "测距 7 米"
+        },
+        "spl.speaker_count": {
+          "user_present": true,
+          "value": "两只",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "两只"
+        },
+        "spl.summation_mode": {
+          "user_present": true,
+          "value": "常规叠加",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "常规叠加"
+        }
+      },
+      "clarification": {
+        "required": false,
+        "reasons": []
+      },
+      "rationale": "“多小”是“多少”的明显输入错字，不改变型号、数量、测距和叠加条件。"
+    }
+  },
+  {
+    "id": "SPL-007",
+    "category": "spl",
+    "mode": "distance_estimate",
+    "case_type": "missing_parameters",
+    "tags": [
+      "missing_parameters",
+      "numeric_boundary"
+    ],
+    "user_utterance": "TS-803C 当前接了 0 只音箱，按额定功率估一下声压；测量距离我还没量。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "spl",
+      "intent_ambiguous": false,
+      "parameters": {
+        "spl.speaker_model": {
+          "user_present": true,
+          "value": "TS-803C",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "TS-803C"
+        },
+        "spl.sensitivity_1w1m_db": {
+          "user_present": false,
+          "value": "95 dB @ 1W/1m",
+          "source": "product_catalog",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "data/equipment.js: TS-803C ratedPower=300 W, impedance=4 ohm, sensitivityDb=95; source itc产品说明书 TS-603C、TS-803C、TS-1203C 中文.pdf"
+        },
+        "spl.rated_power_w": {
+          "user_present": false,
+          "value": "300 W",
+          "source": "product_catalog",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "data/equipment.js: TS-803C ratedPower=300 W, impedance=4 ohm, sensitivityDb=95; source itc产品说明书 TS-603C、TS-803C、TS-1203C 中文.pdf"
+        },
+        "spl.listening_distance_m": {
+          "user_present": false,
+          "source": "missing",
+          "valid": null,
+          "sufficient": false,
+          "evidence": ""
+        },
+        "spl.speaker_count": {
+          "user_present": true,
+          "value": "0 只音箱",
+          "source": "user",
+          "valid": false,
+          "sufficient": false,
+          "evidence": "0 只音箱"
+        }
+      },
+      "clarification": {
+        "required": true,
+        "reasons": [
+          {
+            "code": "invalid_parameter",
+            "parameters": [
+              "spl.speaker_count"
+            ]
+          },
+          {
+            "code": "missing_required_information",
+            "parameters": [
+              "spl.listening_distance_m"
+            ]
+          }
+        ]
+      },
+      "rationale": "0 只明确给出了数量，字段算已提供，数值合法性由校验处理；此处只追问缺少的测量距离。"
+    }
+  },
+  {
+    "id": "SPL-008",
+    "category": "spl",
+    "mode": "distance_estimate",
+    "case_type": "ambiguous_parameters",
+    "tags": [
+      "ambiguous_parameters",
+      "range_requires_choice"
+    ],
+    "user_utterance": "TS-715H 三只常规叠加，听音位置大约在 4 到 8 m；需要按一个确定测距出额定声压估算。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "spl",
+      "intent_ambiguous": false,
+      "parameters": {
+        "spl.speaker_model": {
+          "user_present": true,
+          "value": "TS-715H",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "TS-715H"
+        },
+        "spl.sensitivity_1w1m_db": {
+          "user_present": false,
+          "value": "100 dB @ 1W/1m",
+          "source": "product_catalog",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "data/equipment.js: TS-715H ratedPower=500 W, sensitivityDb=100; docs/sensitivity-data-2026-07-10.md: TS-715H 100 dB @ 1W/1m; source itc产品说明书 TS-715H@V20231228.pdf"
+        },
+        "spl.rated_power_w": {
+          "user_present": false,
+          "value": "500 W",
+          "source": "product_catalog",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "data/equipment.js: TS-715H ratedPower=500 W, sensitivityDb=100; docs/sensitivity-data-2026-07-10.md: TS-715H 100 dB @ 1W/1m; source itc产品说明书 TS-715H@V20231228.pdf"
+        },
+        "spl.listening_distance_m": {
+          "user_present": true,
+          "value": {
+            "min": 4,
+            "max": 8
+          },
+          "source": "user",
+          "valid": true,
+          "sufficient": false,
+          "evidence": "4 到 8 m"
+        },
+        "spl.speaker_count": {
+          "user_present": true,
+          "value": "三只",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "三只"
+        },
+        "spl.summation_mode": {
+          "user_present": true,
+          "value": "常规叠加",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "常规叠加"
+        }
+      },
+      "clarification": {
+        "required": true,
+        "reasons": [
+          {
+            "code": "uncertain_parameter",
+            "parameters": [
+              "spl.listening_distance_m"
+            ]
+          }
+        ]
+      },
+      "rationale": "测距明确给成范围但任务要求单个位置的声压值，应先确认测点距离。"
+    }
+  },
+  {
+    "id": "SPL-009",
+    "category": "spl",
+    "mode": "distance_estimate",
+    "case_type": "irrelevant_numbers",
+    "tags": [
+      "irrelevant_numbers"
+    ],
+    "user_utterance": "TS-803C 两只常规叠加，距离 4 m，按额定功率估 SPL。房间摆了 8 张桌，墙上屏幕 120 英寸。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "spl",
+      "intent_ambiguous": false,
+      "parameters": {
+        "spl.speaker_model": {
+          "user_present": true,
+          "value": "TS-803C",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "TS-803C"
+        },
+        "spl.sensitivity_1w1m_db": {
+          "user_present": false,
+          "value": "95 dB @ 1W/1m",
+          "source": "product_catalog",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "data/equipment.js: TS-803C ratedPower=300 W, impedance=4 ohm, sensitivityDb=95; source itc产品说明书 TS-603C、TS-803C、TS-1203C 中文.pdf"
+        },
+        "spl.rated_power_w": {
+          "user_present": false,
+          "value": "300 W",
+          "source": "product_catalog",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "data/equipment.js: TS-803C ratedPower=300 W, impedance=4 ohm, sensitivityDb=95; source itc产品说明书 TS-603C、TS-803C、TS-1203C 中文.pdf"
+        },
+        "spl.listening_distance_m": {
+          "user_present": true,
+          "value": "距离 4 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "距离 4 m"
+        },
+        "spl.speaker_count": {
+          "user_present": true,
+          "value": "两只",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "两只"
+        },
+        "spl.summation_mode": {
+          "user_present": true,
+          "value": "常规叠加",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "常规叠加"
+        }
+      },
+      "clarification": {
+        "required": false,
+        "reasons": []
+      },
+      "rationale": "桌数和屏幕尺寸不是音箱距离估算的输入；已登记型号可补齐额定规格。"
+    }
+  },
+  {
+    "id": "SPL-010",
+    "category": "spl",
+    "mode": "distance_estimate",
+    "case_type": "wrong_parameter",
+    "tags": [
+      "wrong_parameter",
+      "wrong_kind_parameter",
+      "catalog_lookup"
+    ],
+    "user_utterance": "音箱最大声压级是 120 dB，测距 5 m、单只、按常规叠加；请把 120 dB 当灵敏度算一下。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "spl",
+      "intent_ambiguous": false,
+      "parameters": {
+        "spl.speaker_model": {
+          "user_present": false,
+          "source": "missing",
+          "valid": null,
+          "sufficient": false,
+          "evidence": ""
+        },
+        "spl.sensitivity_1w1m_db": {
+          "user_present": true,
+          "value": "最大声压级是 120 dB",
+          "source": "user",
+          "valid": false,
+          "sufficient": false,
+          "evidence": "最大声压级是 120 dB"
+        },
+        "spl.rated_power_w": {
+          "user_present": false,
+          "source": "missing",
+          "valid": null,
+          "sufficient": false,
+          "evidence": ""
+        },
+        "spl.listening_distance_m": {
+          "user_present": true,
+          "value": "测距 5 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "测距 5 m"
+        },
+        "spl.speaker_count": {
+          "user_present": true,
+          "value": "单只",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "单只"
+        },
+        "spl.summation_mode": {
+          "user_present": true,
+          "value": "常规叠加",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "常规叠加"
+        }
+      },
+      "clarification": {
+        "required": true,
+        "reasons": [
+          {
+            "code": "invalid_parameter",
+            "parameters": [
+              "spl.sensitivity_1w1m_db"
+            ]
+          },
+          {
+            "code": "missing_required_information",
+            "parameters": [
+              "spl.rated_power_w"
+            ]
+          }
+        ]
+      },
+      "rationale": "最大声压级不是 dB @ 1W/1m 灵敏度；且缺少可查目录参数的音箱型号。"
+    }
+  },
+  {
+    "id": "VEN-001",
+    "category": "venue",
+    "mode": "report",
+    "case_type": "standard",
+    "tags": [
+      "standard"
+    ],
+    "user_utterance": "按报告/培训型预估：房间长 12 m、宽 8 m、高 4 m，目标二级；主扩在短边前置，首排距前墙 3 m、末排 11 m，听音区宽 7 m。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "venue",
+      "intent_ambiguous": false,
+      "parameters": {
+        "venue.room_length_m": {
+          "user_present": true,
+          "value": "长 12 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "长 12 m"
+        },
+        "venue.room_width_m": {
+          "user_present": true,
+          "value": "宽 8 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "宽 8 m"
+        },
+        "venue.room_height_m": {
+          "user_present": true,
+          "value": "高 4 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "高 4 m"
+        },
+        "venue.scene_type": {
+          "user_present": true,
+          "value": "报告/培训型",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "报告/培训型"
+        },
+        "venue.target_grade": {
+          "user_present": true,
+          "value": "二级",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "二级"
+        },
+        "venue.front_wall_layout": {
+          "user_present": true,
+          "value": "短边前置",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "短边前置"
+        },
+        "venue.first_row_distance_m": {
+          "user_present": true,
+          "value": "首排距前墙 3 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "首排距前墙 3 m"
+        },
+        "venue.last_row_distance_m": {
+          "user_present": true,
+          "value": "末排 11 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "末排 11 m"
+        },
+        "venue.listening_width_m": {
+          "user_present": true,
+          "value": "听音区宽 7 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "听音区宽 7 m"
+        }
+      },
+      "clarification": {
+        "required": false,
+        "reasons": []
+      },
+      "rationale": "报告型几何、布置方向和目标等级均明示，满足完整输入。"
+    }
+  },
+  {
+    "id": "VEN-002",
+    "category": "venue",
+    "mode": "report",
+    "case_type": "casual",
+    "tags": [
+      "casual"
+    ],
+    "user_utterance": "培训室大概 10 米长、7 米宽、3.5 米高，想按一级看看；音箱放在短墙这边，第一排 2 米、最后排 8 米，实际听众横向占 5 米。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "venue",
+      "intent_ambiguous": false,
+      "parameters": {
+        "venue.room_length_m": {
+          "user_present": true,
+          "value": "10 米长",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "10 米长"
+        },
+        "venue.room_width_m": {
+          "user_present": true,
+          "value": "7 米宽",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "7 米宽"
+        },
+        "venue.room_height_m": {
+          "user_present": true,
+          "value": "3.5 米高",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "3.5 米高"
+        },
+        "venue.scene_type": {
+          "user_present": true,
+          "value": "培训室",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "培训室"
+        },
+        "venue.target_grade": {
+          "user_present": true,
+          "value": "一级",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "一级"
+        },
+        "venue.front_wall_layout": {
+          "user_present": true,
+          "value": "短墙这边",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "短墙这边"
+        },
+        "venue.first_row_distance_m": {
+          "user_present": true,
+          "value": "第一排 2 米",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "第一排 2 米"
+        },
+        "venue.last_row_distance_m": {
+          "user_present": true,
+          "value": "最后排 8 米",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "最后排 8 米"
+        },
+        "venue.listening_width_m": {
+          "user_present": true,
+          "value": "横向占 5 米",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "横向占 5 米"
+        }
+      },
+      "clarification": {
+        "required": false,
+        "reasons": []
+      },
+      "rationale": "自然口语表达仍给出报告培训场景、等级和全部听音区几何数据。"
+    }
+  },
+  {
+    "id": "VEN-003",
+    "category": "venue",
+    "mode": "report",
+    "case_type": "abbreviation",
+    "tags": [
+      "abbreviation"
+    ],
+    "user_utterance": "报告型，L=9.5m，W=6m，H=3.2m；目标 I 级；主扩 front=short wall；first row 1.8m、last row 7.5m、listening width 4.8m。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "venue",
+      "intent_ambiguous": false,
+      "parameters": {
+        "venue.room_length_m": {
+          "user_present": true,
+          "value": "L=9.5m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "L=9.5m"
+        },
+        "venue.room_width_m": {
+          "user_present": true,
+          "value": "W=6m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "W=6m"
+        },
+        "venue.room_height_m": {
+          "user_present": true,
+          "value": "H=3.2m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "H=3.2m"
+        },
+        "venue.scene_type": {
+          "user_present": true,
+          "value": "报告型",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "报告型"
+        },
+        "venue.target_grade": {
+          "user_present": true,
+          "value": "I 级",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "I 级"
+        },
+        "venue.front_wall_layout": {
+          "user_present": true,
+          "value": "front=short wall",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "front=short wall"
+        },
+        "venue.first_row_distance_m": {
+          "user_present": true,
+          "value": "first row 1.8m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "first row 1.8m"
+        },
+        "venue.last_row_distance_m": {
+          "user_present": true,
+          "value": "last row 7.5m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "last row 7.5m"
+        },
+        "venue.listening_width_m": {
+          "user_present": true,
+          "value": "listening width 4.8m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "listening width 4.8m"
+        }
+      },
+      "clarification": {
+        "required": false,
+        "reasons": []
+      },
+      "rationale": "L/W/H 与 first/last row 是可唯一解释的尺寸和排距缩写。"
+    }
+  },
+  {
+    "id": "VEN-004",
+    "category": "venue",
+    "mode": "discussion",
+    "case_type": "mixed_language",
+    "tags": [
+      "mixed_language"
+    ],
+    "user_utterance": "围桌 Discussion 模式，room 长 9 m、宽 7 m、高 3.4 m，目标二级；rectangular table 长 4 m、宽 1.5 m，10 位参会，ceiling blocked，按顶面不可安装处理。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "venue",
+      "intent_ambiguous": false,
+      "parameters": {
+        "venue.room_length_m": {
+          "user_present": true,
+          "value": "长 9 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "长 9 m"
+        },
+        "venue.room_width_m": {
+          "user_present": true,
+          "value": "宽 7 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "宽 7 m"
+        },
+        "venue.room_height_m": {
+          "user_present": true,
+          "value": "高 3.4 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "高 3.4 m"
+        },
+        "venue.scene_type": {
+          "user_present": true,
+          "value": "围桌 Discussion 模式",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "围桌 Discussion 模式"
+        },
+        "venue.target_grade": {
+          "user_present": true,
+          "value": "二级",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "二级"
+        },
+        "venue.table_shape": {
+          "user_present": true,
+          "value": "rectangular table",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "rectangular table"
+        },
+        "venue.table_length_m": {
+          "user_present": true,
+          "value": "长 4 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "长 4 m"
+        },
+        "venue.table_width_m": {
+          "user_present": true,
+          "value": "宽 1.5 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "宽 1.5 m"
+        },
+        "venue.participant_count": {
+          "user_present": true,
+          "value": "10 位参会",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "10 位参会"
+        },
+        "venue.installation_condition": {
+          "user_present": true,
+          "value": "ceiling blocked",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "ceiling blocked"
+        }
+      },
+      "clarification": {
+        "required": false,
+        "reasons": []
+      },
+      "rationale": "中英混合但场景、矩形桌尺寸、人数、安装条件和等级均明确。"
+    }
+  },
+  {
+    "id": "VEN-005",
+    "category": "venue",
+    "mode": "discussion",
+    "case_type": "alternative_units",
+    "tags": [
+      "alternative_units"
+    ],
+    "user_utterance": "围桌讨论：会议室 20 ft × 16 ft × 10 ft，圆桌直径 8 ft，10 人参加，平顶可装吸顶，按二级预估。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "venue",
+      "intent_ambiguous": false,
+      "parameters": {
+        "venue.room_length_m": {
+          "user_present": true,
+          "value": "20 ft",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "20 ft"
+        },
+        "venue.room_width_m": {
+          "user_present": true,
+          "value": "16 ft",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "16 ft"
+        },
+        "venue.room_height_m": {
+          "user_present": true,
+          "value": "10 ft",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "10 ft"
+        },
+        "venue.scene_type": {
+          "user_present": true,
+          "value": "围桌讨论",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "围桌讨论"
+        },
+        "venue.target_grade": {
+          "user_present": true,
+          "value": "二级",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "二级"
+        },
+        "venue.table_shape": {
+          "user_present": true,
+          "value": "圆桌",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "圆桌"
+        },
+        "venue.table_diameter_m": {
+          "user_present": true,
+          "value": "直径 8 ft",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "直径 8 ft"
+        },
+        "venue.participant_count": {
+          "user_present": true,
+          "value": "10 人参加",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "10 人参加"
+        },
+        "venue.installation_condition": {
+          "user_present": true,
+          "value": "平顶可装吸顶",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "平顶可装吸顶"
+        }
+      },
+      "clarification": {
+        "required": false,
+        "reasons": []
+      },
+      "rationale": "各尺寸用同一英制单位明确给出，可转换为米；圆桌分支只需要直径。"
+    }
+  },
+  {
+    "id": "VEN-006",
+    "category": "venue",
+    "mode": "discussion",
+    "case_type": "typo",
+    "tags": [
+      "typo"
+    ],
+    "user_utterance": "围桌讨论型帮我预估一下方按：房间长 8 m、宽 7 m、高 3.5 m，矩形桌长 4 m、宽 1.5 m，8 人，顶面不可安装，目标一级。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "venue",
+      "intent_ambiguous": false,
+      "parameters": {
+        "venue.room_length_m": {
+          "user_present": true,
+          "value": "长 8 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "长 8 m"
+        },
+        "venue.room_width_m": {
+          "user_present": true,
+          "value": "宽 7 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "宽 7 m"
+        },
+        "venue.room_height_m": {
+          "user_present": true,
+          "value": "高 3.5 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "高 3.5 m"
+        },
+        "venue.scene_type": {
+          "user_present": true,
+          "value": "围桌讨论型",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "围桌讨论型"
+        },
+        "venue.target_grade": {
+          "user_present": true,
+          "value": "一级",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "一级"
+        },
+        "venue.table_shape": {
+          "user_present": true,
+          "value": "矩形桌",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "矩形桌"
+        },
+        "venue.table_length_m": {
+          "user_present": true,
+          "value": "长 4 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "长 4 m"
+        },
+        "venue.table_width_m": {
+          "user_present": true,
+          "value": "宽 1.5 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "宽 1.5 m"
+        },
+        "venue.participant_count": {
+          "user_present": true,
+          "value": "8 人",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "8 人"
+        },
+        "venue.installation_condition": {
+          "user_present": true,
+          "value": "顶面不可安装",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "顶面不可安装"
+        }
+      },
+      "clarification": {
+        "required": false,
+        "reasons": []
+      },
+      "rationale": "“方按”是“方案”的明显错字，不影响矩形桌、房间和安装条件字段。"
+    }
+  },
+  {
+    "id": "VEN-007",
+    "category": "venue",
+    "mode": "pag_nag",
+    "case_type": "missing_parameters",
+    "tags": [
+      "missing_parameters"
+    ],
+    "user_utterance": "先复核单音箱 PAG/NAG：嘴到话筒 0.5 m，发言人到远端 6 m、最近听众 2 m，话筒到实际送声音箱 3 m，NOM 同时开 1 支；音箱到同一远端听众的距离没量。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "venue",
+      "intent_ambiguous": false,
+      "parameters": {
+        "venue.pag_speaker_mode": {
+          "user_present": true,
+          "value": "单音箱",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "单音箱"
+        },
+        "venue.ds_m": {
+          "user_present": true,
+          "value": "嘴到话筒 0.5 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "嘴到话筒 0.5 m"
+        },
+        "venue.d0_m": {
+          "user_present": true,
+          "value": "发言人到远端 6 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "发言人到远端 6 m"
+        },
+        "venue.dn_m": {
+          "user_present": true,
+          "value": "最近听众 2 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "最近听众 2 m"
+        },
+        "venue.d1_m": {
+          "user_present": true,
+          "value": "话筒到实际送声音箱 3 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "话筒到实际送声音箱 3 m"
+        },
+        "venue.d2_m": {
+          "user_present": false,
+          "source": "missing",
+          "valid": null,
+          "sufficient": false,
+          "evidence": ""
+        },
+        "venue.nom": {
+          "user_present": true,
+          "value": "NOM 同时开 1 支",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "NOM 同时开 1 支"
+        }
+      },
+      "clarification": {
+        "required": true,
+        "reasons": [
+          {
+            "code": "missing_required_information",
+            "parameters": [
+              "venue.d2_m"
+            ]
+          }
+        ]
+      },
+      "rationale": "单链路所需的 d2 未提供；同时开放话筒数已明示，不能再追问该字段。"
+    }
+  },
+  {
+    "id": "VEN-008",
+    "category": "venue",
+    "mode": "pag_nag",
+    "case_type": "ambiguous_parameters",
+    "tags": [
+      "ambiguous_parameters",
+      "range_requires_choice"
+    ],
+    "user_utterance": "做多音箱取点 PAG/NAG：ds=0.5 m，d0=7 m，dn=2 m，A 是离话筒最近、且当前确实播放这支话筒信号的音箱，d1=3 m；B 是离同一最远听众最近、且当前确实播放这支话筒信号的音箱，d2=5 m；NOM 同时开 1 到 2 支。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "venue",
+      "intent_ambiguous": false,
+      "parameters": {
+        "venue.pag_speaker_mode": {
+          "user_present": true,
+          "value": "多音箱取点",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "多音箱取点"
+        },
+        "venue.ds_m": {
+          "user_present": true,
+          "value": "ds=0.5 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "ds=0.5 m"
+        },
+        "venue.d0_m": {
+          "user_present": true,
+          "value": "d0=7 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "d0=7 m"
+        },
+        "venue.dn_m": {
+          "user_present": true,
+          "value": "dn=2 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "dn=2 m"
+        },
+        "venue.d1_m": {
+          "user_present": true,
+          "value": "A 是离话筒最近、且当前确实播放这支话筒信号的音箱，d1=3 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "A 是离话筒最近、且当前确实播放这支话筒信号的音箱，d1=3 m"
+        },
+        "venue.d2_m": {
+          "user_present": true,
+          "value": "B 是离同一最远听众最近、且当前确实播放这支话筒信号的音箱，d2=5 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "B 是离同一最远听众最近、且当前确实播放这支话筒信号的音箱，d2=5 m"
+        },
+        "venue.nom": {
+          "user_present": true,
+          "value": {
+            "min": 1,
+            "max": 2
+          },
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "NOM 同时开 1 到 2 支"
+        }
+      },
+      "clarification": {
+        "required": false,
+        "reasons": []
+      },
+      "rationale": "多音箱取点和全部距离均明确；NOM 给出 1 到 2 的有效范围，可按范围端点评估，不需用户选一个单值。"
+    }
+  },
+  {
+    "id": "VEN-009",
+    "category": "venue",
+    "mode": "pag_nag",
+    "case_type": "irrelevant_numbers",
+    "tags": [
+      "irrelevant_numbers"
+    ],
+    "user_utterance": "单音箱单链路复核：ds 0.4 m，d0 6 m，dn 1.5 m，d1 3 m，d2 4 m，同时开放话筒 2 支。会议共有 12 位参会者、桌面长 4 m。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "venue",
+      "intent_ambiguous": false,
+      "parameters": {
+        "venue.pag_speaker_mode": {
+          "user_present": true,
+          "value": "单音箱单链路",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "单音箱单链路"
+        },
+        "venue.ds_m": {
+          "user_present": true,
+          "value": "ds 0.4 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "ds 0.4 m"
+        },
+        "venue.d0_m": {
+          "user_present": true,
+          "value": "d0 6 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "d0 6 m"
+        },
+        "venue.dn_m": {
+          "user_present": true,
+          "value": "dn 1.5 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "dn 1.5 m"
+        },
+        "venue.d1_m": {
+          "user_present": true,
+          "value": "d1 3 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "d1 3 m"
+        },
+        "venue.d2_m": {
+          "user_present": true,
+          "value": "d2 4 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "d2 4 m"
+        },
+        "venue.nom": {
+          "user_present": true,
+          "value": "同时开放话筒 2 支",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "同时开放话筒 2 支"
+        }
+      },
+      "clarification": {
+        "required": false,
+        "reasons": []
+      },
+      "rationale": "12 位参会者不替代 NOM；本例另行给出了同时开放的 2 支话筒，桌长无关。"
+    }
+  },
+  {
+    "id": "VEN-010",
+    "category": "venue",
+    "mode": "pag_nag",
+    "case_type": "wrong_parameter",
+    "tags": [
+      "wrong_parameter",
+      "wrong_kind_parameter"
+    ],
+    "user_utterance": "单音箱 PAG/NAG，ds 0.5 m、d0 6 m、dn 2 m、d1 3 m、d2 4 m；会议有 12 名参会者，但同时开放的话筒数还没统计。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "venue",
+      "intent_ambiguous": false,
+      "parameters": {
+        "venue.pag_speaker_mode": {
+          "user_present": true,
+          "value": "单音箱 PAG/NAG",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "单音箱 PAG/NAG"
+        },
+        "venue.ds_m": {
+          "user_present": true,
+          "value": "ds 0.5 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "ds 0.5 m"
+        },
+        "venue.d0_m": {
+          "user_present": true,
+          "value": "d0 6 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "d0 6 m"
+        },
+        "venue.dn_m": {
+          "user_present": true,
+          "value": "dn 2 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "dn 2 m"
+        },
+        "venue.d1_m": {
+          "user_present": true,
+          "value": "d1 3 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "d1 3 m"
+        },
+        "venue.d2_m": {
+          "user_present": true,
+          "value": "d2 4 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "d2 4 m"
+        },
+        "venue.nom": {
+          "user_present": false,
+          "source": "missing",
+          "valid": null,
+          "sufficient": false,
+          "evidence": ""
+        }
+      },
+      "clarification": {
+        "required": true,
+        "reasons": [
+          {
+            "code": "missing_required_information",
+            "parameters": [
+              "venue.nom"
+            ]
+          }
+        ]
+      },
+      "rationale": "参会总人数不是同时开放话筒数；NOM 必须按当前开放的话筒链路明确提供。"
+    }
+  }
+]

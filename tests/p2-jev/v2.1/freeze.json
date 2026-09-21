@@ -1,0 +1,22 @@
+{
+  "version": "2.1",
+  "phase": "P2-A-V2.1/offline-dataset",
+  "base_commit": "e89d57a492bb776fed35809eed91741715e828b0",
+  "v1_dataset_sha256": "ba93006d321f4db247cbb01ef5f75b6a7c9c13361ca1c83fd75820f00a2ab134",
+  "v2_dataset_sha256": "cbc3b6d34165e64ff5e53b7189b7dedfffb80a3cee5e8f169ab3b7fe1fee5212",
+  "case_count": 144,
+  "dataset_sha256": "b4f7c2de6036c0dee0c1d00bdde5c7158baad18d5bebb9dd9e045c4e9a618c00",
+  "canonicalization": "Cases sorted by id; recursively sort object keys; preserve array order; compact UTF-8 JSON with final LF",
+  "inference_executed": false,
+  "files": {
+    "README.md": "fd30f275de829570a2087f3d71fef2ef96baca85e9b393c39e99e9b6d8910220",
+    "audio.additions.json": "ca4ff9dd9c3a7a9c7dcb00d05ca6d91f8e9995b7fd548a6fdb5e83022dd0fcc4",
+    "audio.cases.json": "9410b7e205e90e5ee0eca8b5bab828a6330d800d793126767c20f3a30c27a745",
+    "av-and-controls.cases.json": "8cea47cc588e8bb300a6c3040bb827b686428a84888080a70e0b23d3d022751c",
+    "av.additions.json": "b644e290a68a2d0b295dd675a53496325563f264e2c6a6daab97f7e4fa960ae2",
+    "freeze.cjs": "59a1395fba22b798204837ade2c4b5b7cfa46de62a8f85a002322d96918a125f",
+    "human-review.json": "febfe8422f4a7f4ec04b344b2bab3aecb007f362f60e6b9fbaf1534bdf5c109c",
+    "schema.json": "275d47699fec4a3c140d6ed4d7d6456a19a733e127a9af5b7cba726e734abcb0",
+    "validate.cjs": "eb90a7394d3ebcd9127d45d1c8509f5d2006bcf1706a3500ec0d96d535ae571e"
+  }
+}

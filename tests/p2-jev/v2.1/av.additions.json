@@ -1,0 +1,803 @@
+[
+  {
+    "id": "V2-AV-001",
+    "category": "camera_fov",
+    "mode": "horizontal_only",
+    "case_type": "horizontal_only",
+    "tags": [
+      "v2",
+      "camera_fov",
+      "horizontal_only"
+    ],
+    "user_utterance": "自定义镜头 HFOV 72°，只核对距墙 8 m 时能否覆盖 10 m 宽；不要做垂直构图校核。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "camera_fov",
+      "intent_ambiguous": false,
+      "parameters": {
+        "camera_fov.hfov_deg": {
+          "user_present": true,
+          "value": 72,
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "HFOV 72°"
+        },
+        "camera_fov.camera_target_distance_m": {
+          "user_present": true,
+          "value": 8,
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "距墙 8 m"
+        },
+        "camera_fov.target_width_m": {
+          "user_present": true,
+          "value": 10,
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "10 m 宽"
+        },
+        "camera_fov.vfov_deg": {
+          "user_present": false,
+          "source": "missing",
+          "valid": null,
+          "sufficient": false,
+          "evidence": ""
+        }
+      },
+      "clarification": {
+        "required": false,
+        "reasons": []
+      },
+      "rationale": "用户明确只做水平覆盖校核，HFOV 足以完成该项操作。"
+    }
+  },
+  {
+    "id": "V2-AV-002",
+    "category": "camera_fov",
+    "mode": "horizontal_only",
+    "case_type": "diagonal_angle_needs_sensor_ratio",
+    "tags": [
+      "v2",
+      "camera_fov",
+      "diagonal_vs_horizontal",
+      "diagonal_angle_needs_sensor_ratio"
+    ],
+    "user_utterance": "镜头对角视场角 DFOV 90°，请据此算水平视场角和 12 m 处横向覆盖宽度。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "camera_fov",
+      "intent_ambiguous": false,
+      "parameters": {
+        "camera_fov.dfov_deg": {
+          "user_present": true,
+          "value": 90,
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "DFOV 90°"
+        },
+        "camera_fov.hfov_deg": {
+          "user_present": false,
+          "source": "missing",
+          "valid": null,
+          "sufficient": false,
+          "evidence": ""
+        },
+        "camera_fov.sensor_width_mm": {
+          "user_present": false,
+          "source": "missing",
+          "valid": null,
+          "sufficient": false,
+          "evidence": ""
+        },
+        "camera_fov.sensor_height_mm": {
+          "user_present": false,
+          "source": "missing",
+          "valid": null,
+          "sufficient": false,
+          "evidence": ""
+        },
+        "camera_fov.camera_target_distance_m": {
+          "user_present": true,
+          "value": 12,
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "12 m 处"
+        },
+        "camera_fov.aspect_ratio": {
+          "user_present": false,
+          "source": "missing",
+          "valid": null,
+          "sufficient": false,
+          "evidence": ""
+        }
+      },
+      "clarification": {
+        "required": true,
+        "reasons": [
+          {
+            "code": "missing_required_information",
+            "parameters": [
+              "camera_fov.hfov_deg",
+              "camera_fov.aspect_ratio",
+              "camera_fov.sensor_width_mm",
+              "camera_fov.sensor_height_mm"
+            ],
+            "any_of": [
+              [
+                "camera_fov.hfov_deg"
+              ],
+              [
+                "camera_fov.dfov_deg",
+                "camera_fov.aspect_ratio"
+              ],
+              [
+                "camera_fov.dfov_deg",
+                "camera_fov.sensor_width_mm",
+                "camera_fov.sensor_height_mm"
+              ]
+            ]
+          }
+        ]
+      },
+      "rationale": "HFOV 可直接满足水平视角；若由 DFOV 推导，画面比例可通过 aspect_ratio 提供，或由传感器宽高计算。当前只有 DFOV，且缺少比例和物理宽高，因此无法确定 HFOV；物理传感器尺寸并非始终必需。"
+    }
+  },
+  {
+    "id": "V2-AV-003",
+    "category": "camera_fov",
+    "mode": "vertical_plane",
+    "case_type": "derive_three_fov_axes",
+    "tags": [
+      "v2",
+      "camera_fov",
+      "hfov",
+      "vfov",
+      "dfov",
+      "derive_three_fov_axes"
+    ],
+    "user_utterance": "自定义传感器宽 6.4 mm、高 3.6 mm，焦距 4.5 mm，算理论 HFOV、VFOV 和 DFOV。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "camera_fov",
+      "intent_ambiguous": false,
+      "parameters": {
+        "camera_fov.sensor_width_mm": {
+          "user_present": true,
+          "value": 6.4,
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "宽 6.4 mm"
+        },
+        "camera_fov.sensor_height_mm": {
+          "user_present": true,
+          "value": 3.6,
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "高 3.6 mm"
+        },
+        "camera_fov.focal_length_mm": {
+          "user_present": true,
+          "value": 4.5,
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "焦距 4.5 mm"
+        },
+        "camera_fov.hfov_deg": {
+          "user_present": false,
+          "value": 70.83411055293486,
+          "source": "derived",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "2×atan(6.4/(2×4.5))×180/π；utils/camera-fov.js:16-18 angleFromRatio"
+        },
+        "camera_fov.vfov_deg": {
+          "user_present": false,
+          "value": 43.60281897270362,
+          "source": "derived",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "2×atan(3.6/(2×4.5))×180/π；utils/camera-fov.js:16-18 angleFromRatio"
+        },
+        "camera_fov.dfov_deg": {
+          "user_present": false,
+          "value": 78.42142939285137,
+          "source": "derived",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "由两轴角按 utils/camera-fov.js:25-31 diagonalFromAxes 推得"
+        }
+      },
+      "clarification": {
+        "required": false,
+        "reasons": []
+      },
+      "rationale": "三种角度从给定传感器尺寸和焦距分别推导，彼此不混用。"
+    }
+  },
+  {
+    "id": "V2-AV-004",
+    "category": "camera_fov",
+    "mode": "ground_area",
+    "case_type": "unresolved_dimension_role",
+    "tags": [
+      "v2",
+      "camera_fov",
+      "unresolved_dimension",
+      "unresolved_dimension_role"
+    ],
+    "user_utterance": "现场单写“展市区”，宽 6 m，另一个尺寸 3 m 没标是高还是纵深；自定义 HFOV 80°、VFOV 50°，帮我算覆盖。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "camera_fov",
+      "intent_ambiguous": false,
+      "parameters": {
+        "camera_fov.target_width_m": {
+          "user_present": true,
+          "value": 6,
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "宽 6 m"
+        },
+        "camera_fov.unresolved_dimension_1": {
+          "user_present": true,
+          "value": 3,
+          "source": "user",
+          "valid": true,
+          "sufficient": false,
+          "evidence": "尺寸 3 m",
+          "semantic_role": "unresolved"
+        },
+        "camera_fov.camera_model": {
+          "user_present": false,
+          "source": "missing",
+          "valid": null,
+          "sufficient": false,
+          "evidence": ""
+        },
+        "camera_fov.hfov_deg": {
+          "user_present": true,
+          "value": 80,
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "HFOV 80°"
+        },
+        "camera_fov.vfov_deg": {
+          "user_present": true,
+          "value": 50,
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "VFOV 50°"
+        },
+        "camera_fov.scene_type": {
+          "user_present": true,
+          "value": "展市区",
+          "source": "user",
+          "valid": null,
+          "sufficient": false,
+          "evidence": "展市区",
+          "possible_typo": true
+        }
+      },
+      "clarification": {
+        "required": true,
+        "reasons": [
+          {
+            "code": "uncertain_parameter",
+            "parameters": [
+              "camera_fov.unresolved_dimension_1"
+            ]
+          }
+        ]
+      },
+      "rationale": "保留疑似场景笔误“展市区”原文；此处笔误不阻断当前计算。宽 6 m、HFOV 80°与 VFOV 50°可用于相应覆盖计算；另一个有效尺寸 3 m 未标明轴向，不能自动改字或映射为墙高/纵深，因此仍需确认该尺寸的含义。"
+    }
+  },
+  {
+    "id": "V2-AV-005",
+    "category": "camera_fov",
+    "mode": "horizontal_only",
+    "case_type": "vfov_cannot_substitute_hfov",
+    "tags": [
+      "v2",
+      "camera_fov",
+      "vfov_vs_hfov",
+      "vfov_cannot_substitute_hfov"
+    ],
+    "user_utterance": "自定义镜头 VFOV 48°，摄像机距墙 10 m；墙宽 8 m，我要核对横向能否拍全。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "camera_fov",
+      "intent_ambiguous": false,
+      "parameters": {
+        "camera_fov.vfov_deg": {
+          "user_present": true,
+          "value": 48,
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "VFOV 48°"
+        },
+        "camera_fov.hfov_deg": {
+          "user_present": false,
+          "source": "missing",
+          "valid": null,
+          "sufficient": false,
+          "evidence": ""
+        },
+        "camera_fov.camera_target_distance_m": {
+          "user_present": true,
+          "value": 10,
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "距墙 10 m"
+        },
+        "camera_fov.target_width_m": {
+          "user_present": true,
+          "value": 8,
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "墙宽 8 m"
+        }
+      },
+      "clarification": {
+        "required": true,
+        "reasons": [
+          {
+            "code": "missing_required_information",
+            "parameters": [
+              "camera_fov.hfov_deg"
+            ]
+          }
+        ]
+      },
+      "rationale": "VFOV 不能代替 HFOV 进行横向覆盖计算，需提供水平视场角或足以推导它的镜头规格。"
+    }
+  },
+  {
+    "id": "V2-AV-006",
+    "category": "dmx_address",
+    "mode": "layout",
+    "case_type": "resolved_orientation_conflict",
+    "tags": [
+      "v2",
+      "dmx",
+      "conflict_resolution",
+      "resolved_orientation_conflict"
+    ],
+    "user_utterance": "图纸把舞台前沿标在上方、观众席在下方；方向有冲突时以舞台前沿为准，请只确认前沿方向，不排具体灯位。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "dmx_address",
+      "intent_ambiguous": false,
+      "parameters": {
+        "dmx_address.front_orientation": {
+          "user_present": true,
+          "value": "舞台前沿方向",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "以舞台前沿为准",
+          "conflict": {
+            "resolution": "以舞台前沿为准"
+          }
+        },
+        "dmx_address.operation": {
+          "user_present": true,
+          "value": "确认方向",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "只确认前沿方向"
+        }
+      },
+      "clarification": {
+        "required": false,
+        "reasons": []
+      },
+      "rationale": "用户明确解决方向冲突，并只要求确认朝向，不需要舞台尺寸来排灯位。"
+    }
+  },
+  {
+    "id": "V2-AV-007",
+    "category": "audio_wiring",
+    "mode": "wiring",
+    "case_type": "permission_request_not_confirmation",
+    "tags": [
+      "v2",
+      "audio_wiring",
+      "permission_unconfirmed",
+      "permission_request_not_confirmation"
+    ],
+    "user_utterance": "平衡 XLR 输出接 RCA 输入，请按我要求把冷端接屏蔽并出图。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "audio_wiring",
+      "intent_ambiguous": false,
+      "parameters": {
+        "audio_wiring.output_connector": {
+          "user_present": true,
+          "value": "XLR",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "XLR"
+        },
+        "audio_wiring.input_connector": {
+          "user_present": true,
+          "value": "RCA",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "RCA"
+        },
+        "audio_wiring.output_signal_type": {
+          "user_present": true,
+          "value": "平衡",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "平衡 XLR 输出"
+        },
+        "audio_wiring.cold_end_permission": {
+          "user_present": false,
+          "source": "missing",
+          "valid": null,
+          "sufficient": false,
+          "evidence": ""
+        },
+        "audio_wiring.cold_end_requested": {
+          "user_present": true,
+          "value": "tie_to_shield",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "把冷端接屏蔽"
+        }
+      },
+      "clarification": {
+        "required": true,
+        "reasons": [
+          {
+            "code": "permission_unconfirmed",
+            "parameters": [
+              "audio_wiring.cold_end_permission"
+            ]
+          }
+        ]
+      },
+      "rationale": "用户要求这样接线不构成设备手册许可确认，需先确认设备允许冷端与屏蔽汇接。"
+    }
+  },
+  {
+    "id": "V2-AV-008",
+    "category": "audio_wiring",
+    "mode": "wiring",
+    "case_type": "explicit_device_permission",
+    "tags": [
+      "v2",
+      "audio_wiring",
+      "permission_confirmed",
+      "explicit_device_permission"
+    ],
+    "user_utterance": "平衡 XLR 输出接 RCA 输入；两台设备的手册都确认允许冷端与屏蔽在 RCA 输入端汇接，请据此画接线图。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "audio_wiring",
+      "intent_ambiguous": false,
+      "parameters": {
+        "audio_wiring.output_connector": {
+          "user_present": true,
+          "value": "XLR",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "XLR 输出"
+        },
+        "audio_wiring.input_connector": {
+          "user_present": true,
+          "value": "RCA",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "RCA 输入"
+        },
+        "audio_wiring.cold_end_permission": {
+          "user_present": true,
+          "value": true,
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "两台设备的手册都确认允许冷端与屏蔽在 RCA 输入端汇接"
+        },
+        "audio_wiring.output_signal_type": {
+          "user_present": true,
+          "value": "balanced",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "平衡 XLR 输出"
+        },
+        "audio_wiring.cold_end_requested": {
+          "user_present": true,
+          "value": "tie_to_shield",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "冷端与屏蔽在 RCA 输入端汇接"
+        }
+      },
+      "clarification": {
+        "required": false,
+        "reasons": []
+      },
+      "rationale": "用户明确说两台设备的手册都确认允许该接法，且请求的汇接方式与许可内容一致。"
+    }
+  },
+  {
+    "id": "V2-AV-009",
+    "category": "led_screen",
+    "mode": "sizing",
+    "case_type": "missing_assembly_dimensions",
+    "tags": [
+      "v2",
+      "led_screen",
+      "no_hidden_default",
+      "missing_assembly_dimensions"
+    ],
+    "user_utterance": "墙宽 6 m、高 3 m，采用常规箱体拼 LED，按 16:9 排箱。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "led_screen",
+      "intent_ambiguous": false,
+      "parameters": {
+        "led_screen.wall_width_m": {
+          "user_present": true,
+          "value": 6,
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "墙宽 6 m"
+        },
+        "led_screen.wall_height_m": {
+          "user_present": true,
+          "value": 3,
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "高 3 m"
+        },
+        "led_screen.assembly_unit": {
+          "user_present": true,
+          "value": "常规箱体",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "常规箱体"
+        },
+        "led_screen.assembly_unit_width_mm": {
+          "user_present": false,
+          "source": "missing",
+          "valid": null,
+          "sufficient": false,
+          "evidence": ""
+        },
+        "led_screen.assembly_unit_height_mm": {
+          "user_present": false,
+          "source": "missing",
+          "valid": null,
+          "sufficient": false,
+          "evidence": ""
+        },
+        "led_screen.aspect_ratio": {
+          "user_present": true,
+          "value": "16:9",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "16:9"
+        }
+      },
+      "clarification": {
+        "required": true,
+        "reasons": [
+          {
+            "code": "missing_required_information",
+            "parameters": [
+              "led_screen.assembly_unit_width_mm",
+              "led_screen.assembly_unit_height_mm"
+            ]
+          }
+        ]
+      },
+      "rationale": "只说常规箱体没有给出箱体尺寸；不能静默套用固定箱体尺寸。"
+    }
+  },
+  {
+    "id": "V2-AV-010",
+    "category": "camera_fov",
+    "mode": "vertical_plane",
+    "case_type": "invalid_zero_angle",
+    "tags": [
+      "v2",
+      "camera_fov",
+      "invalid_angle",
+      "invalid_zero_angle"
+    ],
+    "user_utterance": "镜头 HFOV 0°，要算距墙 5 m 时覆盖多宽。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "camera_fov",
+      "intent_ambiguous": false,
+      "parameters": {
+        "camera_fov.hfov_deg": {
+          "user_present": true,
+          "value": 0,
+          "source": "user",
+          "valid": false,
+          "sufficient": false,
+          "evidence": "HFOV 0°"
+        },
+        "camera_fov.camera_target_distance_m": {
+          "user_present": true,
+          "value": 5,
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "距墙 5 m"
+        }
+      },
+      "clarification": {
+        "required": true,
+        "reasons": [
+          {
+            "code": "invalid_parameter",
+            "parameters": [
+              "camera_fov.hfov_deg"
+            ]
+          }
+        ]
+      },
+      "rationale": "零度视场角不是可用于覆盖计算的有效输入。"
+    }
+  },
+  {
+    "id": "V2-AV-011",
+    "category": "camera_fov",
+    "mode": "horizontal_only",
+    "case_type": "catalog_then_derived_coverage",
+    "tags": [
+      "v2",
+      "camera_fov",
+      "product_catalog",
+      "derived",
+      "catalog_then_derived_coverage"
+    ],
+    "user_utterance": "查产品库 TS-0663XP 的主镜头水平视场角，并计算距墙 10 m 时横向覆盖宽度。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "camera_fov",
+      "intent_ambiguous": false,
+      "parameters": {
+        "camera_fov.camera_model": {
+          "user_present": true,
+          "value": "TS-0663XP",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "TS-0663XP"
+        },
+        "camera_fov.hfov_deg": {
+          "user_present": false,
+          "value": 82,
+          "source": "product_catalog",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "data/cameras.js: TS-0663XP 主镜头 hWide=82°"
+        },
+        "camera_fov.camera_target_distance_m": {
+          "user_present": true,
+          "value": 10,
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "距墙 10 m"
+        },
+        "camera_fov.coverage_width_m": {
+          "user_present": false,
+          "value": 17.39,
+          "source": "derived",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "2×10×tan(82°/2)=17.3857 m, rounded to 17.39; utils/camera-fov.js:465 frameWidthMeters"
+        }
+      },
+      "clarification": {
+        "required": false,
+        "reasons": []
+      },
+      "rationale": "产品库中明确型号的主镜头 HFOV 为 82°，据此计算 10 m 距离的理论横向覆盖宽度。"
+    }
+  },
+  {
+    "id": "V2-AV-012",
+    "category": "dmx_address",
+    "mode": "addressing",
+    "case_type": "address_prefix_unresolved",
+    "tags": [
+      "v2",
+      "dmx",
+      "address_unresolved",
+      "address_prefix_unresolved"
+    ],
+    "user_utterance": "给 4 台、每台 12 通道的灯具从 A001 连续编址；A 是 universe 还是地址文本的一部分由我另行填写。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "dmx_address",
+      "intent_ambiguous": false,
+      "parameters": {
+        "dmx_address.fixture_count": {
+          "user_present": true,
+          "value": 4,
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "4 台"
+        },
+        "dmx_address.channels_per_fixture": {
+          "user_present": true,
+          "value": 12,
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "每台 12 通道"
+        },
+        "dmx_address.start_address": {
+          "user_present": true,
+          "value": "A001",
+          "source": "user",
+          "valid": null,
+          "sufficient": false,
+          "evidence": "A001"
+        },
+        "dmx_address.target_universe": {
+          "user_present": false,
+          "source": "missing",
+          "valid": null,
+          "sufficient": false,
+          "evidence": ""
+        }
+      },
+      "clarification": {
+        "required": true,
+        "reasons": [
+          {
+            "code": "uncertain_parameter",
+            "parameters": [
+              "dmx_address.start_address"
+            ]
+          },
+          {
+            "code": "missing_required_information",
+            "parameters": [
+              "dmx_address.target_universe"
+            ]
+          }
+        ]
+      },
+      "rationale": "用户明确未确定 A 的语义，不能推断它是 universe；地址与 universe 需分别确认。"
+    }
+  }
+]

@@ -1,0 +1,21 @@
+{
+  "version": "2.0",
+  "phase": "P2-A-V2/offline-dataset",
+  "base_commit": "e89d57a492bb776fed35809eed91741715e828b0",
+  "v1_dataset_sha256": "ba93006d321f4db247cbb01ef5f75b6a7c9c13361ca1c83fd75820f00a2ab134",
+  "case_count": 144,
+  "dataset_sha256": "cbc3b6d34165e64ff5e53b7189b7dedfffb80a3cee5e8f169ab3b7fe1fee5212",
+  "canonicalization": "Cases sorted by id; recursively sort object keys; preserve array order; compact UTF-8 JSON with final LF",
+  "inference_executed": false,
+  "files": {
+    "README.md": "e53757219c39a06f15ab2e744d6ec7d76b9ef90d9610130dcd5a6063f68e4971",
+    "audio.additions.json": "ca4ff9dd9c3a7a9c7dcb00d05ca6d91f8e9995b7fd548a6fdb5e83022dd0fcc4",
+    "audio.cases.json": "9410b7e205e90e5ee0eca8b5bab828a6330d800d793126767c20f3a30c27a745",
+    "av-and-controls.cases.json": "8cea47cc588e8bb300a6c3040bb827b686428a84888080a70e0b23d3d022751c",
+    "av.additions.json": "6b9c66083947f61f4a13225a07c0a77e243b68a8a4e2a462f4f16683ddfe534e",
+    "freeze.cjs": "b455d5769cb7e56dca2a35c7988fc15db5e66020e54a9e6965685adff14e2543",
+    "human-review.json": "a70f69db4a687663c2c26f7a93903a425f4a6f83e7ae1dacf38d70fcc95336ac",
+    "schema.json": "cc2b3a3b61777c42af90de43131503ca5baf5b949ae88fe7228505d59e95c912",
+    "validate.cjs": "63fc1949d80aeb021b238b78bcb724d52f4ef172a445cee3564bc20d043f0082"
+  }
+}

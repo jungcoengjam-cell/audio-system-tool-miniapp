@@ -1,0 +1,862 @@
+[
+  {
+    "id": "V2-AUD-001",
+    "category": "gain_structure",
+    "mode": "input_sensitivity",
+    "case_type": "alternative_units",
+    "tags": [
+      "gain_structure",
+      "negative_db",
+      "alternative_units"
+    ],
+    "user_utterance": "功放输入灵敏度档按 -10 dBu，DSP 目标峰值 -6 dBFS，帮我核系统增益结构。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "gain_structure",
+      "intent_ambiguous": false,
+      "parameters": {
+        "gain_structure.input_stage_type": {
+          "user_present": true,
+          "value": "输入灵敏度档",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "输入灵敏度档"
+        },
+        "gain_structure.input_stage_value": {
+          "user_present": true,
+          "value": "-10 dBu",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "-10 dBu"
+        },
+        "gain_structure.target_peak_dbfs": {
+          "user_present": true,
+          "value": "-6 dBFS",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "-6 dBFS"
+        }
+      },
+      "clarification": {
+        "required": false,
+        "reasons": []
+      },
+      "rationale": "-10 dBu 是有效的输入灵敏度单位和值；负号不能被丢弃，也不能把 dBu 当作 dBFS。"
+    }
+  },
+  {
+    "id": "V2-AUD-002",
+    "category": "gain_structure",
+    "mode": "input_sensitivity",
+    "case_type": "alternative_units",
+    "tags": [
+      "gain_structure",
+      "dBV",
+      "unit_distinction",
+      "alternative_units"
+    ],
+    "user_utterance": "这台功放灵敏度是 -10 dBV，换算成输入电压后，目标峰值按 -6 dBFS。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "gain_structure",
+      "intent_ambiguous": false,
+      "parameters": {
+        "gain_structure.input_stage_type": {
+          "user_present": true,
+          "value": "输入灵敏度",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "灵敏度"
+        },
+        "gain_structure.input_stage_value": {
+          "user_present": true,
+          "value": "-10 dBV",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "-10 dBV"
+        },
+        "gain_structure.target_peak_dbfs": {
+          "user_present": true,
+          "value": "-6 dBFS",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "-6 dBFS"
+        }
+      },
+      "clarification": {
+        "required": false,
+        "reasons": []
+      },
+      "rationale": "dBV 明确表示相对 1 V 的输入电压单位；按其参考电压语义换算，不把 dBV 误认成 dBFS 或 dBu。"
+    }
+  },
+  {
+    "id": "V2-AUD-003",
+    "category": "gain_structure",
+    "mode": "input_sensitivity",
+    "case_type": "wrong_parameter",
+    "tags": [
+      "gain_structure",
+      "dBFS",
+      "wrong_kind_parameter",
+      "wrong_parameter"
+    ],
+    "user_utterance": "功放输入灵敏度标注 -18 dBFS，DSP 目标峰值 -6 dBFS，按这个灵敏度帮我算增益结构。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "gain_structure",
+      "intent_ambiguous": false,
+      "parameters": {
+        "gain_structure.input_stage_type": {
+          "user_present": true,
+          "value": "输入灵敏度",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "输入灵敏度"
+        },
+        "gain_structure.input_stage_value": {
+          "user_present": true,
+          "value": "-18 dBFS",
+          "source": "user",
+          "valid": false,
+          "sufficient": false,
+          "evidence": "-18 dBFS"
+        },
+        "gain_structure.target_peak_dbfs": {
+          "user_present": true,
+          "value": "-6 dBFS",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "-6 dBFS"
+        }
+      },
+      "clarification": {
+        "required": true,
+        "reasons": [
+          {
+            "code": "invalid_parameter",
+            "parameters": [
+              "gain_structure.input_stage_value"
+            ]
+          }
+        ]
+      },
+      "rationale": "dBFS 是数字满刻度电平，不是功放输入灵敏度的电压单位，字段虽出现仍无效。"
+    }
+  },
+  {
+    "id": "V2-AUD-004",
+    "category": "gain_structure",
+    "mode": "input_sensitivity",
+    "case_type": "wrong_parameter",
+    "tags": [
+      "gain_structure",
+      "wrong_kind_parameter",
+      "wrong_parameter"
+    ],
+    "user_utterance": "功放输入灵敏度为 0 V，DSP 目标峰值 -3 dBFS；功放型号 TC-2350B，请直接给对齐量。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "gain_structure",
+      "intent_ambiguous": false,
+      "parameters": {
+        "gain_structure.amplifier_model": {
+          "user_present": true,
+          "value": "TC-2350B",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "TC-2350B"
+        },
+        "gain_structure.input_stage_type": {
+          "user_present": true,
+          "value": "输入灵敏度",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "输入灵敏度"
+        },
+        "gain_structure.input_stage_value": {
+          "user_present": true,
+          "value": "0 V",
+          "source": "user",
+          "valid": false,
+          "sufficient": false,
+          "evidence": "0 V"
+        },
+        "gain_structure.target_peak_dbfs": {
+          "user_present": true,
+          "value": "-3 dBFS",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "-3 dBFS"
+        }
+      },
+      "clarification": {
+        "required": true,
+        "reasons": [
+          {
+            "code": "invalid_parameter",
+            "parameters": [
+              "gain_structure.input_stage_value"
+            ]
+          }
+        ]
+      },
+      "rationale": "0 V 不是可用的非零输入灵敏度档，字段已出现但数值无效。"
+    }
+  },
+  {
+    "id": "V2-AUD-005",
+    "category": "venue",
+    "mode": "report",
+    "case_type": "missing_parameters",
+    "tags": [
+      "venue",
+      "missing_length",
+      "missing_parameters"
+    ],
+    "user_utterance": "报告厅预估：房间宽 8 m、高 4 m；目标二级，音箱短边前置，首排 2 m、末排 10 m，听音区宽 7 m。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "venue",
+      "intent_ambiguous": false,
+      "parameters": {
+        "venue.room_width_m": {
+          "user_present": true,
+          "value": "8 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "宽 8 m"
+        },
+        "venue.room_height_m": {
+          "user_present": true,
+          "value": "4 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "高 4 m"
+        },
+        "venue.target_grade": {
+          "user_present": true,
+          "value": "二级",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "目标二级"
+        },
+        "venue.front_wall_layout": {
+          "user_present": true,
+          "value": "短边前置",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "短边前置"
+        },
+        "venue.first_row_distance_m": {
+          "user_present": true,
+          "value": "2 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "首排 2 m"
+        },
+        "venue.last_row_distance_m": {
+          "user_present": true,
+          "value": "10 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "末排 10 m"
+        },
+        "venue.listening_width_m": {
+          "user_present": true,
+          "value": "7 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "听音区宽 7 m"
+        },
+        "venue.room_length_m": {
+          "user_present": false,
+          "source": "missing",
+          "valid": null,
+          "sufficient": false,
+          "evidence": ""
+        },
+        "venue.scene_type": {
+          "user_present": true,
+          "value": "报告厅",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "报告厅"
+        }
+      },
+      "clarification": {
+        "required": true,
+        "reasons": [
+          {
+            "code": "missing_required_information",
+            "parameters": [
+              "venue.room_length_m"
+            ]
+          }
+        ]
+      },
+      "rationale": "报告型几何缺少房间长度；宽度、高度与排距不能替代长度。"
+    }
+  },
+  {
+    "id": "V2-AUD-006",
+    "category": "venue",
+    "mode": "report",
+    "case_type": "missing_parameters",
+    "tags": [
+      "venue",
+      "missing_width",
+      "missing_parameters"
+    ],
+    "user_utterance": "报告厅预估：房间长 12 m、高 4 m；目标一级，主扩短边前置，首排 3 m、末排 11 m，听音区宽 8 m。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "venue",
+      "intent_ambiguous": false,
+      "parameters": {
+        "venue.room_length_m": {
+          "user_present": true,
+          "value": "12 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "长 12 m"
+        },
+        "venue.room_height_m": {
+          "user_present": true,
+          "value": "4 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "高 4 m"
+        },
+        "venue.target_grade": {
+          "user_present": true,
+          "value": "一级",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "目标一级"
+        },
+        "venue.front_wall_layout": {
+          "user_present": true,
+          "value": "短边前置",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "主扩短边前置"
+        },
+        "venue.first_row_distance_m": {
+          "user_present": true,
+          "value": "3 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "首排 3 m"
+        },
+        "venue.last_row_distance_m": {
+          "user_present": true,
+          "value": "11 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "末排 11 m"
+        },
+        "venue.listening_width_m": {
+          "user_present": true,
+          "value": "8 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "听音区宽 8 m"
+        },
+        "venue.room_width_m": {
+          "user_present": false,
+          "source": "missing",
+          "valid": null,
+          "sufficient": false,
+          "evidence": ""
+        },
+        "venue.scene_type": {
+          "user_present": true,
+          "value": "报告厅",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "报告厅"
+        }
+      },
+      "clarification": {
+        "required": true,
+        "reasons": [
+          {
+            "code": "missing_required_information",
+            "parameters": [
+              "venue.room_width_m"
+            ]
+          }
+        ]
+      },
+      "rationale": "报告型几何缺少房间宽度，用户给出的听众区宽度不能代替房间宽度。"
+    }
+  },
+  {
+    "id": "V2-AUD-007",
+    "category": "venue",
+    "mode": "report",
+    "case_type": "missing_parameters",
+    "tags": [
+      "venue",
+      "missing_height",
+      "missing_parameters"
+    ],
+    "user_utterance": "报告厅预估：房间长 12 m、宽 8 m；目标二级，主扩短边前置，首排 2 m、末排 10 m，听音区宽 7 m。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "venue",
+      "intent_ambiguous": false,
+      "parameters": {
+        "venue.room_length_m": {
+          "user_present": true,
+          "value": "12 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "长 12 m"
+        },
+        "venue.room_width_m": {
+          "user_present": true,
+          "value": "8 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "宽 8 m"
+        },
+        "venue.target_grade": {
+          "user_present": true,
+          "value": "二级",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "目标二级"
+        },
+        "venue.front_wall_layout": {
+          "user_present": true,
+          "value": "短边前置",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "主扩短边前置"
+        },
+        "venue.first_row_distance_m": {
+          "user_present": true,
+          "value": "2 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "首排 2 m"
+        },
+        "venue.last_row_distance_m": {
+          "user_present": true,
+          "value": "10 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "末排 10 m"
+        },
+        "venue.listening_width_m": {
+          "user_present": true,
+          "value": "7 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "听音区宽 7 m"
+        },
+        "venue.room_height_m": {
+          "user_present": false,
+          "source": "missing",
+          "valid": null,
+          "sufficient": false,
+          "evidence": ""
+        },
+        "venue.scene_type": {
+          "user_present": true,
+          "value": "报告厅",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "报告厅"
+        }
+      },
+      "clarification": {
+        "required": true,
+        "reasons": [
+          {
+            "code": "missing_required_information",
+            "parameters": [
+              "venue.room_height_m"
+            ]
+          }
+        ]
+      },
+      "rationale": "报告型几何缺少房间高度；其他平面尺寸无法推算层高。"
+    }
+  },
+  {
+    "id": "V2-AUD-008",
+    "category": "gain_structure",
+    "mode": "input_sensitivity",
+    "case_type": "alternative_units",
+    "tags": [
+      "gain_structure",
+      "unit_conversion",
+      "derived",
+      "alternative_units"
+    ],
+    "user_utterance": "输入灵敏度档写 775 mV，DSP 目标峰值 -6 dBFS，请换成伏特后核对齐量。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "gain_structure",
+      "intent_ambiguous": false,
+      "parameters": {
+        "gain_structure.input_stage_type": {
+          "user_present": true,
+          "value": "输入灵敏度档",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "输入灵敏度档"
+        },
+        "gain_structure.input_stage_value": {
+          "user_present": true,
+          "value": "775 mV",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "775 mV"
+        },
+        "gain_structure.target_peak_dbfs": {
+          "user_present": true,
+          "value": "-6 dBFS",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "-6 dBFS"
+        }
+      },
+      "clarification": {
+        "required": false,
+        "reasons": []
+      },
+      "rationale": "775 mV 是用户明示的输入值，保留原始单位和值；换算到 V 可按 mV/1000 进行，但不把派生值冒充用户输入。"
+    }
+  },
+  {
+    "id": "V2-AUD-009",
+    "category": "gain_structure",
+    "mode": "input_sensitivity",
+    "case_type": "documented_default",
+    "tags": [
+      "gain_structure",
+      "documented_default",
+      "default"
+    ],
+    "user_utterance": "功放输入灵敏度档是 1 V，按默认 DSP 目标峰值算一下系统对齐量。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "gain_structure",
+      "intent_ambiguous": false,
+      "parameters": {
+        "gain_structure.input_stage_type": {
+          "user_present": true,
+          "value": "输入灵敏度档",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "输入灵敏度档"
+        },
+        "gain_structure.input_stage_value": {
+          "user_present": true,
+          "value": "1 V",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "1 V"
+        },
+        "gain_structure.target_peak_dbfs": {
+          "user_present": false,
+          "value": "-6 dBFS",
+          "source": "documented_default",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "utils/gain-structure.js: DEFAULT_TARGET_PEAK_DBFS = -6"
+        }
+      },
+      "clarification": {
+        "required": false,
+        "reasons": []
+      },
+      "rationale": "用户接受工具默认目标峰值；规则在 rubric.v1.json gain_structure.defaults 中定义为 -6 dBFS。"
+    }
+  },
+  {
+    "id": "V2-AUD-010",
+    "category": "venue",
+    "mode": "pag_nag",
+    "case_type": "range",
+    "tags": [
+      "venue",
+      "pag_nag",
+      "operating_range",
+      "range"
+    ],
+    "user_utterance": "复核单音箱单链路 PAG/NAG：嘴至话筒 ds=0.5 m，发言人到远端 d0=6 m、最近听众 dn=2 m，话筒至实际送声音箱 d1=3 m、同一远端到该音箱 d2=4 m；同时开放 NOM 在 1 到 3 支间波动，请按上下端点评估。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "venue",
+      "intent_ambiguous": false,
+      "parameters": {
+        "venue.pag_speaker_mode": {
+          "user_present": true,
+          "value": "单音箱单链路",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "单音箱单链路"
+        },
+        "venue.ds_m": {
+          "user_present": true,
+          "value": "ds=0.5 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "ds=0.5 m"
+        },
+        "venue.d0_m": {
+          "user_present": true,
+          "value": "d0=6 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "d0=6 m"
+        },
+        "venue.dn_m": {
+          "user_present": true,
+          "value": "dn=2 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "dn=2 m"
+        },
+        "venue.d1_m": {
+          "user_present": true,
+          "value": "d1=3 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "d1=3 m"
+        },
+        "venue.d2_m": {
+          "user_present": true,
+          "value": "d2=4 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "d2=4 m"
+        },
+        "venue.nom": {
+          "user_present": true,
+          "value": {
+            "min": 1,
+            "max": 3
+          },
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "NOM 在 1 到 3 支间波动"
+        }
+      },
+      "clarification": {
+        "required": false,
+        "reasons": []
+      },
+      "rationale": "输入几何和单音箱链路均完整；用户明确要求按 NOM 范围两端评估，可直接比较上下端结果而无需追问。"
+    }
+  },
+  {
+    "id": "V2-AUD-011",
+    "category": "gain_structure",
+    "mode": "voltage_gain",
+    "case_type": "conflict",
+    "tags": [
+      "gain_structure",
+      "unresolved_conflict",
+      "conflict"
+    ],
+    "user_utterance": "TC-22000 电压增益旋钮记着 36 dB，调试表里又写 39 dB；立体声接 8 Ω，目标峰值 -6 dBFS，按现场档值计算。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "gain_structure",
+      "intent_ambiguous": false,
+      "parameters": {
+        "gain_structure.amplifier_model": {
+          "user_present": true,
+          "value": "TC-22000",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "TC-22000"
+        },
+        "gain_structure.input_stage_type": {
+          "user_present": true,
+          "value": "电压增益",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "电压增益"
+        },
+        "gain_structure.input_stage_value": {
+          "user_present": true,
+          "value": [
+            "36 dB",
+            "39 dB"
+          ],
+          "source": "user",
+          "valid": true,
+          "sufficient": false,
+          "evidence": "旋钮记着 36 dB，调试表里又写 39 dB",
+          "conflict": {
+            "resolution": null
+          }
+        },
+        "gain_structure.amplifier_mode": {
+          "user_present": true,
+          "value": "立体声",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "立体声"
+        },
+        "gain_structure.load_impedance_ohm": {
+          "user_present": true,
+          "value": "8 Ω",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "8 Ω"
+        },
+        "gain_structure.target_peak_dbfs": {
+          "user_present": true,
+          "value": "-6 dBFS",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "-6 dBFS"
+        }
+      },
+      "clarification": {
+        "required": true,
+        "reasons": [
+          {
+            "code": "unresolved_conflict",
+            "parameters": [
+              "gain_structure.input_stage_value"
+            ]
+          }
+        ]
+      },
+      "rationale": "两个相互冲突的记录都属于用户原话，未给出优先依据，当前值不足以确定。"
+    }
+  },
+  {
+    "id": "V2-AUD-012",
+    "category": "spl",
+    "mode": "distance_estimate",
+    "case_type": "catalog_resolved",
+    "tags": [
+      "spl",
+      "product_catalog",
+      "catalog_resolved"
+    ],
+    "user_utterance": "TS-715H 两只，听音点 6 m，按常规叠加；手头没抄灵敏度和额定功率，请按型号目录查值估算额定声压级。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "spl",
+      "intent_ambiguous": false,
+      "parameters": {
+        "spl.speaker_model": {
+          "user_present": true,
+          "value": "TS-715H",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "TS-715H"
+        },
+        "spl.speaker_count": {
+          "user_present": true,
+          "value": "两只",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "两只"
+        },
+        "spl.listening_distance_m": {
+          "user_present": true,
+          "value": "6 m",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "6 m"
+        },
+        "spl.summation_mode": {
+          "user_present": true,
+          "value": "常规叠加",
+          "source": "user",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "常规叠加"
+        },
+        "spl.sensitivity_1w1m_db": {
+          "user_present": false,
+          "value": "100 dB @ 1W/1m",
+          "source": "product_catalog",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "data/equipment.js: TS-715H sensitivityDb=100; docs/sensitivity-data-2026-07-10.md: TS-715H 100 dB @ 1W/1m; source itc产品说明书 TS-715H@V20231228.pdf"
+        },
+        "spl.rated_power_w": {
+          "user_present": false,
+          "value": "500 W",
+          "source": "product_catalog",
+          "valid": true,
+          "sufficient": true,
+          "evidence": "data/equipment.js: TS-715H ratedPower=500; source itc产品说明书 TS-715H@V20231228.pdf"
+        }
+      },
+      "clarification": {
+        "required": false,
+        "reasons": []
+      },
+      "rationale": "用户缺少灵敏度和额定功率，但 TS-715H 型号可在目录中唯一查得这两个规格；目录补值单独标为 product_catalog。"
+    }
+  }
+]

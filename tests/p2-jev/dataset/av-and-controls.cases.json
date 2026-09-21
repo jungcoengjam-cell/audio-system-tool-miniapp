@@ -1,0 +1,2817 @@
+[
+  {
+    "id": "AW-001",
+    "category": "audio_wiring",
+    "mode": "wiring",
+    "case_type": "standard",
+    "tags": [
+      "standard"
+    ],
+    "user_utterance": "调音台的 XLR 平衡输出接处理器的 XLR 平衡输入，请给我对应接线图。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "audio_wiring",
+      "clear_tools": [
+        "audio_wiring"
+      ],
+      "parameters": {
+        "audio_wiring.output_connector": true,
+        "audio_wiring.input_connector": true,
+        "audio_wiring.output_signal_type": true,
+        "audio_wiring.input_signal_type": true,
+        "audio_wiring.source_channel": false,
+        "audio_wiring.destination_channel": false,
+        "audio_wiring.cold_end_permission": false
+      },
+      "parameter_evidence": {
+        "audio_wiring.output_connector": "XLR",
+        "audio_wiring.input_connector": "XLR",
+        "audio_wiring.output_signal_type": "XLR 平衡输出",
+        "audio_wiring.input_signal_type": "XLR 平衡输入"
+      },
+      "ambiguity_level": 0,
+      "needs_clarification": false,
+      "clarification_reasons": [],
+      "rationale": "两端接口和信号类型都已明确，直接查对应接法。"
+    }
+  },
+  {
+    "id": "AW-002",
+    "category": "audio_wiring",
+    "mode": "wiring",
+    "case_type": "casual",
+    "tags": [
+      "casual"
+    ],
+    "user_utterance": "电脑 3.5 耳机口接功放单个 RCA 输入，我只要左声道，怎么接？",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "audio_wiring",
+      "clear_tools": [
+        "audio_wiring"
+      ],
+      "parameters": {
+        "audio_wiring.output_connector": true,
+        "audio_wiring.input_connector": true,
+        "audio_wiring.output_signal_type": false,
+        "audio_wiring.input_signal_type": false,
+        "audio_wiring.source_channel": true,
+        "audio_wiring.destination_channel": false,
+        "audio_wiring.cold_end_permission": false
+      },
+      "parameter_evidence": {
+        "audio_wiring.output_connector": "3.5 耳机口",
+        "audio_wiring.input_connector": "RCA 输入",
+        "audio_wiring.source_channel": "左声道"
+      },
+      "ambiguity_level": 0,
+      "needs_clarification": false,
+      "clarification_reasons": [],
+      "rationale": "用户明确只取左声道；单个输入不需要猜测合并左右声道。"
+    }
+  },
+  {
+    "id": "AW-003",
+    "category": "audio_wiring",
+    "mode": "wiring",
+    "case_type": "abbreviation",
+    "tags": [
+      "abbreviation"
+    ],
+    "user_utterance": "Mixer 的 XLR 平衡 mono out 到 DSP 的平衡 terminal in，画一下接法。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "audio_wiring",
+      "clear_tools": [
+        "audio_wiring"
+      ],
+      "parameters": {
+        "audio_wiring.output_connector": true,
+        "audio_wiring.input_connector": true,
+        "audio_wiring.output_signal_type": true,
+        "audio_wiring.input_signal_type": true,
+        "audio_wiring.source_channel": false,
+        "audio_wiring.destination_channel": false,
+        "audio_wiring.cold_end_permission": false
+      },
+      "parameter_evidence": {
+        "audio_wiring.output_connector": "XLR",
+        "audio_wiring.output_signal_type": "平衡 mono out",
+        "audio_wiring.input_connector": "terminal",
+        "audio_wiring.input_signal_type": "平衡 terminal in"
+      },
+      "ambiguity_level": 0,
+      "needs_clarification": false,
+      "clarification_reasons": [],
+      "rationale": "缩写仍清楚给出了单声道平衡输出与平衡端子输入。"
+    }
+  },
+  {
+    "id": "AW-004",
+    "category": "audio_wiring",
+    "mode": "wiring",
+    "case_type": "mixed_language",
+    "tags": [
+      "mixed_language"
+    ],
+    "user_utterance": "请画 6.35 mm TRS balanced LINE OUT 到 XLR balanced LINE IN 的 wiring。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "audio_wiring",
+      "clear_tools": [
+        "audio_wiring"
+      ],
+      "parameters": {
+        "audio_wiring.output_connector": true,
+        "audio_wiring.input_connector": true,
+        "audio_wiring.output_signal_type": true,
+        "audio_wiring.input_signal_type": true,
+        "audio_wiring.source_channel": false,
+        "audio_wiring.destination_channel": false,
+        "audio_wiring.cold_end_permission": false
+      },
+      "parameter_evidence": {
+        "audio_wiring.output_connector": "6.35 mm TRS",
+        "audio_wiring.output_signal_type": "balanced LINE OUT",
+        "audio_wiring.input_connector": "XLR",
+        "audio_wiring.input_signal_type": "balanced LINE IN"
+      },
+      "ambiguity_level": 0,
+      "needs_clarification": false,
+      "clarification_reasons": [],
+      "rationale": "英文明确写出 balanced 与 LINE，接口外形没有被单独用来推断信号类型。"
+    }
+  },
+  {
+    "id": "AW-005",
+    "category": "audio_wiring",
+    "mode": "wiring",
+    "case_type": "alternative_units",
+    "tags": [
+      "alternative_units"
+    ],
+    "user_utterance": "四分之一英寸 TRS 平衡输出接三针 XLR 平衡输入，想核对针脚。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "audio_wiring",
+      "clear_tools": [
+        "audio_wiring"
+      ],
+      "parameters": {
+        "audio_wiring.output_connector": true,
+        "audio_wiring.input_connector": true,
+        "audio_wiring.output_signal_type": true,
+        "audio_wiring.input_signal_type": true,
+        "audio_wiring.source_channel": false,
+        "audio_wiring.destination_channel": false,
+        "audio_wiring.cold_end_permission": false
+      },
+      "parameter_evidence": {
+        "audio_wiring.output_connector": "四分之一英寸 TRS",
+        "audio_wiring.output_signal_type": "平衡输出",
+        "audio_wiring.input_connector": "三针 XLR",
+        "audio_wiring.input_signal_type": "平衡输入"
+      },
+      "ambiguity_level": 0,
+      "needs_clarification": false,
+      "clarification_reasons": [],
+      "rationale": "四分之一英寸是接口尺寸写法，且用户已明确两端为平衡信号。"
+    }
+  },
+  {
+    "id": "AW-006",
+    "category": "audio_wiring",
+    "mode": "wiring",
+    "case_type": "typo",
+    "tags": [
+      "typo",
+      "cold_end_permission_confirmed"
+    ],
+    "user_utterance": "调音台 XLR 平衡 LINE 输出接 RCA 非平衡 LINE 输入，设备手册已确认允许冷端与屏蔽在输入端汇接，请按手册画接现图。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "audio_wiring",
+      "clear_tools": [
+        "audio_wiring"
+      ],
+      "parameters": {
+        "audio_wiring.output_connector": true,
+        "audio_wiring.input_connector": true,
+        "audio_wiring.output_signal_type": true,
+        "audio_wiring.input_signal_type": true,
+        "audio_wiring.source_channel": false,
+        "audio_wiring.destination_channel": false,
+        "audio_wiring.cold_end_permission": true
+      },
+      "parameter_evidence": {
+        "audio_wiring.output_connector": "XLR",
+        "audio_wiring.input_connector": "RCA",
+        "audio_wiring.output_signal_type": "XLR 平衡 LINE 输出",
+        "audio_wiring.input_signal_type": "RCA 非平衡 LINE 输入",
+        "audio_wiring.cold_end_permission": "设备手册已确认允许冷端与屏蔽在输入端汇接"
+      },
+      "ambiguity_level": 0,
+      "needs_clarification": false,
+      "clarification_reasons": [],
+      "rationale": "“接现图”是“接线图”的明显笔误；用户明确确认两台设备手册允许该冷端接法。"
+    }
+  },
+  {
+    "id": "AW-007",
+    "category": "audio_wiring",
+    "mode": "wiring",
+    "case_type": "missing_parameters",
+    "tags": [
+      "missing_parameters"
+    ],
+    "user_utterance": "电脑 3.5 mm 立体声输出接功放的单声道 XLR 平衡输入，给我接线图。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "audio_wiring",
+      "clear_tools": [
+        "audio_wiring"
+      ],
+      "parameters": {
+        "audio_wiring.output_connector": true,
+        "audio_wiring.input_connector": true,
+        "audio_wiring.output_signal_type": true,
+        "audio_wiring.input_signal_type": true,
+        "audio_wiring.source_channel": false,
+        "audio_wiring.destination_channel": false,
+        "audio_wiring.cold_end_permission": false
+      },
+      "parameter_evidence": {
+        "audio_wiring.output_connector": "3.5 mm",
+        "audio_wiring.output_signal_type": "立体声输出",
+        "audio_wiring.input_connector": "XLR",
+        "audio_wiring.input_signal_type": "单声道 XLR 平衡输入"
+      },
+      "ambiguity_level": 0,
+      "needs_clarification": true,
+      "clarification_reasons": [
+        "missing_required_information"
+      ],
+      "rationale": "3.5 mm 立体声转单声道输入需要明确取左声道还是右声道。"
+    }
+  },
+  {
+    "id": "AW-008",
+    "category": "audio_wiring",
+    "mode": "wiring",
+    "case_type": "ambiguous_parameters",
+    "tags": [
+      "ambiguous_parameters",
+      "cold_end_permission_missing"
+    ],
+    "user_utterance": "平衡 XLR 输出接 RCA 单声道输入，冷端按常规接屏蔽，帮我出接法。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "audio_wiring",
+      "clear_tools": [
+        "audio_wiring"
+      ],
+      "parameters": {
+        "audio_wiring.output_connector": true,
+        "audio_wiring.input_connector": true,
+        "audio_wiring.output_signal_type": true,
+        "audio_wiring.input_signal_type": false,
+        "audio_wiring.source_channel": false,
+        "audio_wiring.destination_channel": false,
+        "audio_wiring.cold_end_permission": false
+      },
+      "parameter_evidence": {
+        "audio_wiring.output_connector": "XLR",
+        "audio_wiring.output_signal_type": "平衡 XLR 输出",
+        "audio_wiring.input_connector": "RCA 单声道输入"
+      },
+      "ambiguity_level": 1,
+      "needs_clarification": true,
+      "clarification_reasons": [
+        "missing_conditional_confirmation"
+      ],
+      "rationale": "须先确认两台设备手册允许冷端与屏蔽在输入端汇接，不能把“按常规”当成确认。"
+    }
+  },
+  {
+    "id": "AW-009",
+    "category": "audio_wiring",
+    "mode": "wiring",
+    "case_type": "irrelevant_numbers",
+    "tags": [
+      "irrelevant_numbers"
+    ],
+    "user_utterance": "电脑 3.5 mm 立体声输出接双 RCA 立体声输入，L 对 L、R 对 R。日期 2026-09-20，会议有 36 人。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "audio_wiring",
+      "clear_tools": [
+        "audio_wiring"
+      ],
+      "parameters": {
+        "audio_wiring.output_connector": true,
+        "audio_wiring.input_connector": true,
+        "audio_wiring.output_signal_type": true,
+        "audio_wiring.input_signal_type": true,
+        "audio_wiring.source_channel": true,
+        "audio_wiring.destination_channel": true,
+        "audio_wiring.cold_end_permission": false
+      },
+      "parameter_evidence": {
+        "audio_wiring.output_connector": "3.5 mm",
+        "audio_wiring.output_signal_type": "立体声输出",
+        "audio_wiring.input_connector": "双 RCA",
+        "audio_wiring.input_signal_type": "立体声输入",
+        "audio_wiring.source_channel": "L 对 L、R 对 R",
+        "audio_wiring.destination_channel": "L 对 L、R 对 R"
+      },
+      "ambiguity_level": 0,
+      "needs_clarification": false,
+      "clarification_reasons": [],
+      "rationale": "日期和人数与接线字段无关，不会被当作声道数值。"
+    }
+  },
+  {
+    "id": "AW-010",
+    "category": "audio_wiring",
+    "mode": "wiring",
+    "case_type": "wrong_parameter",
+    "tags": [
+      "wrong_parameter",
+      "conflicting_signal_type"
+    ],
+    "user_utterance": "6.35 mm TRS 立体声耳机口有三段触点，所以它肯定是平衡单声道输出；接 XLR 输入怎么焊？",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "audio_wiring",
+      "clear_tools": [
+        "audio_wiring"
+      ],
+      "parameters": {
+        "audio_wiring.output_connector": true,
+        "audio_wiring.input_connector": true,
+        "audio_wiring.output_signal_type": true,
+        "audio_wiring.input_signal_type": false,
+        "audio_wiring.source_channel": false,
+        "audio_wiring.destination_channel": false,
+        "audio_wiring.cold_end_permission": false
+      },
+      "parameter_evidence": {
+        "audio_wiring.output_connector": "6.35 mm TRS",
+        "audio_wiring.input_connector": "XLR 输入",
+        "audio_wiring.output_signal_type": "立体声耳机口有三段触点，所以它肯定是平衡单声道输出"
+      },
+      "ambiguity_level": 2,
+      "needs_clarification": true,
+      "clarification_reasons": [
+        "conflicting_values"
+      ],
+      "rationale": "同一输出被明确称为立体声耳机口和“平衡单声道输出”，两种信号类型相冲突，需确认实际模式。"
+    }
+  },
+  {
+    "id": "CAM-001",
+    "category": "camera_fov",
+    "mode": "ground_area",
+    "case_type": "standard",
+    "tags": [
+      "standard"
+    ],
+    "user_utterance": "用库内 TS-0650JSM 教师特写广角拍地面活动区，宽 8 m、纵深 5 m、人物最高点 1.7 m，自动建议安装高度，构图余量 10%。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "camera_fov",
+      "clear_tools": [
+        "camera_fov"
+      ],
+      "parameters": {
+        "camera_fov.camera_model": true,
+        "camera_fov.scene_type": true,
+        "camera_fov.target_width_m": true,
+        "camera_fov.target_height_m": false,
+        "camera_fov.target_bottom_height_m": false,
+        "camera_fov.area_depth_m": true,
+        "camera_fov.subject_height_m": true,
+        "camera_fov.hfov_deg": false,
+        "camera_fov.vfov_deg": false,
+        "camera_fov.sensor_width_mm": false,
+        "camera_fov.sensor_height_mm": false,
+        "camera_fov.focal_length_mm": false,
+        "camera_fov.height_mode": true,
+        "camera_fov.camera_height_m": false,
+        "camera_fov.margin_percent": true,
+        "camera_fov.camera_target_distance_m": false
+      },
+      "parameter_evidence": {
+        "camera_fov.camera_model": "TS-0650JSM 教师特写广角",
+        "camera_fov.scene_type": "地面活动区",
+        "camera_fov.target_width_m": "宽 8 m",
+        "camera_fov.area_depth_m": "纵深 5 m",
+        "camera_fov.subject_height_m": "人物最高点 1.7 m",
+        "camera_fov.height_mode": "自动建议安装高度",
+        "camera_fov.margin_percent": "构图余量 10%"
+      },
+      "ambiguity_level": 0,
+      "needs_clarification": false,
+      "clarification_reasons": [],
+      "rationale": "这是地面区域的反求安装距离；用户未提供距离并不构成缺项。"
+    }
+  },
+  {
+    "id": "CAM-002",
+    "category": "camera_fov",
+    "mode": "vertical_plane",
+    "case_type": "casual",
+    "tags": [
+      "casual"
+    ],
+    "user_utterance": "TS-0663XP 对着背景屏，屏宽 5 m、高 2.4 m，底边离地 0.8 m，镜头固定在 2.6 m，边上留 15%。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "camera_fov",
+      "clear_tools": [
+        "camera_fov"
+      ],
+      "parameters": {
+        "camera_fov.camera_model": true,
+        "camera_fov.scene_type": true,
+        "camera_fov.target_width_m": true,
+        "camera_fov.target_height_m": true,
+        "camera_fov.target_bottom_height_m": true,
+        "camera_fov.area_depth_m": false,
+        "camera_fov.subject_height_m": false,
+        "camera_fov.hfov_deg": false,
+        "camera_fov.vfov_deg": false,
+        "camera_fov.sensor_width_mm": false,
+        "camera_fov.sensor_height_mm": false,
+        "camera_fov.focal_length_mm": false,
+        "camera_fov.height_mode": true,
+        "camera_fov.camera_height_m": true,
+        "camera_fov.margin_percent": true,
+        "camera_fov.camera_target_distance_m": false
+      },
+      "parameter_evidence": {
+        "camera_fov.camera_model": "TS-0663XP",
+        "camera_fov.scene_type": "背景屏",
+        "camera_fov.target_width_m": "屏宽 5 m",
+        "camera_fov.target_height_m": "高 2.4 m",
+        "camera_fov.target_bottom_height_m": "底边离地 0.8 m",
+        "camera_fov.height_mode": "镜头固定在",
+        "camera_fov.camera_height_m": "固定在 2.6 m",
+        "camera_fov.margin_percent": "留 15%"
+      },
+      "ambiguity_level": 0,
+      "needs_clarification": false,
+      "clarification_reasons": [],
+      "rationale": "背景屏按垂直平面处理，固定镜头高度已给出。"
+    }
+  },
+  {
+    "id": "CAM-003",
+    "category": "camera_fov",
+    "mode": "ground_area",
+    "case_type": "abbreviation",
+    "tags": [
+      "abbreviation"
+    ],
+    "user_utterance": "自定义枪机 HFOV 78°、VFOV 48°，拍地面宽 6 m、纵深 4 m、人物高 1.8 m，auto height，margin 10%。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "camera_fov",
+      "clear_tools": [
+        "camera_fov"
+      ],
+      "parameters": {
+        "camera_fov.camera_model": false,
+        "camera_fov.scene_type": true,
+        "camera_fov.target_width_m": true,
+        "camera_fov.target_height_m": false,
+        "camera_fov.target_bottom_height_m": false,
+        "camera_fov.area_depth_m": true,
+        "camera_fov.subject_height_m": true,
+        "camera_fov.hfov_deg": true,
+        "camera_fov.vfov_deg": true,
+        "camera_fov.sensor_width_mm": false,
+        "camera_fov.sensor_height_mm": false,
+        "camera_fov.focal_length_mm": false,
+        "camera_fov.height_mode": true,
+        "camera_fov.camera_height_m": false,
+        "camera_fov.margin_percent": true,
+        "camera_fov.camera_target_distance_m": false
+      },
+      "parameter_evidence": {
+        "camera_fov.hfov_deg": "HFOV 78°",
+        "camera_fov.vfov_deg": "VFOV 48°",
+        "camera_fov.scene_type": "地面",
+        "camera_fov.target_width_m": "宽 6 m",
+        "camera_fov.area_depth_m": "纵深 4 m",
+        "camera_fov.subject_height_m": "人物高 1.8 m",
+        "camera_fov.height_mode": "auto height",
+        "camera_fov.margin_percent": "margin 10%"
+      },
+      "ambiguity_level": 0,
+      "needs_clarification": false,
+      "clarification_reasons": [],
+      "rationale": "HFOV 与 VFOV 都是明确输入的轴向视场角，安装高度选择为自动。"
+    }
+  },
+  {
+    "id": "CAM-004",
+    "category": "camera_fov",
+    "mode": "vertical_plane",
+    "case_type": "mixed_language",
+    "tags": [
+      "mixed_language"
+    ],
+    "user_utterance": "Custom sensor：有效宽 6.4 mm、高 3.6 mm，focal length 4.5 mm；拍 4.8 m × 2.4 m 背景墙，底边 0.6 m，余量 10%。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "camera_fov",
+      "clear_tools": [
+        "camera_fov"
+      ],
+      "parameters": {
+        "camera_fov.camera_model": false,
+        "camera_fov.scene_type": true,
+        "camera_fov.target_width_m": true,
+        "camera_fov.target_height_m": true,
+        "camera_fov.target_bottom_height_m": true,
+        "camera_fov.area_depth_m": false,
+        "camera_fov.subject_height_m": false,
+        "camera_fov.hfov_deg": false,
+        "camera_fov.vfov_deg": false,
+        "camera_fov.sensor_width_mm": true,
+        "camera_fov.sensor_height_mm": true,
+        "camera_fov.focal_length_mm": true,
+        "camera_fov.height_mode": false,
+        "camera_fov.camera_height_m": false,
+        "camera_fov.margin_percent": true,
+        "camera_fov.camera_target_distance_m": false
+      },
+      "parameter_evidence": {
+        "camera_fov.sensor_width_mm": "有效宽 6.4 mm",
+        "camera_fov.sensor_height_mm": "高 3.6 mm",
+        "camera_fov.focal_length_mm": "focal length 4.5 mm",
+        "camera_fov.scene_type": "背景墙",
+        "camera_fov.target_width_m": "4.8 m",
+        "camera_fov.target_height_m": "2.4 m",
+        "camera_fov.target_bottom_height_m": "底边 0.6 m",
+        "camera_fov.margin_percent": "余量 10%"
+      },
+      "ambiguity_level": 0,
+      "needs_clarification": false,
+      "clarification_reasons": [],
+      "rationale": "明确提供了传感器物理宽高和焦距，可采用传感器加焦距定义视场角。"
+    }
+  },
+  {
+    "id": "CAM-005",
+    "category": "camera_fov",
+    "mode": "vertical_plane",
+    "case_type": "alternative_units",
+    "tags": [
+      "alternative_units"
+    ],
+    "user_utterance": "用 TS-0663XP 拍墙面，宽 480 cm、高 240 cm，底边离地 80 cm，自动建议镜头高度，构图余量 5%。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "camera_fov",
+      "clear_tools": [
+        "camera_fov"
+      ],
+      "parameters": {
+        "camera_fov.camera_model": true,
+        "camera_fov.scene_type": true,
+        "camera_fov.target_width_m": true,
+        "camera_fov.target_height_m": true,
+        "camera_fov.target_bottom_height_m": true,
+        "camera_fov.area_depth_m": false,
+        "camera_fov.subject_height_m": false,
+        "camera_fov.hfov_deg": false,
+        "camera_fov.vfov_deg": false,
+        "camera_fov.sensor_width_mm": false,
+        "camera_fov.sensor_height_mm": false,
+        "camera_fov.focal_length_mm": false,
+        "camera_fov.height_mode": true,
+        "camera_fov.camera_height_m": false,
+        "camera_fov.margin_percent": true,
+        "camera_fov.camera_target_distance_m": false
+      },
+      "parameter_evidence": {
+        "camera_fov.camera_model": "TS-0663XP",
+        "camera_fov.scene_type": "墙面",
+        "camera_fov.target_width_m": "宽 480 cm",
+        "camera_fov.target_height_m": "高 240 cm",
+        "camera_fov.target_bottom_height_m": "底边离地 80 cm",
+        "camera_fov.height_mode": "自动建议",
+        "camera_fov.margin_percent": "余量 5%"
+      },
+      "ambiguity_level": 0,
+      "needs_clarification": false,
+      "clarification_reasons": [],
+      "rationale": "厘米尺寸有明确字段归属，可换算为米；不需要用户先提供目标距离。"
+    }
+  },
+  {
+    "id": "CAM-006",
+    "category": "camera_fov",
+    "mode": "vertical_plane",
+    "case_type": "typo",
+    "tags": [
+      "typo"
+    ],
+    "user_utterance": "请安照 TS-0650JSM 教师特写广角拍墙，宽 4.5m、高 2m，低边离地 0.8m，镜头中心固定高 2.2m，余量 10%。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "camera_fov",
+      "clear_tools": [
+        "camera_fov"
+      ],
+      "parameters": {
+        "camera_fov.camera_model": true,
+        "camera_fov.scene_type": true,
+        "camera_fov.target_width_m": true,
+        "camera_fov.target_height_m": true,
+        "camera_fov.target_bottom_height_m": true,
+        "camera_fov.area_depth_m": false,
+        "camera_fov.subject_height_m": false,
+        "camera_fov.hfov_deg": false,
+        "camera_fov.vfov_deg": false,
+        "camera_fov.sensor_width_mm": false,
+        "camera_fov.sensor_height_mm": false,
+        "camera_fov.focal_length_mm": false,
+        "camera_fov.height_mode": true,
+        "camera_fov.camera_height_m": true,
+        "camera_fov.margin_percent": true,
+        "camera_fov.camera_target_distance_m": false
+      },
+      "parameter_evidence": {
+        "camera_fov.camera_model": "TS-0650JSM 教师特写广角",
+        "camera_fov.scene_type": "墙",
+        "camera_fov.target_width_m": "宽 4.5m",
+        "camera_fov.target_height_m": "高 2m",
+        "camera_fov.target_bottom_height_m": "低边离地 0.8m",
+        "camera_fov.height_mode": "固定高",
+        "camera_fov.camera_height_m": "固定高 2.2m",
+        "camera_fov.margin_percent": "余量 10%"
+      },
+      "ambiguity_level": 0,
+      "needs_clarification": false,
+      "clarification_reasons": [],
+      "rationale": "“低边”是“底边”的明显笔误，剩余尺寸语义明确。"
+    }
+  },
+  {
+    "id": "CAM-007",
+    "category": "camera_fov",
+    "mode": "ground_area",
+    "case_type": "missing_parameters",
+    "tags": [
+      "missing_parameters",
+      "custom_vertical_fov_missing"
+    ],
+    "user_utterance": "自定义摄像机水平视场角 75°，请算完整地面区域的安装距离：宽 6 m、纵深 4 m、人物最高点 1.8 m，自动高度、余量 10%。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "camera_fov",
+      "clear_tools": [
+        "camera_fov"
+      ],
+      "parameters": {
+        "camera_fov.camera_model": false,
+        "camera_fov.scene_type": true,
+        "camera_fov.target_width_m": true,
+        "camera_fov.target_height_m": false,
+        "camera_fov.target_bottom_height_m": false,
+        "camera_fov.area_depth_m": true,
+        "camera_fov.subject_height_m": true,
+        "camera_fov.hfov_deg": true,
+        "camera_fov.vfov_deg": false,
+        "camera_fov.sensor_width_mm": false,
+        "camera_fov.sensor_height_mm": false,
+        "camera_fov.focal_length_mm": false,
+        "camera_fov.height_mode": true,
+        "camera_fov.camera_height_m": false,
+        "camera_fov.margin_percent": true,
+        "camera_fov.camera_target_distance_m": false
+      },
+      "parameter_evidence": {
+        "camera_fov.hfov_deg": "水平视场角 75°",
+        "camera_fov.scene_type": "地面区域",
+        "camera_fov.target_width_m": "宽 6 m",
+        "camera_fov.area_depth_m": "纵深 4 m",
+        "camera_fov.subject_height_m": "人物最高点 1.8 m",
+        "camera_fov.height_mode": "自动高度",
+        "camera_fov.margin_percent": "余量 10%"
+      },
+      "ambiguity_level": 0,
+      "needs_clarification": true,
+      "clarification_reasons": [
+        "missing_required_information"
+      ],
+      "rationale": "完整地面覆盖校核需要自定义摄像机的水平和垂直视场角；垂直角缺失。"
+    }
+  },
+  {
+    "id": "CAM-008",
+    "category": "camera_fov",
+    "mode": "ground_area",
+    "case_type": "ambiguous_parameters",
+    "tags": [
+      "ambiguous_parameters"
+    ],
+    "user_utterance": "展示区宽 6 m，另一个尺寸是 3 m；用库里的摄像机算一下该怎么装。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "camera_fov",
+      "clear_tools": [
+        "camera_fov"
+      ],
+      "parameters": {
+        "camera_fov.camera_model": false,
+        "camera_fov.scene_type": false,
+        "camera_fov.target_width_m": true,
+        "camera_fov.target_height_m": false,
+        "camera_fov.target_bottom_height_m": false,
+        "camera_fov.area_depth_m": false,
+        "camera_fov.subject_height_m": false,
+        "camera_fov.hfov_deg": false,
+        "camera_fov.vfov_deg": false,
+        "camera_fov.sensor_width_mm": false,
+        "camera_fov.sensor_height_mm": false,
+        "camera_fov.focal_length_mm": false,
+        "camera_fov.height_mode": false,
+        "camera_fov.camera_height_m": false,
+        "camera_fov.margin_percent": false,
+        "camera_fov.camera_target_distance_m": false
+      },
+      "parameter_evidence": {
+        "camera_fov.target_width_m": "展示区宽 6 m"
+      },
+      "ambiguity_level": 1,
+      "needs_clarification": true,
+      "clarification_reasons": [
+        "ambiguous_parameter",
+        "missing_required_information"
+      ],
+      "rationale": "“展示区”与未注明方向的另一个尺寸无法确定地面纵深还是垂直高度，且没有指定库内型号。"
+    }
+  },
+  {
+    "id": "CAM-009",
+    "category": "camera_fov",
+    "mode": "horizontal_only",
+    "case_type": "irrelevant_numbers",
+    "tags": [
+      "irrelevant_numbers",
+      "horizontal_only_distance_check"
+    ],
+    "user_utterance": "TS-0663JS 按水平角拍宽 4 m、高 2 m、底边离地 0.8 m 的展示板，auto 安装、留 10%；摄像机到板面水平距离已量 20 m，请核对横向能否拍全。日期 2026-09-20，预算 3000 元。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "camera_fov",
+      "clear_tools": [
+        "camera_fov"
+      ],
+      "parameters": {
+        "camera_fov.camera_model": true,
+        "camera_fov.scene_type": true,
+        "camera_fov.target_width_m": true,
+        "camera_fov.target_height_m": true,
+        "camera_fov.target_bottom_height_m": true,
+        "camera_fov.area_depth_m": false,
+        "camera_fov.subject_height_m": false,
+        "camera_fov.hfov_deg": false,
+        "camera_fov.vfov_deg": false,
+        "camera_fov.sensor_width_mm": false,
+        "camera_fov.sensor_height_mm": false,
+        "camera_fov.focal_length_mm": false,
+        "camera_fov.height_mode": true,
+        "camera_fov.camera_height_m": false,
+        "camera_fov.margin_percent": true,
+        "camera_fov.camera_target_distance_m": true
+      },
+      "parameter_evidence": {
+        "camera_fov.camera_model": "TS-0663JS",
+        "camera_fov.scene_type": "展示板",
+        "camera_fov.target_width_m": "宽 4 m",
+        "camera_fov.target_height_m": "高 2 m",
+        "camera_fov.target_bottom_height_m": "底边离地 0.8 m",
+        "camera_fov.height_mode": "auto 安装",
+        "camera_fov.margin_percent": "留 10%",
+        "camera_fov.camera_target_distance_m": "摄像机到板面水平距离已量 20 m"
+      },
+      "ambiguity_level": 0,
+      "needs_clarification": false,
+      "clarification_reasons": [],
+      "rationale": "日期和预算不是拍摄尺寸或镜头距离；缺失的 VFOV 对水平单轴请求无需追问。"
+    }
+  },
+  {
+    "id": "CAM-010",
+    "category": "camera_fov",
+    "mode": "vertical_plane",
+    "case_type": "wrong_parameter",
+    "tags": [
+      "wrong_parameter",
+      "optical_format_not_sensor_size"
+    ],
+    "user_utterance": "光学格式是 1/2.8 英寸，焦距 4.5 mm；拿这两个数当传感器宽和焦距，算一面宽 4m、高 2m、底边 0.5m 的墙。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "camera_fov",
+      "clear_tools": [
+        "camera_fov"
+      ],
+      "parameters": {
+        "camera_fov.camera_model": false,
+        "camera_fov.scene_type": true,
+        "camera_fov.target_width_m": true,
+        "camera_fov.target_height_m": true,
+        "camera_fov.target_bottom_height_m": true,
+        "camera_fov.area_depth_m": false,
+        "camera_fov.subject_height_m": false,
+        "camera_fov.hfov_deg": false,
+        "camera_fov.vfov_deg": false,
+        "camera_fov.sensor_width_mm": false,
+        "camera_fov.sensor_height_mm": false,
+        "camera_fov.focal_length_mm": true,
+        "camera_fov.height_mode": false,
+        "camera_fov.camera_height_m": false,
+        "camera_fov.margin_percent": false,
+        "camera_fov.camera_target_distance_m": false
+      },
+      "parameter_evidence": {
+        "camera_fov.scene_type": "墙",
+        "camera_fov.target_width_m": "宽 4m",
+        "camera_fov.target_height_m": "高 2m",
+        "camera_fov.target_bottom_height_m": "底边 0.5m",
+        "camera_fov.focal_length_mm": "焦距 4.5 mm"
+      },
+      "ambiguity_level": 0,
+      "needs_clarification": true,
+      "clarification_reasons": [
+        "missing_required_information"
+      ],
+      "rationale": "1/2.8 英寸是光学格式，不能替代传感器物理宽度；还缺有效传感器尺寸。"
+    }
+  },
+  {
+    "id": "CROSS-001",
+    "category": "cross_tool",
+    "mode": "cross_tool",
+    "case_type": "cross_tool_ambiguity",
+    "tags": [
+      "cross_tool_ambiguity",
+      "ambiguous_maximum"
+    ],
+    "user_utterance": "8 Ω 音箱额定 200 W，功放在 8 Ω 下额定 250 W，帮我算一下这套系统的“最大值”。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "unclear",
+      "clear_tools": [],
+      "parameters": {
+        "limiter.speaker_rated_power_w": true,
+        "limiter.speaker_impedance_ohm": true,
+        "limiter.amplifier_rated_power_w": true,
+        "spl.rated_power_w": true,
+        "spl.sensitivity_1w1m_db": false,
+        "spl.listening_distance_m": false,
+        "spl.speaker_count": false,
+        "spl.summation_mode": false
+      },
+      "parameter_evidence": {
+        "limiter.speaker_rated_power_w": "音箱额定 200 W",
+        "limiter.speaker_impedance_ohm": "8 Ω",
+        "limiter.amplifier_rated_power_w": "功放在 8 Ω 下额定 250 W",
+        "spl.rated_power_w": "音箱额定 200 W"
+      },
+      "ambiguity_level": 2,
+      "needs_clarification": true,
+      "clarification_reasons": [
+        "ambiguous_tool"
+      ],
+      "rationale": "“最大值”可能指限幅保护上限，也可能指音箱在听音位置的最大声压；当前信息不足以确定用户要哪类结果。"
+    }
+  },
+  {
+    "id": "CROSS-002",
+    "category": "cross_tool",
+    "mode": "cross_tool",
+    "case_type": "cross_tool_ambiguity",
+    "tags": [
+      "cross_tool_ambiguity"
+    ],
+    "user_utterance": "会议背景墙宽 6 m，想给它配一台摄像机，帮我算下方案。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "unclear",
+      "clear_tools": [],
+      "parameters": {
+        "product_catalog.product_category": true,
+        "product_catalog.model": false,
+        "product_catalog.comparison_models": false,
+        "camera_fov.camera_model": false,
+        "camera_fov.scene_type": true,
+        "camera_fov.target_width_m": true,
+        "camera_fov.target_height_m": false,
+        "camera_fov.target_bottom_height_m": false,
+        "camera_fov.hfov_deg": false,
+        "camera_fov.vfov_deg": false
+      },
+      "parameter_evidence": {
+        "product_catalog.product_category": "摄像机",
+        "camera_fov.scene_type": "会议背景墙",
+        "camera_fov.target_width_m": "宽 6 m"
+      },
+      "ambiguity_level": 2,
+      "needs_clarification": true,
+      "clarification_reasons": [
+        "ambiguous_tool"
+      ],
+      "rationale": "用户可能在找合适摄像机型号，也可能在指定已有镜头后计算背景墙的拍摄距离；尚未选定型号。"
+    }
+  },
+  {
+    "id": "CROSS-003",
+    "category": "cross_tool",
+    "mode": "cross_tool",
+    "case_type": "cross_tool_ambiguity",
+    "tags": [
+      "cross_tool_ambiguity"
+    ],
+    "user_utterance": "TL-SL333 灯具不受控，控台通道值会变化；我还没决定要重新排地址表，还是进入故障排查，请先帮我选入口。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "unclear",
+      "clear_tools": [],
+      "parameters": {
+        "dmx_address.fixture_name": false,
+        "dmx_address.fixture_model": true,
+        "dmx_address.channels_per_fixture": false,
+        "dmx_address.fixture_count": false,
+        "dmx_address.start_address": false,
+        "dmx_address.target_universe": false,
+        "troubleshoot.fault_type": true,
+        "troubleshoot.observation": true
+      },
+      "parameter_evidence": {
+        "dmx_address.fixture_model": "TL-SL333",
+        "troubleshoot.fault_type": "灯具不受控",
+        "troubleshoot.observation": "控台通道值会变化"
+      },
+      "ambiguity_level": 2,
+      "needs_clarification": true,
+      "clarification_reasons": [
+        "ambiguous_tool"
+      ],
+      "rationale": "请求同时给出地址核对和故障诊断两种可能路径，没有确定当前要执行哪一种。"
+    }
+  },
+  {
+    "id": "CROSS-004",
+    "category": "cross_tool",
+    "mode": "cross_tool",
+    "case_type": "cross_tool_ambiguity",
+    "tags": [
+      "cross_tool_ambiguity"
+    ],
+    "user_utterance": "项目“展厅改造”中调音台 Main L 到 DSP Input 1 的信息帮我查一下，是看线路台账还是查看项目计算记录？",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "unclear",
+      "clear_tools": [],
+      "parameters": {
+        "project_wiring.project_name": true,
+        "project_wiring.from_device": true,
+        "project_wiring.from_port": true,
+        "project_wiring.to_device": true,
+        "project_wiring.to_port": true,
+        "project_wiring.status": false,
+        "project_records.project_name": true,
+        "project_records.record_tool": false,
+        "project_records.operation": true
+      },
+      "parameter_evidence": {
+        "project_wiring.project_name": "展厅改造",
+        "project_wiring.from_device": "调音台",
+        "project_wiring.from_port": "Main L",
+        "project_wiring.to_device": "DSP",
+        "project_wiring.to_port": "Input 1",
+        "project_records.project_name": "展厅改造",
+        "project_records.operation": "查看"
+      },
+      "ambiguity_level": 2,
+      "needs_clarification": true,
+      "clarification_reasons": [
+        "ambiguous_tool"
+      ],
+      "rationale": "用户明确提出线路台账与项目计算记录两个不同查询入口，需先确定目标资料。"
+    }
+  },
+  {
+    "id": "CROSS-005",
+    "category": "cross_tool",
+    "mode": "cross_tool",
+    "case_type": "cross_tool_ambiguity",
+    "tags": [
+      "cross_tool_ambiguity"
+    ],
+    "user_utterance": "XLR 公母头的 1、2、3 针怎么接？我还没确定是只查针脚定义，还是按两端设备画接线图。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "unclear",
+      "clear_tools": [],
+      "parameters": {
+        "audio_wiring.output_connector": false,
+        "audio_wiring.input_connector": false,
+        "audio_wiring.output_signal_type": false,
+        "audio_wiring.input_signal_type": false,
+        "knowledge.topic": true
+      },
+      "parameter_evidence": {
+        "knowledge.topic": "XLR 公母头的 1、2、3 针"
+      },
+      "ambiguity_level": 2,
+      "needs_clarification": true,
+      "clarification_reasons": [
+        "ambiguous_tool"
+      ],
+      "rationale": "针脚知识查询与针对具体输出、输入生成接线图是不同任务；当前也未给出端点角色。"
+    }
+  },
+  {
+    "id": "CROSS-006",
+    "category": "cross_tool",
+    "mode": "cross_tool",
+    "case_type": "cross_tool_ambiguity",
+    "tags": [
+      "cross_tool_ambiguity"
+    ],
+    "user_utterance": "专业定阻主扩系统总额定功率 1000 W、最远单程 35 m；帮我定扬声器线规格，或者把线材需求登记到项目“巡演扩声”的线路表。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "unclear",
+      "clear_tools": [],
+      "parameters": {
+        "cable.circuit_type": true,
+        "cable.total_rated_power_w": true,
+        "cable.one_way_distance_m": true,
+        "cable.environment": false,
+        "project_wiring.project_name": true,
+        "project_wiring.from_device": false,
+      "project_wiring.from_port": false,
+      "project_wiring.to_device": false,
+      "project_wiring.to_port": false,
+      "project_wiring.cable_type": true,
+      "project_wiring.cable_spec": false,
+        "project_wiring.length_m": false,
+        "project_wiring.line_count": false
+      },
+      "parameter_evidence": {
+      "cable.circuit_type": "专业定阻主扩系统",
+      "cable.total_rated_power_w": "总额定功率 1000 W",
+      "cable.one_way_distance_m": "最远单程 35 m",
+      "project_wiring.project_name": "巡演扩声",
+      "project_wiring.cable_type": "扬声器线"
+      },
+      "ambiguity_level": 2,
+      "needs_clarification": true,
+      "clarification_reasons": [
+        "ambiguous_tool"
+      ],
+      "rationale": "线缆估算和项目布线登记是两个不同操作，用户以“或者”给出备选目标。"
+    }
+  },
+  {
+    "id": "CROSS-007",
+    "category": "cross_tool",
+    "mode": "multi_tool",
+    "case_type": "multi_tool_request",
+    "tags": [
+      "multi_tool_request",
+      "two_explicit_tools"
+    ],
+    "user_utterance": "请用产品库里的两只 TS-803C（常规叠加，听音距离 4 m）估算声压；另按专业定阻音箱线总额定功率 600 W、单程 45 m 估算线径。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "multiple",
+      "clear_tools": [
+        "spl",
+        "cable"
+      ],
+      "parameters": {
+        "spl.speaker_model": true,
+        "spl.sensitivity_1w1m_db": false,
+        "spl.rated_power_w": false,
+        "spl.listening_distance_m": true,
+        "spl.speaker_count": true,
+        "spl.summation_mode": true,
+        "cable.circuit_type": true,
+        "cable.total_rated_power_w": true,
+        "cable.one_way_distance_m": true,
+        "cable.environment": false
+      },
+      "parameter_evidence": {
+        "spl.speaker_model": "TS-803C",
+        "spl.speaker_count": "两只",
+        "spl.summation_mode": "常规叠加",
+        "spl.listening_distance_m": "听音距离 4 m",
+        "cable.circuit_type": "专业定阻音箱线",
+        "cable.total_rated_power_w": "总额定功率 600 W",
+        "cable.one_way_distance_m": "单程 45 m"
+      },
+      "ambiguity_level": 0,
+      "needs_clarification": false,
+      "clarification_reasons": [],
+      "rationale": "用户分别请求指定音箱的声压估算和专业定阻音箱线线径估算；目录派生的灵敏度、额定功率未被当作显式输入。"
+    }
+  },
+  {
+    "id": "CROSS-008",
+    "category": "cross_tool",
+    "mode": "multi_tool",
+    "case_type": "multi_tool_request",
+    "tags": [
+      "multi_tool_request",
+      "two_explicit_tools"
+    ],
+    "user_utterance": "先比较产品库里的两款摄像机 TS-0650JSM 和 TS-0663XP，再按 TS-0650JSM 教师特写广角拍地面区域，宽 6 m、纵深 4 m、人物最高点 1.8 m、自动高度、余量 10%，算安装距离。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "multiple",
+      "clear_tools": [
+        "product_catalog",
+        "camera_fov"
+      ],
+      "parameters": {
+        "product_catalog.product_category": true,
+        "product_catalog.model": true,
+        "product_catalog.comparison_models": true,
+        "camera_fov.camera_model": true,
+        "camera_fov.scene_type": true,
+        "camera_fov.target_width_m": true,
+        "camera_fov.target_height_m": false,
+        "camera_fov.target_bottom_height_m": false,
+        "camera_fov.area_depth_m": true,
+        "camera_fov.subject_height_m": true,
+        "camera_fov.hfov_deg": false,
+        "camera_fov.vfov_deg": false,
+        "camera_fov.height_mode": true,
+        "camera_fov.camera_height_m": false,
+        "camera_fov.margin_percent": true
+      },
+      "parameter_evidence": {
+        "product_catalog.product_category": "摄像机",
+        "product_catalog.model": "TS-0650JSM",
+        "product_catalog.comparison_models": "TS-0650JSM 和 TS-0663XP",
+        "camera_fov.camera_model": "TS-0650JSM 教师特写广角",
+        "camera_fov.scene_type": "地面区域",
+        "camera_fov.target_width_m": "宽 6 m",
+        "camera_fov.area_depth_m": "纵深 4 m",
+        "camera_fov.subject_height_m": "人物最高点 1.8 m",
+        "camera_fov.height_mode": "自动高度",
+        "camera_fov.margin_percent": "余量 10%"
+      },
+      "ambiguity_level": 0,
+      "needs_clarification": false,
+      "clarification_reasons": [],
+      "rationale": "产品比较和指定型号的安装距离计算是两个分别说明清楚的请求。"
+    }
+  },
+  {
+    "id": "DMX-001",
+    "category": "dmx_address",
+    "mode": "addressing",
+    "case_type": "standard",
+    "tags": [
+      "standard"
+    ],
+    "user_utterance": "把 8 台面光灯 TL-SL333 按 6 通道模式，从 A 域地址 A001 自动连续编址。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "dmx_address",
+      "clear_tools": [
+        "dmx_address"
+      ],
+      "parameters": {
+        "dmx_address.fixture_name": true,
+        "dmx_address.fixture_model": true,
+        "dmx_address.channels_per_fixture": true,
+        "dmx_address.fixture_count": true,
+        "dmx_address.start_address": true,
+        "dmx_address.allocation_mode": true,
+        "dmx_address.target_universe": true,
+        "dmx_address.stage_width_m": false,
+        "dmx_address.stage_depth_m": false,
+        "dmx_address.lighting_layout": false,
+        "dmx_address.front_orientation": false,
+        "dmx_address.truss_rows": false,
+        "dmx_address.side_pairs": false,
+        "dmx_address.existing_address_plan": false
+      },
+      "parameter_evidence": {
+        "dmx_address.fixture_name": "面光灯",
+        "dmx_address.fixture_model": "TL-SL333",
+        "dmx_address.channels_per_fixture": "6 通道模式",
+        "dmx_address.fixture_count": "8 台",
+        "dmx_address.start_address": "A001",
+        "dmx_address.allocation_mode": "自动连续编址",
+        "dmx_address.target_universe": "A 域"
+      },
+      "ambiguity_level": 0,
+      "needs_clarification": false,
+      "clarification_reasons": [],
+      "rationale": "型号和通道模式明确，A001 可拆为 A 域与地址 1。"
+    }
+  },
+  {
+    "id": "DMX-002",
+    "category": "dmx_address",
+    "mode": "addressing",
+    "case_type": "casual",
+    "tags": [
+      "casual"
+    ],
+    "user_utterance": "染色灯 12 台，每台 18ch，从 B101 往后自动排。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "dmx_address",
+      "clear_tools": [
+        "dmx_address"
+      ],
+      "parameters": {
+        "dmx_address.fixture_name": true,
+        "dmx_address.fixture_model": false,
+        "dmx_address.channels_per_fixture": true,
+        "dmx_address.fixture_count": true,
+        "dmx_address.start_address": true,
+        "dmx_address.allocation_mode": true,
+        "dmx_address.target_universe": true,
+        "dmx_address.stage_width_m": false,
+        "dmx_address.stage_depth_m": false,
+        "dmx_address.lighting_layout": false,
+        "dmx_address.front_orientation": false,
+        "dmx_address.truss_rows": false,
+        "dmx_address.side_pairs": false,
+        "dmx_address.existing_address_plan": false
+      },
+      "parameter_evidence": {
+        "dmx_address.fixture_name": "染色灯",
+        "dmx_address.fixture_count": "12 台",
+        "dmx_address.channels_per_fixture": "18ch",
+        "dmx_address.start_address": "B101",
+        "dmx_address.allocation_mode": "自动排",
+        "dmx_address.target_universe": "B101"
+      },
+      "ambiguity_level": 0,
+      "needs_clarification": false,
+      "clarification_reasons": [],
+      "rationale": "B101 明确给出 B 域和起始地址；该简短请求未提供型号不影响按通道数编址。"
+    }
+  },
+  {
+    "id": "DMX-003",
+    "category": "dmx_address",
+    "mode": "addressing",
+    "case_type": "abbreviation",
+    "tags": [
+      "abbreviation"
+    ],
+    "user_utterance": "面光组 TL-SL333，6ch、8台，universe C，start 001，auto address。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "dmx_address",
+      "clear_tools": [
+        "dmx_address"
+      ],
+      "parameters": {
+        "dmx_address.fixture_name": true,
+        "dmx_address.fixture_model": true,
+        "dmx_address.channels_per_fixture": true,
+        "dmx_address.fixture_count": true,
+        "dmx_address.start_address": true,
+        "dmx_address.allocation_mode": true,
+        "dmx_address.target_universe": true,
+        "dmx_address.stage_width_m": false,
+        "dmx_address.stage_depth_m": false,
+        "dmx_address.lighting_layout": false,
+        "dmx_address.front_orientation": false,
+        "dmx_address.truss_rows": false,
+        "dmx_address.side_pairs": false,
+        "dmx_address.existing_address_plan": false
+      },
+      "parameter_evidence": {
+        "dmx_address.fixture_name": "面光组",
+        "dmx_address.fixture_model": "TL-SL333",
+        "dmx_address.channels_per_fixture": "6ch",
+        "dmx_address.fixture_count": "8台",
+        "dmx_address.target_universe": "universe C",
+        "dmx_address.start_address": "start 001",
+        "dmx_address.allocation_mode": "auto address"
+      },
+      "ambiguity_level": 0,
+      "needs_clarification": false,
+      "clarification_reasons": [],
+      "rationale": "ch、universe、start 和 auto 均指向明确的编址字段。"
+    }
+  },
+  {
+    "id": "DMX-004",
+    "category": "dmx_address",
+    "mode": "addressing",
+    "case_type": "mixed_language",
+    "tags": [
+      "mixed_language"
+    ],
+    "user_utterance": "Moving head 6 台，18-channel mode，从 D001 start address，按 manual allocation 给我排。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "dmx_address",
+      "clear_tools": [
+        "dmx_address"
+      ],
+      "parameters": {
+        "dmx_address.fixture_name": true,
+        "dmx_address.fixture_model": false,
+        "dmx_address.channels_per_fixture": true,
+        "dmx_address.fixture_count": true,
+        "dmx_address.start_address": true,
+        "dmx_address.allocation_mode": true,
+        "dmx_address.target_universe": true,
+        "dmx_address.stage_width_m": false,
+        "dmx_address.stage_depth_m": false,
+        "dmx_address.lighting_layout": false,
+        "dmx_address.front_orientation": false,
+        "dmx_address.truss_rows": false,
+        "dmx_address.side_pairs": false,
+        "dmx_address.existing_address_plan": false
+      },
+      "parameter_evidence": {
+        "dmx_address.fixture_name": "Moving head",
+        "dmx_address.fixture_count": "6 台",
+        "dmx_address.channels_per_fixture": "18-channel mode",
+        "dmx_address.start_address": "D001",
+        "dmx_address.target_universe": "D001",
+        "dmx_address.allocation_mode": "manual allocation"
+      },
+      "ambiguity_level": 0,
+      "needs_clarification": false,
+      "clarification_reasons": [],
+      "rationale": "混合语言明确指定灯具数、通道数、D 域和手动分配。"
+    }
+  },
+  {
+    "id": "DMX-005",
+    "category": "dmx_address",
+    "mode": "layout",
+    "case_type": "alternative_units",
+    "tags": [
+      "alternative_units",
+      "centimeter_dimensions"
+    ],
+    "user_utterance": "沿用“黑匣子场地”现有编址方案，舞台宽 1200 cm、纵深 800 cm，做顶光加面光布局，前沿在下方，顶光杆 3 排、侧光 2 对。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "dmx_address",
+      "clear_tools": [
+        "dmx_address"
+      ],
+      "parameters": {
+        "dmx_address.fixture_name": false,
+        "dmx_address.fixture_model": false,
+        "dmx_address.channels_per_fixture": false,
+        "dmx_address.fixture_count": false,
+        "dmx_address.start_address": false,
+        "dmx_address.allocation_mode": false,
+        "dmx_address.target_universe": false,
+        "dmx_address.stage_width_m": true,
+        "dmx_address.stage_depth_m": true,
+        "dmx_address.lighting_layout": true,
+        "dmx_address.front_orientation": true,
+        "dmx_address.truss_rows": true,
+        "dmx_address.side_pairs": true,
+        "dmx_address.existing_address_plan": true
+      },
+      "parameter_evidence": {
+        "dmx_address.existing_address_plan": "黑匣子场地”现有编址方案",
+        "dmx_address.stage_width_m": "舞台宽 1200 cm",
+        "dmx_address.stage_depth_m": "纵深 800 cm",
+        "dmx_address.lighting_layout": "顶光加面光布局",
+        "dmx_address.front_orientation": "前沿在下方",
+        "dmx_address.truss_rows": "顶光杆 3 排",
+        "dmx_address.side_pairs": "侧光 2 对"
+      },
+      "ambiguity_level": 0,
+      "needs_clarification": false,
+      "clarification_reasons": [],
+      "rationale": "舞台尺寸用厘米表示，字段归属明确；侧光位置数量也符合页面可选的 1 至 3 对。"
+    }
+  },
+  {
+    "id": "DMX-006",
+    "category": "dmx_address",
+    "mode": "addressing",
+    "case_type": "typo",
+    "tags": [
+      "typo"
+    ],
+    "user_utterance": "4台染色灯，每台12通道，从A01O开始自动排，A后面是零一字母O。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "dmx_address",
+      "clear_tools": [
+        "dmx_address"
+      ],
+      "parameters": {
+        "dmx_address.fixture_name": true,
+        "dmx_address.fixture_model": false,
+        "dmx_address.channels_per_fixture": true,
+        "dmx_address.fixture_count": true,
+        "dmx_address.start_address": true,
+        "dmx_address.allocation_mode": true,
+        "dmx_address.target_universe": true,
+        "dmx_address.stage_width_m": false,
+        "dmx_address.stage_depth_m": false,
+        "dmx_address.lighting_layout": false,
+        "dmx_address.front_orientation": false,
+        "dmx_address.truss_rows": false,
+        "dmx_address.side_pairs": false,
+        "dmx_address.existing_address_plan": false
+      },
+      "parameter_evidence": {
+        "dmx_address.fixture_name": "染色灯",
+        "dmx_address.channels_per_fixture": "每台12通道",
+        "dmx_address.fixture_count": "4台",
+        "dmx_address.allocation_mode": "自动排",
+        "dmx_address.target_universe": "A",
+        "dmx_address.start_address": "A01O"
+      },
+      "ambiguity_level": 1,
+      "needs_clarification": true,
+      "clarification_reasons": [
+        "ambiguous_parameter"
+      ],
+      "rationale": "A01O 中末位为字母 O，无法确定用户实际输入的是哪个有效地址。"
+    }
+  },
+  {
+    "id": "DMX-007",
+    "category": "dmx_address",
+    "mode": "addressing",
+    "case_type": "missing_parameters",
+    "tags": [
+      "missing_parameters",
+      "multi_channel_mode"
+    ],
+    "user_utterance": "4 台 TL-SL333 面光灯从 A001 开始自动编址，按灯具型号的通道模式排。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "dmx_address",
+      "clear_tools": [
+        "dmx_address"
+      ],
+      "parameters": {
+        "dmx_address.fixture_name": true,
+        "dmx_address.fixture_model": true,
+        "dmx_address.channels_per_fixture": false,
+        "dmx_address.fixture_count": true,
+        "dmx_address.start_address": true,
+        "dmx_address.allocation_mode": true,
+        "dmx_address.target_universe": true,
+        "dmx_address.stage_width_m": false,
+        "dmx_address.stage_depth_m": false,
+        "dmx_address.lighting_layout": false,
+        "dmx_address.front_orientation": false,
+        "dmx_address.truss_rows": false,
+        "dmx_address.side_pairs": false,
+        "dmx_address.existing_address_plan": false
+      },
+      "parameter_evidence": {
+        "dmx_address.fixture_name": "面光灯",
+        "dmx_address.fixture_model": "TL-SL333",
+        "dmx_address.fixture_count": "4 台",
+        "dmx_address.start_address": "A001",
+        "dmx_address.target_universe": "A001",
+        "dmx_address.allocation_mode": "自动编址"
+      },
+      "ambiguity_level": 0,
+      "needs_clarification": true,
+      "clarification_reasons": [
+        "missing_required_information"
+      ],
+      "rationale": "型号 TL-SL333 有多个通道模式，需先指定实际使用的模式才能计算地址。"
+    }
+  },
+  {
+    "id": "DMX-008",
+    "category": "dmx_address",
+    "mode": "layout",
+    "case_type": "ambiguous_parameters",
+    "tags": [
+      "ambiguous_parameters",
+      "orientation_conflict"
+    ],
+    "user_utterance": "沿用现有编址表给舞台宽 12 m、纵深 8 m 画顶光加面光的 3 排灯位；图纸舞台前沿标在上方，但观众席在下方，按前沿方向布置。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "dmx_address",
+      "clear_tools": [
+        "dmx_address"
+      ],
+      "parameters": {
+        "dmx_address.fixture_name": false,
+        "dmx_address.fixture_model": false,
+        "dmx_address.channels_per_fixture": false,
+        "dmx_address.fixture_count": false,
+        "dmx_address.start_address": false,
+        "dmx_address.allocation_mode": false,
+        "dmx_address.target_universe": false,
+        "dmx_address.stage_width_m": true,
+        "dmx_address.stage_depth_m": true,
+        "dmx_address.lighting_layout": true,
+        "dmx_address.front_orientation": true,
+        "dmx_address.truss_rows": true,
+        "dmx_address.side_pairs": false,
+        "dmx_address.existing_address_plan": true
+      },
+      "parameter_evidence": {
+        "dmx_address.existing_address_plan": "现有编址表",
+        "dmx_address.stage_width_m": "舞台宽 12 m",
+        "dmx_address.stage_depth_m": "纵深 8 m",
+        "dmx_address.lighting_layout": "顶光加面光",
+        "dmx_address.front_orientation": "图纸舞台前沿标在上方，但观众席在下方",
+        "dmx_address.truss_rows": "3 排"
+      },
+      "ambiguity_level": 2,
+      "needs_clarification": true,
+      "clarification_reasons": [
+        "conflicting_values"
+      ],
+      "rationale": "图纸前沿与观众席方向给出相反位置，虽两侧都已说明，仍需用户确认采用哪一侧。"
+    }
+  },
+  {
+    "id": "DMX-009",
+    "category": "dmx_address",
+    "mode": "channel_guide",
+    "case_type": "irrelevant_numbers",
+    "tags": [
+      "irrelevant_numbers"
+    ],
+    "user_utterance": "查一下 TL-SL333 的 6 通道模式功能表，演出日期 2026-09-20，灯具编号 1001。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "dmx_address",
+      "clear_tools": [
+        "dmx_address"
+      ],
+      "parameters": {
+        "dmx_address.fixture_name": false,
+        "dmx_address.fixture_model": true,
+        "dmx_address.channels_per_fixture": true,
+        "dmx_address.fixture_count": false,
+        "dmx_address.start_address": false,
+        "dmx_address.allocation_mode": false,
+        "dmx_address.target_universe": false,
+        "dmx_address.stage_width_m": false,
+        "dmx_address.stage_depth_m": false,
+        "dmx_address.lighting_layout": false,
+        "dmx_address.front_orientation": false,
+        "dmx_address.truss_rows": false,
+        "dmx_address.side_pairs": false,
+        "dmx_address.existing_address_plan": false
+      },
+      "parameter_evidence": {
+        "dmx_address.fixture_model": "TL-SL333",
+        "dmx_address.channels_per_fixture": "6 通道模式"
+      },
+      "ambiguity_level": 0,
+      "needs_clarification": false,
+      "clarification_reasons": [],
+      "rationale": "型号和 6 通道模式足以查询通道说明，日期和资产编号不属于通道参数。"
+    }
+  },
+  {
+    "id": "DMX-010",
+    "category": "dmx_address",
+    "mode": "channel_guide",
+    "case_type": "wrong_parameter",
+    "tags": [
+      "wrong_parameter",
+      "mode_required"
+    ],
+    "user_utterance": "TL-SL333 电源是 220V，帮我查它每个 DMX 通道控制什么。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "dmx_address",
+      "clear_tools": [
+        "dmx_address"
+      ],
+      "parameters": {
+        "dmx_address.fixture_name": false,
+        "dmx_address.fixture_model": true,
+        "dmx_address.channels_per_fixture": false,
+        "dmx_address.fixture_count": false,
+        "dmx_address.start_address": false,
+        "dmx_address.allocation_mode": false,
+        "dmx_address.target_universe": false,
+        "dmx_address.stage_width_m": false,
+        "dmx_address.stage_depth_m": false,
+        "dmx_address.lighting_layout": false,
+        "dmx_address.front_orientation": false,
+        "dmx_address.truss_rows": false,
+        "dmx_address.side_pairs": false,
+        "dmx_address.existing_address_plan": false
+      },
+      "parameter_evidence": {
+        "dmx_address.fixture_model": "TL-SL333"
+      },
+      "ambiguity_level": 0,
+      "needs_clarification": true,
+      "clarification_reasons": [
+        "missing_required_information"
+      ],
+      "rationale": "TL-SL333 支持多个通道模式；220V 是供电信息，不能代替用户指定实际采用的 DMX 模式。"
+    }
+  },
+  {
+    "id": "LED-001",
+    "category": "led_screen",
+    "mode": "sizing",
+    "case_type": "standard",
+    "tags": [
+      "standard"
+    ],
+    "user_utterance": "墙面宽 8 m、高 4 m，上下各留 0.2 m，边框宽 0.05 m；目标比例 16:9，常规箱体，最近观看 5 m，点间距 P2.0。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "led_screen",
+      "clear_tools": [
+        "led_screen"
+      ],
+      "parameters": {
+        "led_screen.wall_width_m": true,
+        "led_screen.wall_height_m": true,
+        "led_screen.top_clearance_m": true,
+        "led_screen.bottom_clearance_m": true,
+        "led_screen.border_width_m": true,
+        "led_screen.aspect_ratio": true,
+        "led_screen.assembly_unit": true,
+        "led_screen.nearest_viewing_distance_m": true,
+        "led_screen.pixel_pitch": true
+      },
+      "parameter_evidence": {
+        "led_screen.wall_width_m": "宽 8 m",
+        "led_screen.wall_height_m": "高 4 m",
+        "led_screen.top_clearance_m": "上下各留 0.2 m",
+        "led_screen.bottom_clearance_m": "上下各留 0.2 m",
+        "led_screen.border_width_m": "边框宽 0.05 m",
+        "led_screen.aspect_ratio": "16:9",
+        "led_screen.assembly_unit": "常规箱体",
+        "led_screen.nearest_viewing_distance_m": "最近观看 5 m",
+        "led_screen.pixel_pitch": "P2.0"
+      },
+      "ambiguity_level": 0,
+      "needs_clarification": false,
+      "clarification_reasons": [],
+      "rationale": "墙体尺寸和所有自定义拼装约束均明确。"
+    }
+  },
+  {
+    "id": "LED-002",
+    "category": "led_screen",
+    "mode": "sizing",
+    "case_type": "casual",
+    "tags": [
+      "casual"
+    ],
+    "user_utterance": "墙上能放 6 米宽、3 米高的屏，想用常规箱体，大概算下。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "led_screen",
+      "clear_tools": [
+        "led_screen"
+      ],
+      "parameters": {
+        "led_screen.wall_width_m": true,
+        "led_screen.wall_height_m": true,
+        "led_screen.top_clearance_m": false,
+        "led_screen.bottom_clearance_m": false,
+        "led_screen.border_width_m": false,
+        "led_screen.aspect_ratio": false,
+        "led_screen.assembly_unit": true,
+        "led_screen.nearest_viewing_distance_m": false,
+        "led_screen.pixel_pitch": false
+      },
+      "parameter_evidence": {
+        "led_screen.wall_width_m": "6 米宽",
+        "led_screen.wall_height_m": "3 米高",
+        "led_screen.assembly_unit": "常规箱体"
+      },
+      "ambiguity_level": 0,
+      "needs_clarification": false,
+      "clarification_reasons": [],
+      "rationale": "屏体估算的墙宽和墙高已给出，其他未提条件属于可选设置。"
+    }
+  },
+  {
+    "id": "LED-003",
+    "category": "led_screen",
+    "mode": "sizing",
+    "case_type": "abbreviation",
+    "tags": [
+      "abbreviation"
+    ],
+    "user_utterance": "墙宽 7.2m、高 4.2m，目标 16:9，最近视距 4m，P1.86，模组拼。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "led_screen",
+      "clear_tools": [
+        "led_screen"
+      ],
+      "parameters": {
+        "led_screen.wall_width_m": true,
+        "led_screen.wall_height_m": true,
+        "led_screen.top_clearance_m": false,
+        "led_screen.bottom_clearance_m": false,
+        "led_screen.border_width_m": false,
+        "led_screen.aspect_ratio": true,
+        "led_screen.assembly_unit": true,
+        "led_screen.nearest_viewing_distance_m": true,
+        "led_screen.pixel_pitch": true
+      },
+      "parameter_evidence": {
+        "led_screen.wall_width_m": "墙宽 7.2m",
+        "led_screen.wall_height_m": "高 4.2m",
+        "led_screen.aspect_ratio": "16:9",
+        "led_screen.nearest_viewing_distance_m": "4m",
+        "led_screen.pixel_pitch": "P1.86",
+        "led_screen.assembly_unit": "模组拼"
+      },
+      "ambiguity_level": 0,
+      "needs_clarification": false,
+      "clarification_reasons": [],
+      "rationale": "“视距”“P1.86”和“模组拼”分别明确指观看距离、点间距与拼装单元。"
+    }
+  },
+  {
+    "id": "LED-004",
+    "category": "led_screen",
+    "mode": "sizing",
+    "case_type": "mixed_language",
+    "tags": [
+      "mixed_language"
+    ],
+    "user_utterance": "LED screen 墙体 6000 mm × 3375 mm，aspect ratio 16:9，nearest viewing distance 3 m，cabinet 用 600 × 337.5 mm 的高端 A 系列。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "led_screen",
+      "clear_tools": [
+        "led_screen"
+      ],
+      "parameters": {
+        "led_screen.wall_width_m": true,
+        "led_screen.wall_height_m": true,
+        "led_screen.top_clearance_m": false,
+        "led_screen.bottom_clearance_m": false,
+        "led_screen.border_width_m": false,
+        "led_screen.aspect_ratio": true,
+        "led_screen.assembly_unit": true,
+        "led_screen.nearest_viewing_distance_m": true,
+        "led_screen.pixel_pitch": false
+      },
+      "parameter_evidence": {
+        "led_screen.wall_width_m": "6000 mm",
+        "led_screen.wall_height_m": "3375 mm",
+        "led_screen.aspect_ratio": "16:9",
+        "led_screen.nearest_viewing_distance_m": "3 m",
+        "led_screen.assembly_unit": "cabinet 用 600 × 337.5 mm 的高端 A 系列"
+      },
+      "ambiguity_level": 0,
+      "needs_clarification": false,
+      "clarification_reasons": [],
+      "rationale": "英中文混用但物理尺寸和箱体系列都已明确。"
+    }
+  },
+  {
+    "id": "LED-005",
+    "category": "led_screen",
+    "mode": "sizing",
+    "case_type": "alternative_units",
+    "tags": [
+      "alternative_units"
+    ],
+    "user_utterance": "墙宽 720 cm、高 405 cm，上边留 20 cm、下边留 15 cm，最近观看 450 cm，按 16:9 算。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "led_screen",
+      "clear_tools": [
+        "led_screen"
+      ],
+      "parameters": {
+        "led_screen.wall_width_m": true,
+        "led_screen.wall_height_m": true,
+        "led_screen.top_clearance_m": true,
+        "led_screen.bottom_clearance_m": true,
+        "led_screen.border_width_m": false,
+        "led_screen.aspect_ratio": true,
+        "led_screen.assembly_unit": false,
+        "led_screen.nearest_viewing_distance_m": true,
+        "led_screen.pixel_pitch": false
+      },
+      "parameter_evidence": {
+        "led_screen.wall_width_m": "墙宽 720 cm",
+        "led_screen.wall_height_m": "高 405 cm",
+        "led_screen.top_clearance_m": "上边留 20 cm",
+        "led_screen.bottom_clearance_m": "下边留 15 cm",
+        "led_screen.nearest_viewing_distance_m": "最近观看 450 cm",
+        "led_screen.aspect_ratio": "16:9"
+      },
+      "ambiguity_level": 0,
+      "needs_clarification": false,
+      "clarification_reasons": [],
+      "rationale": "用户把米制长度改用厘米表达，字段归属仍清晰，可以换算单位。"
+    }
+  },
+  {
+    "id": "LED-006",
+    "category": "led_screen",
+    "mode": "sizing",
+    "case_type": "typo",
+    "tags": [
+      "typo"
+    ],
+    "user_utterance": "屏体估算：墙宽 6m、高 3m，顶边留 20 公分、底边留 15 公分，最近视距 4m，anpect ratio 16:9。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "led_screen",
+      "clear_tools": [
+        "led_screen"
+      ],
+      "parameters": {
+        "led_screen.wall_width_m": true,
+        "led_screen.wall_height_m": true,
+        "led_screen.top_clearance_m": true,
+        "led_screen.bottom_clearance_m": true,
+        "led_screen.border_width_m": false,
+        "led_screen.aspect_ratio": true,
+        "led_screen.assembly_unit": false,
+        "led_screen.nearest_viewing_distance_m": true,
+        "led_screen.pixel_pitch": false
+      },
+      "parameter_evidence": {
+        "led_screen.wall_width_m": "墙宽 6m",
+        "led_screen.wall_height_m": "高 3m",
+        "led_screen.top_clearance_m": "顶边留 20 公分",
+        "led_screen.bottom_clearance_m": "底边留 15 公分",
+        "led_screen.nearest_viewing_distance_m": "最近视距 4m",
+        "led_screen.aspect_ratio": "anpect ratio 16:9"
+      },
+      "ambiguity_level": 0,
+      "needs_clarification": false,
+      "clarification_reasons": [],
+      "rationale": "anpect 是 aspect 的明显拼写错误；其后的比例和各尺寸归属明确。"
+    }
+  },
+  {
+    "id": "LED-007",
+    "category": "led_screen",
+    "mode": "sizing",
+    "case_type": "missing_parameters",
+    "tags": [
+      "missing_parameters"
+    ],
+    "user_utterance": "这面墙宽 6 m，想估一下能拼多大 LED 屏，用 640 × 480 mm 常规箱体。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "led_screen",
+      "clear_tools": [
+        "led_screen"
+      ],
+      "parameters": {
+        "led_screen.wall_width_m": true,
+        "led_screen.wall_height_m": false,
+        "led_screen.top_clearance_m": false,
+        "led_screen.bottom_clearance_m": false,
+        "led_screen.border_width_m": false,
+        "led_screen.aspect_ratio": false,
+        "led_screen.assembly_unit": true,
+        "led_screen.nearest_viewing_distance_m": false,
+        "led_screen.pixel_pitch": false
+      },
+      "parameter_evidence": {
+        "led_screen.wall_width_m": "墙宽 6 m",
+        "led_screen.assembly_unit": "640 × 480 mm 常规箱体"
+      },
+      "ambiguity_level": 0,
+      "needs_clarification": true,
+      "clarification_reasons": [
+        "missing_required_information"
+      ],
+      "rationale": "需知道可用墙高才能确定屏体可拼装尺寸。"
+    }
+  },
+  {
+    "id": "LED-008",
+    "category": "led_screen",
+    "mode": "sizing",
+    "case_type": "ambiguous_parameters",
+    "tags": [
+      "ambiguous_parameters",
+      "conflicting_values"
+    ],
+    "user_utterance": "墙宽 6 m、高 3.5 m，任务单上目标比例写 16:9，改版消息又写 4:3，我还没决定采用哪一个；请排箱体。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "led_screen",
+      "clear_tools": [
+        "led_screen"
+      ],
+      "parameters": {
+        "led_screen.wall_width_m": true,
+        "led_screen.wall_height_m": true,
+        "led_screen.top_clearance_m": false,
+        "led_screen.bottom_clearance_m": false,
+        "led_screen.border_width_m": false,
+        "led_screen.aspect_ratio": true,
+        "led_screen.assembly_unit": false,
+        "led_screen.nearest_viewing_distance_m": false,
+        "led_screen.pixel_pitch": false
+      },
+      "parameter_evidence": {
+        "led_screen.wall_width_m": "墙宽 6 m",
+        "led_screen.wall_height_m": "高 3.5 m",
+        "led_screen.aspect_ratio": "目标比例写 16:9，改版消息又写 4:3"
+      },
+      "ambiguity_level": 2,
+      "needs_clarification": true,
+      "clarification_reasons": [
+        "conflicting_values"
+      ],
+      "rationale": "两个比例都被明确归到目标比例，但用户说明尚未选定，须先消除冲突。"
+    }
+  },
+  {
+    "id": "LED-009",
+    "category": "led_screen",
+    "mode": "sizing",
+    "case_type": "irrelevant_numbers",
+    "tags": [
+      "irrelevant_numbers"
+    ],
+    "user_utterance": "墙宽 8 m、高 4.5 m，最近观看 6 m，按 16:9、模组计算。验收日期 2026-09-20，采购单 18 号。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "led_screen",
+      "clear_tools": [
+        "led_screen"
+      ],
+      "parameters": {
+        "led_screen.wall_width_m": true,
+        "led_screen.wall_height_m": true,
+        "led_screen.top_clearance_m": false,
+        "led_screen.bottom_clearance_m": false,
+        "led_screen.border_width_m": false,
+        "led_screen.aspect_ratio": true,
+        "led_screen.assembly_unit": true,
+        "led_screen.nearest_viewing_distance_m": true,
+        "led_screen.pixel_pitch": false
+      },
+      "parameter_evidence": {
+        "led_screen.wall_width_m": "墙宽 8 m",
+        "led_screen.wall_height_m": "高 4.5 m",
+        "led_screen.nearest_viewing_distance_m": "最近观看 6 m",
+        "led_screen.aspect_ratio": "16:9",
+        "led_screen.assembly_unit": "模组计算"
+      },
+      "ambiguity_level": 0,
+      "needs_clarification": false,
+      "clarification_reasons": [],
+      "rationale": "验收日期和采购单号不属于屏体尺寸或最近观看距离。"
+    }
+  },
+  {
+    "id": "LED-010",
+    "category": "led_screen",
+    "mode": "sizing",
+    "case_type": "wrong_parameter",
+    "tags": [
+      "wrong_parameter"
+    ],
+    "user_utterance": "墙宽 4.8 m、高 2.7 m，屏亮度要 2500 nit，按这个亮度帮我选点间距。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "led_screen",
+      "clear_tools": [
+        "led_screen"
+      ],
+      "parameters": {
+        "led_screen.wall_width_m": true,
+        "led_screen.wall_height_m": true,
+        "led_screen.top_clearance_m": false,
+        "led_screen.bottom_clearance_m": false,
+        "led_screen.border_width_m": false,
+        "led_screen.aspect_ratio": false,
+        "led_screen.assembly_unit": false,
+        "led_screen.nearest_viewing_distance_m": false,
+        "led_screen.pixel_pitch": false
+      },
+      "parameter_evidence": {
+        "led_screen.wall_width_m": "墙宽 4.8 m",
+        "led_screen.wall_height_m": "高 2.7 m"
+      },
+      "ambiguity_level": 0,
+      "needs_clarification": true,
+      "clarification_reasons": [
+        "missing_required_information"
+      ],
+      "rationale": "亮度不能代替最近观看距离；若要按观看条件推荐点间距还需给出视距。"
+    }
+  },
+  {
+    "id": "OTHER-001",
+    "category": "unrelated",
+    "mode": "unrelated",
+    "case_type": "unrelated",
+    "tags": [
+      "unrelated"
+    ],
+    "user_utterance": "把这段通知改写得正式一点：会议延期到周五下午。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "other",
+      "clear_tools": [],
+      "parameters": {},
+      "parameter_evidence": {},
+      "ambiguity_level": 0,
+      "needs_clarification": false,
+      "clarification_reasons": [],
+      "rationale": "这是普通文字改写，与应用中的工具无关。"
+    }
+  },
+  {
+    "id": "OTHER-002",
+    "category": "unrelated",
+    "mode": "unrelated",
+    "case_type": "unrelated",
+    "tags": [
+      "unrelated"
+    ],
+    "user_utterance": "帮我翻译成英文：请于明天上午九点到场。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "other",
+      "clear_tools": [],
+      "parameters": {},
+      "parameter_evidence": {},
+      "ambiguity_level": 0,
+      "needs_clarification": false,
+      "clarification_reasons": [],
+      "rationale": "这是翻译请求，不涉及已实现的音视频工具。"
+    }
+  },
+  {
+    "id": "OTHER-003",
+    "category": "unrelated",
+    "mode": "unrelated",
+    "case_type": "unrelated",
+    "tags": [
+      "unrelated"
+    ],
+    "user_utterance": "给年会开场写一句轻松的主持词。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "other",
+      "clear_tools": [],
+      "parameters": {},
+      "parameter_evidence": {},
+      "ambiguity_level": 0,
+      "needs_clarification": false,
+      "clarification_reasons": [],
+      "rationale": "这是主持文案创作，没有对应的应用工具。"
+    }
+  },
+  {
+    "id": "OTHER-004",
+    "category": "unrelated",
+    "mode": "unrelated",
+    "case_type": "unrelated",
+    "tags": [
+      "unrelated"
+    ],
+    "user_utterance": "今天上海天气怎么样？",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "other",
+      "clear_tools": [],
+      "parameters": {},
+      "parameter_evidence": {},
+      "ambiguity_level": 0,
+      "needs_clarification": false,
+      "clarification_reasons": [],
+      "rationale": "天气查询不属于本应用支持的工具。"
+    }
+  },
+  {
+    "id": "OTHER-005",
+    "category": "unrelated",
+    "mode": "unrelated",
+    "case_type": "unrelated",
+    "tags": [
+      "unrelated"
+    ],
+    "user_utterance": "帮我做一个下周的个人健身计划。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "other",
+      "clear_tools": [],
+      "parameters": {},
+      "parameter_evidence": {},
+      "ambiguity_level": 0,
+      "needs_clarification": false,
+      "clarification_reasons": [],
+      "rationale": "个人健身计划与音视频系统工具无关。"
+    }
+  },
+  {
+    "id": "OTHER-006",
+    "category": "unrelated",
+    "mode": "unrelated",
+    "case_type": "unrelated",
+    "tags": [
+      "unrelated"
+    ],
+    "user_utterance": "推荐三本适合入门的历史书。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "other",
+      "clear_tools": [],
+      "parameters": {},
+      "parameter_evidence": {},
+      "ambiguity_level": 0,
+      "needs_clarification": false,
+      "clarification_reasons": [],
+      "rationale": "图书推荐不属于应用中已实现的功能。"
+    }
+  },
+  {
+    "id": "PW-001",
+    "category": "project_wiring",
+    "mode": "record",
+    "case_type": "standard",
+    "tags": [
+      "standard"
+    ],
+    "user_utterance": "在项目“东馆扩声”登记一条线路：调音台 Main L 输出到 DSP Input 1，成品平衡音频线，RVPE 2×0.5 mm²，两端 XLR 母头到 XLR 公头，长 8 m，状态待施工。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "project_wiring",
+      "clear_tools": [
+        "project_wiring"
+      ],
+      "parameters": {
+        "project_wiring.project_name": true,
+        "project_wiring.from_device": true,
+        "project_wiring.from_port": true,
+        "project_wiring.to_device": true,
+        "project_wiring.to_port": true,
+        "project_wiring.build_type": true,
+        "project_wiring.cable_type": true,
+        "project_wiring.cable_spec": true,
+        "project_wiring.from_connector": true,
+        "project_wiring.to_connector": true,
+        "project_wiring.length_m": true,
+        "project_wiring.line_count": true,
+        "project_wiring.status": true
+      },
+      "parameter_evidence": {
+        "project_wiring.project_name": "东馆扩声",
+        "project_wiring.from_device": "调音台",
+        "project_wiring.from_port": "Main L 输出",
+        "project_wiring.to_device": "DSP",
+        "project_wiring.to_port": "Input 1",
+        "project_wiring.build_type": "成品平衡音频线",
+        "project_wiring.cable_type": "平衡音频线",
+        "project_wiring.cable_spec": "RVPE 2×0.5 mm²",
+        "project_wiring.from_connector": "XLR 母头",
+        "project_wiring.to_connector": "XLR 公头",
+        "project_wiring.length_m": "长 8 m",
+        "project_wiring.line_count": "一条线路",
+        "project_wiring.status": "待施工"
+      },
+      "ambiguity_level": 0,
+      "needs_clarification": false,
+      "clarification_reasons": [],
+      "rationale": "项目、两端设备与端口以及记录类型均已明确。"
+    }
+  },
+  {
+    "id": "PW-002",
+    "category": "project_wiring",
+    "mode": "record",
+    "case_type": "casual",
+    "tags": [
+      "casual",
+      "unknown_length_pending_allowed"
+    ],
+    "user_utterance": "在“序厅音响”里记一根调音台 OUT1 到处理器 IN1 的平衡成品线，长度先留空，状态待施工。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "project_wiring",
+      "clear_tools": [
+        "project_wiring"
+      ],
+      "parameters": {
+        "project_wiring.project_name": true,
+        "project_wiring.from_device": true,
+        "project_wiring.from_port": true,
+        "project_wiring.to_device": true,
+        "project_wiring.to_port": true,
+        "project_wiring.build_type": true,
+        "project_wiring.cable_type": true,
+        "project_wiring.cable_spec": false,
+        "project_wiring.from_connector": false,
+        "project_wiring.to_connector": false,
+        "project_wiring.length_m": false,
+        "project_wiring.line_count": true,
+        "project_wiring.status": true
+      },
+      "parameter_evidence": {
+        "project_wiring.project_name": "序厅音响",
+        "project_wiring.from_device": "调音台",
+        "project_wiring.from_port": "OUT1",
+        "project_wiring.to_device": "处理器",
+        "project_wiring.to_port": "IN1",
+        "project_wiring.line_count": "一根",
+        "project_wiring.build_type": "平衡成品线",
+        "project_wiring.cable_type": "平衡成品线",
+        "project_wiring.status": "待施工"
+      },
+      "ambiguity_level": 0,
+      "needs_clarification": false,
+      "clarification_reasons": [],
+      "rationale": "用户明确要求先留空长度并标为待施工，未知长度允许保存为待确认。"
+    }
+  },
+  {
+    "id": "PW-003",
+    "category": "project_wiring",
+    "mode": "record",
+    "case_type": "abbreviation",
+    "tags": [
+      "abbreviation"
+    ],
+    "user_utterance": "项目“报告厅改造”：Mixer Main L OUT → DSP IN1，1条成品 balanced audio cable，RVPE 2×0.5 mm²，8m，已连接。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "project_wiring",
+      "clear_tools": [
+        "project_wiring"
+      ],
+      "parameters": {
+        "project_wiring.project_name": true,
+        "project_wiring.from_device": true,
+        "project_wiring.from_port": true,
+        "project_wiring.to_device": true,
+        "project_wiring.to_port": true,
+        "project_wiring.build_type": true,
+        "project_wiring.cable_type": true,
+        "project_wiring.cable_spec": true,
+        "project_wiring.from_connector": false,
+        "project_wiring.to_connector": false,
+        "project_wiring.length_m": true,
+        "project_wiring.line_count": true,
+        "project_wiring.status": true
+      },
+      "parameter_evidence": {
+        "project_wiring.project_name": "报告厅改造",
+        "project_wiring.from_device": "Mixer",
+        "project_wiring.from_port": "Main L OUT",
+        "project_wiring.to_device": "DSP",
+        "project_wiring.to_port": "IN1",
+        "project_wiring.line_count": "1条",
+        "project_wiring.build_type": "成品",
+        "project_wiring.cable_type": "balanced audio cable",
+        "project_wiring.cable_spec": "RVPE 2×0.5 mm²",
+        "project_wiring.length_m": "8m",
+        "project_wiring.status": "已连接"
+      },
+      "ambiguity_level": 0,
+      "needs_clarification": false,
+      "clarification_reasons": [],
+      "rationale": "英文端口缩写和线路类型都有明确对应关系，项目也由用户点名。"
+    }
+  },
+  {
+    "id": "PW-004",
+    "category": "project_wiring",
+    "mode": "record",
+    "case_type": "mixed_language",
+    "tags": [
+      "mixed_language"
+    ],
+    "user_utterance": "在 project “春季发布会”里新增 one finished speaker cable：功放 Channel A 到左主扩 NL4，长度 12 m，status connected。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "project_wiring",
+      "clear_tools": [
+        "project_wiring"
+      ],
+      "parameters": {
+        "project_wiring.project_name": true,
+        "project_wiring.from_device": true,
+        "project_wiring.from_port": true,
+        "project_wiring.to_device": true,
+        "project_wiring.to_port": true,
+        "project_wiring.build_type": true,
+        "project_wiring.cable_type": true,
+        "project_wiring.cable_spec": false,
+        "project_wiring.from_connector": false,
+        "project_wiring.to_connector": true,
+        "project_wiring.length_m": true,
+        "project_wiring.line_count": true,
+        "project_wiring.status": true
+      },
+      "parameter_evidence": {
+        "project_wiring.project_name": "春季发布会",
+        "project_wiring.line_count": "one",
+        "project_wiring.build_type": "one finished",
+        "project_wiring.cable_type": "speaker cable",
+        "project_wiring.from_device": "功放",
+        "project_wiring.from_port": "Channel A",
+        "project_wiring.to_device": "左主扩",
+        "project_wiring.to_port": "NL4",
+        "project_wiring.to_connector": "NL4",
+        "project_wiring.length_m": "12 m",
+        "project_wiring.status": "status connected"
+      },
+      "ambiguity_level": 0,
+      "needs_clarification": false,
+      "clarification_reasons": [],
+      "rationale": "语言混用仍明确指定项目、单条线路、端点、线材与状态。"
+    }
+  },
+  {
+    "id": "PW-005",
+    "category": "project_wiring",
+    "mode": "record",
+    "case_type": "alternative_units",
+    "tags": [
+      "alternative_units"
+    ],
+    "user_utterance": "项目“多功能厅”登记一根成品扬声器线：功放 A 输出到主扩输入，长度 850 cm，状态已连接。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "project_wiring",
+      "clear_tools": [
+        "project_wiring"
+      ],
+      "parameters": {
+        "project_wiring.project_name": true,
+        "project_wiring.from_device": true,
+        "project_wiring.from_port": true,
+        "project_wiring.to_device": true,
+        "project_wiring.to_port": true,
+        "project_wiring.build_type": true,
+        "project_wiring.cable_type": true,
+        "project_wiring.cable_spec": false,
+        "project_wiring.from_connector": false,
+        "project_wiring.to_connector": false,
+        "project_wiring.length_m": true,
+        "project_wiring.line_count": true,
+        "project_wiring.status": true
+      },
+      "parameter_evidence": {
+        "project_wiring.project_name": "多功能厅",
+        "project_wiring.line_count": "一根",
+        "project_wiring.build_type": "成品",
+        "project_wiring.cable_type": "扬声器线",
+        "project_wiring.from_device": "功放",
+        "project_wiring.from_port": "A 输出",
+        "project_wiring.to_device": "主扩",
+        "project_wiring.to_port": "输入",
+        "project_wiring.length_m": "850 cm",
+        "project_wiring.status": "已连接"
+      },
+      "ambiguity_level": 0,
+      "needs_clarification": false,
+      "clarification_reasons": [],
+      "rationale": "长度以厘米给出且明确归属单条线路，可以换算为米。"
+    }
+  },
+  {
+    "id": "PW-006",
+    "category": "project_wiring",
+    "mode": "record",
+    "case_type": "typo",
+    "tags": [
+      "typo"
+    ],
+    "user_utterance": "项目“巡展音响”，调音台 OUT1 接 DPS IN1，做一条平横音频成品线，长 6 m，状态已连接。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "project_wiring",
+      "clear_tools": [
+        "project_wiring"
+      ],
+      "parameters": {
+        "project_wiring.project_name": true,
+        "project_wiring.from_device": true,
+        "project_wiring.from_port": true,
+        "project_wiring.to_device": true,
+        "project_wiring.to_port": true,
+        "project_wiring.build_type": true,
+        "project_wiring.cable_type": true,
+        "project_wiring.cable_spec": false,
+        "project_wiring.from_connector": false,
+        "project_wiring.to_connector": false,
+        "project_wiring.length_m": true,
+        "project_wiring.line_count": true,
+        "project_wiring.status": true
+      },
+      "parameter_evidence": {
+        "project_wiring.project_name": "巡展音响",
+        "project_wiring.from_device": "调音台",
+        "project_wiring.from_port": "OUT1",
+        "project_wiring.to_device": "DPS",
+        "project_wiring.to_port": "IN1",
+        "project_wiring.line_count": "一条",
+        "project_wiring.build_type": "音频成品线",
+        "project_wiring.cable_type": "平横音频成品线",
+        "project_wiring.status": "已连接",
+        "project_wiring.length_m": "长 6 m"
+      },
+      "ambiguity_level": 0,
+      "needs_clarification": false,
+      "clarification_reasons": [],
+      "rationale": "“DPS”和“平横”是用户明确给出的记录文本；该请求不要求纠正设备名或线材标签。"
+    }
+  },
+  {
+    "id": "PW-007",
+    "category": "project_wiring",
+    "mode": "record",
+    "case_type": "missing_parameters",
+    "tags": [
+      "missing_parameters"
+    ],
+    "user_utterance": "在项目“会议室改造”登记一条线：调音台到 DSP，平衡音频线，长度 5 m，待施工。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "project_wiring",
+      "clear_tools": [
+        "project_wiring"
+      ],
+      "parameters": {
+        "project_wiring.project_name": true,
+        "project_wiring.from_device": true,
+        "project_wiring.from_port": false,
+        "project_wiring.to_device": true,
+        "project_wiring.to_port": false,
+        "project_wiring.build_type": false,
+        "project_wiring.cable_type": true,
+        "project_wiring.cable_spec": false,
+        "project_wiring.from_connector": false,
+        "project_wiring.to_connector": false,
+        "project_wiring.length_m": true,
+        "project_wiring.line_count": true,
+        "project_wiring.status": true
+      },
+      "parameter_evidence": {
+        "project_wiring.project_name": "会议室改造",
+        "project_wiring.line_count": "一条",
+        "project_wiring.from_device": "调音台",
+        "project_wiring.to_device": "DSP",
+        "project_wiring.cable_type": "平衡音频线",
+        "project_wiring.length_m": "长度 5 m",
+        "project_wiring.status": "待施工"
+      },
+      "ambiguity_level": 0,
+      "needs_clarification": true,
+      "clarification_reasons": [
+        "missing_required_information"
+      ],
+      "rationale": "保存单条线路要求记录两端端口，用户只提供了设备名。"
+    }
+  },
+  {
+    "id": "PW-008",
+    "category": "project_wiring",
+    "mode": "record",
+    "case_type": "ambiguous_parameters",
+    "tags": [
+      "ambiguous_parameters",
+      "conflicting_values"
+    ],
+    "user_utterance": "项目“舞台扩声”同一条调音台 OUT2 到 DSP IN2 的成品平衡线，在施工单记 8 m、材料单记 10 m；尚未确认哪一个是单条线路长度。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "project_wiring",
+      "clear_tools": [
+        "project_wiring"
+      ],
+      "parameters": {
+        "project_wiring.project_name": true,
+        "project_wiring.from_device": true,
+        "project_wiring.from_port": true,
+        "project_wiring.to_device": true,
+        "project_wiring.to_port": true,
+        "project_wiring.build_type": true,
+        "project_wiring.cable_type": true,
+        "project_wiring.cable_spec": false,
+        "project_wiring.from_connector": false,
+        "project_wiring.to_connector": false,
+        "project_wiring.length_m": true,
+        "project_wiring.line_count": true,
+        "project_wiring.status": false
+      },
+      "parameter_evidence": {
+        "project_wiring.project_name": "舞台扩声",
+        "project_wiring.from_device": "调音台",
+        "project_wiring.from_port": "OUT2",
+        "project_wiring.to_device": "DSP",
+        "project_wiring.to_port": "IN2",
+        "project_wiring.line_count": "同一条",
+        "project_wiring.build_type": "成品",
+        "project_wiring.cable_type": "平衡线",
+        "project_wiring.length_m": "施工单记 8 m、材料单记 10 m"
+      },
+      "ambiguity_level": 2,
+      "needs_clarification": true,
+      "clarification_reasons": [
+        "conflicting_values"
+      ],
+      "rationale": "施工单和材料单对同一线路记载了不同长度，尚未确认哪个数值代表单条线路长度。"
+    }
+  },
+  {
+    "id": "PW-009",
+    "category": "project_wiring",
+    "mode": "record",
+    "case_type": "irrelevant_numbers",
+    "tags": [
+      "irrelevant_numbers"
+    ],
+    "user_utterance": "项目“西厅改造”添加一条：调音台 OUT1 到功放 CH1，成品平衡音频线，6 m，待施工。订单号 20260920，设备编号 18。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "project_wiring",
+      "clear_tools": [
+        "project_wiring"
+      ],
+      "parameters": {
+        "project_wiring.project_name": true,
+        "project_wiring.from_device": true,
+        "project_wiring.from_port": true,
+        "project_wiring.to_device": true,
+        "project_wiring.to_port": true,
+        "project_wiring.build_type": true,
+        "project_wiring.cable_type": true,
+        "project_wiring.cable_spec": false,
+        "project_wiring.from_connector": false,
+        "project_wiring.to_connector": false,
+        "project_wiring.length_m": true,
+        "project_wiring.line_count": true,
+        "project_wiring.status": true
+      },
+      "parameter_evidence": {
+        "project_wiring.project_name": "西厅改造",
+        "project_wiring.from_device": "调音台",
+        "project_wiring.from_port": "OUT1",
+        "project_wiring.to_device": "功放",
+        "project_wiring.to_port": "CH1",
+        "project_wiring.line_count": "一条",
+        "project_wiring.build_type": "成品",
+        "project_wiring.cable_type": "平衡音频线",
+        "project_wiring.length_m": "6 m",
+        "project_wiring.status": "待施工"
+      },
+      "ambiguity_level": 0,
+      "needs_clarification": false,
+      "clarification_reasons": [],
+      "rationale": "订单号和设备编号不属于线路长度，也不覆盖用户给出的 6 m。"
+    }
+  },
+  {
+    "id": "PW-010",
+    "category": "project_wiring",
+    "mode": "record",
+    "case_type": "wrong_parameter",
+    "tags": [
+      "wrong_parameter",
+      "total_not_per_line"
+    ],
+    "user_utterance": "项目“巡演”里有调音台 OUT1 到 DSP IN1 的 3 条散线。材料汇总写总用量 30 m，但我不知道每条单长，能否直接用总长填每条线路长度？",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "project_wiring",
+      "clear_tools": [
+        "project_wiring"
+      ],
+      "parameters": {
+        "project_wiring.project_name": true,
+        "project_wiring.from_device": true,
+        "project_wiring.from_port": true,
+        "project_wiring.to_device": true,
+        "project_wiring.to_port": true,
+        "project_wiring.build_type": true,
+        "project_wiring.cable_type": false,
+        "project_wiring.cable_spec": false,
+        "project_wiring.from_connector": false,
+        "project_wiring.to_connector": false,
+        "project_wiring.length_m": false,
+        "project_wiring.line_count": true,
+        "project_wiring.status": false
+      },
+      "parameter_evidence": {
+        "project_wiring.project_name": "巡演",
+        "project_wiring.from_device": "调音台",
+        "project_wiring.from_port": "OUT1",
+        "project_wiring.to_device": "DSP",
+        "project_wiring.to_port": "IN1",
+        "project_wiring.line_count": "3 条",
+        "project_wiring.build_type": "3 条散线"
+      },
+      "ambiguity_level": 0,
+      "needs_clarification": false,
+      "clarification_reasons": [],
+      "rationale": "材料汇总总用量不能用作每条线的长度；线路长度可留空并保持待确认，无需阻止用户继续。"
+    }
+  },
+  {
+    "id": "SUPPORT-001",
+    "category": "supporting",
+    "mode": "product_catalog",
+    "case_type": "supporting_request",
+    "tags": [
+      "supporting_request"
+    ],
+    "user_utterance": "产品库里有哪些可用于限幅器的功放？",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "product_catalog",
+      "clear_tools": [
+        "product_catalog"
+      ],
+      "parameters": {
+        "product_catalog.product_category": true,
+        "product_catalog.model": false,
+        "product_catalog.comparison_models": false
+      },
+      "parameter_evidence": {
+        "product_catalog.product_category": "功放"
+      },
+      "ambiguity_level": 0,
+      "needs_clarification": false,
+      "clarification_reasons": [],
+      "rationale": "用户要浏览特定能力分类的产品，不需要先指定型号。"
+    }
+  },
+  {
+    "id": "SUPPORT-002",
+    "category": "supporting",
+    "mode": "product_catalog",
+    "case_type": "supporting_request",
+    "tags": [
+      "supporting_request"
+    ],
+    "user_utterance": "请比较产品库中的 TS-0650JSM 和 TS-0663XP 两款摄像机。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "product_catalog",
+      "clear_tools": [
+        "product_catalog"
+      ],
+      "parameters": {
+        "product_catalog.product_category": true,
+        "product_catalog.model": true,
+        "product_catalog.comparison_models": true
+      },
+      "parameter_evidence": {
+        "product_catalog.product_category": "摄像机",
+        "product_catalog.model": "TS-0650JSM",
+        "product_catalog.comparison_models": "TS-0650JSM 和 TS-0663XP"
+      },
+      "ambiguity_level": 0,
+      "needs_clarification": false,
+      "clarification_reasons": [],
+      "rationale": "两个待比较型号都已点名，查询对象明确。"
+    }
+  },
+  {
+    "id": "SUPPORT-003",
+    "category": "supporting",
+    "mode": "troubleshoot",
+    "case_type": "supporting_request",
+    "tags": [
+      "supporting_request"
+    ],
+    "user_utterance": "音箱全部没声音，播放时输入电平表有信号，但对应输出电平表无信号，按步骤帮我排查。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "troubleshoot",
+      "clear_tools": [
+        "troubleshoot"
+      ],
+      "parameters": {
+        "troubleshoot.fault_type": true,
+        "troubleshoot.observation": true
+      },
+      "parameter_evidence": {
+        "troubleshoot.fault_type": "音箱全部没声音",
+        "troubleshoot.observation": "输入电平表有信号，但对应输出电平表无信号"
+      },
+      "ambiguity_level": 0,
+      "needs_clarification": false,
+      "clarification_reasons": [],
+      "rationale": "故障类型和已观察到的输入、输出表状态足以进入引导排查流程。"
+    }
+  },
+  {
+    "id": "SUPPORT-004",
+    "category": "supporting",
+    "mode": "troubleshoot",
+    "case_type": "supporting_request",
+    "tags": [
+      "supporting_request"
+    ],
+    "user_utterance": "一组灯具不受控，灯具显示没有收到 DMX 信号，按故障排查流程带我检查。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "troubleshoot",
+      "clear_tools": [
+        "troubleshoot"
+      ],
+      "parameters": {
+        "troubleshoot.fault_type": true,
+        "troubleshoot.observation": true
+      },
+      "parameter_evidence": {
+        "troubleshoot.fault_type": "一组灯具不受控",
+        "troubleshoot.observation": "显示没有收到 DMX 信号"
+      },
+      "ambiguity_level": 0,
+      "needs_clarification": false,
+      "clarification_reasons": [],
+      "rationale": "用户明确要求开始灯具故障引导，现有观察可用于第一步核查。"
+    }
+  },
+  {
+    "id": "SUPPORT-005",
+    "category": "supporting",
+    "mode": "knowledge",
+    "case_type": "supporting_request",
+    "tags": [
+      "supporting_request"
+    ],
+    "user_utterance": "XLR 三针里 1、2、3 脚分别是什么？",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "knowledge",
+      "clear_tools": [
+        "knowledge"
+      ],
+      "parameters": {
+        "knowledge.topic": true
+      },
+      "parameter_evidence": {
+        "knowledge.topic": "XLR 三针里 1、2、3 脚分别是什么"
+      },
+      "ambiguity_level": 0,
+      "needs_clarification": false,
+      "clarification_reasons": [],
+      "rationale": "这是接线知识点查询，没有要求针对具体设备生成线路方案。"
+    }
+  },
+  {
+    "id": "SUPPORT-006",
+    "category": "supporting",
+    "mode": "project_records",
+    "case_type": "supporting_request",
+    "tags": [
+      "supporting_request"
+    ],
+    "user_utterance": "查看项目“合唱厅改造”里保存的 DMX 编址计算记录。",
+    "provenance": "synthetic",
+    "expected": {
+      "tool": "project_records",
+      "clear_tools": [
+        "project_records"
+      ],
+      "parameters": {
+        "project_records.project_name": true,
+        "project_records.record_tool": true,
+        "project_records.operation": true
+      },
+      "parameter_evidence": {
+        "project_records.project_name": "合唱厅改造",
+        "project_records.record_tool": "DMX 编址",
+        "project_records.operation": "查看"
+      },
+      "ambiguity_level": 0,
+      "needs_clarification": false,
+      "clarification_reasons": [],
+      "rationale": "项目、记录工具和查看操作都由用户明确指定。"
+    }
+  }
+]

@@ -1,0 +1,1997 @@
+{
+  "version": "1.0",
+  "phase": "P2-A",
+  "state_whitelist": [
+    "user_request"
+  ],
+  "questions": {
+    "route": {
+      "kind": "Choice",
+      "state": "user_request",
+      "options": [
+        {
+          "id": "limiter",
+          "description": "按功放与音箱参数计算限幅建议"
+        },
+        {
+          "id": "spl",
+          "description": "估算音箱最大声压级或指定距离声压"
+        },
+        {
+          "id": "cable",
+          "description": "按回路负载与距离选择线缆"
+        },
+        {
+          "id": "gain_structure",
+          "description": "根据输入灵敏度/增益级换算电平与目标峰值"
+        },
+        {
+          "id": "venue",
+          "description": "估算场地覆盖、讨论会议或PAG/NAG传声增益"
+        },
+        {
+          "id": "camera_fov",
+          "description": "估算摄像机视场或反算安装位置"
+        },
+        {
+          "id": "led_screen",
+          "description": "估算LED屏体尺寸与拼装"
+        },
+        {
+          "id": "dmx_address",
+          "description": "查询灯具通道资料或规划DMX地址/布局"
+        },
+        {
+          "id": "audio_wiring",
+          "description": "确定两个音频端口之间的接线"
+        },
+        {
+          "id": "project_wiring",
+          "description": "建立项目设备端口间的线路清单"
+        },
+        {
+          "id": "product_catalog",
+          "description": "按产品类别浏览、查询或比较型号资料"
+        },
+        {
+          "id": "troubleshoot",
+          "description": "根据故障现象排查设备/系统问题"
+        },
+        {
+          "id": "knowledge",
+          "description": "回答音视频或舞台灯光知识问题"
+        },
+        {
+          "id": "project_records",
+          "description": "查询或操作项目计算记录"
+        },
+        {
+          "id": "multiple",
+          "description": "用户明确要求两个或更多已登记工具分别执行任务"
+        },
+        {
+          "id": "unclear",
+          "description": "请求可合理解释为多个工具，但用户意图还不能确定"
+        },
+        {
+          "id": "other",
+          "description": "请求不属于任何已登记工具"
+        }
+      ],
+      "instructions": "对 user_request 选择最匹配的单一工具选项；若明确要求多个独立任务选 multiple；若多个工具解释均合理且意图未定选 unclear；不匹配任何工具选 other。Choice 取最高概率选项，不使用 0.5 阈值。"
+    },
+    "needs_clarification": {
+      "kind": "Noul",
+      "state": "user_request",
+      "return": "probability",
+      "question": "根据下列完整的字段要求与澄清规则，处理该请求前是否必须向用户追问？",
+      "positive_event": "缺少当前任务必需信息、工具或字段有多个合理解释、关键数值相互冲突，或条件接法缺少明确确认，因此不能按现有请求安全确定处理方式。",
+      "decision_context": {
+        "reasons": {
+          "missing_required_information": "请求需要当前模式的必填信息，但用户未提供且不能按规则使用默认值或唯一目录资料补齐。缺少可选字段不触发澄清。",
+          "ambiguous_tool": "多个工具路由均合理，用户意图未明确。",
+          "ambiguous_parameter": "参数的角色、单位、范围或选项不能唯一确定。",
+          "conflicting_values": "用户给出的值互相矛盾且规则无法消解。",
+          "missing_conditional_confirmation": "当前接法分支要求用户确认设备手册许可或其他条件，但尚未明确确认。"
+        },
+        "presence_policy": [
+          "只有用户明确表达、且角色和值或范围/选项均明确的字段才记为 true。",
+          "产品目录、默认值、计算派生量均不算用户明确提供。",
+          "用户说出的数值即使超出物理范围仍算已提供；范围检查和澄清另行标注。",
+          "数值范围已提供但范围不完整或有歧义时可要求澄清。",
+          "缺少可选字段不触发澄清；反向摄像机距离是输出，不是缺失输入。",
+          "不得要求模型进行没有规则依据的工程判断。",
+          "明确写出的数值（包括负 dBu）仍算用户已提供；正负号本身不改变显式性，也不自动判为无效。"
+        ],
+        "tool_requirements": {
+          "limiter": {
+            "fields": {
+              "amplifier_model": "功放型号",
+              "speaker_model": "音箱型号",
+              "speaker_rated_power_w": "音箱额定功率（W）",
+              "speaker_impedance_ohm": "音箱阻抗（Ω）",
+              "amplifier_rated_power_w": "功放额定功率（W）",
+              "speakers_per_channel": "每通道音箱数量",
+              "wiring_mode": "接线方式",
+              "amplifier_mode": "功放工作模式",
+              "input_sensitivity_v": "输入灵敏度（V）",
+              "hpf_hz": "高通滤波频率（Hz）"
+            },
+            "policy": {
+              "required": [
+                "speaker_rated_power_w",
+                "speaker_impedance_ohm",
+                "amplifier_rated_power_w"
+              ],
+              "optional": [
+                "amplifier_model",
+                "speaker_model",
+                "speakers_per_channel",
+                "wiring_mode",
+                "amplifier_mode",
+                "hpf_hz"
+              ],
+              "conditional": {
+                "hpf_hz": "只有用户要求设定限幅器 attack/release 时间时需要高通频率；不能把 HPF 误作限幅计算阈值。",
+                "input_sensitivity_v": "限幅电压阈值需要实际输入灵敏度；仅在明确型号的目录资料可唯一确定灵敏度且切换模式无歧义时才可补齐。若功放存在多个可选灵敏度档位，必须澄清，不得自行选档。"
+              },
+              "catalog": "目录型号只作查表补充，不能标为用户明确提供。",
+              "conditional_required": {
+                "input_sensitivity_v": "限幅计算需要实际输入灵敏度，或已知且可唯一确定实际灵敏度的具体型号目录资料。若型号存在多个可选灵敏度档位必须澄清；不得擅自选档。"
+              }
+            }
+          },
+          "spl": {
+            "fields": {
+              "speaker_model": "音箱型号",
+              "sensitivity_1w1m_db": "灵敏度（dB SPL @ 1 W/1 m）",
+              "rated_power_w": "额定功率（W）",
+              "listening_distance_m": "聆听距离（m）",
+              "speaker_count": "音箱数量",
+              "summation_mode": "声压叠加方式"
+            },
+            "policy": {
+              "required": [
+                "listening_distance_m"
+              ],
+              "optional": [
+                "speaker_model",
+                "sensitivity_1w1m_db",
+                "rated_power_w",
+                "speaker_count",
+                "summation_mode"
+              ],
+              "conditional": {
+                "rated_power_w": "最大声压级计算需要额定功率；明确型号可由产品目录补齐，目录补齐不算用户显式提供。"
+              },
+              "catalog": "目录型号只有唯一对应已核实型号规格时才补齐灵敏度与额定功率，不得标为用户显式提供。",
+              "conditional_required": {
+                "sensitivity_1w1m_db": "最大声压级计算必须有灵敏度，或由用户明确的型号在核实产品目录中唯一查得；目录查得不算用户显式输入。",
+                "rated_power_w": "最大声压级计算必须有额定功率，或由用户明确的型号在核实产品目录中唯一查得；目录查得不算用户显式输入。"
+              }
+            }
+          },
+          "cable": {
+            "fields": {
+              "circuit_type": "回路类型",
+              "total_rated_power_w": "总额定功率（W）",
+              "one_way_distance_m": "单程距离（m）",
+              "environment": "使用环境"
+            },
+            "policy": {
+              "required": [
+                "circuit_type",
+                "total_rated_power_w",
+                "one_way_distance_m"
+              ],
+              "optional": [],
+              "conditional": {
+                "environment": "仅 100 V 回路需要环境信息。"
+              }
+            }
+          },
+          "gain_structure": {
+            "fields": {
+              "amplifier_model": "功放型号",
+              "input_stage_type": "输入级类型",
+              "input_stage_value": "输入级数值",
+              "target_peak_dbfs": "目标峰值（dBFS）",
+              "amplifier_mode": "功放工作模式",
+              "load_impedance_ohm": "负载阻抗（Ω）"
+            },
+            "policy": {
+              "required": [
+                "input_stage_type",
+                "input_stage_value"
+              ],
+              "optional": [
+                "amplifier_model",
+                "target_peak_dbfs",
+                "amplifier_mode",
+                "load_impedance_ohm"
+              ],
+              "conditional": {
+                "amplifier_model": "电压增益路径需要型号、负载与模式；直接给出的 V/dBu 输入灵敏度不需要负载。",
+                "load_impedance_ohm": "电压增益路径需要负载；直接给出的 V/dBu 输入灵敏度不需要负载。"
+              },
+              "defaults": {
+                "target_peak_dbfs": "默认 -6 dBFS；默认值不算用户明确提供。"
+              },
+              "catalog": "目录型号只作查表补充，不能标为用户明确提供。"
+            }
+          },
+          "venue": {
+            "fields": {
+              "room_length_m": "房间长度（m）",
+              "room_width_m": "房间宽度（m）",
+              "room_height_m": "房间高度（m）",
+              "scene_type": "场景类型",
+              "target_grade": "目标等级",
+              "front_wall_layout": "前墙布局",
+              "first_row_distance_m": "首排距离（m）",
+              "last_row_distance_m": "末排距离（m）",
+              "listening_width_m": "听众区宽度（m）",
+              "table_shape": "桌型",
+              "table_diameter_m": "桌直径（m）",
+              "table_length_m": "桌长（m）",
+              "table_width_m": "桌宽（m）",
+              "participant_count": "参会人数",
+              "installation_condition": "安装条件",
+              "pag_speaker_mode": "PAG/NAG 音箱模式",
+              "ds_m": "发言人口至话筒距离 DS（m）",
+              "d0_m": "发言人口至最远听众距离 D0（m）",
+              "dn_m": "发言人口至最近听众距离 Dn（m）",
+              "d1_m": "话筒至最近的实际送声音箱的空间直线距离（单音箱模式使用同一只音箱）",
+              "d2_m": "同一最远听众至最近的实际送声音箱的空间直线距离（单音箱模式使用同一只音箱）",
+              "nom": "同时开放并送入扩声的话筒数量 NOM"
+            },
+            "policy": {
+              "required": [],
+              "optional": [
+                "scene_type",
+                "target_grade",
+                "front_wall_layout",
+                "first_row_distance_m",
+                "last_row_distance_m",
+                "listening_width_m",
+                "table_shape",
+                "table_diameter_m",
+                "table_length_m",
+                "table_width_m",
+                "participant_count",
+                "installation_condition",
+                "pag_speaker_mode",
+                "ds_m",
+                "d0_m",
+                "dn_m",
+                "d1_m",
+                "d2_m",
+                "nom"
+              ],
+              "conditional": {
+                "room_length_m": "report 几何估算需要房间长宽高；人数或 3D 空间描述不是尺寸。",
+                "room_width_m": "report 几何估算需要房间长宽高；人数或 3D 空间描述不是尺寸。",
+                "room_height_m": "report 几何估算需要房间长宽高；人数或 3D 空间描述不是尺寸。",
+                "target_grade": "report 需要目标等级，除非用户明确接受工具提供的默认等级。",
+                "front_wall_layout": "report 需要前墙音箱布局。",
+                "first_row_distance_m": "report 需要首排距离。",
+                "last_row_distance_m": "report 需要末排距离。",
+                "listening_width_m": "report 需要听众区宽度。",
+                "table_shape": "discussion 需要桌型以及与形状匹配的尺寸。",
+                "participant_count": "discussion 需要参会人数。",
+                "installation_condition": "discussion 需要安装条件。",
+                "pag_speaker_mode": "仅 PAG/NAG 请求需要该模式以及 DS、D0、Dn、D1、D2 和 NOM；discussion 使用固定 voiceLift，不表示用户选择 remote。",
+                "table_diameter_m": "discussion 圆桌需要直径。",
+                "table_length_m": "discussion 矩形桌需要长度。",
+                "table_width_m": "discussion 矩形桌需要宽度。"
+              },
+              "defaults": {
+                "discussion_mode": "discussion 固定 voiceLift。NOM 是同时开放并送入扩声的话筒数量，不是音箱数或参会人数。距离均为对应链路的空间直线距离并计高度差。"
+              },
+              "mode_requirements": {
+                "report": [
+                  "room_length_m",
+                  "room_width_m",
+                  "room_height_m",
+                  "target_grade",
+                  "front_wall_layout",
+                  "first_row_distance_m",
+                  "last_row_distance_m",
+                  "listening_width_m"
+                ],
+                "discussion": [
+                  "room_length_m",
+                  "room_width_m",
+                  "room_height_m",
+                  "table_shape",
+                  "participant_count",
+                  "installation_condition"
+                ],
+                "pag_nag": [
+                  "pag_speaker_mode",
+                  "ds_m",
+                  "d0_m",
+                  "dn_m",
+                  "d1_m",
+                  "d2_m",
+                  "nom"
+                ]
+              },
+              "mode_notes": {
+                "report": "需要房间长宽高、前墙布局、首末排距离、听众区宽度和目标等级；只有用户明确接受工具默认等级时才可采用默认值。",
+                "discussion": "需要房间长宽高、桌型及匹配尺寸、参会人数和安装条件。当前讨论模式固定 voiceLift，不得标为用户选择 remote。",
+                "pag_nag": "需要 PAG/NAG 模式以及 Ds、D0、Dn、D1、D2、NOM。D1/D2 分别取话筒端和同一最远听众端到最近且实际送出该话筒信号的音箱；多音箱模式两端可为不同音箱，单音箱模式使用同一音箱。所有距离为空间直线距离并计高度差；NOM 是同时开放并送入扩声的话筒数。 D1/D2 只考虑实际播放同一支话筒信号的音箱；Mix-Minus 等未送出该话筒信号的音箱必须排除。"
+              }
+            }
+          },
+          "camera_fov": {
+            "fields": {
+              "camera_model": "摄像机型号",
+              "scene_type": "场景类型",
+              "target_width_m": "目标宽度（m）",
+              "target_height_m": "目标高度（m）",
+              "target_bottom_height_m": "目标底边高度（m）",
+              "area_depth_m": "区域纵深（m）",
+              "subject_height_m": "人物高度（m）",
+              "hfov_deg": "水平视场角（°）",
+              "vfov_deg": "垂直视场角（°）",
+              "sensor_width_mm": "传感器宽度（mm）",
+              "sensor_height_mm": "传感器高度（mm）",
+              "focal_length_mm": "焦距（mm）",
+              "height_mode": "安装高度模式",
+              "camera_height_m": "摄像机高度（m）",
+              "margin_percent": "余量百分比",
+              "camera_target_distance_m": "正向校核时用户输入的摄像机至目标距离（m）；反算模式下为输出"
+            },
+            "policy": {
+              "required": [],
+              "optional": [
+                "camera_model",
+                "scene_type",
+                "target_width_m",
+                "target_height_m",
+                "target_bottom_height_m",
+                "area_depth_m",
+                "subject_height_m",
+                "hfov_deg",
+                "vfov_deg",
+                "sensor_width_mm",
+                "sensor_height_mm",
+                "focal_length_mm",
+                "height_mode",
+                "camera_height_m",
+                "margin_percent"
+              ],
+              "conditional": {
+                "camera_model": "若同一型号有多个镜头/视角档案，必须明确具体视角或变焦档；只给型号不足以选定视场数据。",
+                "target_width_m": "所有场景需要区域/目标宽度。",
+                "hfov_deg": "所有场景需要 HFOV，或使用已知且可查到的具体摄像机型号和明确视角档案。",
+                "target_height_m": "垂直平面场景需要目标高度。",
+                "target_bottom_height_m": "垂直平面场景需要目标底边高度。",
+                "area_depth_m": "地面区域场景需要纵深。",
+                "subject_height_m": "地面区域场景需要人物/物体最高点。",
+                "vfov_deg": "垂直平面和地面区域场景均需垂直覆盖数据；HFOV 单独只能做水平初估，不能声称已验证垂直覆盖。",
+                "height_mode": "需明确自动高度或固定高度；自动高度可由用户接受工具建议。",
+                "camera_height_m": "仅固定高度模式需要摄像机高度。",
+                "sensor_width_mm": "传感器物理尺寸可与焦距推导 FOV；1/2.8 英寸格式不是物理宽度。",
+                "sensor_height_mm": "垂直覆盖验证需要垂直视场角，或实际传感器尺寸和焦距。",
+                "focal_length_mm": "与实际传感器尺寸共同用于推导视场角；目录推导不算用户显式输入。",
+                "camera_target_distance_m": "仅反算模式中这是求解输出，不是缺失输入；若用户请求正向校核并明确提供距离，则记为已提供。"
+              },
+              "defaults": {
+                "margin_percent": "默认 10%，默认值不算用户显式提供。",
+                "height_mode": "未指定固定高度时可采用工具建议的 auto 高度；默认不算用户显式提供。明确固定高度模式时需要 camera_height_m。"
+              },
+              "catalog": "目录型号只作查表补充，不能标为用户明确提供。",
+              "mode_requirements": {
+                "horizontal_only": {
+                  "all_of": [
+                    "target_width_m"
+                  ],
+                  "one_of": [
+                    [
+                      "hfov_deg"
+                    ],
+                    [
+                      "sensor_width_mm",
+                      "focal_length_mm"
+                    ],
+                    [
+                      "camera_model"
+                    ]
+                  ]
+                },
+                "vertical_plane": {
+                  "all_of": [
+                    "target_width_m",
+                    "target_height_m",
+                    "target_bottom_height_m"
+                  ],
+                  "one_of": [
+                    [
+                      "hfov_deg",
+                      "vfov_deg"
+                    ],
+                    [
+                      "sensor_width_mm",
+                      "sensor_height_mm",
+                      "focal_length_mm"
+                    ],
+                    [
+                      "camera_model"
+                    ]
+                  ]
+                },
+                "ground_area": {
+                  "all_of": [
+                    "target_width_m",
+                    "area_depth_m",
+                    "subject_height_m"
+                  ],
+                  "one_of": [
+                    [
+                      "hfov_deg",
+                      "vfov_deg"
+                    ],
+                    [
+                      "sensor_width_mm",
+                      "sensor_height_mm",
+                      "focal_length_mm"
+                    ],
+                    [
+                      "camera_model"
+                    ]
+                  ]
+                }
+              },
+              "mode_notes": {
+                "horizontal_only": "只验证水平覆盖；不能宣称完成垂直覆盖校验。若目标型号/视角有多个配置，须确认具体视角档。",
+                "vertical_plane": "fixed 高度模式另需 camera_height_m；若以目录型号替代 FOV，必须能唯一匹配具体视角档并含水平和垂直数据。",
+                "ground_area": "fixed 高度模式另需 camera_height_m；若以目录型号替代 FOV，必须能唯一匹配具体视角档并含水平和垂直数据。"
+              }
+            }
+          },
+          "led_screen": {
+            "fields": {
+              "wall_width_m": "墙面宽度（m）",
+              "wall_height_m": "墙面高度（m）",
+              "top_clearance_m": "顶部余量（m）",
+              "bottom_clearance_m": "底部余量（m）",
+              "border_width_m": "边框宽度（m）",
+              "aspect_ratio": "画面比例",
+              "assembly_unit": "拼装单元",
+              "nearest_viewing_distance_m": "最近观看距离（m）",
+              "pixel_pitch": "像素间距"
+            },
+            "policy": {
+              "required": [
+                "wall_width_m",
+                "wall_height_m"
+              ],
+              "optional": [
+                "top_clearance_m",
+                "bottom_clearance_m",
+                "border_width_m",
+                "aspect_ratio",
+                "assembly_unit",
+                "nearest_viewing_distance_m",
+                "pixel_pitch"
+              ],
+              "conditional": {
+                "nearest_viewing_distance_m": "最近观看距离只需用于自动推荐点间距。"
+              },
+              "defaults": {
+                "top_clearance_m": "留空采用工具默认；默认不算用户显式提供。",
+                "bottom_clearance_m": "留空采用工具默认；默认不算用户显式提供。",
+                "border_width_m": "默认每边 0.05 m；默认不算用户显式提供。",
+                "aspect_ratio": "工具提供默认画面比例时，默认不算用户显式提供。",
+                "assembly_unit": "工具提供默认拼装单元时，默认不算用户显式提供。"
+              },
+              "catalog": "系统推荐或目录规格只作补充，不得标为用户显式提供。"
+            }
+          },
+          "dmx_address": {
+            "fields": {
+              "fixture_name": "灯具名称",
+              "fixture_model": "灯具型号",
+              "channels_per_fixture": "每灯通道数",
+              "fixture_count": "灯具数量",
+              "start_address": "起始地址",
+              "allocation_mode": "地址分配模式",
+              "target_universe": "目标 Universe",
+              "stage_width_m": "舞台宽度（m）",
+              "stage_depth_m": "舞台深度（m）",
+              "lighting_layout": "灯光布局",
+              "front_orientation": "正面朝向",
+              "truss_rows": "桁架排数",
+              "side_pairs": "侧灯对数",
+              "existing_address_plan": "现有地址方案"
+            },
+            "policy": {
+              "required": [],
+              "optional": [
+                "fixture_name",
+                "fixture_model",
+                "channels_per_fixture",
+                "fixture_count",
+                "start_address",
+                "allocation_mode",
+                "target_universe",
+                "stage_width_m",
+                "stage_depth_m",
+                "lighting_layout",
+                "front_orientation",
+                "truss_rows",
+                "side_pairs",
+                "existing_address_plan"
+              ],
+              "conditional": {
+                "channels_per_fixture": "channel_guide 需要明确通道数或能唯一匹配的型号和模式；型号若对应多个模式不能推断模式。",
+                "fixture_model": "若同一型号有多个通道模式，必须明确所需模式；只给型号不能代选。",
+                "fixture_count": "addressing 需要灯具数量。",
+                "start_address": "addressing 需要起始地址。",
+                "allocation_mode": "addressing 需要明确 manual 起始地址或 auto 分配方式；layout 也需明确要规划的模式。",
+                "target_universe": "仅 manual 地址规划需要目标 Universe。",
+                "existing_address_plan": "layout 需要已有有效地址方案。",
+                "stage_width_m": "layout 需要舞台宽度。",
+                "stage_depth_m": "layout 需要舞台纵深。",
+                "lighting_layout": "layout 需要灯光布局。",
+                "front_orientation": "layout 需要灯具正面朝向。",
+                "truss_rows": "桁架布局时需要排数；side_pairs 侧灯布局时需要对数。"
+              },
+              "catalog": "灯具型号可用于查目录，但不能单独确定多模式型号的通道模式，也不算显式提供通道数。",
+              "mode_requirements": {
+                "addressing": {
+                  "all_of": [
+                    "fixture_count",
+                    "allocation_mode"
+                  ],
+                  "one_of": [
+                    [
+                      "channels_per_fixture"
+                    ],
+                    [
+                      "fixture_model"
+                    ]
+                  ],
+                  "conditional": {
+                    "start_address": "manual 模式需要起始地址",
+                    "target_universe": "manual 模式需要目标 Universe"
+                  }
+                },
+                "layout": {
+                  "all_of": [
+                    "existing_address_plan",
+                    "stage_width_m",
+                    "stage_depth_m",
+                    "lighting_layout",
+                    "front_orientation"
+                  ],
+                  "conditional": {
+                    "truss_rows": "桁架布局需要桁架排数",
+                    "side_pairs": "侧灯布局需要侧灯对数"
+                  }
+                },
+                "channel_guide": {
+                  "all_of": [
+                    "fixture_model",
+                    "channels_per_fixture"
+                  ],
+                  "conditional": {
+                    "fixture_model": "具体型号对应多个通道模式时，channels_per_fixture 必须标识所选的实际模式；仅通道数不能代替型号资料，型号单独也不能代选模式。"
+                  }
+                }
+              }
+            }
+          },
+          "audio_wiring": {
+            "fields": {
+              "output_connector": "输出端接头",
+              "input_connector": "输入端接头",
+              "output_signal_type": "输出信号类型",
+              "input_signal_type": "输入信号类型",
+              "source_channel": "源声道",
+              "destination_channel": "目标声道",
+              "cold_end_permission": "设备手册允许冷端回路接法的确认"
+            },
+            "policy": {
+              "required": [
+                "output_connector",
+                "input_connector"
+              ],
+              "optional": [
+                "output_signal_type",
+                "input_signal_type",
+                "source_channel",
+                "destination_channel",
+                "cold_end_permission"
+              ],
+              "conditional": {
+                "output_signal_type": "只有接头与用户提供的端口用途/电平角色组合能唯一确定受支持连接时才可路由；接头外形不能证明平衡或 LINE。",
+                "input_signal_type": "只有接头与用户提供的端口用途/电平角色组合能唯一确定受支持连接时才可路由；接头外形不能证明平衡或 LINE。",
+                "source_channel": "双声道合并或单声道分送分支需要明确选择声道。",
+                "destination_channel": "单声道输出分送双输入分支需要明确选择目标声道。",
+                "cold_end_permission": "仅相关接法分支要求用户明确确认设备手册允许；接口形状不能证明信号平衡或 LINE。"
+              }
+            }
+          },
+          "project_wiring": {
+            "fields": {
+              "project_name": "项目名称",
+              "from_device": "源设备",
+              "from_port": "源端口",
+              "to_device": "目标设备",
+              "to_port": "目标端口",
+              "build_type": "制作方式",
+              "cable_type": "线材类型",
+              "cable_spec": "线材规格",
+              "from_connector": "源端接头",
+              "to_connector": "目标端接头",
+              "length_m": "线长（m）",
+              "line_count": "线路数量",
+              "status": "线路状态"
+            },
+            "policy": {
+              "required": [
+                "from_device",
+                "from_port",
+                "to_device",
+                "to_port"
+              ],
+              "optional": [
+                "project_name",
+                "build_type",
+                "cable_type",
+                "cable_spec",
+                "from_connector",
+                "to_connector",
+                "length_m",
+                "line_count",
+                "status"
+              ],
+              "defaults": {
+                "length_m": "未知线长可留待项目记录；缺少长度本身不强制澄清。"
+              }
+            }
+          },
+          "product_catalog": {
+            "fields": {
+              "product_category": "产品类别",
+              "model": "型号",
+              "comparison_models": "对比型号"
+            },
+            "policy": {
+              "required": [],
+              "optional": [
+                "model",
+                "comparison_models"
+              ],
+              "conditional": {
+                "model": "按类别浏览时可不提供型号；若只给具体型号，类别可从目录查得。比较型号须明确给出比较对象。"
+              },
+              "one_of": [
+                [
+                  "product_category"
+                ],
+                [
+                  "model"
+                ]
+              ]
+            }
+          },
+          "troubleshoot": {
+            "fields": {
+              "fault_type": "故障类型",
+              "observation": "观察到的现象"
+            },
+            "policy": {
+              "required": [
+                "fault_type"
+              ],
+              "optional": [
+                "observation"
+              ]
+            }
+          },
+          "knowledge": {
+            "fields": {
+              "topic": "知识主题"
+            },
+            "policy": {
+              "required": [
+                "topic"
+              ],
+              "optional": []
+            }
+          },
+          "project_records": {
+            "fields": {
+              "project_name": "项目名称",
+              "record_tool": "记录工具",
+              "operation": "记录操作"
+            },
+            "policy": {
+              "required": [
+                "project_name",
+                "operation"
+              ],
+              "optional": [
+                "record_tool"
+              ]
+            }
+          }
+        },
+        "catalog_context": {
+          "scope": "仅包含本冻结数据集请求中出现、且在当前批准源码目录中有记录的型号。此上下文只说明可查询的目录字段和候选档位，不包含公式计算结果或样例预期标签。不得据此把目录值标成用户明确输入。",
+          "sources": [
+            "data/equipment.js",
+            "data/amplifier-input-stages.js",
+            "data/cameras.js",
+            "data/stage-lighting.js"
+          ],
+          "categories": {
+            "amplifiers": {
+              "known_fields": [
+                "amplifier_rated_power_w",
+                "input_sensitivity_v",
+                "input_stage_type",
+                "input_stage_value"
+              ],
+              "models": {
+                "TC-2350B": {
+                  "input_stage": {
+                    "type": "inputSensitivity",
+                    "unit": "V",
+                    "options": [
+                      1,
+                      2
+                    ]
+                  }
+                },
+                "TC-22000": {
+                  "input_stage": {
+                    "type": "voltageGain",
+                    "unit": "dB",
+                    "options": [
+                      33,
+                      36,
+                      39,
+                      42
+                    ]
+                  }
+                },
+                "TC-4500B": {
+                  "input_stage": {
+                    "type": "inputSensitivity",
+                    "unit": "V",
+                    "options": [
+                      1,
+                      2
+                    ]
+                  }
+                },
+                "TC-23000": {
+                  "input_stage": {
+                    "type": "voltageGain",
+                    "unit": "dB",
+                    "options": [
+                      35,
+                      38,
+                      41,
+                      44
+                    ]
+                  }
+                },
+                "TC-X2200B": {
+                  "input_stage": {
+                    "type": "inputSensitivity",
+                    "unit": "V",
+                    "options": [
+                      1,
+                      2
+                    ],
+                    "source_default": 1
+                  }
+                },
+                "TC-2500": {
+                  "input_stage": {
+                    "type": "inputSensitivity",
+                    "unit": "V",
+                    "options": [
+                      1,
+                      2
+                    ]
+                  }
+                },
+                "TC-2500B": {
+                  "input_stage": {
+                    "type": "inputSensitivity",
+                    "unit": "V",
+                    "options": [
+                      1,
+                      2
+                    ]
+                  }
+                }
+              },
+              "rule": "功率资料需结合用户明确的放大器模式和负载阻抗；目录不能推断现场实际模式，也不能提供音箱阻抗。输入灵敏度/增益控制类型和候选档位按型号表区分。TC-X2200B 的 source_default=1 只有用户接受目录默认且上下文没有表示实际档位不明或相冲突时才可用；不得覆盖用户明确表示不清楚现场实际档位或给出冲突选项。其他多个候选档位不得自行选择。"
+            },
+            "speakers": {
+              "known_fields": [
+                "sensitivity_1w1m_db",
+                "rated_power_w",
+                "speaker_impedance_ohm"
+              ],
+              "models": [
+                "TS-803C",
+                "TS-715H"
+              ],
+              "rule": "上述型号在当前设备目录含灵敏度、额定功率和阻抗字段；唯一型号可补充目录数据，但不代表用户显式提供这些字段。"
+            },
+            "cameras": {
+              "known_fields": [
+                "camera_model",
+                "hfov_deg",
+                "vfov_deg",
+                "focal_length_mm"
+              ],
+              "models": {
+                "TS-0650JSM": {
+                  "views": [
+                    {
+                      "label": "教师特写",
+                      "options": [
+                        {
+                          "zoom": "wide",
+                          "hfov_deg": 71,
+                          "vfov_deg": 42.7
+                        },
+                        {
+                          "zoom": "tele",
+                          "hfov_deg": 8.2,
+                          "vfov_deg": 4.5
+                        }
+                      ]
+                    },
+                    {
+                      "label": "教师全景",
+                      "options": [
+                        {
+                          "zoom": "fixed",
+                          "hfov_deg": 48,
+                          "vfov_deg": null
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "TS-0663XP": {
+                  "views": [
+                    {
+                      "label": "主镜头",
+                      "hfov_deg": 82,
+                      "vfov_deg": 51
+                    }
+                  ]
+                },
+                "TS-0663JS": {
+                  "views": [
+                    {
+                      "label": "主镜头",
+                      "hfov_deg": 44,
+                      "vfov_deg": null
+                    }
+                  ]
+                }
+              },
+              "rule": "TS-0650JSM 需区分教师特写与教师全景；特写还需区分 wide/tele。其他型号只有目录明确给出的视场信息可用；null 表示批准目录未提供该轴数据，不得推算或假定。传感器标称英寸规格不等于物理传感器尺寸。"
+            },
+            "dmx_fixtures": {
+              "known_fields": [
+                "fixture_model",
+                "channels_per_fixture"
+              ],
+              "models": {
+                "TL-SL333": {
+                  "channel_modes": [
+                    3,
+                    6
+                  ]
+                }
+              },
+              "rule": "TL-SL333 有 3 通道和 6 通道模式；必须由用户明确选定实际模式。只给型号不能代选模式。"
+            }
+          }
+        }
+      }
+    },
+    "ambiguity": {
+      "kind": "Score",
+      "state": "user_request",
+      "scale": {
+        "0": "工具意图明确；即使缺少必填信息，也可需要补问，但不代表工具意图含糊。",
+        "1": "工具明确，至少一个参数值、单位、角色或条件存在可定位的歧义。",
+        "2": "工具路由本身有多个合理解释，或关键值存在冲突，必须先澄清。"
+      },
+      "question": "仅评价工具路由与用户表达的歧义程度；缺少已明确工具的必填参数可需要澄清，但不自动提高歧义分数。"
+    },
+    "route_membership": {
+      "limiter": {
+        "kind": "Noul",
+        "state": "user_request",
+        "return": "probability",
+        "question": "用户是否明确请求按功放与音箱参数计算限幅建议？",
+        "description": "按功放与音箱参数计算限幅建议",
+        "positive_event": "请求明确要求按功放与音箱参数计算限幅建议，而非仅提及相关信息或把它作为背景。"
+      },
+      "spl": {
+        "kind": "Noul",
+        "state": "user_request",
+        "return": "probability",
+        "question": "用户是否明确请求估算音箱最大声压级或指定距离声压？",
+        "description": "估算音箱最大声压级或指定距离声压",
+        "positive_event": "请求明确要求估算音箱最大声压级或指定距离声压，而非仅提及相关信息或把它作为背景。"
+      },
+      "cable": {
+        "kind": "Noul",
+        "state": "user_request",
+        "return": "probability",
+        "question": "用户是否明确请求按回路负载与距离选择线缆？",
+        "description": "按回路负载与距离选择线缆",
+        "positive_event": "请求明确要求按回路负载与距离选择线缆，而非仅提及相关信息或把它作为背景。"
+      },
+      "gain_structure": {
+        "kind": "Noul",
+        "state": "user_request",
+        "return": "probability",
+        "question": "用户是否明确请求根据输入灵敏度/增益级换算电平与目标峰值？",
+        "description": "根据输入灵敏度/增益级换算电平与目标峰值",
+        "positive_event": "请求明确要求根据输入灵敏度/增益级换算电平与目标峰值，而非仅提及相关信息或把它作为背景。"
+      },
+      "venue": {
+        "kind": "Noul",
+        "state": "user_request",
+        "return": "probability",
+        "question": "用户是否明确请求估算场地覆盖、讨论会议或PAG/NAG传声增益？",
+        "description": "估算场地覆盖、讨论会议或PAG/NAG传声增益",
+        "positive_event": "请求明确要求估算场地覆盖、讨论会议或PAG/NAG传声增益，而非仅提及相关信息或把它作为背景。"
+      },
+      "camera_fov": {
+        "kind": "Noul",
+        "state": "user_request",
+        "return": "probability",
+        "question": "用户是否明确请求估算摄像机视场或反算安装位置？",
+        "description": "估算摄像机视场或反算安装位置",
+        "positive_event": "请求明确要求估算摄像机视场或反算安装位置，而非仅提及相关信息或把它作为背景。"
+      },
+      "led_screen": {
+        "kind": "Noul",
+        "state": "user_request",
+        "return": "probability",
+        "question": "用户是否明确请求估算LED屏体尺寸与拼装？",
+        "description": "估算LED屏体尺寸与拼装",
+        "positive_event": "请求明确要求估算LED屏体尺寸与拼装，而非仅提及相关信息或把它作为背景。"
+      },
+      "dmx_address": {
+        "kind": "Noul",
+        "state": "user_request",
+        "return": "probability",
+        "question": "用户是否明确请求查询灯具通道资料或规划DMX地址/布局？",
+        "description": "查询灯具通道资料或规划DMX地址/布局",
+        "positive_event": "请求明确要求查询灯具通道资料或规划DMX地址/布局，而非仅提及相关信息或把它作为背景。"
+      },
+      "audio_wiring": {
+        "kind": "Noul",
+        "state": "user_request",
+        "return": "probability",
+        "question": "用户是否明确请求确定两个音频端口之间的接线？",
+        "description": "确定两个音频端口之间的接线",
+        "positive_event": "请求明确要求确定两个音频端口之间的接线，而非仅提及相关信息或把它作为背景。"
+      },
+      "project_wiring": {
+        "kind": "Noul",
+        "state": "user_request",
+        "return": "probability",
+        "question": "用户是否明确请求建立项目设备端口间的线路清单？",
+        "description": "建立项目设备端口间的线路清单",
+        "positive_event": "请求明确要求建立项目设备端口间的线路清单，而非仅提及相关信息或把它作为背景。"
+      },
+      "product_catalog": {
+        "kind": "Noul",
+        "state": "user_request",
+        "return": "probability",
+        "question": "用户是否明确请求按产品类别浏览、查询或比较型号资料？",
+        "description": "按产品类别浏览、查询或比较型号资料",
+        "positive_event": "请求明确要求按产品类别浏览、查询或比较型号资料，而非仅提及相关信息或把它作为背景。"
+      },
+      "troubleshoot": {
+        "kind": "Noul",
+        "state": "user_request",
+        "return": "probability",
+        "question": "用户是否明确请求根据故障现象排查设备/系统问题？",
+        "description": "根据故障现象排查设备/系统问题",
+        "positive_event": "请求明确要求根据故障现象排查设备/系统问题，而非仅提及相关信息或把它作为背景。"
+      },
+      "knowledge": {
+        "kind": "Noul",
+        "state": "user_request",
+        "return": "probability",
+        "question": "用户是否明确请求回答音视频或舞台灯光知识问题？",
+        "description": "回答音视频或舞台灯光知识问题",
+        "positive_event": "请求明确要求回答音视频或舞台灯光知识问题，而非仅提及相关信息或把它作为背景。"
+      },
+      "project_records": {
+        "kind": "Noul",
+        "state": "user_request",
+        "return": "probability",
+        "question": "用户是否明确请求查询或操作项目计算记录？",
+        "description": "查询或操作项目计算记录",
+        "positive_event": "请求明确要求查询或操作项目计算记录，而非仅提及相关信息或把它作为背景。"
+      }
+    },
+    "parameter_presence": {
+      "kind": "Noul",
+      "state": "user_request",
+      "description": "对登记字段逐一判断：仅用户明确表达且角色和值/范围/选项明确时为 true；目录、默认、派生值不得算显式输入。",
+      "fields": {
+        "limiter": [
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "amplifier_model",
+            "question": "用户是否在本次请求中明确提供了“功放型号”？",
+            "definition": "功放型号",
+            "positive_event": "用户原话明确给出功放型号的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "speaker_model",
+            "question": "用户是否在本次请求中明确提供了“音箱型号”？",
+            "definition": "音箱型号",
+            "positive_event": "用户原话明确给出音箱型号的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "speaker_rated_power_w",
+            "question": "用户是否在本次请求中明确提供了“音箱额定功率（W）”？",
+            "definition": "音箱额定功率（W）",
+            "positive_event": "用户原话明确给出音箱额定功率（W）的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "speaker_impedance_ohm",
+            "question": "用户是否在本次请求中明确提供了“音箱阻抗（Ω）”？",
+            "definition": "音箱阻抗（Ω）",
+            "positive_event": "用户原话明确给出音箱阻抗（Ω）的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "amplifier_rated_power_w",
+            "question": "用户是否在本次请求中明确提供了“功放额定功率（W）”？",
+            "definition": "功放额定功率（W）",
+            "positive_event": "用户原话明确给出功放额定功率（W）的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "speakers_per_channel",
+            "question": "用户是否在本次请求中明确提供了“每通道音箱数量”？",
+            "definition": "每通道音箱数量",
+            "positive_event": "用户原话明确给出每通道音箱数量的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "wiring_mode",
+            "question": "用户是否在本次请求中明确提供了“接线方式”？",
+            "definition": "接线方式",
+            "positive_event": "用户原话明确给出接线方式的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "amplifier_mode",
+            "question": "用户是否在本次请求中明确提供了“功放工作模式”？",
+            "definition": "功放工作模式",
+            "positive_event": "用户原话明确给出功放工作模式的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "input_sensitivity_v",
+            "question": "用户是否在本次请求中明确提供了“输入灵敏度（V）”？",
+            "definition": "输入灵敏度（V）；条件规则：限幅电压阈值需要实际输入灵敏度；仅在明确型号的目录资料可唯一确定灵敏度且切换模式无歧义时才可补齐。若功放存在多个可选灵敏度档位，必须澄清，不得自行选档。；条件必需规则：限幅计算需要实际输入灵敏度，或已知且可唯一确定实际灵敏度的具体型号目录资料。若型号存在多个可选灵敏度档位必须澄清；不得擅自选档。",
+            "positive_event": "用户原话明确给出输入灵敏度（V）的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "hpf_hz",
+            "question": "用户是否在本次请求中明确提供了“高通滤波频率（Hz）”？",
+            "definition": "高通滤波频率（Hz）；条件规则：只有用户要求设定限幅器 attack/release 时间时需要高通频率；不能把 HPF 误作限幅计算阈值。",
+            "positive_event": "用户原话明确给出高通滤波频率（Hz）的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          }
+        ],
+        "spl": [
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "speaker_model",
+            "question": "用户是否在本次请求中明确提供了“音箱型号”？",
+            "definition": "音箱型号",
+            "positive_event": "用户原话明确给出音箱型号的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "sensitivity_1w1m_db",
+            "question": "用户是否在本次请求中明确提供了“灵敏度（dB SPL @ 1 W/1 m）”？",
+            "definition": "灵敏度（dB SPL @ 1 W/1 m）；条件必需规则：最大声压级计算必须有灵敏度，或由用户明确的型号在核实产品目录中唯一查得；目录查得不算用户显式输入。",
+            "positive_event": "用户原话明确给出灵敏度（dB SPL @ 1 W/1 m）的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "rated_power_w",
+            "question": "用户是否在本次请求中明确提供了“额定功率（W）”？",
+            "definition": "额定功率（W）；条件规则：最大声压级计算需要额定功率；明确型号可由产品目录补齐，目录补齐不算用户显式提供。；条件必需规则：最大声压级计算必须有额定功率，或由用户明确的型号在核实产品目录中唯一查得；目录查得不算用户显式输入。",
+            "positive_event": "用户原话明确给出额定功率（W）的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "listening_distance_m",
+            "question": "用户是否在本次请求中明确提供了“聆听距离（m）”？",
+            "definition": "聆听距离（m）",
+            "positive_event": "用户原话明确给出聆听距离（m）的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "speaker_count",
+            "question": "用户是否在本次请求中明确提供了“音箱数量”？",
+            "definition": "音箱数量",
+            "positive_event": "用户原话明确给出音箱数量的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "summation_mode",
+            "question": "用户是否在本次请求中明确提供了“声压叠加方式”？",
+            "definition": "声压叠加方式",
+            "positive_event": "用户原话明确给出声压叠加方式的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          }
+        ],
+        "cable": [
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "circuit_type",
+            "question": "用户是否在本次请求中明确提供了“回路类型”？",
+            "definition": "回路类型",
+            "positive_event": "用户原话明确给出回路类型的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "total_rated_power_w",
+            "question": "用户是否在本次请求中明确提供了“总额定功率（W）”？",
+            "definition": "总额定功率（W）",
+            "positive_event": "用户原话明确给出总额定功率（W）的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "one_way_distance_m",
+            "question": "用户是否在本次请求中明确提供了“单程距离（m）”？",
+            "definition": "单程距离（m）",
+            "positive_event": "用户原话明确给出单程距离（m）的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "environment",
+            "question": "用户是否在本次请求中明确提供了“使用环境”？",
+            "definition": "使用环境；条件规则：仅 100 V 回路需要环境信息。",
+            "positive_event": "用户原话明确给出使用环境的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          }
+        ],
+        "gain_structure": [
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "amplifier_model",
+            "question": "用户是否在本次请求中明确提供了“功放型号”？",
+            "definition": "功放型号；条件规则：电压增益路径需要型号、负载与模式；直接给出的 V/dBu 输入灵敏度不需要负载。",
+            "positive_event": "用户原话明确给出功放型号的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "input_stage_type",
+            "question": "用户是否在本次请求中明确提供了“输入级类型”？",
+            "definition": "输入级类型",
+            "positive_event": "用户原话明确给出输入级类型的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "input_stage_value",
+            "question": "用户是否在本次请求中明确提供了“输入级数值”？",
+            "definition": "输入级数值",
+            "positive_event": "用户原话明确给出输入级数值的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "target_peak_dbfs",
+            "question": "用户是否在本次请求中明确提供了“目标峰值（dBFS）”？",
+            "definition": "目标峰值（dBFS）",
+            "positive_event": "用户原话明确给出目标峰值（dBFS）的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "amplifier_mode",
+            "question": "用户是否在本次请求中明确提供了“功放工作模式”？",
+            "definition": "功放工作模式",
+            "positive_event": "用户原话明确给出功放工作模式的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "load_impedance_ohm",
+            "question": "用户是否在本次请求中明确提供了“负载阻抗（Ω）”？",
+            "definition": "负载阻抗（Ω）；条件规则：电压增益路径需要负载；直接给出的 V/dBu 输入灵敏度不需要负载。",
+            "positive_event": "用户原话明确给出负载阻抗（Ω）的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          }
+        ],
+        "venue": [
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "room_length_m",
+            "question": "用户是否在本次请求中明确提供了“房间长度（m）”？",
+            "definition": "房间长度（m）；条件规则：report 几何估算需要房间长宽高；人数或 3D 空间描述不是尺寸。",
+            "positive_event": "用户原话明确给出房间长度（m）的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "room_width_m",
+            "question": "用户是否在本次请求中明确提供了“房间宽度（m）”？",
+            "definition": "房间宽度（m）；条件规则：report 几何估算需要房间长宽高；人数或 3D 空间描述不是尺寸。",
+            "positive_event": "用户原话明确给出房间宽度（m）的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "room_height_m",
+            "question": "用户是否在本次请求中明确提供了“房间高度（m）”？",
+            "definition": "房间高度（m）；条件规则：report 几何估算需要房间长宽高；人数或 3D 空间描述不是尺寸。",
+            "positive_event": "用户原话明确给出房间高度（m）的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "scene_type",
+            "question": "用户是否在本次请求中明确提供了“场景类型”？",
+            "definition": "场景类型",
+            "positive_event": "用户原话明确给出场景类型的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "target_grade",
+            "question": "用户是否在本次请求中明确提供了“目标等级”？",
+            "definition": "目标等级；条件规则：report 需要目标等级，除非用户明确接受工具提供的默认等级。",
+            "positive_event": "用户原话明确给出目标等级的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "front_wall_layout",
+            "question": "用户是否在本次请求中明确提供了“前墙布局”？",
+            "definition": "前墙布局；条件规则：report 需要前墙音箱布局。",
+            "positive_event": "用户原话明确给出前墙布局的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "first_row_distance_m",
+            "question": "用户是否在本次请求中明确提供了“首排距离（m）”？",
+            "definition": "首排距离（m）；条件规则：report 需要首排距离。",
+            "positive_event": "用户原话明确给出首排距离（m）的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "last_row_distance_m",
+            "question": "用户是否在本次请求中明确提供了“末排距离（m）”？",
+            "definition": "末排距离（m）；条件规则：report 需要末排距离。",
+            "positive_event": "用户原话明确给出末排距离（m）的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "listening_width_m",
+            "question": "用户是否在本次请求中明确提供了“听众区宽度（m）”？",
+            "definition": "听众区宽度（m）；条件规则：report 需要听众区宽度。",
+            "positive_event": "用户原话明确给出听众区宽度（m）的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "table_shape",
+            "question": "用户是否在本次请求中明确提供了“桌型”？",
+            "definition": "桌型；条件规则：discussion 需要桌型以及与形状匹配的尺寸。",
+            "positive_event": "用户原话明确给出桌型的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "table_diameter_m",
+            "question": "用户是否在本次请求中明确提供了“桌直径（m）”？",
+            "definition": "桌直径（m）；条件规则：discussion 圆桌需要直径。",
+            "positive_event": "用户原话明确给出桌直径（m）的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "table_length_m",
+            "question": "用户是否在本次请求中明确提供了“桌长（m）”？",
+            "definition": "桌长（m）；条件规则：discussion 矩形桌需要长度。",
+            "positive_event": "用户原话明确给出桌长（m）的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "table_width_m",
+            "question": "用户是否在本次请求中明确提供了“桌宽（m）”？",
+            "definition": "桌宽（m）；条件规则：discussion 矩形桌需要宽度。",
+            "positive_event": "用户原话明确给出桌宽（m）的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "participant_count",
+            "question": "用户是否在本次请求中明确提供了“参会人数”？",
+            "definition": "参会人数；条件规则：discussion 需要参会人数。",
+            "positive_event": "用户原话明确给出参会人数的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "installation_condition",
+            "question": "用户是否在本次请求中明确提供了“安装条件”？",
+            "definition": "安装条件；条件规则：discussion 需要安装条件。",
+            "positive_event": "用户原话明确给出安装条件的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "pag_speaker_mode",
+            "question": "用户是否在本次请求中明确提供了“PAG/NAG 音箱模式”？",
+            "definition": "PAG/NAG 音箱模式；条件规则：仅 PAG/NAG 请求需要该模式以及 DS、D0、Dn、D1、D2 和 NOM；discussion 使用固定 voiceLift，不表示用户选择 remote。",
+            "positive_event": "用户原话明确给出PAG/NAG 音箱模式的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "ds_m",
+            "question": "用户是否在本次请求中明确提供了“发言人口至话筒距离 DS（m）”？",
+            "definition": "发言人口至话筒距离 DS（m）",
+            "positive_event": "用户原话明确给出发言人口至话筒距离 DS（m）的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "d0_m",
+            "question": "用户是否在本次请求中明确提供了“发言人口至最远听众距离 D0（m）”？",
+            "definition": "发言人口至最远听众距离 D0（m）",
+            "positive_event": "用户原话明确给出发言人口至最远听众距离 D0（m）的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "dn_m",
+            "question": "用户是否在本次请求中明确提供了“发言人口至最近听众距离 Dn（m）”？",
+            "definition": "发言人口至最近听众距离 Dn（m）",
+            "positive_event": "用户原话明确给出发言人口至最近听众距离 Dn（m）的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "d1_m",
+            "question": "用户是否在本次请求中明确提供了“话筒至最近的实际送声音箱的空间直线距离（单音箱模式使用同一只音箱）”？",
+            "definition": "话筒至最近的实际送声音箱的空间直线距离（单音箱模式使用同一只音箱）；只考虑实际播放同一支话筒信号的音箱，排除 Mix-Minus 等未送出该话筒信号的音箱。",
+            "positive_event": "用户原话明确给出话筒至最近的实际送声音箱的空间直线距离（单音箱模式使用同一只音箱）的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "d2_m",
+            "question": "用户是否在本次请求中明确提供了“同一最远听众至最近的实际送声音箱的空间直线距离（单音箱模式使用同一只音箱）”？",
+            "definition": "同一最远听众至最近的实际送声音箱的空间直线距离（单音箱模式使用同一只音箱）；只考虑实际播放同一支话筒信号的音箱，排除 Mix-Minus 等未送出该话筒信号的音箱。",
+            "positive_event": "用户原话明确给出同一最远听众至最近的实际送声音箱的空间直线距离（单音箱模式使用同一只音箱）的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "nom",
+            "question": "用户是否在本次请求中明确提供了“同时开放并送入扩声的话筒数量 NOM”？",
+            "definition": "同时开放并送入扩声的话筒数量 NOM",
+            "positive_event": "用户原话明确给出同时开放并送入扩声的话筒数量 NOM的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          }
+        ],
+        "camera_fov": [
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "camera_model",
+            "question": "用户是否在本次请求中明确提供了“摄像机型号”？",
+            "definition": "摄像机型号；条件规则：若同一型号有多个镜头/视角档案，必须明确具体视角或变焦档；只给型号不足以选定视场数据。",
+            "positive_event": "用户原话明确给出摄像机型号的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "scene_type",
+            "question": "用户是否在本次请求中明确提供了“场景类型”？",
+            "definition": "场景类型",
+            "positive_event": "用户原话明确给出场景类型的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "target_width_m",
+            "question": "用户是否在本次请求中明确提供了“目标宽度（m）”？",
+            "definition": "目标宽度（m）；条件规则：所有场景需要区域/目标宽度。",
+            "positive_event": "用户原话明确给出目标宽度（m）的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "target_height_m",
+            "question": "用户是否在本次请求中明确提供了“目标高度（m）”？",
+            "definition": "目标高度（m）；条件规则：垂直平面场景需要目标高度。",
+            "positive_event": "用户原话明确给出目标高度（m）的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "target_bottom_height_m",
+            "question": "用户是否在本次请求中明确提供了“目标底边高度（m）”？",
+            "definition": "目标底边高度（m）；条件规则：垂直平面场景需要目标底边高度。",
+            "positive_event": "用户原话明确给出目标底边高度（m）的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "area_depth_m",
+            "question": "用户是否在本次请求中明确提供了“区域纵深（m）”？",
+            "definition": "区域纵深（m）；条件规则：地面区域场景需要纵深。",
+            "positive_event": "用户原话明确给出区域纵深（m）的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "subject_height_m",
+            "question": "用户是否在本次请求中明确提供了“人物高度（m）”？",
+            "definition": "人物高度（m）；条件规则：地面区域场景需要人物/物体最高点。",
+            "positive_event": "用户原话明确给出人物高度（m）的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "hfov_deg",
+            "question": "用户是否在本次请求中明确提供了“水平视场角（°）”？",
+            "definition": "水平视场角（°）；条件规则：所有场景需要 HFOV，或使用已知且可查到的具体摄像机型号和明确视角档案。",
+            "positive_event": "用户原话明确给出水平视场角（°）的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "vfov_deg",
+            "question": "用户是否在本次请求中明确提供了“垂直视场角（°）”？",
+            "definition": "垂直视场角（°）；条件规则：垂直平面和地面区域场景均需垂直覆盖数据；HFOV 单独只能做水平初估，不能声称已验证垂直覆盖。",
+            "positive_event": "用户原话明确给出垂直视场角（°）的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "sensor_width_mm",
+            "question": "用户是否在本次请求中明确提供了“传感器宽度（mm）”？",
+            "definition": "传感器宽度（mm）；条件规则：传感器物理尺寸可与焦距推导 FOV；1/2.8 英寸格式不是物理宽度。",
+            "positive_event": "用户原话明确给出传感器宽度（mm）的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "sensor_height_mm",
+            "question": "用户是否在本次请求中明确提供了“传感器高度（mm）”？",
+            "definition": "传感器高度（mm）；条件规则：垂直覆盖验证需要垂直视场角，或实际传感器尺寸和焦距。",
+            "positive_event": "用户原话明确给出传感器高度（mm）的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "focal_length_mm",
+            "question": "用户是否在本次请求中明确提供了“焦距（mm）”？",
+            "definition": "焦距（mm）；条件规则：与实际传感器尺寸共同用于推导视场角；目录推导不算用户显式输入。",
+            "positive_event": "用户原话明确给出焦距（mm）的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "height_mode",
+            "question": "用户是否在本次请求中明确提供了“安装高度模式”？",
+            "definition": "安装高度模式；条件规则：需明确自动高度或固定高度；自动高度可由用户接受工具建议。",
+            "positive_event": "用户原话明确给出安装高度模式的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "camera_height_m",
+            "question": "用户是否在本次请求中明确提供了“摄像机高度（m）”？",
+            "definition": "摄像机高度（m）；条件规则：仅固定高度模式需要摄像机高度。",
+            "positive_event": "用户原话明确给出摄像机高度（m）的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "margin_percent",
+            "question": "用户是否在本次请求中明确提供了“余量百分比”？",
+            "definition": "余量百分比",
+            "positive_event": "用户原话明确给出余量百分比的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "camera_target_distance_m",
+            "question": "用户是否在本次请求中明确提供了“正向校核时用户输入的摄像机至目标距离（m）；反算模式下为输出”？",
+            "definition": "正向校核时用户输入的摄像机至目标距离（m）；反算模式下为输出；条件规则：仅反算模式中这是求解输出，不是缺失输入；若用户请求正向校核并明确提供距离，则记为已提供。",
+            "positive_event": "用户原话明确给出正向校核时用户输入的摄像机至目标距离（m）；反算模式下为输出的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          }
+        ],
+        "led_screen": [
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "wall_width_m",
+            "question": "用户是否在本次请求中明确提供了“墙面宽度（m）”？",
+            "definition": "墙面宽度（m）",
+            "positive_event": "用户原话明确给出墙面宽度（m）的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "wall_height_m",
+            "question": "用户是否在本次请求中明确提供了“墙面高度（m）”？",
+            "definition": "墙面高度（m）",
+            "positive_event": "用户原话明确给出墙面高度（m）的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "top_clearance_m",
+            "question": "用户是否在本次请求中明确提供了“顶部余量（m）”？",
+            "definition": "顶部余量（m）",
+            "positive_event": "用户原话明确给出顶部余量（m）的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "bottom_clearance_m",
+            "question": "用户是否在本次请求中明确提供了“底部余量（m）”？",
+            "definition": "底部余量（m）",
+            "positive_event": "用户原话明确给出底部余量（m）的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "border_width_m",
+            "question": "用户是否在本次请求中明确提供了“边框宽度（m）”？",
+            "definition": "边框宽度（m）",
+            "positive_event": "用户原话明确给出边框宽度（m）的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "aspect_ratio",
+            "question": "用户是否在本次请求中明确提供了“画面比例”？",
+            "definition": "画面比例",
+            "positive_event": "用户原话明确给出画面比例的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "assembly_unit",
+            "question": "用户是否在本次请求中明确提供了“拼装单元”？",
+            "definition": "拼装单元",
+            "positive_event": "用户原话明确给出拼装单元的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "nearest_viewing_distance_m",
+            "question": "用户是否在本次请求中明确提供了“最近观看距离（m）”？",
+            "definition": "最近观看距离（m）；条件规则：最近观看距离只需用于自动推荐点间距。",
+            "positive_event": "用户原话明确给出最近观看距离（m）的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "pixel_pitch",
+            "question": "用户是否在本次请求中明确提供了“像素间距”？",
+            "definition": "像素间距",
+            "positive_event": "用户原话明确给出像素间距的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          }
+        ],
+        "dmx_address": [
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "fixture_name",
+            "question": "用户是否在本次请求中明确提供了“灯具名称”？",
+            "definition": "灯具名称",
+            "positive_event": "用户原话明确给出灯具名称的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "fixture_model",
+            "question": "用户是否在本次请求中明确提供了“灯具型号”？",
+            "definition": "灯具型号；条件规则：若同一型号有多个通道模式，必须明确所需模式；只给型号不能代选。",
+            "positive_event": "用户原话明确给出灯具型号的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "channels_per_fixture",
+            "question": "用户是否在本次请求中明确提供了“每灯通道数”？",
+            "definition": "每灯通道数；条件规则：channel_guide 需要明确通道数或能唯一匹配的型号和模式；型号若对应多个模式不能推断模式。",
+            "positive_event": "用户原话明确给出每灯通道数的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "fixture_count",
+            "question": "用户是否在本次请求中明确提供了“灯具数量”？",
+            "definition": "灯具数量；条件规则：addressing 需要灯具数量。",
+            "positive_event": "用户原话明确给出灯具数量的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "start_address",
+            "question": "用户是否在本次请求中明确提供了“起始地址”？",
+            "definition": "起始地址；条件规则：addressing 需要起始地址。",
+            "positive_event": "用户原话明确给出起始地址的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "allocation_mode",
+            "question": "用户是否在本次请求中明确提供了“地址分配模式”？",
+            "definition": "地址分配模式；条件规则：addressing 需要明确 manual 起始地址或 auto 分配方式；layout 也需明确要规划的模式。",
+            "positive_event": "用户原话明确给出地址分配模式的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "target_universe",
+            "question": "用户是否在本次请求中明确提供了“目标 Universe”？",
+            "definition": "目标 Universe；条件规则：仅 manual 地址规划需要目标 Universe。",
+            "positive_event": "用户原话明确给出目标 Universe的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "stage_width_m",
+            "question": "用户是否在本次请求中明确提供了“舞台宽度（m）”？",
+            "definition": "舞台宽度（m）；条件规则：layout 需要舞台宽度。",
+            "positive_event": "用户原话明确给出舞台宽度（m）的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "stage_depth_m",
+            "question": "用户是否在本次请求中明确提供了“舞台深度（m）”？",
+            "definition": "舞台深度（m）；条件规则：layout 需要舞台纵深。",
+            "positive_event": "用户原话明确给出舞台深度（m）的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "lighting_layout",
+            "question": "用户是否在本次请求中明确提供了“灯光布局”？",
+            "definition": "灯光布局；条件规则：layout 需要灯光布局。",
+            "positive_event": "用户原话明确给出灯光布局的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "front_orientation",
+            "question": "用户是否在本次请求中明确提供了“正面朝向”？",
+            "definition": "正面朝向；条件规则：layout 需要灯具正面朝向。",
+            "positive_event": "用户原话明确给出正面朝向的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "truss_rows",
+            "question": "用户是否在本次请求中明确提供了“桁架排数”？",
+            "definition": "桁架排数；条件规则：桁架布局时需要排数；side_pairs 侧灯布局时需要对数。",
+            "positive_event": "用户原话明确给出桁架排数的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "side_pairs",
+            "question": "用户是否在本次请求中明确提供了“侧灯对数”？",
+            "definition": "侧灯对数",
+            "positive_event": "用户原话明确给出侧灯对数的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "existing_address_plan",
+            "question": "用户是否在本次请求中明确提供了“现有地址方案”？",
+            "definition": "现有地址方案；条件规则：layout 需要已有有效地址方案。",
+            "positive_event": "用户原话明确给出现有地址方案的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          }
+        ],
+        "audio_wiring": [
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "output_connector",
+            "question": "用户是否在本次请求中明确提供了“输出端接头”？",
+            "definition": "输出端接头",
+            "positive_event": "用户原话明确给出输出端接头的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "input_connector",
+            "question": "用户是否在本次请求中明确提供了“输入端接头”？",
+            "definition": "输入端接头",
+            "positive_event": "用户原话明确给出输入端接头的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "output_signal_type",
+            "question": "用户是否在本次请求中明确提供了“输出信号类型”？",
+            "definition": "输出信号类型；条件规则：只有接头与用户提供的端口用途/电平角色组合能唯一确定受支持连接时才可路由；接头外形不能证明平衡或 LINE。",
+            "positive_event": "用户原话明确给出输出信号类型的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "input_signal_type",
+            "question": "用户是否在本次请求中明确提供了“输入信号类型”？",
+            "definition": "输入信号类型；条件规则：只有接头与用户提供的端口用途/电平角色组合能唯一确定受支持连接时才可路由；接头外形不能证明平衡或 LINE。",
+            "positive_event": "用户原话明确给出输入信号类型的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "source_channel",
+            "question": "用户是否在本次请求中明确提供了“源声道”？",
+            "definition": "源声道；条件规则：双声道合并或单声道分送分支需要明确选择声道。",
+            "positive_event": "用户原话明确给出源声道的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "destination_channel",
+            "question": "用户是否在本次请求中明确提供了“目标声道”？",
+            "definition": "目标声道；条件规则：单声道输出分送双输入分支需要明确选择目标声道。",
+            "positive_event": "用户原话明确给出目标声道的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "cold_end_permission",
+            "question": "用户是否在本次请求中明确提供了“设备手册允许冷端回路接法的确认”？",
+            "definition": "设备手册允许冷端回路接法的确认；条件规则：仅相关接法分支要求用户明确确认设备手册允许；接口形状不能证明信号平衡或 LINE。",
+            "positive_event": "用户原话明确给出设备手册允许冷端回路接法的确认的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          }
+        ],
+        "project_wiring": [
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "project_name",
+            "question": "用户是否在本次请求中明确提供了“项目名称”？",
+            "definition": "项目名称",
+            "positive_event": "用户原话明确给出项目名称的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "from_device",
+            "question": "用户是否在本次请求中明确提供了“源设备”？",
+            "definition": "源设备",
+            "positive_event": "用户原话明确给出源设备的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "from_port",
+            "question": "用户是否在本次请求中明确提供了“源端口”？",
+            "definition": "源端口",
+            "positive_event": "用户原话明确给出源端口的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "to_device",
+            "question": "用户是否在本次请求中明确提供了“目标设备”？",
+            "definition": "目标设备",
+            "positive_event": "用户原话明确给出目标设备的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "to_port",
+            "question": "用户是否在本次请求中明确提供了“目标端口”？",
+            "definition": "目标端口",
+            "positive_event": "用户原话明确给出目标端口的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "build_type",
+            "question": "用户是否在本次请求中明确提供了“制作方式”？",
+            "definition": "制作方式",
+            "positive_event": "用户原话明确给出制作方式的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "cable_type",
+            "question": "用户是否在本次请求中明确提供了“线材类型”？",
+            "definition": "线材类型",
+            "positive_event": "用户原话明确给出线材类型的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "cable_spec",
+            "question": "用户是否在本次请求中明确提供了“线材规格”？",
+            "definition": "线材规格",
+            "positive_event": "用户原话明确给出线材规格的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "from_connector",
+            "question": "用户是否在本次请求中明确提供了“源端接头”？",
+            "definition": "源端接头",
+            "positive_event": "用户原话明确给出源端接头的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "to_connector",
+            "question": "用户是否在本次请求中明确提供了“目标端接头”？",
+            "definition": "目标端接头",
+            "positive_event": "用户原话明确给出目标端接头的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "length_m",
+            "question": "用户是否在本次请求中明确提供了“线长（m）”？",
+            "definition": "线长（m）",
+            "positive_event": "用户原话明确给出线长（m）的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "line_count",
+            "question": "用户是否在本次请求中明确提供了“线路数量”？",
+            "definition": "线路数量",
+            "positive_event": "用户原话明确给出线路数量的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "status",
+            "question": "用户是否在本次请求中明确提供了“线路状态”？",
+            "definition": "线路状态",
+            "positive_event": "用户原话明确给出线路状态的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          }
+        ],
+        "product_catalog": [
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "product_category",
+            "question": "用户是否在本次请求中明确提供了“产品类别”？",
+            "definition": "产品类别",
+            "positive_event": "用户原话明确给出产品类别的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "model",
+            "question": "用户是否在本次请求中明确提供了“型号”？",
+            "definition": "型号；条件规则：按类别浏览时可不提供型号；若只给具体型号，类别可从目录查得。比较型号须明确给出比较对象。",
+            "positive_event": "用户原话明确给出型号的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "comparison_models",
+            "question": "用户是否在本次请求中明确提供了“对比型号”？",
+            "definition": "对比型号",
+            "positive_event": "用户原话明确给出对比型号的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          }
+        ],
+        "troubleshoot": [
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "fault_type",
+            "question": "用户是否在本次请求中明确提供了“故障类型”？",
+            "definition": "故障类型",
+            "positive_event": "用户原话明确给出故障类型的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "observation",
+            "question": "用户是否在本次请求中明确提供了“观察到的现象”？",
+            "definition": "观察到的现象",
+            "positive_event": "用户原话明确给出观察到的现象的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          }
+        ],
+        "knowledge": [
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "topic",
+            "question": "用户是否在本次请求中明确提供了“知识主题”？",
+            "definition": "知识主题",
+            "positive_event": "用户原话明确给出知识主题的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          }
+        ],
+        "project_records": [
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "project_name",
+            "question": "用户是否在本次请求中明确提供了“项目名称”？",
+            "definition": "项目名称",
+            "positive_event": "用户原话明确给出项目名称的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "record_tool",
+            "question": "用户是否在本次请求中明确提供了“记录工具”？",
+            "definition": "记录工具",
+            "positive_event": "用户原话明确给出记录工具的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          },
+          {
+            "kind": "Noul",
+            "return": "probability",
+            "field": "operation",
+            "question": "用户是否在本次请求中明确提供了“记录操作”？",
+            "definition": "记录操作",
+            "positive_event": "用户原话明确给出记录操作的值、范围或选项。目录推导、默认值、计算派生值不算用户显式提供。"
+          }
+        ]
+      },
+      "return": "probability"
+    }
+  }
+}
