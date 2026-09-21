@@ -1,0 +1,200 @@
+{
+  "schemaVersion": 1,
+  "scope": "Every regular file under tests/p2-safety recursively, except tests/p2-safety/safety-baseline/manifest.json itself.",
+  "canonicalization": "Sort POSIX relative paths by JavaScript ordinal string order; serialize each entry as lowercase SHA-256, two spaces, relative path; join entries with LF and no trailing LF; hash the UTF-8 payload with SHA-256.",
+  "createdAt": "2026-09-21T16:15:05.932Z",
+  "fileCount": 38,
+  "files": [
+    {
+      "path": ".gitattributes",
+      "size": 8,
+      "sha256": "705fd4d6451a31d36b3df7de96f83f30ac976c9b4a6d1e51671d8e2f33e2d0da"
+    },
+    {
+      "path": "FROZEN_CLASSIFICATIONS.md",
+      "size": 1215,
+      "sha256": "bcd1fdfdd7f6348722d10f7c96f2cdb3277702ab216fed8a59aba75b8a2ad25d"
+    },
+    {
+      "path": "README.md",
+      "size": 2696,
+      "sha256": "620a11f75d14dbcbb30122ed21fe5b06f93f61174c34b33727a4d91ac6137bf5"
+    },
+    {
+      "path": "acceptance/created-files.json",
+      "size": 1594,
+      "sha256": "b865b736163a07ec2bfac2bcc732febadea4b4836e31617f2b6e2f40a699ac60"
+    },
+    {
+      "path": "acceptance/credential-scan.cjs",
+      "size": 14956,
+      "sha256": "282db2401da66caf90760e45aa89207db9b5273b6939e461a8ac4b3ef34ac0a8"
+    },
+    {
+      "path": "acceptance/frozen-validation.json",
+      "size": 372,
+      "sha256": "2455f77a7ed13ae14411bfea47594c5cebcb0186fe269fb6bf3daa53e509646a"
+    },
+    {
+      "path": "acceptance/p01-report.json",
+      "size": 37098,
+      "sha256": "66457b0c1b83c445a7550f18ed0f3fea2b92b7eae88cbb23bb4498a96f9b6a4f"
+    },
+    {
+      "path": "acceptance/precommit-credential-scan.json",
+      "size": 1174,
+      "sha256": "adff9d0329ab45d3fd8232ecba06e77aa09d676008ef34b064d7f44f594c23fe"
+    },
+    {
+      "path": "acceptance/precommit-p01-report.json",
+      "size": 37098,
+      "sha256": "7f212b2195a8bb0cd6146c0856945f70f798ba7f8012e873eb1f41195fbb54b6"
+    },
+    {
+      "path": "acceptance/review-summary.md",
+      "size": 9110,
+      "sha256": "7a103e50c356371b23a47c22d413a3e88da5267d401cbd989f192be2bf8a0a30"
+    },
+    {
+      "path": "baseline-manifest.json",
+      "size": 2577192,
+      "sha256": "6694c99b6269075c3a8790a908dc33a7289384536fbbf71ab27c2a4ccc6c32cf"
+    },
+    {
+      "path": "freeze-record.json",
+      "size": 475,
+      "sha256": "4579a83f722a183543cc4e624f79842a9f9daeedbd09439b902d2b12db38ee79"
+    },
+    {
+      "path": "harness.cjs",
+      "size": 2682,
+      "sha256": "08bea0a56314ada65d2a65e5f004225d9055b466e1cde0042f70ef16e6ca51e1"
+    },
+    {
+      "path": "phase-a.cjs",
+      "size": 20394,
+      "sha256": "3a54d451f6a04049b0602369488af5b47b4fabbe0045f20db7b980187445310c"
+    },
+    {
+      "path": "phase-b/README.md",
+      "size": 3090,
+      "sha256": "2a25659e8f72ae34ff90b13ac5e9645a1f966df37fc17400eb78a05ff358854d"
+    },
+    {
+      "path": "phase-b/observe.cjs",
+      "size": 23899,
+      "sha256": "23254c40e1f7fa61a444be12afc86415f99a0590ae5eadca5e807be3910eb68d"
+    },
+    {
+      "path": "phase-b/runs/2026-09-21T15-39-09-439Z/phase-b-evidence.json",
+      "size": 44429,
+      "sha256": "a03fbfec48325a1300e43b2ea17f083f6cfe7dfe2eaa832395c91dc4f36a833f"
+    },
+    {
+      "path": "phase-b/runs/2026-09-21T15-40-01-346Z/phase-b-evidence.json",
+      "size": 45118,
+      "sha256": "f0ea9dd18e8e09ac3ce932f4508b1b405db7eb41b1ab73778968985a2671d85b"
+    },
+    {
+      "path": "phase-b/runs/2026-09-21T15-41-00-194Z/phase-b-evidence.json",
+      "size": 45392,
+      "sha256": "29996b970a46e07f50d7a4f69a9e185af633f9db75745ea4f1c646fc52aba15c"
+    },
+    {
+      "path": "phase-b/runs/2026-09-21T16-01-50-909Z/phase-b-evidence.json",
+      "size": 45392,
+      "sha256": "f37295e9331e59791b6006960fa08a6e32ff125685ff66288396678ee9466368"
+    },
+    {
+      "path": "phase-b/scope.json",
+      "size": 1284,
+      "sha256": "7e616e5a82584c6b47dda5b92042c83bf763ce5280b4eb57fb2d795545886175"
+    },
+    {
+      "path": "runs/2026-09-21T15-33-45-845Z/phase-a-evidence.json",
+      "size": 399135,
+      "sha256": "7b65879360b3466637e0989a86a252a7ba07352e75af9b42bf31b9d1132536d4"
+    },
+    {
+      "path": "runs/2026-09-21T15-38-39-551Z/phase-a-evidence.json",
+      "size": 430898,
+      "sha256": "fb7c245dea0ea999b839691f950ac5b18a56e20a9e70c3f7e56160ce65452046"
+    },
+    {
+      "path": "runs/2026-09-21T15-40-12-068Z/phase-a-evidence.json",
+      "size": 463701,
+      "sha256": "4103a7d56592e45c236978bfd908d71b81e8fd9520eb53a4cd4272235ca65c66"
+    },
+    {
+      "path": "runs/2026-09-21T15-42-37-904Z/phase-a-evidence.json",
+      "size": 464360,
+      "sha256": "4fbba488943a529616857ea2e97826428752961ab7973c117b6fa63fa6c4fbb3"
+    },
+    {
+      "path": "runs/2026-09-21T15-43-08-694Z/integrity.json",
+      "size": 620290,
+      "sha256": "cab0ad05757d7b418be7b95e4d9670f7e627d642e52deb61be9b8dcf32b68e56"
+    },
+    {
+      "path": "runs/2026-09-21T15-44-04-364Z/integrity.json",
+      "size": 620290,
+      "sha256": "40a7c89f40539cc5eede78549f597336a4be8fb2e46373d49f40f342e6343419"
+    },
+    {
+      "path": "runs/2026-09-21T15-44-16-431Z/phase-a-evidence.json",
+      "size": 464237,
+      "sha256": "303ab5770f1d4d7091d49a5369bd0423d019fe0102eb3adf2b4449eb1907ef32"
+    },
+    {
+      "path": "runs/2026-09-21T15-44-37-027Z/integrity.json",
+      "size": 620290,
+      "sha256": "faf027dfe6bab147145b10844f43cb2ba5d23d0ff59745a3ab62887715369b39"
+    },
+    {
+      "path": "runs/2026-09-21T15-45-37-576Z/integrity.json",
+      "size": 620800,
+      "sha256": "c25b0c4d19c94d46d6d76e97d56c1f6dae149e38b0d53d832b0b1b559c262ab4"
+    },
+    {
+      "path": "runs/2026-09-21T16-01-44-879Z/phase-a-evidence.json",
+      "size": 464237,
+      "sha256": "4b7e04bdb2f2561840d72f121001478877fc833d060befbdab00892fb7d4aa76"
+    },
+    {
+      "path": "runs/2026-09-21T16-06-54-776Z/integrity.json",
+      "size": 620800,
+      "sha256": "3917fe90dd880d77b4a14f04b2afc6cdec75be209e2edc5d89731a7d9be762ae"
+    },
+    {
+      "path": "safety-baseline/README.md",
+      "size": 2756,
+      "sha256": "d84e3fbb8c7273b4745967d679fe8155937c29d3ce88c30aff5f7586f01777e4"
+    },
+    {
+      "path": "safety-baseline/acceptance.json",
+      "size": 7571,
+      "sha256": "d74e7916ddf98dec53c6b58de53f7da7fd36e77a5162e62fb36efda4523a2d78"
+    },
+    {
+      "path": "safety-baseline/baseline.cjs",
+      "size": 16949,
+      "sha256": "2ba30c4268cc557d55a34629acb809e81f99158354332bb6ea443f06bbdf3141"
+    },
+    {
+      "path": "safety-baseline/inputs.json",
+      "size": 906,
+      "sha256": "3cbb82d893aae38ec0cc0451000db6cc1458101888deed71d86fee4711c85054"
+    },
+    {
+      "path": "safety-baseline/verify-tests.cjs",
+      "size": 1938,
+      "sha256": "d65b0c7618852cdbe465a9b782996b6006099624b07b5a88ba929d4a3b5f4d83"
+    },
+    {
+      "path": "verify-integrity.cjs",
+      "size": 5052,
+      "sha256": "bc8f6fed59ace30723884257d648c57940cbb0414fb83466d7adbc865c88147d"
+    }
+  ],
+  "baselineSha256": "86e0fae20c8e352a138560c85c36c8f92f1f906680534789b4762e0d48b9a22c"
+}

@@ -1,0 +1,19 @@
+{
+  "repoRoot": ".",
+  "acceptance": "tests/p2-safety/safety-baseline/acceptance.json",
+  "frozenDefinitions": "tests/p2-safety/FROZEN_CLASSIFICATIONS.md",
+  "canonicalAnchors": {
+    "phaseA": "tests/p2-safety/runs/2026-09-21T15-44-16-431Z/phase-a-evidence.json",
+    "phaseB": "tests/p2-safety/phase-b/runs/2026-09-21T15-41-00-194Z/phase-b-evidence.json"
+  },
+  "reproductions": {
+    "phaseA": "tests/p2-safety/runs/2026-09-21T16-01-44-879Z/phase-a-evidence.json",
+    "phaseB": "tests/p2-safety/phase-b/runs/2026-09-21T16-01-50-909Z/phase-b-evidence.json"
+  },
+  "checks": {
+    "p0AndRelease": "tests/p2-safety/acceptance/precommit-p01-report.json",
+    "credentialScan": "tests/p2-safety/acceptance/precommit-credential-scan.json",
+    "frozenBenchmark": "tests/p2-safety/acceptance/frozen-validation.json",
+    "safetyIntegrity": "tests/p2-safety/runs/2026-09-21T16-06-54-776Z/integrity.json"
+  }
+}

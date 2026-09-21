@@ -1,0 +1,15 @@
+# Phase B observation-only harness
+
+This directory covers only AW-007, CAB-008, CAM-007 and controls DMX-004, DMX-006, PW-007. It exercises real page handlers and deterministic cores through pass-through argument spies with in-memory WeChat environment stubs. It does not add a natural-language parser, alter V1/V2/V2.1 data, or encode proposed fixes.
+
+The current request text and blocking-parameter adjudications are loaded from the frozen V2.1 corpus at runtime. Behavioral tests must not be executed until Phase A is complete and the root agent gives the go-ahead. Form-handler behavior is the evidence boundary; this harness cannot establish native WeChat keyboard/rendering behavior or an AI-to-form integration that does not exist in the product.
+
+For CAB-008, the interval string is an adversarial handler-boundary probe because the page declares numeric input. It does not prove native keyboard entry. The test separately captures the untouched persisted/default scalar path. No range-to-scalar mapping is invented.
+
+Run the behavioral observations with `node tests/p2-safety/phase-b/observe.cjs`. Each run writes a new, exclusive evidence directory under `phase-b/runs/`. The recorded run on 2026-09-21 is `runs/2026-09-21T15-41-00-194Z/phase-b-evidence.json`.
+
+That run classified AW-007 and CAB-008 as UNVERIFIED, CAM-007 as IMPLICIT_DEFAULT_ESCAPE, and DMX-004, DMX-006, PW-007 as BLOCKED. AW-007's fresh form state blocks. After a prior explicit Left selection, reopening the same endpoints adds zero core calls and copies the existing map; this demonstrates retained state and no renewed choice, but not a new calculation or a distinct new-request boundary. CAB-008's interval object and raw range-string probes reject, while a separate omitted-input path uses 300 W and produces a result; no range-to-default mapping is observed. CAM-007's actual custom form flow uses the untouched onLoad VFOV 36° and returns a recommendation. A clearly labeled 24° sensitivity probe changes setback from 4.50 m to 4.91 m; that probe value is not attributed to the user request.
+
+The bounded regression assertions passed. All Phase B environment/network guards reported zero attempts. The root task handles the broader P0/P1 review.
+
+Evidence is tied to the immutable V2.1 corpus in `tests/p2-jev/v2.1/freeze.json`: dataset SHA-256 `b4f7c2de6036c0dee0c1d00bdde5c7158baad18d5bebb9dd9e045c4e9a618c00`, based on commit `e89d57a492bb776fed35809eed91741715e828b0`. The source case files are `audio.cases.json` (SHA-256 `9410b7e205e90e5ee0eca8b5bab828a6330d800d793126767c20f3a30c27a745`) and `av-and-controls.cases.json` (SHA-256 `8cea47cc588e8bb300a6c3040bb827b686428a84888080a70e0b23d3d022751c`). The Phase A evidence is `../runs/2026-09-21T15-33-45-845Z/phase-a-evidence.json`; both phases recorded frozen-definition SHA-256 `BCD1FDFDD7F6348722D10F7C96F2CDB3277702AB216FED8A59ABA75B8A2AD25D`. The pre-test baseline manifest is `../baseline-manifest.json`; the 12 page/core source files touched by these observations match their baseline SHA-256 values, and no production files were edited.

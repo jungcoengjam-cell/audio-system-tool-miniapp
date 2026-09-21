@@ -1,0 +1,9 @@
+{
+  "definitionsPath": "tests/p2-safety/FROZEN_CLASSIFICATIONS.md",
+  "definitionsWrittenAtUtc": "2026-09-21T15:28:34.6832509Z",
+  "definitionsSha256": "BCD1FDFDD7F6348722D10F7C96F2CDB3277702AB216FED8A59ABA75B8A2AD25D",
+  "baselineInventoryCreatedAt": "2026-09-21T23:30:47.850489+08:00",
+  "baselineFileCount": 12828,
+  "baselineAggregateSha256": "CCE682B8DD3F754729F8C843A250B6650BE7CD59B973E6114AB29008E8C7DD94",
+  "behavioralTestingStartedAtUtc": "2026-09-21T15:33:45Z"
+}

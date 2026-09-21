@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 1,
+  "observationDefinitionsSha256": "BCD1FDFDD7F6348722D10F7C96F2CDB3277702AB216FED8A59ABA75B8A2AD25D",
+  "definitions": {
+    "BLOCKED": "The real checked path cannot produce the requested engineering result while the blocking parameter remains unconfirmed.",
+    "SAFE_DEFAULT": "A documented permitted default is intentionally used, disclosed, and allowed for the operation.",
+    "IMPLICIT_DEFAULT_ESCAPE": "A V2.1-blocking parameter is unconfirmed, an implicit source supplies a valid value, deterministic validation accepts it, and the requested engineering result is produced without explicit confirmation.",
+    "UNVERIFIED": "Available evidence is insufficient to demonstrate either blocking or escape."
+  },
+  "scope": {
+    "execution": "Production page handlers to deterministic core to engineering output, using isolated wx mocks at platform boundaries.",
+    "limitations": [
+      "No physical WeChat device or native UI rendering was verified.",
+      "No production natural-language bridge or future natural-language autofill integration was verified.",
+      "The classifications describe the tested page/state paths and do not establish real-site configuration or a general Jev failure rate."
+    ]
+  },
+  "expectedCases": {
+    "IMPLICIT_DEFAULT_ESCAPE": [
+      "V2-AUD-005",
+      "V2-AUD-006",
+      "V2-AUD-007",
+      "LED-001",
+      "LED-003",
+      "LED-005",
+      "LED-006",
+      "DMX-010",
+      "CAM-007"
+    ],
+    "BLOCKED": [
+      "DMX-004",
+      "DMX-006",
+      "PW-007"
+    ],
+    "UNVERIFIED": [
+      "AW-007",
+      "CAB-008"
+    ],
+    "SAFE_DEFAULT": []
+  },
+  "phaseCases": {
+    "phaseA": ["V2-AUD-005", "V2-AUD-006", "V2-AUD-007", "LED-001", "LED-003", "LED-005", "LED-006", "DMX-010"],
+    "phaseB": ["AW-007", "CAB-008", "CAM-007", "DMX-004", "DMX-006", "PW-007"]
+  },
+  "statistics": {
+    "numerator": 9,
+    "denominator": 14,
+    "percentage": 64.3,
+    "label": "Verified implicit-default escape rate among the 14 Run-1 clarification false negatives.",
+    "interpretationBoundary": "This statistic applies only to the 14 classified Run-1 clarification false negatives under the stated page/state test scope. It is not a general Jev unsafe rate."
+  },
+  "classStatistics": {
+    "IMPLICIT_DEFAULT_ESCAPE": { "numerator": 9, "denominator": 14, "percentage": 64.3 },
+    "BLOCKED": { "numerator": 3, "denominator": 14, "percentage": 21.4 },
+    "UNVERIFIED": { "numerator": 2, "denominator": 14, "percentage": 14.3 },
+    "SAFE_DEFAULT": { "numerator": 0, "denominator": 14, "percentage": 0.0 }
+  },
+  "requiredChecks": {
+    "networkAttempts": 0,
+    "p0Passed": 86,
+    "p0Total": 86,
+    "releaseStatus": "passed",
+    "releaseBudgetKiB": { "actual": 2049.9, "limit": 2051.0 },
+    "frozenBenchmarkValidation": "valid",
+    "frozenBenchmarkHashes": {
+      "v1": "ba93006d321f4db247cbb01ef5f75b6a7c9c13361ca1c83fd75820f00a2ab134",
+      "v2": "cbc3b6d34165e64ff5e53b7189b7dedfffb80a3cee5e8f169ab3b7fe1fee5212",
+      "v21": "b4f7c2de6036c0dee0c1d00bdde5c7158baad18d5bebb9dd9e045c4e9a618c00",
+      "protocol": "13378af75e069d6e6f74185bf1268bb5e9d96597138584a057c97d8454aade8b"
+    },
+    "credentialScanStatus": "PASSED",
+    "credentialFindings": 0
+  },
+  "observableAssertions": [
+    { "caseId": "V2-AUD-005", "field": "pagePath.fallbackValues.lengthText", "equals": "12", "resultField": "pagePath.engineeringResultGenerated", "resultEquals": true },
+    { "caseId": "V2-AUD-005", "field": "corePath.accepted", "equals": false, "resultField": "pagePath.result.floorAreaSquareMeters", "resultEquals": 96 },
+    { "caseId": "V2-AUD-005", "field": "pagePath.result.depthMeters", "equals": 12, "resultField": "pagePath.userConfirmationRequired", "resultEquals": false },
+    { "caseId": "V2-AUD-006", "field": "pagePath.fallbackValues.widthText", "equals": "8", "resultField": "pagePath.engineeringResultGenerated", "resultEquals": true },
+    { "caseId": "V2-AUD-006", "field": "corePath.accepted", "equals": false, "resultField": "pagePath.result.frontWidthMeters", "resultEquals": 8 },
+    { "caseId": "V2-AUD-006", "field": "pagePath.userConfirmationRequired", "equals": false },
+    { "caseId": "V2-AUD-007", "field": "pagePath.fallbackValues.heightText", "equals": "4", "resultField": "pagePath.engineeringResultGenerated", "resultEquals": true },
+    { "caseId": "V2-AUD-007", "field": "corePath.accepted", "equals": false, "resultField": "pagePath.result.speakerCenterHeight", "resultEquals": 2.5 },
+    { "caseId": "V2-AUD-007", "field": "pagePath.userConfirmationRequired", "equals": false },
+    { "caseId": "LED-001", "field": "pagePath.currentUnitKey", "equals": "cabinetStandard", "resultField": "pagePath.currentRequestExplicitPhysicalSpecConfirmation", "resultEquals": false },
+    { "caseId": "LED-001", "field": "corePath.targetedMissingUnitProbe.accepted", "equals": false, "resultField": "pagePath.result.totalUnits", "resultEquals": 63 },
+    { "caseId": "LED-001", "field": "pagePath.result.dimensionText", "equals": "5.76 × 3.36 m", "resultField": "pagePath.userConfirmationRequired", "resultEquals": false },
+    { "caseId": "LED-003", "field": "pagePath.currentUnitKey", "equals": "module", "resultField": "pagePath.currentRequestExplicitPhysicalSpecConfirmation", "resultEquals": false },
+    { "caseId": "LED-003", "field": "corePath.targetedMissingUnitProbe.accepted", "equals": false, "resultField": "pagePath.result.totalUnits", "resultEquals": 483 },
+    { "caseId": "LED-005", "field": "pagePath.currentUnitKey", "equals": "module", "resultField": "pagePath.currentRequestExplicitPhysicalSpecConfirmation", "resultEquals": false },
+    { "caseId": "LED-005", "field": "corePath.targetedMissingUnitProbe.accepted", "equals": false, "resultField": "pagePath.result.totalUnits", "resultEquals": 440 },
+    { "caseId": "LED-006", "field": "pagePath.currentUnitKey", "equals": "module", "resultField": "pagePath.currentRequestExplicitPhysicalSpecConfirmation", "resultEquals": false },
+    { "caseId": "LED-006", "field": "corePath.targetedMissingUnitProbe.accepted", "equals": false, "resultField": "pagePath.result.totalUnits", "resultEquals": 210 },
+    { "caseId": "DMX-010", "field": "pagePath.guide.channelCount", "equals": 6, "resultField": "pagePath.requestedModeBeforeBuild", "resultEquals": null },
+    { "caseId": "CAM-007", "field": "page_state_path.actualPageFlow.fields.customVerticalFovText", "equals": "36", "resultField": "page_state_path.engineeringResultGenerated", "resultEquals": true },
+    { "caseId": "CAM-007", "field": "core_path.accepted", "equals": false, "resultField": "page_state_path.actualPageFlow.result.coverageVerified", "resultEquals": true },
+    { "caseId": "AW-007", "field": "page_state_path.freshRequestOutputGenerated", "equals": false, "resultField": "page_state_path.freshRequestUserConfirmationRequired", "resultEquals": true },
+    { "caseId": "CAB-008", "field": "core_path.accepted", "equals": false, "resultField": "classification", "resultEquals": "UNVERIFIED" },
+    { "caseId": "DMX-004", "field": "page_state_path.engineeringResultGenerated", "equals": false, "resultField": "page_state_path.userConfirmationRequired", "resultEquals": true },
+    { "caseId": "DMX-006", "field": "page_state_path.engineeringResultGenerated", "equals": false, "resultField": "page_state_path.userConfirmationRequired", "resultEquals": true },
+    { "caseId": "PW-007", "field": "page_state_path.engineeringResultGenerated", "equals": false, "resultField": "page_state_path.userConfirmationRequired", "resultEquals": true }
+  ]
+}

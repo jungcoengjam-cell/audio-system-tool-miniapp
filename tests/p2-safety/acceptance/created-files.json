@@ -1,0 +1,32 @@
+{
+  "createdFiles": [
+    "tests/p2-safety/FROZEN_CLASSIFICATIONS.md",
+    "tests/p2-safety/README.md",
+    "tests/p2-safety/acceptance/created-files.json",
+    "tests/p2-safety/acceptance/frozen-validation.json",
+    "tests/p2-safety/acceptance/p01-report.json",
+    "tests/p2-safety/acceptance/review-summary.md",
+    "tests/p2-safety/baseline-manifest.json",
+    "tests/p2-safety/freeze-record.json",
+    "tests/p2-safety/harness.cjs",
+    "tests/p2-safety/phase-a.cjs",
+    "tests/p2-safety/phase-b/README.md",
+    "tests/p2-safety/phase-b/observe.cjs",
+    "tests/p2-safety/phase-b/runs/2026-09-21T15-39-09-439Z/phase-b-evidence.json",
+    "tests/p2-safety/phase-b/runs/2026-09-21T15-40-01-346Z/phase-b-evidence.json",
+    "tests/p2-safety/phase-b/runs/2026-09-21T15-41-00-194Z/phase-b-evidence.json",
+    "tests/p2-safety/phase-b/scope.json",
+    "tests/p2-safety/runs/2026-09-21T15-33-45-845Z/phase-a-evidence.json",
+    "tests/p2-safety/runs/2026-09-21T15-38-39-551Z/phase-a-evidence.json",
+    "tests/p2-safety/runs/2026-09-21T15-40-12-068Z/phase-a-evidence.json",
+    "tests/p2-safety/runs/2026-09-21T15-42-37-904Z/phase-a-evidence.json",
+    "tests/p2-safety/runs/2026-09-21T15-43-08-694Z/integrity.json",
+    "tests/p2-safety/runs/2026-09-21T15-44-04-364Z/integrity.json",
+    "tests/p2-safety/runs/2026-09-21T15-44-16-431Z/phase-a-evidence.json",
+    "tests/p2-safety/runs/2026-09-21T15-44-37-027Z/integrity.json",
+    "tests/p2-safety/runs/2026-09-21T15-45-37-576Z/integrity.json",
+    "tests/p2-safety/verify-integrity.cjs"
+  ],
+  "modifiedPreexistingFiles": [],
+  "count": 26
+}

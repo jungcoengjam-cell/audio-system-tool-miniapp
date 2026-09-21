@@ -1,0 +1,14 @@
+{
+  "phase": "P2 safety deterministic end-to-end / Phase B",
+  "purpose": "Observation-only actual page-handler to deterministic-core behavior",
+  "behavioral_execution_gate": "Wait for explicit root-agent signal after Phase A completion",
+  "cases": [
+    { "case_id": "AW-007", "source": "tests/p2-jev/v2.1/av-and-controls.cases.json", "blocking_parameter": "audio_wiring.source_channel" },
+    { "case_id": "CAB-008", "source": "tests/p2-jev/v2.1/audio.cases.json", "blocking_parameter": "cable.total_rated_power_w" },
+    { "case_id": "CAM-007", "source": "tests/p2-jev/v2.1/av-and-controls.cases.json", "blocking_parameter": "camera_fov.vfov_deg" },
+    { "case_id": "DMX-004", "source": "tests/p2-jev/v2.1/av-and-controls.cases.json", "blocking_parameter": "dmx_address.start_address, dmx_address.target_universe" },
+    { "case_id": "DMX-006", "source": "tests/p2-jev/v2.1/av-and-controls.cases.json", "blocking_parameter": "dmx_address.start_address, dmx_address.target_universe" },
+    { "case_id": "PW-007", "source": "tests/p2-jev/v2.1/av-and-controls.cases.json", "blocking_parameter": "project_wiring.from_port, project_wiring.to_port" }
+  ],
+  "excluded": ["Jev", "network", "environment-key reads", "commits", "production edits", "Run 1 edits", "Unsafe Escape Rate"]
+}

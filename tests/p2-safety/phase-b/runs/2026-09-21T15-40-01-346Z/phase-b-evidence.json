@@ -1,0 +1,1118 @@
+{
+  "runId": "2026-09-21T15-40-01-346Z",
+  "definitionsSha256": "BCD1FDFDD7F6348722D10F7C96F2CDB3277702AB216FED8A59ABA75B8A2AD25D",
+  "executedCases": [
+    "AW-007",
+    "CAB-008",
+    "CAM-007",
+    "DMX-004",
+    "DMX-006",
+    "PW-007"
+  ],
+  "scopeBoundary": "Actual page/form-handler to deterministic core; no natural-language parser/integration exists in this product flow, and no WeChat native rendering or physical keyboard behavior is claimed.",
+  "excluded": [
+    "Jev",
+    "network",
+    "environment-key reads",
+    "commits",
+    "Run 1 edits",
+    "Unsafe Escape Rate",
+    "production fixes",
+    "WeChat UI rendering"
+  ],
+  "networkAttempts": [],
+  "classifications": {
+    "UNVERIFIED": 2,
+    "IMPLICIT_DEFAULT_ESCAPE": 1,
+    "BLOCKED": 3
+  },
+  "results": [
+    {
+      "case_id": "AW-007",
+      "user_utterance": "电脑 3.5 mm 立体声输出接功放的单声道 XLR 平衡输入，给我接线图。",
+      "blocking_parameter": "audio_wiring.source_channel",
+      "v21_expected_blocking_reason": {
+        "required": true,
+        "reasons": [
+          {
+            "code": "missing_required_information",
+            "parameters": [
+              "audio_wiring.source_channel"
+            ]
+          }
+        ]
+      },
+      "core_path": {
+        "accepted": false,
+        "validationMessage": "需要选择：立体声源声道。",
+        "engineeringResultGenerated": false,
+        "actualCoreArguments": [
+          "stereo35",
+          "xlrBalanced",
+          {}
+        ]
+      },
+      "page_state_path": {
+        "blockingParameter": "audio_wiring.source_channel",
+        "initialState": {
+          "outputId": "xlrBalanced",
+          "inputId": "terminalBalanced",
+          "selections": {}
+        },
+        "freshRequest": {
+          "selections": {},
+          "status": "needs-choice",
+          "requirement": {
+            "id": "sourceChannel",
+            "title": "立体声源声道",
+            "hint": "本直连接法只取一路，可能遗漏另一声道内容；未选声道不接。",
+            "options": [
+              {
+                "id": "left",
+                "label": "左声道 L",
+                "detail": "使用 T 尖端；R 环不接。"
+              },
+              {
+                "id": "right",
+                "label": "右声道 R",
+                "detail": "使用 R 环；T 尖端不接。"
+              }
+            ],
+            "value": ""
+          },
+          "connections": []
+        },
+        "freshRequestOutputGenerated": false,
+        "freshRequestUserConfirmationRequired": true,
+        "priorExplicitChoice": {
+          "sourceChannel": "left"
+        },
+        "sameEndpointReopenState": {
+          "selections": {
+            "sourceChannel": "left"
+          },
+          "status": "ready",
+          "sourceChannel": "left",
+          "connections": [
+            {
+              "id": "signal-left",
+              "fromPin": "T",
+              "fromLabel": "T 尖端（左声道 L）",
+              "toPin": "2",
+              "toLabel": "2 号针（+）",
+              "label": "只取左声道 L",
+              "color": "#1976d2",
+              "networkId": "signal-left",
+              "fromRole": "left",
+              "toRole": "positive"
+            },
+            {
+              "id": "return-negative",
+              "fromPin": "S",
+              "fromLabel": "S 套筒（源端公共回路）",
+              "toPin": "3",
+              "toLabel": "3 号针（−）",
+              "label": "S 公共回路芯线 → −",
+              "color": "#ed8b23",
+              "networkId": "return-negative",
+              "fromRole": "return",
+              "toRole": "negative"
+            },
+            {
+              "id": "shield",
+              "fromPin": "S",
+              "fromLabel": "S 套筒（源端公共回路）",
+              "toPin": "1",
+              "toLabel": "1 号针（屏蔽）",
+              "label": "S 公共回路屏蔽 → G",
+              "color": "#78818c",
+              "networkId": "shield",
+              "fromRole": "shield",
+              "toRole": "shield"
+            }
+          ]
+        },
+        "staleChoiceOutputGenerated": true,
+        "staleChoiceOutputRequiresNewChoice": false,
+        "engineeringResultGenerated": true,
+        "staleChoiceOutput": [
+          {
+            "id": "signal-left",
+            "fromPin": "T",
+            "fromLabel": "T 尖端（左声道 L）",
+            "toPin": "2",
+            "toLabel": "2 号针（+）",
+            "label": "只取左声道 L",
+            "color": "#1976d2",
+            "networkId": "signal-left",
+            "fromRole": "left",
+            "toRole": "positive"
+          },
+          {
+            "id": "return-negative",
+            "fromPin": "S",
+            "fromLabel": "S 套筒（源端公共回路）",
+            "toPin": "3",
+            "toLabel": "3 号针（−）",
+            "label": "S 公共回路芯线 → −",
+            "color": "#ed8b23",
+            "networkId": "return-negative",
+            "fromRole": "return",
+            "toRole": "negative"
+          },
+          {
+            "id": "shield",
+            "fromPin": "S",
+            "fromLabel": "S 套筒（源端公共回路）",
+            "toPin": "1",
+            "toLabel": "1 号针（屏蔽）",
+            "label": "S 公共回路屏蔽 → G",
+            "color": "#78818c",
+            "networkId": "shield",
+            "fromRole": "shield",
+            "toRole": "shield"
+          }
+        ],
+        "clipboardOutput": "3.5 mm TRS → 3 针 XLR\n输出：3.5 mm TRS 立体声输出（立体声模拟 L/R · 非平衡）\n输入：XLR 平衡输入（LINE IN · 平衡单声道）\n线材：双芯屏蔽音频线；TRS 公共回路在源端分接\n选择：只取左声道 L\n逐线连接：\n- T 尖端（左声道 L） → 2 号针（+）：只取左声道 L\n- S 套筒（源端公共回路） → 3 号针（−）：S 公共回路芯线 → −\n- S 套筒（源端公共回路） → 1 号针（屏蔽）：S 公共回路屏蔽 → G\n未连接：输出 R 环（右声道 R）（未选择的声道输出保持未接，不与已选声道并接。）\n关键条件：右声道信号输出保持未接；只取一路，不将 L/R 并接。\n关键条件：输入须为 LINE 用途并关闭幻象或插孔馈电；不自动补偿 6 dB 或其他电平差。\n提示：仅适用于电脑/播放设备的模拟立体声输出或已确认的 LINE 输出；不适用于 TRRS 耳麦、麦克风输入或数字音频口。\n提示：本直连接法只取一路，可能遗漏另一声道内容。需要两边内容时先通过播放设备或混音器合成为单声道；L/R 不可直接并接。\n提示：T 为左声道、R 为右声道、S 为公共回路。\n提示：输入须为 LINE 用途；关闭幻象或插孔馈电。开始播放前先调低音量，再逐步升高。\n提示：图示颜色只区分信号功能，不代表实际导线颜色。\n依据：Yamaha PA 入门指南：线材与接头 https://europe.yamaha.com/en/audio/portable-pa/explore/pa-beginners-guide/equipments/cable.html\n依据：RaneNote 109：Why Not Wye? https://www.ranecommercial.com/legacy/note109.html\n依据：Jensen AN-003：平衡与非平衡设备互连 https://www.jensen-transformers.com/wp-content/uploads/2014/08/an003.pdf",
+        "actualValuePassedToCore": {
+          "freshRequest": [
+            "stereo35",
+            "xlrBalanced",
+            {}
+          ],
+          "sameEndpointReopen": [
+            "stereo35",
+            "xlrBalanced",
+            {
+              "sourceChannel": "left"
+            }
+          ]
+        },
+        "allCoreCalls": [
+          [
+            "stereo35",
+            "xlrBalanced",
+            {}
+          ],
+          [
+            "xlrBalanced",
+            "terminalBalanced",
+            {}
+          ],
+          [
+            "stereo35",
+            "terminalBalanced",
+            {}
+          ],
+          [
+            "stereo35",
+            "xlrBalanced",
+            {}
+          ],
+          [
+            "stereo35",
+            "xlrBalanced",
+            {
+              "sourceChannel": "left"
+            }
+          ]
+        ],
+        "persistedState": null,
+        "validatorResult": "Fresh state needs sourceChannel; same-endpoint selection preserves the prior explicit left value.",
+        "userConfirmationRequired": false,
+        "classificationBoundary": "Fresh handler state blocks. An earlier explicit choice survives selecting the same endpoints and produces output without renewed choice; no natural-language-to-page bridge proves the case utterance reaches that state sequence."
+      },
+      "implicit_value_source": null,
+      "actual_value_passed_to_core": {
+        "freshRequest": [
+          "stereo35",
+          "xlrBalanced",
+          {}
+        ],
+        "sameEndpointReopen": [
+          "stereo35",
+          "xlrBalanced",
+          {
+            "sourceChannel": "left"
+          }
+        ]
+      },
+      "validator_result": "Fresh state needs sourceChannel; same-endpoint selection preserves the prior explicit left value.",
+      "final_result_generated": true,
+      "user_confirmation_required": false,
+      "classification": "UNVERIFIED",
+      "concrete_engineering_consequence": "A stale left-channel choice can generate a concrete mono wiring map after reopening unchanged endpoints; a fresh state blocks output. The case-level utterance-to-handler transition is not present in the product.",
+      "evidence_references": [
+        "pages/audio-wiring/index.js: selectEndpointOption, selectWiringRequirement, copyConnection",
+        "pages/audio-wiring/wiring-model.js: getWiringModel, buildWiringText",
+        "tests/p2-jev/v2.1/av-and-controls.cases.json: AW-007"
+      ]
+    },
+    {
+      "case_id": "CAB-008",
+      "user_utterance": "专业定阻音箱线，总额定功率在 250 到 400 W 之间，最远单程 55 m；这批是按一个固定功率档配的。",
+      "blocking_parameter": "cable.total_rated_power_w",
+      "v21_expected_blocking_reason": {
+        "required": true,
+        "reasons": [
+          {
+            "code": "uncertain_parameter",
+            "parameters": [
+              "cable.total_rated_power_w"
+            ]
+          }
+        ]
+      },
+      "core_path": {
+        "accepted": false,
+        "validationMessage": "请输入大于 0 的音箱总功率和最远布线距离。",
+        "engineeringResultGenerated": false,
+        "actualCoreArguments": {
+          "totalPowerW": {
+            "min": 250,
+            "max": 400
+          },
+          "distanceMeters": 55
+        }
+      },
+      "page_state_path": {
+        "blockingParameter": "cable.total_rated_power_w",
+        "initialState": {
+          "professionalPowerText": "300",
+          "professionalDistanceText": "50"
+        },
+        "rangeInputObservation": {
+          "powerText": "250–400",
+          "distanceText": "55",
+          "inputTypeInWxml": "digit",
+          "result": null,
+          "inputError": "请输入大于 0 的音箱总功率和最远布线距离。",
+          "coreArgs": {
+            "totalPowerW": "250–400",
+            "distanceMeters": "55"
+          },
+          "persistedState": {
+            "mode": "professional",
+            "environment": "indoor",
+            "constantPowerText": "100",
+            "constantDistanceText": "100",
+            "professionalPowerText": "300",
+            "professionalDistanceText": "50"
+          }
+        },
+        "omittedInputCounterfactual": {
+          "powerText": "300",
+          "result": {
+            "type": "professional",
+            "isWithinStandard": true,
+            "status": "符合表格条件",
+            "spec": "秋叶原 300 芯×2 金银线",
+            "selectedArea": 2.4,
+            "designPowerW": 450,
+            "distanceMeters": 55,
+            "currentA": 12,
+            "hasFormula": false,
+            "description": "按音箱总功率 × 1.5 的 600 W 档位选择；本公司表中该规格最长适用于 100 m。",
+            "warnings": []
+          },
+          "resultText": "专业音箱线材选型\n结果性质：公司标准推荐\n输入总功率：300 W\n最远单程距离：55 m\n设计带载功率：450 W\n推荐线材：秋叶原 300 芯×2 金银线\n状态：符合表格条件\n按音箱总功率 × 1.5 的 600 W 档位选择；本公司表中该规格最长适用于 100 m。\n注：按公司线材标准作选型参考，实际施工仍需结合敷设方式、环境和当地规范复核。",
+          "coreArgs": {
+            "totalPowerW": "300",
+            "distanceMeters": "55"
+          },
+          "persistedState": {
+            "mode": "professional",
+            "environment": "indoor",
+            "constantPowerText": "100",
+            "constantDistanceText": "100",
+            "professionalPowerText": "300",
+            "professionalDistanceText": "55"
+          }
+        },
+        "implicitValueSource": "onLoad fallback/default or absent storage returns professionalPowerText=300; the range is never mapped to omission by product code.",
+        "actualValuePassedToCore": {
+          "totalPowerW": "250–400",
+          "distanceMeters": "55"
+        },
+        "validatorResult": "Core rejects range object and raw range-string probe; untouched 300 W passes and yields a result on a separate omitted-input path.",
+        "userConfirmationRequired": true,
+        "engineeringResultGenerated": false,
+        "classificationBoundary": "No production natural-language bridge maps the case range into the page, and digit input UI was not physically exercised."
+      },
+      "implicit_value_source": "onLoad fallback/default or absent storage returns professionalPowerText=300; the range is never mapped to omission by product code.",
+      "actual_value_passed_to_core": {
+        "totalPowerW": "250–400",
+        "distanceMeters": "55"
+      },
+      "validator_result": "Core rejects range object and raw range-string probe; untouched 300 W passes and yields a result on a separate omitted-input path.",
+      "final_result_generated": false,
+      "user_confirmation_required": true,
+      "classification": "UNVERIFIED",
+      "concrete_engineering_consequence": "A separately omitted input can yield the 300 W-based 秋叶原 200 芯×2 recommendation, while the unresolved range path has no generated result. The omitted path is not evidence that this request was reduced to 300 W.",
+      "evidence_references": [
+        "pages/cable/cable.js: onLoad, onInput, onInputBlur, calculatePageResult",
+        "pages/cable/cable.wxml: professionalPowerText input type=digit",
+        "utils/cable.js: calculateProfessionalSpeakerCable",
+        "tests/p2-jev/v2.1/audio.cases.json: CAB-008"
+      ]
+    },
+    {
+      "case_id": "CAM-007",
+      "user_utterance": "自定义摄像机水平视场角 75°，请算完整地面区域的安装距离：宽 6 m、纵深 4 m、人物最高点 1.8 m，自动高度、余量 10%。",
+      "blocking_parameter": "camera_fov.vfov_deg",
+      "v21_expected_blocking_reason": {
+        "required": true,
+        "reasons": [
+          {
+            "code": "missing_required_information",
+            "parameters": [
+              "camera_fov.vfov_deg"
+            ]
+          }
+        ]
+      },
+      "core_path": {
+        "accepted": false,
+        "validationMessage": "resolveCustomFov returns null when custom angle mode lacks a valid VFOV; ground-area calculator returns null.",
+        "engineeringResultGenerated": false,
+        "actualCoreArguments": {
+          "definitionMode": "angles",
+          "horizontalFov": 75
+        }
+      },
+      "page_state_path": {
+        "blockingParameter": "camera_fov.vfov_deg",
+        "initialState": {
+          "sourceModeIndex": 0,
+          "customHorizontalFovText": "60",
+          "customVerticalFovText": "36",
+          "groundWidthText": "6",
+          "groundDepthText": "4",
+          "subjectHeightText": "1.8",
+          "heightModeIndex": 0,
+          "marginIndex": 2,
+          "persistedState": {
+            "sourceMode": "library",
+            "cameraModel": "TV-6124HK",
+            "viewIndex": 0,
+            "viewLabel": "主镜头",
+            "definitionMode": "angles",
+            "customMountType": "ptz",
+            "customHorizontalFovText": "60",
+            "customVerticalFovText": "36",
+            "customSensorWidthText": "6.4",
+            "customSensorHeightText": "3.6",
+            "customFocalLengthText": "4.5",
+            "sceneMode": "ground",
+            "heightMode": "auto",
+            "marginPercent": 10,
+            "groundWidthText": "6",
+            "groundDepthText": "4",
+            "subjectHeightText": "1.8",
+            "planeWidthText": "6",
+            "planeHeightText": "2.5",
+            "planeBottomHeightText": "0.8",
+            "fixedCameraHeightText": "2.3"
+          }
+        },
+        "actualPageFlow": {
+          "fields": {
+            "sourceModeIndex": 1,
+            "customHorizontalFovText": "75",
+            "customVerticalFovText": "36",
+            "groundWidthText": "6",
+            "groundDepthText": "4",
+            "subjectHeightText": "1.8",
+            "heightMode": "auto",
+            "marginPercent": 10
+          },
+          "resolveFovArgs": {
+            "definitionMode": "angles",
+            "horizontalFov": 75,
+            "verticalFov": 36,
+            "sensorWidth": 6.4,
+            "sensorHeight": 3.6,
+            "focalLength": 4.5
+          },
+          "groundCoreArgs": [
+            {
+              "horizontalFov": 75,
+              "verticalFov": 36,
+              "diagonalFov": 79.60785818151354,
+              "verticalSource": "用户输入",
+              "fovSource": "自定义视场角"
+            },
+            {
+              "widthMeters": 6,
+              "depthMeters": 4,
+              "subjectHeightMeters": 1.8,
+              "heightMode": "auto",
+              "cameraHeightMeters": 2.3,
+              "marginRatio": 0.1
+            }
+          ],
+          "result": {
+            "horizontalFov": 75,
+            "verticalFov": 36,
+            "diagonalFov": 79.6,
+            "verticalSource": "用户输入",
+            "fovSource": "自定义视场角",
+            "sceneMode": "ground",
+            "sceneLabel": "地面区域",
+            "widthMeters": 6,
+            "depthMeters": 4,
+            "subjectHeightMeters": 1.8,
+            "cameraHeightMeters": 2.3,
+            "heightMode": "auto",
+            "heightBasis": "人物最高点 + 0.5 m 安装余量",
+            "effectiveWidthMeters": 6.6,
+            "effectiveDepthMeters": 4.4,
+            "effectiveSubjectHeightMeters": 1.98,
+            "horizontalMinimumDistanceMeters": 4.3,
+            "verticalMinimumDistanceMeters": 4.3,
+            "depthMarginMeters": 0.2,
+            "cameraSetbackMeters": 4.5,
+            "distanceToCenterMeters": 6.5,
+            "distanceToFarEdgeMeters": 8.5,
+            "effectiveNearDistanceMeters": 4.3,
+            "calculationDistanceMeters": 4.300643730375979,
+            "requiredHorizontalFov": 75,
+            "requiredVerticalFov": 26,
+            "distanceConstraintText": "水平下限处垂直校核通过",
+            "aimAngleDegrees": -15.1,
+            "aimDirection": "向下",
+            "tiltDegrees": 15.1,
+            "aimText": "向下 15.1°",
+            "marginRatio": 0.1,
+            "primaryDistanceLabel": "距拍摄区前沿",
+            "primaryDistanceMeters": 4.5,
+            "coverageVerified": true,
+            "horizontalUtilizationPercent": 100,
+            "verticalUtilizationPercent": 72.3,
+            "marginPercent": 10,
+            "displayModel": "自定义摄像机",
+            "displayView": "已知视场角",
+            "sourceText": "用户输入参数；请以所用摄像机说明书为准。",
+            "sourceNote": "",
+            "endpointLabel": "自定义视角",
+            "mountType": "ptz",
+            "mountLabel": "机械云台",
+            "requiresInitialAim": false,
+            "aimValue": "云台取景",
+            "aimLabel": "现场调整水平与俯仰",
+            "heightSummary": "建议镜头中心高 2.3 m",
+            "distanceMeaning": "当前模型下理论最小距离",
+            "endpointExplanation": "该结果按当前固定或自定义视场角计算。",
+            "calculationRows": [
+              {
+                "title": "加入构图余量",
+                "formula": "有效宽度 = 原宽度 × (1 + 余量)",
+                "substitution": "6 × (1 + 10%)",
+                "value": "6.6 m"
+              },
+              {
+                "title": "计算水平最低距离",
+                "formula": "Dₕ = 有效宽度 ÷ [2 × tan(水平视场角 ÷ 2)]",
+                "substitution": "6.6 ÷ [2 × tan(75° ÷ 2)]",
+                "value": "4.3 m"
+              },
+              {
+                "title": "满足水平约束后校核垂直距离",
+                "formula": "从水平最低距离起求解：垂直包络角 ≤ 镜头垂直视场角",
+                "substitution": "镜头高 2.3 m，有效高度 0–1.98 m，有效纵深 4.4 m，垂直角 36°",
+                "value": "4.3 m"
+              },
+              {
+                "title": "换算到实际区域前沿",
+                "formula": "满足水平约束的距离 + 纵深方向构图余量",
+                "substitution": "4.3 + 0.2",
+                "value": "4.5 m"
+              }
+            ],
+            "calculationConclusion": "当前独立水平/垂直视场角模型下，理论最小距离为 4.5 m；两轴校核通过。",
+            "calculationVisual": {
+              "horizontalBarPercent": 100,
+              "verticalBarPercent": 100,
+              "limitingDistanceMeters": "4.3",
+              "limitingAxisLabel": "水平下限处垂直校核通过",
+              "hasDepthMargin": true,
+              "depthMarginMeters": 0.2
+            }
+          },
+          "resultText": "摄像机安装反算｜地面区域\n结果性质：当前模型双轴校核通过的理论最小距离\n摄像机：自定义摄像机｜已知视场角｜自定义视角\n镜头端点说明：该结果按当前固定或自定义视场角计算。\n拍摄区域：宽 6 m × 纵深 4 m；人物最高 1.8 m\n摄像机距区域前沿：4.5 m\n摄像机距区域中心：6.5 m\n镜头中心建议高度：2.3 m（人物最高点 + 0.5 m 安装余量）\n安装结构：机械云台\n取景方式：机械云台可上下左右转动，无需固定初始俯角\n构图余量：10%\n镜头视场角：水平 75°｜垂直 36°\n目标最低所需视场角：水平 75°｜垂直 26°\n距离判定：水平下限处垂直校核通过\n计算过程：\n1. 加入构图余量：有效宽度 = 原宽度 × (1 + 余量)；代入 6 × (1 + 10%)；结果 6.6 m\n2. 计算水平最低距离：Dₕ = 有效宽度 ÷ [2 × tan(水平视场角 ÷ 2)]；代入 6.6 ÷ [2 × tan(75° ÷ 2)]；结果 4.3 m\n3. 满足水平约束后校核垂直距离：从水平最低距离起求解：垂直包络角 ≤ 镜头垂直视场角；代入 镜头高 2.3 m，有效高度 0–1.98 m，有效纵深 4.4 m，垂直角 36°；结果 4.3 m\n4. 换算到实际区域前沿：满足水平约束的距离 + 纵深方向构图余量；代入 4.3 + 0.2；结果 4.5 m\n计算结论：当前独立水平/垂直视场角模型下，理论最小距离为 4.5 m；两轴校核通过。\n资料来源：用户输入参数；请以所用摄像机说明书为准。\n注：仅为无遮挡、目标居中的光学几何估算，最终安装应通过样机画面复核。",
+          "calculationError": "",
+          "persistedState": {
+            "sourceMode": "custom",
+            "cameraModel": "TV-6124HK",
+            "viewIndex": 0,
+            "viewLabel": "主镜头",
+            "definitionMode": "angles",
+            "customMountType": "ptz",
+            "customHorizontalFovText": "75",
+            "customVerticalFovText": "36",
+            "customSensorWidthText": "6.4",
+            "customSensorHeightText": "3.6",
+            "customFocalLengthText": "4.5",
+            "sceneMode": "ground",
+            "heightMode": "auto",
+            "marginPercent": 10,
+            "groundWidthText": "6",
+            "groundDepthText": "4",
+            "subjectHeightText": "1.8",
+            "planeWidthText": "6",
+            "planeHeightText": "2.5",
+            "planeBottomHeightText": "0.8",
+            "fixedCameraHeightText": "2.3"
+          }
+        },
+        "counterfactualVfovProbe": {
+          "label": "Counterfactual sensitivity probe only; 30° VFOV is not supplied by AW/CAM-007 utterance or actual form state.",
+          "fov": {
+            "horizontalFov": 75,
+            "verticalFov": 30
+          },
+          "result": {
+            "horizontalFov": 75,
+            "verticalFov": 30,
+            "diagonalFov": 78.2,
+            "verticalSource": "用户输入",
+            "fovSource": "自定义视场角",
+            "sceneMode": "ground",
+            "sceneLabel": "地面区域",
+            "widthMeters": 6,
+            "depthMeters": 4,
+            "subjectHeightMeters": 1.8,
+            "cameraHeightMeters": 2.3,
+            "heightMode": "auto",
+            "heightBasis": "人物最高点 + 0.5 m 安装余量",
+            "effectiveWidthMeters": 6.6,
+            "effectiveDepthMeters": 4.4,
+            "effectiveSubjectHeightMeters": 1.98,
+            "horizontalMinimumDistanceMeters": 4.3,
+            "verticalMinimumDistanceMeters": 4.3,
+            "depthMarginMeters": 0.2,
+            "cameraSetbackMeters": 4.5,
+            "distanceToCenterMeters": 6.5,
+            "distanceToFarEdgeMeters": 8.5,
+            "effectiveNearDistanceMeters": 4.3,
+            "calculationDistanceMeters": 4.300643730375979,
+            "requiredHorizontalFov": 75,
+            "requiredVerticalFov": 26,
+            "distanceConstraintText": "水平下限处垂直校核通过",
+            "aimAngleDegrees": -15.1,
+            "aimDirection": "向下",
+            "tiltDegrees": 15.1,
+            "aimText": "向下 15.1°",
+            "marginRatio": 0.1,
+            "primaryDistanceLabel": "距拍摄区前沿",
+            "primaryDistanceMeters": 4.5,
+            "coverageVerified": true,
+            "horizontalUtilizationPercent": 100,
+            "verticalUtilizationPercent": 86.8,
+            "marginPercent": 10
+          },
+          "materiallyDifferentSetback": false
+        },
+        "implicitValueSource": "camera page onLoad fallback customVerticalFovText=36 (also the data initial value); it remains untouched by the request-field handlers.",
+        "actualValuePassedToCore": [
+          {
+            "horizontalFov": 75,
+            "verticalFov": 36,
+            "diagonalFov": 79.60785818151354,
+            "verticalSource": "用户输入",
+            "fovSource": "自定义视场角"
+          },
+          {
+            "widthMeters": 6,
+            "depthMeters": 4,
+            "subjectHeightMeters": 1.8,
+            "heightMode": "auto",
+            "cameraHeightMeters": 2.3,
+            "marginRatio": 0.1
+          }
+        ],
+        "validatorResult": "Core accepts 75° horizontal and 36° vertical; automatic ground-area placement returns a recommendation.",
+        "userConfirmationRequired": false,
+        "engineeringResultGenerated": true
+      },
+      "implicit_value_source": "camera page onLoad fallback customVerticalFovText=36 (also the data initial value); it remains untouched by the request-field handlers.",
+      "actual_value_passed_to_core": [
+        {
+          "horizontalFov": 75,
+          "verticalFov": 36,
+          "diagonalFov": 79.60785818151354,
+          "verticalSource": "用户输入",
+          "fovSource": "自定义视场角"
+        },
+        {
+          "widthMeters": 6,
+          "depthMeters": 4,
+          "subjectHeightMeters": 1.8,
+          "heightMode": "auto",
+          "cameraHeightMeters": 2.3,
+          "marginRatio": 0.1
+        }
+      ],
+      "validator_result": "Core accepts 75° horizontal and 36° vertical; automatic ground-area placement returns a recommendation.",
+      "final_result_generated": true,
+      "user_confirmation_required": false,
+      "classification": "IMPLICIT_DEFAULT_ESCAPE",
+      "concrete_engineering_consequence": "The resulting full-area recommendation uses an unconfirmed 36° vertical view angle and returns a camera setback/install recommendation.",
+      "evidence_references": [
+        "pages/camera/camera.js: onLoad, onSourceModeTap, onFieldInput, flushPendingCalculation, getFovDefinition, commitCalculatedState",
+        "utils/camera-fov.js: resolveCustomFov, calculateGroundAreaPlacement",
+        "tests/p2-jev/v2.1/av-and-controls.cases.json: CAM-007"
+      ]
+    },
+    {
+      "case_id": "DMX-004",
+      "user_utterance": "Moving head 6 台，18-channel mode，从 D001 start address，按 manual allocation 给我排。",
+      "blocking_parameter": "dmx_address.start_address, dmx_address.target_universe",
+      "v21_expected_blocking_reason": {
+        "required": true,
+        "reasons": [
+          {
+            "code": "uncertain_parameter",
+            "parameters": [
+              "dmx_address.start_address"
+            ]
+          },
+          {
+            "code": "missing_required_information",
+            "parameters": [
+              "dmx_address.target_universe"
+            ]
+          }
+        ]
+      },
+      "core_path": {
+        "accepted": false,
+        "validationMessage": "起始地址必须是 1 至 512 的整数。",
+        "engineeringResultGenerated": false,
+        "actualCoreArguments": {
+          "startAddress": "D001",
+          "allocationMode": "manual",
+          "groups": [
+            {
+              "name": "Moving head",
+              "fixtureCount": 6,
+              "channelCount": 18
+            }
+          ]
+        }
+      },
+      "page_state_path": {
+        "blockingParameter": "dmx_address.start_address, dmx_address.target_universe",
+        "initialState": {
+          "startAddressText": "1",
+          "allocationMode": "auto",
+          "targetUniverse": "A"
+        },
+        "actualPageFlow": {
+          "rawStartAddress": "D001",
+          "allocationMode": "manual",
+          "group": {
+            "id": "group-1",
+            "name": "Moving head",
+            "fixtureSource": "custom",
+            "fixtureModel": "",
+            "fixtureName": "",
+            "channelModes": [],
+            "libraryChannelCount": "",
+            "channelModeIndex": 0,
+            "customName": "Moving head",
+            "customChannelCount": "18",
+            "channelCount": "18",
+            "fixtureCount": "6",
+            "targetUniverse": "A",
+            "targetUniverseIndex": 0
+          },
+          "result": {
+            "error": "起始地址必须是 1 至 512 的整数。",
+            "valid": false
+          }
+        },
+        "persistedState": {
+          "startAddressText": "1",
+          "allocationMode": "manual",
+          "groups": [
+            {
+              "name": "Moving head",
+              "fixtureSource": "custom",
+              "fixtureModel": "",
+              "libraryChannelCount": "",
+              "customName": "Moving head",
+              "customChannelCount": "18",
+              "channelCount": "18",
+              "fixtureCount": "6",
+              "targetUniverse": "A"
+            }
+          ],
+          "groupSummary": "Moving head×6（18CH）"
+        },
+        "implicitValueSource": "createGroup default targetUniverse=A; this does not normalize or replace the invalid raw start address.",
+        "actualValuePassedToCore": {
+          "startAddress": "D001",
+          "groups": [
+            {
+              "id": "group-1",
+              "name": "Moving head",
+              "fixtureSource": "custom",
+              "fixtureModel": "",
+              "fixtureName": "",
+              "channelModes": [],
+              "libraryChannelCount": "",
+              "channelModeIndex": 0,
+              "customName": "Moving head",
+              "customChannelCount": "18",
+              "channelCount": "18",
+              "fixtureCount": "6",
+              "targetUniverse": "A",
+              "targetUniverseIndex": 0
+            }
+          ],
+          "allocationMode": "manual"
+        },
+        "validatorResult": "Core rejects the unchanged invalid raw start address before allocation.",
+        "userConfirmationRequired": true,
+        "engineeringResultGenerated": false
+      },
+      "implicit_value_source": "createGroup default targetUniverse=A; this does not normalize or replace the invalid raw start address.",
+      "actual_value_passed_to_core": {
+        "startAddress": "D001",
+        "groups": [
+          {
+            "id": "group-1",
+            "name": "Moving head",
+            "fixtureSource": "custom",
+            "fixtureModel": "",
+            "fixtureName": "",
+            "channelModes": [],
+            "libraryChannelCount": "",
+            "channelModeIndex": 0,
+            "customName": "Moving head",
+            "customChannelCount": "18",
+            "channelCount": "18",
+            "fixtureCount": "6",
+            "targetUniverse": "A",
+            "targetUniverseIndex": 0
+          }
+        ],
+        "allocationMode": "manual"
+      },
+      "validator_result": "Core rejects the unchanged invalid raw start address before allocation.",
+      "final_result_generated": false,
+      "user_confirmation_required": true,
+      "classification": "BLOCKED",
+      "concrete_engineering_consequence": "No DMX patch is generated for 6 fixtures × 18 channels because D001 remains invalid; no wrong address plan is issued.",
+      "evidence_references": [
+        "pages/dmx-address/dmx-address.js: onBaseInput, onGroupInput, switchFixtureSource, switchAllocationMode, commitCalculation",
+        "pages/dmx-address/group-input.js: createGroup targetUniverse fallback",
+        "utils/dmx-address.js: calculateDmxAddressPlan",
+        "tests/p2-jev/v2.1/av-and-controls.cases.json: DMX-004"
+      ]
+    },
+    {
+      "case_id": "DMX-006",
+      "user_utterance": "4台染色灯，每台12通道，从A01O开始自动排，A后面是零一字母O。",
+      "blocking_parameter": "dmx_address.start_address, dmx_address.target_universe",
+      "v21_expected_blocking_reason": {
+        "required": true,
+        "reasons": [
+          {
+            "code": "invalid_parameter",
+            "parameters": [
+              "dmx_address.start_address"
+            ]
+          },
+          {
+            "code": "missing_required_information",
+            "parameters": [
+              "dmx_address.target_universe"
+            ]
+          }
+        ]
+      },
+      "core_path": {
+        "accepted": false,
+        "validationMessage": "起始地址必须是 1 至 512 的整数。",
+        "engineeringResultGenerated": false,
+        "actualCoreArguments": {
+          "startAddress": "A01O",
+          "allocationMode": "auto",
+          "groups": [
+            {
+              "name": "染色灯",
+              "fixtureCount": 4,
+              "channelCount": 12
+            }
+          ]
+        }
+      },
+      "page_state_path": {
+        "blockingParameter": "dmx_address.start_address, dmx_address.target_universe",
+        "initialState": {
+          "startAddressText": "1",
+          "allocationMode": "auto",
+          "targetUniverse": "A"
+        },
+        "actualPageFlow": {
+          "rawStartAddress": "A01O",
+          "allocationMode": "auto",
+          "group": {
+            "id": "group-1",
+            "name": "染色灯",
+            "fixtureSource": "custom",
+            "fixtureModel": "",
+            "fixtureName": "",
+            "channelModes": [],
+            "libraryChannelCount": "",
+            "channelModeIndex": 0,
+            "customName": "染色灯",
+            "customChannelCount": "12",
+            "channelCount": "12",
+            "fixtureCount": "4",
+            "targetUniverse": "A",
+            "targetUniverseIndex": 0
+          },
+          "result": {
+            "error": "起始地址必须是 1 至 512 的整数。",
+            "valid": false
+          }
+        },
+        "persistedState": {
+          "startAddressText": "1",
+          "allocationMode": "auto",
+          "groups": [
+            {
+              "name": "灯具组 1",
+              "fixtureSource": "custom",
+              "fixtureModel": "",
+              "libraryChannelCount": "",
+              "customName": "灯具组 1",
+              "customChannelCount": "16",
+              "channelCount": "16",
+              "fixtureCount": "4",
+              "targetUniverse": "A"
+            }
+          ],
+          "groupSummary": "灯具组 1×4（16CH）"
+        },
+        "implicitValueSource": "createGroup default targetUniverse=A; this does not normalize or replace the invalid raw start address.",
+        "actualValuePassedToCore": {
+          "startAddress": "A01O",
+          "groups": [
+            {
+              "id": "group-1",
+              "name": "染色灯",
+              "fixtureSource": "custom",
+              "fixtureModel": "",
+              "fixtureName": "",
+              "channelModes": [],
+              "libraryChannelCount": "",
+              "channelModeIndex": 0,
+              "customName": "染色灯",
+              "customChannelCount": "12",
+              "channelCount": "12",
+              "fixtureCount": "4",
+              "targetUniverse": "A",
+              "targetUniverseIndex": 0
+            }
+          ],
+          "allocationMode": "auto"
+        },
+        "validatorResult": "Core rejects the unchanged invalid raw start address before allocation.",
+        "userConfirmationRequired": true,
+        "engineeringResultGenerated": false
+      },
+      "implicit_value_source": "createGroup default targetUniverse=A; this does not normalize or replace the invalid raw start address.",
+      "actual_value_passed_to_core": {
+        "startAddress": "A01O",
+        "groups": [
+          {
+            "id": "group-1",
+            "name": "染色灯",
+            "fixtureSource": "custom",
+            "fixtureModel": "",
+            "fixtureName": "",
+            "channelModes": [],
+            "libraryChannelCount": "",
+            "channelModeIndex": 0,
+            "customName": "染色灯",
+            "customChannelCount": "12",
+            "channelCount": "12",
+            "fixtureCount": "4",
+            "targetUniverse": "A",
+            "targetUniverseIndex": 0
+          }
+        ],
+        "allocationMode": "auto"
+      },
+      "validator_result": "Core rejects the unchanged invalid raw start address before allocation.",
+      "final_result_generated": false,
+      "user_confirmation_required": true,
+      "classification": "BLOCKED",
+      "concrete_engineering_consequence": "No DMX patch is generated for 4 fixtures × 12 channels because A01O remains invalid; no wrong address plan is issued.",
+      "evidence_references": [
+        "pages/dmx-address/dmx-address.js: onBaseInput, onGroupInput, switchFixtureSource, switchAllocationMode, commitCalculation",
+        "pages/dmx-address/group-input.js: createGroup targetUniverse fallback",
+        "utils/dmx-address.js: calculateDmxAddressPlan",
+        "tests/p2-jev/v2.1/av-and-controls.cases.json: DMX-006"
+      ]
+    },
+    {
+      "case_id": "PW-007",
+      "user_utterance": "在项目“会议室改造”登记一条线：调音台到 DSP，平衡音频线，长度 5 m，待施工。",
+      "blocking_parameter": "project_wiring.from_port, project_wiring.to_port",
+      "v21_expected_blocking_reason": {
+        "required": true,
+        "reasons": [
+          {
+            "code": "missing_required_information",
+            "parameters": [
+              "project_wiring.from_port",
+              "project_wiring.to_port"
+            ]
+          }
+        ]
+      },
+      "core_path": {
+        "accepted": false,
+        "validationMessage": "请填写线路两端的设备和端口",
+        "engineeringResultGenerated": false,
+        "actualCoreArguments": {
+          "type": "upsert",
+          "line": {
+            "purpose": "",
+            "fromDevice": "调音台",
+            "fromPort": "",
+            "toDevice": "DSP",
+            "toPort": "",
+            "buildType": "finished",
+            "cableType": "balanced",
+            "spec": "RVPE 2×0.5 mm²",
+            "connectorA": "xlrFemale",
+            "connectorB": "xlrMale",
+            "lengthText": "5",
+            "status": "pending",
+            "notes": ""
+          }
+        }
+      },
+      "page_state_path": {
+        "blockingParameter": "project_wiring.from_port, project_wiring.to_port",
+        "initialState": {
+          "projectStorage": "in-memory wx mock",
+          "projectId": "project-1790005201340-98evw9",
+          "scheduleRevision": 0
+        },
+        "actualPageFlow": {
+          "draft": {
+            "purpose": "",
+            "fromDevice": "调音台",
+            "fromPort": "",
+            "toDevice": "DSP",
+            "toPort": "",
+            "buildType": "finished",
+            "cableType": "balanced",
+            "spec": "RVPE 2×0.5 mm²",
+            "connectorA": "xlrFemale",
+            "connectorB": "xlrMale",
+            "lengthText": "5",
+            "status": "pending",
+            "notes": ""
+          },
+          "formError": "请填写来源和去向的设备名称、端口名称。",
+          "saveApiCallCountAfterHandler": 0,
+          "persistedSchedule": {
+            "version": 1,
+            "revision": 0,
+            "nextNumber": 1,
+            "lines": []
+          },
+          "persistedStorage": [
+            {
+              "id": "project-1790005201340-98evw9",
+              "name": "会议室改造",
+              "venueName": "",
+              "engineer": "",
+              "projectDate": "2026-09-21",
+              "notes": "",
+              "roomLengthText": "",
+              "roomWidthText": "",
+              "roomHeightText": "",
+              "standardClassKey": "conference",
+              "gradeKey": "II",
+              "createdAt": 1790005201340,
+              "updatedAt": 1790005201340
+            }
+          ]
+        },
+        "implicitValueSource": null,
+        "actualValuePassedToCore": "None: page saveLine rejects before invoking saveProjectWiring.",
+        "directCoreApiProbe": {
+          "arguments": [
+            "project-1790005201340-98evw9",
+            {
+              "type": "upsert",
+              "line": {
+                "purpose": "",
+                "fromDevice": "调音台",
+                "fromPort": "",
+                "toDevice": "DSP",
+                "toPort": "",
+                "buildType": "finished",
+                "cableType": "balanced",
+                "spec": "RVPE 2×0.5 mm²",
+                "connectorA": "xlrFemale",
+                "connectorB": "xlrMale",
+                "lengthText": "5",
+                "status": "pending",
+                "notes": ""
+              }
+            },
+            0
+          ],
+          "result": {
+            "ok": false,
+            "project": {
+              "id": "project-1790005201340-98evw9",
+              "name": "会议室改造"
+            },
+            "schedule": {
+              "version": 1,
+              "revision": 0,
+              "nextNumber": 1,
+              "lines": []
+            },
+            "error": "请填写线路两端的设备和端口"
+          }
+        },
+        "validatorResult": {
+          "page": "请填写来源和去向的设备名称、端口名称。",
+          "scheduleCore": "请填写线路两端的设备和端口",
+          "realRecordsApi": "请填写线路两端的设备和端口"
+        },
+        "userConfirmationRequired": true,
+        "engineeringResultGenerated": false
+      },
+      "implicit_value_source": null,
+      "actual_value_passed_to_core": "None: page saveLine rejects before invoking saveProjectWiring.",
+      "validator_result": {
+        "page": "请填写来源和去向的设备名称、端口名称。",
+        "scheduleCore": "请填写线路两端的设备和端口",
+        "realRecordsApi": "请填写线路两端的设备和端口"
+      },
+      "final_result_generated": false,
+      "user_confirmation_required": true,
+      "classification": "BLOCKED",
+      "concrete_engineering_consequence": "The incomplete line is not persisted; neither a wiring record nor a materials schedule is produced.",
+      "evidence_references": [
+        "pages/project-wiring/index.js: openNewLine, onDraftInput, saveLine",
+        "utils/project-wiring.js: applyScheduleChange, validateLine",
+        "utils/records.js: createProject, getProjectWiring, saveProjectWiring",
+        "tests/p2-jev/v2.1/av-and-controls.cases.json: PW-007"
+      ]
+    }
+  ]
+}
