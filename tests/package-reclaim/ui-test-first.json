@@ -1,0 +1,12 @@
+{
+  "purpose": "Pin original expanded UI markup and XLR resource identity before approved reclaim edits.",
+  "xlrImageSha256": "565a37a65bed3e9431c5f517d83cef13c580da65b76e51d88968b3a27c37089d",
+  "expandedWxmlSha256": {
+    "pages/dmx-layout/dmx-layout.wxml": "5caeb1d91bc8ecac74d61cb0987bd9b0231a2b721965ef79198a7703db64cfdc",
+    "pages/dmx-layout-landscape/dmx-layout-landscape.wxml": "60abf9ca5cc6aaa03aa818037de616e6c857bf29cc3b495c09d251b88c996260",
+    "pages/cable/cable.wxml": "696c2209341ad306fc204507825098b4e372c8267639ab52dd7bd3bbfb88e0bc",
+    "pages/gain-structure/gain-structure.wxml": "2274609baae95eeac19b5065cf7ffbbb317828a1e1762803e5b4542542859871",
+    "pages/spl/spl.wxml": "5e8073a30f147dc64dc44e00e965678740d72c61e1e42f46c0083a2cdf258cf5",
+    "pages/venue/venue.wxml": "9681bff673c0aaf6d5c57649fade05fa0d71071f9939e97d24dc0aa427c851bf"
+  }
+}

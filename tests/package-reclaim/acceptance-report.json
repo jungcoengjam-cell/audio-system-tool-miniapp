@@ -1,0 +1,275 @@
+{
+  "phase": "Approved package reclaim only; P2 safety remediation not started",
+  "baselineCommit": "7d2fb26a506a5291f6e8327940528027ced9e811",
+  "measurementMethod": "Raw effective release-file byte accounting from tests/release-check.js, after packOptions.ignore and existing app.json subpackage grouping. Not a compiled/uploaded WeChat package size.",
+  "measurement": {
+    "before": {
+      "total": 2099127,
+      "mainJs": 812296,
+      "dmxJs": 242196,
+      "audioJs": 98809,
+      "projectJs": 73867,
+      "wxml": 251569,
+      "wxss": 266518,
+      "media": 346034,
+      "largestJs": 89436
+    },
+    "after": {
+      "total": 2053911,
+      "mainJs": 782884,
+      "dmxJs": 242196,
+      "audioJs": 98829,
+      "projectJs": 73867,
+      "wxml": 248849,
+      "wxss": 266518,
+      "media": 332872,
+      "largestJs": 89436
+    },
+    "reclaim": {
+      "total": 45216,
+      "mainJs": 29412,
+      "dmxJs": 0,
+      "audioJs": -20,
+      "projectJs": 0,
+      "wxml": 2720,
+      "wxss": 0,
+      "media": 13162,
+      "largestJs": 0
+    },
+    "limits": {
+      "total": 2100224,
+      "mainJs": 813056,
+      "dmxJs": 813056,
+      "audioJs": 813056,
+      "projectJs": 813056,
+      "wxml": 251904,
+      "wxss": 267264,
+      "media": 346112,
+      "largestJs": 102400
+    },
+    "headroom": {
+      "total": 46313,
+      "mainJs": 30172,
+      "dmxJs": 570860,
+      "audioJs": 714227,
+      "projectJs": 739189,
+      "wxml": 3055,
+      "wxss": 746,
+      "media": 13240,
+      "largestJs": 12964
+    },
+    "targets": {
+      "total": 38000,
+      "mainJs": 23000,
+      "wxml": 2400
+    },
+    "targetsAndBudgetsPassed": true,
+    "scenarios": [
+      {
+        "additionalJsKiB": 10,
+        "additionalWxmlKiB": 0.5,
+        "remainingBytes": {
+          "total": 35561,
+          "mainJs": 19932,
+          "wxml": 2543
+        }
+      },
+      {
+        "additionalJsKiB": 15,
+        "additionalWxmlKiB": 1,
+        "remainingBytes": {
+          "total": 29929,
+          "mainJs": 14812,
+          "wxml": 2031
+        }
+      },
+      {
+        "additionalJsKiB": 20,
+        "additionalWxmlKiB": 1.5,
+        "remainingBytes": {
+          "total": 24297,
+          "mainJs": 9692,
+          "wxml": 1519
+        }
+      }
+    ],
+    "largestJsFile": "pages/dmx-address/data/stage-lighting-channels.js",
+    "effectiveFiles": 181
+  },
+  "validation": {
+    "catalog": {
+      "products": 149,
+      "dmxFixtures": 121,
+      "result": "passed",
+      "originalSerializedProductSha256": "8e821adbacbf54cc4a80861d4d1ed9b163fd2ffd287ec83c19d2d7e924d07582",
+      "checked": [
+        "original Git catalog deep property names, order, presence, values, descriptors",
+        "exports and model uniqueness",
+        "channel-mode/source ordering",
+        "index and subset shared references",
+        "mutability",
+        "all product details/list/filter/search consumers",
+        "all fixture group consumers",
+        "deterministic generator, tamper and stale-output detection, read-only --check"
+      ],
+      "freshLoadMs": {
+        "median": 0.773,
+        "p95": 1.371,
+        "samples": 50,
+        "scope": "Local Node VM fresh-module load; observational, not device performance"
+      }
+    },
+    "ui": {
+      "expandedWxmlMatchesBaseline": 6,
+      "xlrImageBytesUnchanged": true,
+      "retainedImage": "assets/home/module-audio-wiring-catalog.png",
+      "retainedImageSha256": "565a37a65bed3e9431c5f517d83cef13c580da65b76e51d88968b3a27c37089d",
+      "wcc": {
+        "compiler": "E:/微信web开发者工具/resources/app.asar.unpacked/node_modules/wcc-exec/wcc.exe",
+        "templateCount": 25,
+        "status": 0,
+        "stderr": "",
+        "outputBytes": 563121,
+        "error": null
+      },
+      "existingAudioDmxReportAndPageRegressions": "passed"
+    },
+    "p01": {
+      "total": 86,
+      "passed": 86,
+      "failed": 0,
+      "releaseCheck": "passed",
+      "offlineReleaseChecks": "passed",
+      "report": "tests/package-reclaim/p01-report.json"
+    },
+    "firstValidationIssue": {
+      "classification": "test problem",
+      "file": "tests/audio-wiring-model-test.js",
+      "reason": "Old assertion allowed only page-local image paths.",
+      "resolution": "Allow exactly the approved shared XLR path and require every nonempty local image reference to exist. Complete suite rerun passed."
+    },
+    "credentialScan": {
+      "status": "PASSED",
+      "selfTest": {
+        "fakePositiveCases": 11,
+        "negativeCases": 4
+      },
+      "textFiles": 375,
+      "binaryOrOtherSkipped": 51,
+      "newFilesScanned": 11,
+      "findings": [],
+      "scope": "Tracked and nonignored untracked text files; known credential patterns, paths/rule IDs only; no environment keys read. Not a guarantee against every possible encoding."
+    },
+    "integrity": {
+      "preexistingFiles": 12828,
+      "allowedChanges": [
+        {
+          "path": "data/stage-lighting.js",
+          "missing": false
+        },
+        {
+          "path": "pages/audio-wiring/assets/xlr.png",
+          "missing": true
+        },
+        {
+          "path": "pages/audio-wiring/wiring-model.js",
+          "missing": false
+        },
+        {
+          "path": "pages/cable/cable.wxml",
+          "missing": false
+        },
+        {
+          "path": "pages/dmx-layout-landscape/dmx-layout-landscape.wxml",
+          "missing": false
+        },
+        {
+          "path": "pages/dmx-layout/dmx-layout.wxml",
+          "missing": false
+        },
+        {
+          "path": "pages/gain-structure/gain-structure.wxml",
+          "missing": false
+        },
+        {
+          "path": "pages/spl/spl.wxml",
+          "missing": false
+        },
+        {
+          "path": "pages/venue/venue.wxml",
+          "missing": false
+        },
+        {
+          "path": "project.config.json",
+          "missing": false
+        },
+        {
+          "path": "tests/audio-wiring-model-test.js",
+          "missing": false
+        },
+        {
+          "path": "tests/release-check.js",
+          "missing": false
+        }
+      ],
+      "unexpectedChanges": [],
+      "frozenSafetySha256": "86e0fae20c8e352a138560c85c36c8f92f1f906680534789b4762e0d48b9a22c",
+      "groundTruthAndProtocol": {
+        "valid": true,
+        "errors": [],
+        "v1": "ba93006d321f4db247cbb01ef5f75b6a7c9c13361ca1c83fd75820f00a2ab134",
+        "v2": "cbc3b6d34165e64ff5e53b7189b7dedfffb80a3cee5e8f169ab3b7fe1fee5212",
+        "v21": "b4f7c2de6036c0dee0c1d00bdde5c7158baad18d5bebb9dd9e045c4e9a618c00",
+        "protocol": "13378af75e069d6e6f74185bf1268bb5e9d96597138584a057c97d8454aade8b",
+        "networkAttempts": []
+      },
+      "allOtherPreexistingFilesUnchanged": true
+    },
+    "freshFrozenValidation": {
+      "valid": true,
+      "hashes": {
+        "v1": "ba93006d321f4db247cbb01ef5f75b6a7c9c13361ca1c83fd75820f00a2ab134",
+        "v2": "cbc3b6d34165e64ff5e53b7189b7dedfffb80a3cee5e8f169ab3b7fe1fee5212",
+        "v21": "b4f7c2de6036c0dee0c1d00bdde5c7158baad18d5bebb9dd9e045c4e9a618c00",
+        "protocol": "13378af75e069d6e6f74185bf1268bb5e9d96597138584a057c97d8454aade8b"
+      },
+      "inferenceCalls": 0,
+      "readOnly": true
+    },
+    "budgetLimitsUnchanged": true,
+    "navigationAndSubpackageRegistrationUnchanged": true,
+    "engineeringFormulasUnchanged": true,
+    "jevCalls": 0,
+    "safetyRemediationImplemented": false,
+    "limitations": [
+      "Native WXML compilation and isolated deterministic page/renderer tests passed; no physical WeChat device verification.",
+      "Future remediation scenario bytes assume all added JS is main-package JS and no other bytes are added; these are estimates, not measured remediation output."
+    ]
+  },
+  "changedFiles": [
+    "data/.gitattributes",
+    "data/stage-lighting.js",
+    "docs/catalog-source/stage-lighting.json",
+    "pages/audio-wiring/assets/xlr.png",
+    "pages/audio-wiring/wiring-model.js",
+    "pages/cable/cable.wxml",
+    "pages/dmx-layout-landscape/dmx-layout-landscape.wxml",
+    "pages/dmx-layout/dmx-layout.wxml",
+    "pages/gain-structure/gain-structure.wxml",
+    "pages/spl/spl.wxml",
+    "pages/venue/venue.wxml",
+    "project.config.json",
+    "templates/dmx-batch-sheet.wxml",
+    "templates/result-record-actions.wxml",
+    "tests/audio-wiring-model-test.js",
+    "tests/package-reclaim/README.md",
+    "tests/package-reclaim/acceptance-report.json",
+    "tests/package-reclaim/catalog-equivalence.cjs",
+    "tests/package-reclaim/catalog-generator-test.cjs",
+    "tests/package-reclaim/generate-stage-lighting.cjs",
+    "tests/package-reclaim/p01-report.json",
+    "tests/package-reclaim/ui-resources.cjs",
+    "tests/package-reclaim/ui-test-first.json",
+    "tests/release-check.js"
+  ]
+}

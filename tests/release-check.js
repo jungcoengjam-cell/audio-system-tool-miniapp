@@ -5698,6 +5698,10 @@ function checkReportImageActions() {
 }
 
 checkSyntax()
+childProcess.execFileSync(process.execPath, [path.join(root, 'tests/package-reclaim/generate-stage-lighting.cjs'), '--check'], { stdio: 'inherit' })
+childProcess.execFileSync(process.execPath, [path.join(root, 'tests/package-reclaim/catalog-equivalence.cjs')], { stdio: 'inherit' })
+childProcess.execFileSync(process.execPath, [path.join(root, 'tests/package-reclaim/catalog-generator-test.cjs')], { stdio: 'inherit' })
+childProcess.execFileSync(process.execPath, [path.join(root, 'tests/package-reclaim/ui-resources.cjs')], { stdio: 'inherit' })
 checkReleasePackageGates()
 checkCatalogSelector()
 checkDmxAddressLazyChannelGuide()

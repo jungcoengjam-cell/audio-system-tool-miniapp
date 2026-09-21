@@ -1,4 +1,6 @@
 const assert = require('assert')
+const fs = require('fs')
+const path = require('path')
 
 const { OUTPUT_OPTIONS, INPUT_OPTIONS, getWiringModel, buildWiringText } = require('../pages/audio-wiring/wiring-model')
 const {
@@ -15,7 +17,12 @@ assert.deepStrictEqual(OUTPUT_OPTIONS.map((item) => item.id), [
 assert.deepStrictEqual(INPUT_OPTIONS.map((item) => item.id), [
   'xlrBalanced', 'trsBalanced', 'terminalBalanced', 'rcaStereo', 'tsStereo', 'rcaMono', 'tsMono',
 ])
-assert.ok([...OUTPUT_OPTIONS, ...INPUT_OPTIONS].every((item) => item.image === '' || item.image.startsWith('/pages/audio-wiring/assets/')))
+const audioImages = [...OUTPUT_OPTIONS, ...INPUT_OPTIONS].map((item) => item.image).filter(Boolean)
+assert.ok(audioImages.every((image) => image.startsWith('/pages/audio-wiring/assets/')
+  || image === '/assets/home/module-audio-wiring-catalog.png'))
+audioImages.forEach((image) => {
+  assert.ok(fs.existsSync(path.resolve(__dirname, '..', image.slice(1))), `missing image resource: ${image}`)
+})
 
 // Independent pin-level oracle for the 21 plans that need no user choice.
 const DIRECT_EXPECTED = {

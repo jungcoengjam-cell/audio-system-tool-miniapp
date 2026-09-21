@@ -53,7 +53,7 @@ const OUTPUT_OPTIONS = [
   {
     id: 'xlrBalanced', label: 'XLR 平衡输出', deviceLabel: '调音台',
     signalLabel: 'LINE OUT · 平衡单声道', connectorType: '3 针 XLR',
-    image: '/pages/audio-wiring/assets/xlr.png', side: 'output',
+    image: '/assets/home/module-audio-wiring-catalog.png', side: 'output',
   },
   {
     id: 'trsBalanced', label: '6.35 mm TRS 平衡输出', deviceLabel: '音频设备',
@@ -86,7 +86,7 @@ const INPUT_OPTIONS = [
   {
     id: 'xlrBalanced', label: 'XLR 平衡输入', deviceLabel: '音频设备',
     signalLabel: 'LINE IN · 平衡单声道', connectorType: '3 针 XLR',
-    image: '/pages/audio-wiring/assets/xlr.png', side: 'input',
+    image: '/assets/home/module-audio-wiring-catalog.png', side: 'input',
   },
   {
     id: 'trsBalanced', label: '6.35 mm TRS 平衡输入', deviceLabel: '音频设备',

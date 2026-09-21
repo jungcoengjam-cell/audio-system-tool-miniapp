@@ -1,0 +1,45 @@
+const assert = require('node:assert/strict')
+const crypto = require('node:crypto')
+const fs = require('node:fs')
+const path = require('node:path')
+
+const root = path.resolve(__dirname, '../..')
+const baseline = require('./ui-test-first.json')
+
+function read(relativePath) {
+  return fs.readFileSync(path.join(root, relativePath), 'utf8')
+}
+
+function sha256(buffer) {
+  return crypto.createHash('sha256').update(buffer).digest('hex')
+}
+
+function normalizeLineEndings(source) {
+  return source.replace(/\r\n?/g, '\n')
+}
+
+function expandIncludes(source, fromFile, stack = []) {
+  return source.replace(/<include\s+src="([^"]+)"\s*\/>/g, (_match, includePath) => {
+    const resolved = path.resolve(path.dirname(fromFile), includePath)
+    assert(resolved.startsWith(`${root}${path.sep}`), `WXML include escapes workspace: ${includePath}`)
+    assert(!stack.includes(resolved), `WXML include cycle: ${includePath}`)
+    return expandIncludes(fs.readFileSync(resolved, 'utf8'), resolved, [...stack, resolved])
+  })
+}
+
+for (const [relativePath, expectedHash] of Object.entries(baseline.expandedWxmlSha256)) {
+  assert.match(expectedHash, /^[0-9a-f]{64}$/, `missing test-first WXML hash: ${relativePath}`)
+  const file = path.join(root, relativePath)
+  const expanded = expandIncludes(fs.readFileSync(file, 'utf8'), file)
+  assert.equal(sha256(Buffer.from(normalizeLineEndings(expanded))), expectedHash, `expanded WXML changed: ${relativePath}`)
+}
+
+const keptImagePath = path.join(root, 'assets/home/module-audio-wiring-catalog.png')
+assert.equal(sha256(fs.readFileSync(keptImagePath)), baseline.xlrImageSha256, 'kept XLR image bytes changed')
+assert(!fs.existsSync(path.join(root, 'pages/audio-wiring/assets/xlr.png')), 'duplicate XLR image still exists')
+const wiringModel = read('pages/audio-wiring/wiring-model.js')
+assert.equal((wiringModel.match(/image: '\/assets\/home\/module-audio-wiring-catalog\.png'/g) || []).length, 2,
+  'XLR input/output options must both use the retained production asset')
+assert(!wiringModel.includes('/pages/audio-wiring/assets/xlr.png'), 'wiring model still references the removed duplicate')
+
+console.log('Package reclaim UI/resource equivalence passed (expanded WXML hashes and XLR asset identity).')

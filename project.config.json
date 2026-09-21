@@ -6,6 +6,7 @@
     "ignore": [
       { "type": "file", "value": ".gitignore" },
       { "type": "file", "value": "project.private.config.json" },
+      { "type": "file", "value": "data/.gitattributes" },
       { "type": "file", "value": "assets/miniprogram-icon-original.png" },
       { "type": "file", "value": "assets/miniprogram-icon-144.png" },
       { "type": "file", "value": "assets/miniprogram-icon-144-safe.png" },

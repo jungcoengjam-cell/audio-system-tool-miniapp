@@ -222,10 +222,7 @@
 
       <view class="utility-action-row">
         <view class="result-output-actions"><button class="result-image-button" disabled="{{isGeneratingResultReport}}" bindtap="generateResultReportImage">{{isGeneratingResultReport ? '正在生成…' : '生成结果图片'}}</button><button class="copy-result-button" bindtap="copyResult">复制文字</button></view>
-        <view class="result-record-actions">
-          <button class="result-record-button {{currentFavorite ? 'result-record-button-active' : ''}}" bindtap="toggleCurrentFavorite">{{currentFavorite ? '★ 已收藏' : '☆ 收藏常用'}}</button>
-          <button class="result-record-button" bindtap="saveToActiveProject">加入当前项目</button>
-        </view>
+        <include src="../../templates/result-record-actions.wxml" />
       </view>
       <view class="result-accordion-card {{showVenueDetails ? 'result-accordion-card-active' : ''}}">
         <view class="result-disclosure-row {{showVenueDetails ? 'result-disclosure-row-active' : ''}}" bindtap="toggleVenueDetails">
