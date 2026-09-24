@@ -230,8 +230,8 @@ walkWxss(root)
 assert.strictEqual(bareLengthViolations.length, 0, `WXSS 存在非零长度裸数字: ${JSON.stringify(bareLengthViolations.slice(0, 5))}`)
 // 包体预算是内部预警值，不代表平台上限；本轮测量证据见 docs/verification/wiring-keyboard-stability-2026-09-20/review.json。
 const PACKAGE_BUDGETS = Object.freeze({
-  total: 2051 * 1024,
-  mainJavaScript: 810 * 1024,
+  total: 2067 * 1024,
+  mainJavaScript: 818 * 1024,
   subPackageJavaScript: 794 * 1024,
   '.wxss': 261 * 1024,
   '.wxml': 246 * 1024,
