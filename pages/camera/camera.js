@@ -908,6 +908,26 @@ Page({
   },
 
   ...resultReportMethods,
+  generateResultReportImage() {
+    if (this._cameraUnloaded || (this.getOperationSnapshot() && !this.hasCurrentOperationResult())) return
+    return resultReportMethods.generateResultReportImage.call(this)
+  },
+  canUseCurrentResultReport() {
+    if (!this.hasCurrentOperationResult() || !this.data.resultReportImagePath) return false
+    return this.resultReportSignature === this.getResultReportSignature()
+  },
+  previewResultReportImage() {
+    if (!this.canUseCurrentResultReport()) return false
+    return resultReportMethods.previewResultReportImage.call(this)
+  },
+  shareResultReportImage() {
+    if (!this.canUseCurrentResultReport()) return false
+    return resultReportMethods.shareResultReportImage.call(this)
+  },
+  saveResultReportImage() {
+    if (!this.canUseCurrentResultReport()) return false
+    return resultReportMethods.saveResultReportImage.call(this)
+  },
   copyResult() {
     if (!this.hasCurrentOperationResult()) return
     const resultText = this.getResultText()
@@ -919,8 +939,12 @@ Page({
     if (!this.getOperationSnapshot() && this.hasCurrentOperationResult()) togglePageFavorite(this)
   },
   saveToActiveProject() {
-    if (this.getOperationSnapshot()) return
-    return addPageToActiveProject(this)
+    if (this.getOperationSnapshot() || !this.hasCurrentOperationResult()) return
+    const result = this.data.result
+    const guard = captureOperationResult(this, result)
+    if (!guard) return
+    return addPageToActiveProject(this, () => !this.getOperationSnapshot()
+      && this.data.result === result && isOperationResultCurrent(this, guard))
   },
 })
 

@@ -1,0 +1,18 @@
+[
+  {
+    "id": "DMX-004",
+    "status": "blocked",
+    "valid": false
+  },
+  {
+    "id": "DMX-006",
+    "status": "blocked",
+    "valid": false
+  },
+  {
+    "id": "PW-007",
+    "status": "blocked",
+    "formError": "请填写来源和去向的设备名称、端口名称。",
+    "persistedLineCount": 0
+  }
+]

@@ -10,6 +10,8 @@ const camera = require('./camera-operation.cjs')
 const cameraCard = require('./camera-confirmation-card.cjs')
 const callbacks = require('./operation-callbacks.cjs')
 const ledUnload = require('./led-unload-matrix.cjs')
+const dmx = require('./dmx-operation.cjs')
+const cameraOutput = require('./camera-output-boundaries.cjs')
 
 const suites = []
 function record(name, run, count) {
@@ -41,6 +43,8 @@ record('Camera confirmation-card', cameraCard.run, arrayCount)
 record('Shared operation gate', () => child('gate', 'gate.cjs'), () => 1)
 record('Shared operation callbacks', callbacks.run, objectCount)
 record('LED unload lifecycle matrix', ledUnload.run, objectCount)
+record('DMX-010 channel guide structured/manual', dmx.run, objectCount)
+record('Camera output boundary callbacks', cameraOutput.run, objectCount)
 record('Three blocked controls (DMX-004/006, PW-007)', pages.runControls, arrayCount)
 record('Cross-page manual compatibility', pages.runManualCompatibility, objectCount)
 
@@ -52,8 +56,7 @@ const summary = {
   failedChecks: failedSuites.reduce((sum, suite) => sum + suite.checks, 0),
   suites,
   excluded: [
-    { id: 'DMX-010', reason: 'unimplemented; not run by the active suite' },
-    { id: 'run-minimal.cjs', reason: 'historical runner retained unchanged; has three known Venue failures from obsolete semantic-key mapping and includes pending DMX work' },
+    { id: 'run-minimal.cjs', reason: 'historical runner retained unchanged; has three known Venue failures from obsolete semantic-key mapping and is not current DMX page-contract evidence' },
     { id: 'operation-inputs-unit.cjs', reason: 'historical test retained unchanged; targets the archived gate API and is not current gate evidence' },
   ],
 }

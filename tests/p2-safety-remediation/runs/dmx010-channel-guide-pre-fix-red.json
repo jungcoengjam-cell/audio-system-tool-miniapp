@@ -1,0 +1,15 @@
+{
+  "test": "tests/p2-safety-remediation/minimal/dmx-operation.cjs",
+  "status": "RED",
+  "fixtureModel": "TL-SL333",
+  "profileModeOrder": [6, 3],
+  "builderModelOnlyDefault": 6,
+  "realPageManualOnLoadModelOnly": 6,
+  "firstFailure": {
+    "assertion": "DMX guide Page must expose the structured-operation gate",
+    "actual": "undefined",
+    "expected": "function",
+    "line": 27
+  },
+  "finding": "Without a page-level gate, DMX-010's model-only request follows the builder's first 6CH default."
+}

@@ -187,6 +187,17 @@ function runLedCases() {
     const width = page.getOperationSnapshot().fields.find((field) => field.key === 'wallWidthMeters')
     page.setOperationCandidate(width.key, Number(width.value) + 0.25, width.unit)
     assertLedgerOutputBlocked(page, `${id} changed value`)
+    const blockedEffects = {
+      clipboard: env.effects.clipboard.length, storage: env.effects.storage.length,
+      modals: env.pending.modals.length, draws: env.pending.draws.length,
+      exports: env.pending.canvases.length,
+    }
+    page.copyResult(); page.toggleCurrentFavorite(); page.saveToActiveProject(); page.generateReportImage()
+    assert.deepStrictEqual({
+      clipboard: env.effects.clipboard.length, storage: env.effects.storage.length,
+      modals: env.pending.modals.length, draws: env.pending.draws.length,
+      exports: env.pending.canvases.length,
+    }, blockedEffects, `${id}: stale operation controls must not perform output actions`)
     page.flushInputCalculation()
     assert.strictEqual(spy.calls.length, 2, `${id}: changed but unconfirmed value reached the core`)
 

@@ -6,6 +6,15 @@
       <view class="meta">{{guide.source}} · {{guide.sourcePageText}} · {{guide.verificationStatus}}</view>
     </view>
 
+    <view wx:if="{{operationSnapshot}}" class="card">
+      <view class="section-title">本次结构化操作</view>
+      <view wx:for="{{operationSnapshot.fields}}" wx:key="key" class="meta">{{item.label}}：{{item.displayValue}}<text wx:if="{{item.hasValue}}"> {{item.unit}}</text></view>
+      <view wx:if="{{operationModes.length}}" class="modes">
+        <view wx:for="{{operationModes}}" wx:key="channelCount" class="mode {{item.selected ? 'mode-active' : ''}}" data-channel-count="{{item.channelCount}}" bindtap="switchMode">{{item.label}}</view>
+      </view>
+      <view class="mode" bindtap="endOperation">结束本次操作</view>
+    </view>
+
     <view wx:if="{{guide}}" class="card">
       <view class="section-title">通道模式</view>
       <view class="modes">
@@ -25,6 +34,6 @@
       </view>
     </view>
 
-    <view wx:else class="empty">暂无已核对的逐通道资料</view>
+    <view wx:if="{{!guide && !operationSnapshot}}" class="empty">暂无已核对的逐通道资料</view>
   </view>
 </scroll-view>

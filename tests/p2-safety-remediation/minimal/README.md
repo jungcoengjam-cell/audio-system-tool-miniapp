@@ -24,17 +24,19 @@ WeChat-device performance or lifecycle test.
 Run the current page contract subset with `node tests/p2-safety-remediation/minimal/run-active.cjs`.
 It runs the three corrected Venue cases, four LED cases, Camera operation and
 confirmation-card checks, gate callbacks and LED unload lifecycle, blocked
-controls, and manual compatibility. It explicitly excludes DMX-010 because
-that operation has not been implemented; the historical `run-minimal.cjs` and
+controls, manual compatibility, the structured DMX-010 channel guide, and
+Camera output-boundary callbacks. The
+historical `run-minimal.cjs` and
 the legacy `operation-inputs-unit.cjs` remain unchanged and are not part of the
 active suite.
 
-The 11-suite, 50/50 named-check count does not represent every historical runner.
+The 13-suite, 66/66 named-check count is printed by the runner and does not represent
+every historical runner.
 The number counts returned named result entries, not individual assertions or
 independent end-to-end cases. The
 unchanged `run-minimal.cjs` still has three Venue failures because its old
-semantic-key adapter does not map to the current page field names, and it also
-contains pending DMX work. The unchanged `operation-inputs-unit.cjs` targets an
+semantic-key adapter does not map to the current page field names; it is not
+current DMX page-contract evidence. The unchanged `operation-inputs-unit.cjs` targets an
 archived gate API. The active gate evidence comes from `gate.cjs`,
 `operation-callbacks.cjs`, the Venue/LED/Camera page suites, and the LED unload
 matrix (which invokes the standalone late-success lifecycle test).

@@ -41,12 +41,13 @@ function togglePageFavorite(page) {
   wx.showToast({ title: currentFavorite ? '已收藏常用' : '已取消收藏', icon: 'none' })
 }
 
-function addPageToActiveProject(page) {
+function addPageToActiveProject(page, isCurrent = () => true) {
+  if (!isCurrent()) return
   const payload = getPayload(page)
-  if (!payload) return
+  if (!payload || !isCurrent()) return
 
   const saveToProject = (project) => {
-    if (!project) return
+    if (!project || !isCurrent()) return
     if (!addRecordToProject(payload, project.id)) {
       wx.showToast({ title: '保存失败，请检查本地存储', icon: 'none' })
       return
@@ -68,7 +69,7 @@ function addPageToActiveProject(page) {
     placeholderText: '例如：三楼会议室',
     confirmText: '创建并加入',
     success: ({ confirm, content }) => {
-      if (!confirm) return
+      if (!confirm || !isCurrent()) return
       const project = createProject(content)
       if (project) saveToProject(project)
       else wx.showToast({ title: '请输入项目名称', icon: 'none' })

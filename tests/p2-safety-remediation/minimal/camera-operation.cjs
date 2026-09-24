@@ -222,6 +222,12 @@ function run() {
   assert.equal(typeof env.pending.modals[manualModalBefore].success, 'function',
     'manual shared project modal callback must remain available')
   env.answerModal(manualModalBefore, true, 'Camera manual actions')
+  assert.equal(env.effects.toasts.at(-1)?.title, '已加入Camera manual actions',
+    'manual project helper should retain its existing success toast')
+  const savedProjects = env.storage.get('audioTool.projects.v1') || []
+  assert.equal(savedProjects.length, 1, 'manual project helper should still create a project')
+  assert.equal((env.storage.get('audioTool.records.v1') || []).length, 1,
+    'manual project helper should still add its record')
   env.wx.setStorageSync = () => { throw new Error('simulated local storage failure') }
   page.saveToActiveProject()
   assert.equal(env.effects.toasts.at(-1)?.title, '保存失败，请检查本地存储',

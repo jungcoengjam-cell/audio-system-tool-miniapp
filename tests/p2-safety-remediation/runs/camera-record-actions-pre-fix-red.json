@@ -1,0 +1,16 @@
+{
+  "test": "tests/p2-safety-remediation/minimal/camera-operation.cjs",
+  "stage": "Camera structured record-action regression before fix",
+  "status": "RED",
+  "firstFailure": {
+    "assertion": "structured Camera favorite must not persist a replay record",
+    "expectedStorageWrites": 2,
+    "actualStorageWrites": 6,
+    "line": 154
+  },
+  "alsoRequired": [
+    "structured project action opens no replay modal",
+    "structured copy and report remain available",
+    "ending structured mode restores manual shared-helper behavior"
+  ]
+}

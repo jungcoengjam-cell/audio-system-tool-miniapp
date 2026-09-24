@@ -5,6 +5,7 @@ const path = require('node:path')
 const { createDelayedEnvironment, clone } = require('./delayed-environment.cjs')
 const { CASE_FACTS, CONTROL_FACTS } = require('./fixtures.cjs')
 const { patchExport, repoRoot } = require('../../p2-safety/harness.cjs')
+const { STANDARD_CLASSES } = require('../../../utils/venue')
 
 const CASE_PATHS = Object.freeze({
   venue: 'pages/venue/venue.js',
@@ -176,6 +177,9 @@ function runNineCases() {
 }
 
 function runVenueFocused() {
+  assert.equal(STANDARD_CLASSES[0].key, 'conference')
+  assert.equal(STANDARD_CLASSES[0].grades[0].key, 'II')
+  assert.equal(STANDARD_CLASSES[0].grades[1].key, 'I')
   const results = []
   for (const id of ['V2-AUD-005', 'V2-AUD-006', 'V2-AUD-007']) {
     const facts = CASE_FACTS[id]
@@ -210,6 +214,9 @@ function runVenueFocused() {
       const before = clone(pageOutput(page))
       assert.strictEqual(spy.calls.length, 1, `${id}: expected one core call after exact confirmation`)
       const input = spy.calls[0]
+      assert.equal(input.standardClassKey, 'conference', `${id}: core standard class must come from explicit venue facts`)
+      assert.equal(input.gradeKey, id === 'V2-AUD-006' ? 'I' : 'II', `${id}: core grade must preserve the confirmed level`)
+      assert.equal(input.layout, 'short', `${id}: core layout must preserve short-wall-first facts`)
       const dimensions = {
         lengthMeters: all['venue.room_length_m'], widthMeters: all['venue.room_width_m'], heightMeters: all['venue.room_height_m'],
         firstListeningDistanceMeters: all['venue.first_row_distance_m'], lastListeningDistanceMeters: all['venue.last_row_distance_m'],
@@ -228,8 +235,30 @@ function runVenueFocused() {
       // effects before a new calculation can be committed.
       const lengthField = page.getOperationSnapshot().fields.find((field) => /length/i.test(field.key))
       assert(lengthField, `${id}: length field missing from operation`)
+      page.saveToActiveProject()
+      assert.equal(env.pending.modals.length, 1, `${id}: current result should prompt for project name`)
       page.setOperationCandidate(lengthField.key, Number(lengthField.value) + 1, lengthField.unit)
+      const writesBeforeLateCallback = env.effects.storage.length
+      const projectsBeforeLateCallback = clone(env.storage.get('audioTool.projects.v1') || [])
+      env.answerModal(0, true, `${id} stale venue project`)
+      assert.equal(env.effects.storage.length, writesBeforeLateCallback, `${id}: stale project modal must not create a project or add a record`)
+      assert.deepEqual(env.storage.get('audioTool.projects.v1') || [], projectsBeforeLateCallback,
+        `${id}: stale project callback must leave the project list unchanged`)
       assertNoEngineeringOutput(page, `${id} value invalidation`)
+      const writes = env.effects.storage.length
+      const toasts = env.effects.toasts.length
+      page.copyResult()
+      page.toggleCurrentFavorite()
+      page.saveToActiveProject()
+      assert.equal(env.effects.clipboard.length, 0, `${id}: stale result must not be copied`)
+      assert.equal(env.effects.storage.length, writes, `${id}: stale result must not update favorites or project storage`)
+      assert.equal(env.pending.modals.length, 0, `${id}: stale result must not open a project modal`)
+      assert.equal(env.effects.toasts.length, toasts, `${id}: copy/favorite/project must not show stale-result toasts`)
+      page.generateResultReportImage()
+      assert.equal(env.pending.draws.length, 0, `${id}: stale result must not draw a report`)
+      assert.equal(env.pending.canvases.length, 0, `${id}: stale result must not export a report`)
+      assert.deepEqual(env.effects.toasts.slice(toasts).map((toast) => toast.title), ['暂无可生成的预估结果'],
+        `${id}: stale report request may only show the fixed empty-result message`)
       results.push({ id, historical: Boolean(historical), coreInput: input, status: 'passed' })
     } finally {
       spy.restore()

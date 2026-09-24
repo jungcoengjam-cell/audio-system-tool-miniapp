@@ -1,0 +1,418 @@
+{
+  "acceptanceVersion": "1.0",
+  "acceptanceDate": "2026-09-24",
+  "acceptanceStatus": "verified-awaiting-human-approval",
+  "commits": {
+    "packageReclaim": "8d139e9f8f7a0ad64dc8f58e538022531f2d8fe3",
+    "venueLedCameraCheckpoint": "a5de5a6e4825e9fc00347dbab9ad5c442f44fa59",
+    "internalBudgetRevision": "545e5be28e5acd5d6fc1a065ffbefbaaac172315",
+    "headBeforeFinalRemediationCommit": "545e5be28e5acd5d6fc1a065ffbefbaaac172315"
+  },
+  "targetedCases": [
+    {
+      "id": "V2-AUD-005",
+      "originalBlockingSemanticParameter": "venue.room_length_m",
+      "preFixImplicitSource": "Untouched Venue onLoad length fallback, 12 m",
+      "preFixBehavior": "Core ran and returned 96 m² area, 12 m depth.",
+      "postFixMissingOrUnconfirmedBehavior": "Length remains a blocker; no structured result, core call, copy, report, favorite, or project save.",
+      "explicitConfirmationBehavior": "Confirming the current length candidate permits the operation.",
+      "deterministicCoreResultAfterConfirmation": "Same supplied facts and 12 m length: 96 m² report estimate, 12 m depth, 2.5 m speaker center height.",
+      "sameValueConfirmation": "Idempotent; existing result retained and no duplicate core call.",
+      "invalidation": "Changed length invalidates result and derived output; stale project callback has no storage effect.",
+      "staleCallbackOrOutput": "Old project confirmation callback is rejected; stale copy/favorite/project actions are blocked; a report requested after invalidation starts no draw or export. No already-started report callback was exercised for Venue.",
+      "postFixClassification": "CONFIRMED_EXECUTION",
+      "silentImplicitDefaultEscape": false,
+      "evidence": [
+        "minimal/page-behavior.cjs:runVenueFocused"
+      ],
+      "postFixInitialBlockers": [
+        "lengthText"
+      ]
+    },
+    {
+      "id": "V2-AUD-006",
+      "originalBlockingSemanticParameter": "venue.room_width_m",
+      "preFixImplicitSource": "Untouched Venue onLoad width fallback, 8 m",
+      "preFixBehavior": "Core ran and returned 96 m² area, 8 m front width.",
+      "postFixMissingOrUnconfirmedBehavior": "Width remains a blocker; no structured result or output side effects.",
+      "explicitConfirmationBehavior": "Confirming width 8 m with the real page handler permits the operation.",
+      "deterministicCoreResultAfterConfirmation": "Same supplied facts and 8 m width: 96 m² report estimate, 8 m front width.",
+      "sameValueConfirmation": "Idempotent; existing result retained and no duplicate core call.",
+      "invalidation": "Changed length or width invalidates the result and stale project callback; output handlers remain blocked until reconfirmed.",
+      "staleCallbackOrOutput": "Old project confirmation callback is rejected; stale copy/favorite/project actions are blocked; report request after invalidation starts no draw or export. No already-started report callback was exercised for Venue.",
+      "postFixClassification": "CONFIRMED_EXECUTION",
+      "silentImplicitDefaultEscape": false,
+      "evidence": [
+        "minimal/page-behavior.cjs:runVenueFocused"
+      ],
+      "postFixInitialBlockers": [
+        "widthText"
+      ]
+    },
+    {
+      "id": "V2-AUD-007",
+      "originalBlockingSemanticParameter": "venue.room_height_m",
+      "preFixImplicitSource": "Untouched Venue onLoad height fallback, 4 m",
+      "preFixBehavior": "Core ran with a 4 m room and returned 2.5 m speaker center height.",
+      "postFixMissingOrUnconfirmedBehavior": "Height remains a blocker; no structured result or output side effects.",
+      "explicitConfirmationBehavior": "Confirming the current height candidate permits the operation.",
+      "deterministicCoreResultAfterConfirmation": "Same supplied facts and 4 m height: 2.5 m speaker center height; same deterministic Venue core output as the pre-fix input.",
+      "sameValueConfirmation": "Idempotent; existing result retained and no duplicate core call.",
+      "invalidation": "Changed required values invalidate the result; stale project and report actions cannot publish output.",
+      "staleCallbackOrOutput": "Old project confirmation callback is rejected; stale copy/favorite/project actions are blocked; report request after invalidation starts no draw or export. No already-started report callback was exercised for Venue.",
+      "postFixClassification": "CONFIRMED_EXECUTION",
+      "silentImplicitDefaultEscape": false,
+      "evidence": [
+        "minimal/page-behavior.cjs:runVenueFocused"
+      ],
+      "postFixInitialBlockers": [
+        "heightText"
+      ]
+    },
+    {
+      "id": "LED-001",
+      "originalBlockingSemanticParameter": "led_screen.assembly_unit_width_mm and led_screen.assembly_unit_height_mm",
+      "preFixImplicitSource": "Persisted cabinetStandard picker selection, 640 × 480 mm, from an earlier page instance.",
+      "preFixBehavior": "Current request reused the persisted assembly choice and returned 63 cabinets, 5.76 × 3.36 m.",
+      "postFixMissingOrUnconfirmedBehavior": "Current operation blocks on assembly dimensions until confirmation; category/unitKey is already explicitly supplied and confirmed in this case; prior page result is cleared.",
+      "explicitConfirmationBehavior": "Provided cabinetStandard remains confirmed; explicit modal confirmation of 640 × 480 mm dimensions permits execution.",
+      "deterministicCoreResultAfterConfirmation": "63 cabinet units; 5.76 × 3.36 m; same existing deterministic LED core output for the confirmed input.",
+      "sameValueConfirmation": "Idempotent; result retained and no duplicate core call.",
+      "invalidation": "Changing wall width or selected unit invalidates the result and requires confirmation; stale project/report callbacks do not persist or publish.",
+      "staleCallbackOrOutput": "Stale project, report draw, and export paths are rejected.",
+      "postFixClassification": "CONFIRMED_EXECUTION",
+      "silentImplicitDefaultEscape": false,
+      "evidence": [
+        "minimal/led-operation.cjs:runLedCases",
+        "minimal/led-operation.cjs:runManualCompatibility"
+      ],
+      "postFixInitialBlockers": [
+        "unitWidthMm",
+        "unitHeightMm"
+      ]
+    },
+    {
+      "id": "LED-003",
+      "originalBlockingSemanticParameter": "led_screen.assembly_unit_width_mm and led_screen.assembly_unit_height_mm; the frozen utterance also leaves top clearance unresolved.",
+      "preFixImplicitSource": "Initial module selection, 320 × 160 mm, survived category-only wording.",
+      "preFixBehavior": "After the old page path supplied other UI values, core returned 483 modules, 6.72 × 3.68 m.",
+      "postFixMissingOrUnconfirmedBehavior": "Live blockers include unit dimensions, top clearance, bottom clearance, and frame width; unconfirmed fields cannot reach the core. The frozen utterance also leaves top clearance unresolved.",
+      "explicitConfirmationBehavior": "Confirm required module dimensions and all other live blockers; the structured operation executes only when ready.",
+      "deterministicCoreResultAfterConfirmation": "483 modules at 320 × 160 mm; 6.72 × 3.68 m; matches the unchanged deterministic core for these confirmed inputs.",
+      "sameValueConfirmation": "Idempotent; result retained and no duplicate core call.",
+      "invalidation": "Changing a value invalidates output; unit changes invalidate unitKey and unit dimensions until reconfirmed.",
+      "staleCallbackOrOutput": "Stale project, report draw, and export callbacks cannot publish or persist output.",
+      "postFixClassification": "CONFIRMED_EXECUTION",
+      "silentImplicitDefaultEscape": false,
+      "evidence": [
+        "minimal/led-operation.cjs:runLedCases"
+      ],
+      "postFixInitialBlockers": [
+        "topReserveMeters",
+        "bottomReserveMeters",
+        "frameWidthCm",
+        "unitWidthMm",
+        "unitHeightMm"
+      ]
+    },
+    {
+      "id": "LED-005",
+      "originalBlockingSemanticParameter": "led_screen.assembly_unit_width_mm, led_screen.assembly_unit_height_mm, and led_screen.assembly_unit",
+      "preFixImplicitSource": "Initial module selection, 320 × 160 mm, despite absent category and dimensions.",
+      "preFixBehavior": "Core returned 440 modules, 6.40 × 3.52 m.",
+      "postFixMissingOrUnconfirmedBehavior": "Live blockers include frame width, category/unitKey, unit dimensions, and pixel pitch; all remain unresolved until confirmation.",
+      "explicitConfirmationBehavior": "Confirm cabinetStandard, 640 × 480 mm, and all other live blockers before calculation.",
+      "deterministicCoreResultAfterConfirmation": "63 cabinet units; 5.76 × 3.36 m; matches direct deterministic core for the explicitly confirmed cabinet input (pre-fix output was 440 modules).",
+      "sameValueConfirmation": "Idempotent; result retained and no duplicate core call.",
+      "invalidation": "Changed value or unit invalidates result and derived output until reconfirmed.",
+      "staleCallbackOrOutput": "Stale project/report callbacks do not persist or publish output.",
+      "postFixClassification": "CONFIRMED_EXECUTION",
+      "silentImplicitDefaultEscape": false,
+      "evidence": [
+        "minimal/led-operation.cjs:runLedCases"
+      ],
+      "postFixInitialBlockers": [
+        "frameWidthCm",
+        "unitKey",
+        "unitWidthMm",
+        "unitHeightMm",
+        "pixelPitch"
+      ]
+    },
+    {
+      "id": "LED-006",
+      "originalBlockingSemanticParameter": "led_screen.assembly_unit_width_mm, led_screen.assembly_unit_height_mm, and led_screen.assembly_unit",
+      "preFixImplicitSource": "Initial module selection, 320 × 160 mm, despite absent category and dimensions.",
+      "preFixBehavior": "Core returned 210 modules, 4.48 × 2.40 m.",
+      "postFixMissingOrUnconfirmedBehavior": "Live blockers include frame width, category/unitKey, unit dimensions, and pixel pitch; all remain unresolved until confirmation.",
+      "explicitConfirmationBehavior": "Confirm cabinetStandard, 640 × 480 mm, and all other live blockers before calculation.",
+      "deterministicCoreResultAfterConfirmation": "35 cabinet units; 4.48 × 2.4 m; matches direct deterministic core for the explicitly confirmed cabinet input (pre-fix output was 210 modules).",
+      "sameValueConfirmation": "Idempotent; result retained and no duplicate core call.",
+      "invalidation": "Changed value or unit invalidates result and derived output until reconfirmed.",
+      "staleCallbackOrOutput": "Stale project/report callbacks do not persist or publish output.",
+      "postFixClassification": "CONFIRMED_EXECUTION",
+      "silentImplicitDefaultEscape": false,
+      "evidence": [
+        "minimal/led-operation.cjs:runLedCases"
+      ],
+      "postFixInitialBlockers": [
+        "frameWidthCm",
+        "unitKey",
+        "unitWidthMm",
+        "unitHeightMm",
+        "pixelPitch"
+      ]
+    },
+    {
+      "id": "CAM-007",
+      "originalBlockingSemanticParameter": "camera_fov.vfov_deg",
+      "preFixImplicitSource": "Custom Camera onLoad candidate VFOV 36°.",
+      "preFixBehavior": "Core ran without current-operation confirmation and returned 4.50 m setback, 2.30 m camera height.",
+      "postFixMissingOrUnconfirmedBehavior": "Full-area operation remains blocked without current-operation VFOV; prior manual result is cleared and persistence actions are blocked.",
+      "explicitConfirmationBehavior": "Real Camera handler asks for explicit VFOV confirmation; the selected value controls calculation. Same-value visible candidate 36° also requires confirmation.",
+      "deterministicCoreResultAfterConfirmation": "Confirmed VFOV 24° yields 4.91 m setback and 2.30 m camera height; result matches the existing Camera deterministic core.",
+      "sameValueConfirmation": "Explicit confirmation of the visible 36° candidate executes; 24° is a distinct confirmed input and changes the setback to 4.91 m.",
+      "invalidation": "Editing VFOV or changing model invalidates result and structured persistence eligibility.",
+      "staleCallbackOrOutput": "Stale confirmation and report callbacks cannot replace a newer result or publish after unload.",
+      "postFixClassification": "CONFIRMED_EXECUTION",
+      "silentImplicitDefaultEscape": false,
+      "evidence": [
+        "minimal/camera-operation.cjs:run",
+        "minimal/camera-output-boundaries.cjs:run"
+      ],
+      "postFixInitialBlockers": [
+        "verticalFov"
+      ]
+    },
+    {
+      "id": "DMX-010",
+      "originalBlockingSemanticParameter": "dmx_address.channels_per_fixture",
+      "preFixImplicitSource": "TL-SL333 profile ordering supplied the first 6 CH mode when navigation provided model only.",
+      "preFixBehavior": "Guide immediately showed the labelled 6 CH profile without confirmation.",
+      "postFixMissingOrUnconfirmedBehavior": "Model-only structured operation stays blocked with no guide; selectable 6 CH and 3 CH modes remain candidates only.",
+      "explicitConfirmationBehavior": "Selecting a mode invokes confirmation naming the exact mode; builder runs after confirmation.",
+      "deterministicCoreResultAfterConfirmation": "TL-SL333 6 CH guide, 6 channels, matches buildDmxChannelGuide({model: TL-SL333, channelCount: 6}). 3 CH selection likewise produces the 3 CH guide only after confirmation.",
+      "sameValueConfirmation": "Selecting the page's first 6 CH mode still requires explicit confirmation.",
+      "invalidation": "Switching 6 CH to 3 CH requires confirmation and replaces the guide only after acceptance.",
+      "staleCallbackOrOutput": "Stale mode callback cannot publish or confirm a replacement operation; late callback after unload makes no builder call or output publication.",
+      "postFixClassification": "CONFIRMED_EXECUTION",
+      "silentImplicitDefaultEscape": false,
+      "evidence": [
+        "minimal/dmx-operation.cjs:run"
+      ],
+      "postFixInitialBlockers": [
+        "channelCount"
+      ]
+    }
+  ],
+  "controls": [
+    {
+      "id": "DMX-004",
+      "classification": "BLOCKED",
+      "result": "invalid false; no address plan",
+      "evidence": "minimal/page-behavior.cjs:runControls"
+    },
+    {
+      "id": "DMX-006",
+      "classification": "BLOCKED",
+      "result": "invalid false; no address plan",
+      "evidence": "minimal/page-behavior.cjs:runControls"
+    },
+    {
+      "id": "PW-007",
+      "classification": "BLOCKED",
+      "result": "blank ports rejected; no save; persisted line count 0",
+      "evidence": "minimal/page-behavior.cjs:runControls"
+    }
+  ],
+  "unverifiedCases": [
+    {
+      "id": "AW-007",
+      "classification": "UNVERIFIED",
+      "reason": "No distinct new-operation omitted-channel escape demonstrated; no change in classification."
+    },
+    {
+      "id": "CAB-008",
+      "classification": "UNVERIFIED",
+      "reason": "No production range-to-default conversion demonstrated; no change in classification."
+    }
+  ],
+  "silentImplicitDefaultEscape": false,
+  "cameraCapabilities": {
+    "manual": {
+      "copy": "supported",
+      "report": "supported",
+      "favorite": "supported",
+      "projectSave": "supported"
+    },
+    "currentValidStructuredResult": {
+      "copy": "supported",
+      "report": "supported",
+      "favorite": "intentionally blocked where lossless restoration is unsupported",
+      "projectSave": "intentionally blocked where lossless restoration is unsupported"
+    },
+    "interpretation": "Structured favorite/project persistence is a limitation, not a completed persistence feature."
+  },
+  "tests": {
+    "activeRemediation": {
+      "command": "node tests/p2-safety-remediation/minimal/run-active.cjs",
+      "groups": 13,
+      "namedChecks": 66,
+      "passed": 66,
+      "failed": 0,
+      "historicalRunMinimal": "retained; obsolete Venue/CAM mappings; not current passing evidence",
+      "historicalOperationInputsUnit": "retained; targets archived oversized experimental API; not active gate contract"
+    },
+    "p0p1": {
+      "command": "node tests/deterministic-check.js",
+      "total": 86,
+      "passed": 86,
+      "failed": 0,
+      "status": "passed",
+      "offlineReleaseChecks": "passed"
+    },
+    "releaseCheck": {
+      "command": "node tests/release-check.js",
+      "status": "passed",
+      "exitCode": 0,
+      "catalogProducts": 149,
+      "dmxFixtures": 121,
+      "catalogEquivalence": "passed",
+      "catalogGeneratorDeterminism": "passed",
+      "offlineRuntimeIsolation": "passed",
+      "credentialScan": "passed, 0 findings"
+    },
+    "sourceBytes": {
+      "method": "tests/release-check.js effective release-file accounting; source bytes, not compiled package",
+      "total": {
+        "actual": 2105767,
+        "budget": 2116608
+      },
+      "mainPackageJs": {
+        "actual": 828024,
+        "budget": 837632
+      },
+      "wxml": {
+        "actual": 250901,
+        "budget": 251904
+      },
+      "wxss": {
+        "actual": 266518,
+        "budget": 267264
+      },
+      "media": {
+        "actual": 332872,
+        "budget": 346112
+      },
+      "allHardInternalBudgetsPassed": true
+    },
+    "frozenValidation": {
+      "p2SafetyBaseline": "passed read-only --verify",
+      "fixtureMapping": "passed",
+      "v1": "passed",
+      "v2": "passed",
+      "v21": "passed",
+      "benchmarkProtocol": "passed offline dry-run; no Jev call"
+    },
+    "acceptanceAreaCredentialScan": {
+      "command": "node tests/p2-safety-remediation/post-fix-acceptance/credential-scan.cjs --check-only",
+      "status": "passed",
+      "filesScanned": 7,
+      "findings": 0
+    }
+  },
+  "frozenSha256": {
+    "p2SafetyBaseline": "86e0fae20c8e352a138560c85c36c8f92f1f906680534789b4762e0d48b9a22c",
+    "classificationDefinitions": "BCD1FDFDD7F6348722D10F7C96F2CDB3277702AB216FED8A59ABA75B8A2AD25D",
+    "v1": "ba93006d321f4db247cbb01ef5f75b6a7c9c13361ca1c83fd75820f00a2ab134",
+    "v2": "cbc3b6d34165e64ff5e53b7189b7dedfffb80a3cee5e8f169ab3b7fe1fee5212",
+    "v21": "b4f7c2de6036c0dee0c1d00bdde5c7158baad18d5bebb9dd9e045c4e9a618c00",
+    "benchmarkProtocol": "13378af75e069d6e6f74185bf1268bb5e9d96597138584a057c97d8454aade8b",
+    "catalogSerializedProductSnapshot": "8e821adbacbf54cc4a80861d4d1ed9b163fd2ffd287ec83c19d2d7e924d07582"
+  },
+  "buildAndPlatformStatus": {
+    "wechatDeveloperToolsVersion": "2.02.0",
+    "localProjectOpen": "verified",
+    "localWxmlCompilation": "verified for previously tested templates; not rerun in this acceptance turn",
+    "actualCompiledMiniProgramPackageBytes": "UNVERIFIED",
+    "physicalDeviceLifecycle": "UNVERIFIED except separate LED subpackage experiment, not final architecture",
+    "futureNaturalLanguageOrJevProductionIntegration": "UNVERIFIED"
+  },
+  "independentReview": {
+    "status": "passed",
+    "requiredScope": [
+      "complete production diff since package-reclaim baseline",
+      "two intermediate commits",
+      "current uncommitted DMX/output changes",
+      "active acceptance tests",
+      "operation lifecycle and stale callbacks",
+      "manual versus structured separation",
+      "Camera structured persistence limitation",
+      "DMX mode fallback prevention",
+      "page-default escape audit",
+      "safety test integrity",
+      "representative real Page-handler reproduction"
+    ],
+    "conclusion": "PASS; no blocking findings.",
+    "reviewedScope": [
+      "complete production diff since package-reclaim baseline",
+      "Venue/LED/Camera checkpoint and internal-budget revision commits",
+      "current uncommitted DMX/output changes",
+      "active acceptance tests and safety test integrity",
+      "representative real Page-handler flows for Venue, LED, Camera, and DMX",
+      "operation lifecycle, same-value confirmation, invalidation, and stale callbacks",
+      "manual versus structured separation",
+      "Camera structured persistence limitation",
+      "DMX mode fallback prevention",
+      "page-default escape audit"
+    ],
+    "remainingUnverified": [
+      "actual compiled Mini Program package bytes",
+      "physical-device lifecycle except separate LED subpackage experiment, not final architecture",
+      "future natural-language/Jev-to-production integration",
+      "AW-007 and CAB-008 remain UNVERIFIED"
+    ]
+  },
+  "finalUncommittedProductionFiles": [
+    "pages/camera/camera.js",
+    "pages/dmx-address/channel-guide.js",
+    "pages/dmx-address/channel-guide.wxml",
+    "utils/result-record-actions.js"
+  ],
+  "acceptanceEvidenceFiles": [
+    "README.md",
+    "active-remediation.json",
+    "blocked-controls.json",
+    "credential-scan.cjs",
+    "credential-scan.json",
+    "p0p1-report.json",
+    "manifest.json"
+  ],
+  "notes": [
+    "No files staged or committed.",
+    "No Jev call and no Mini Program upload or publication.",
+    "Independent final review must pass before acceptance status changes to accepted."
+  ],
+  "acceptanceEvidenceSha256": [
+    {
+      "path": "active-remediation.json",
+      "sha256": "cec7105ddd7f49ea94947baa129cc1c31f6b75fee2f45184a8606b482eb8187c"
+    },
+    {
+      "path": "blocked-controls.json",
+      "sha256": "bb217eec4813e9bd6c96c2ee34b76e38a5ce95e416c6d65927752993f4e5b250"
+    },
+    {
+      "path": "credential-scan.cjs",
+      "sha256": "60dd5cce86afc1b2b04ebd0e8046fa0311d8a70437904c686cd393972b95410a"
+    },
+    {
+      "path": "credential-scan.json",
+      "sha256": "ee3d8c18e076f6c62a3592b1e8e7c60ada2ba2d4cc3c9a99c44734afb59c67ce"
+    },
+    {
+      "path": "p0p1-report.json",
+      "sha256": "c1ab3d3f646bd4be5f8db9316b7644eabbae1af4a2f42b3c58b42aa942e2683a"
+    }
+  ]
+}

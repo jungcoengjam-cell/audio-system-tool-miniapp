@@ -1,0 +1,83 @@
+{
+  "status": "passed",
+  "suiteCount": 13,
+  "passedChecks": 66,
+  "failedChecks": 0,
+  "suites": [
+    {
+      "name": "Venue focused (V2-AUD-005/006/007)",
+      "status": "passed",
+      "checks": 3
+    },
+    {
+      "name": "Venue boundary/security",
+      "status": "passed",
+      "checks": 3
+    },
+    {
+      "name": "LED focused (LED-001/003/005/006)",
+      "status": "passed",
+      "checks": 4
+    },
+    {
+      "name": "LED manual compatibility",
+      "status": "passed",
+      "checks": 3
+    },
+    {
+      "name": "Camera operation and manual compatibility",
+      "status": "passed",
+      "checks": 9
+    },
+    {
+      "name": "Camera confirmation-card",
+      "status": "passed",
+      "checks": 7
+    },
+    {
+      "name": "Shared operation gate",
+      "status": "passed",
+      "checks": 1
+    },
+    {
+      "name": "Shared operation callbacks",
+      "status": "passed",
+      "checks": 4
+    },
+    {
+      "name": "LED unload lifecycle matrix",
+      "status": "passed",
+      "checks": 9
+    },
+    {
+      "name": "DMX-010 channel guide structured/manual",
+      "status": "passed",
+      "checks": 14
+    },
+    {
+      "name": "Camera output boundary callbacks",
+      "status": "passed",
+      "checks": 2
+    },
+    {
+      "name": "Three blocked controls (DMX-004/006, PW-007)",
+      "status": "passed",
+      "checks": 3
+    },
+    {
+      "name": "Cross-page manual compatibility",
+      "status": "passed",
+      "checks": 4
+    }
+  ],
+  "excluded": [
+    {
+      "id": "run-minimal.cjs",
+      "reason": "historical runner retained unchanged; has three known Venue failures from obsolete semantic-key mapping and is not current DMX page-contract evidence"
+    },
+    {
+      "id": "operation-inputs-unit.cjs",
+      "reason": "historical test retained unchanged; targets the archived gate API and is not current gate evidence"
+    }
+  ]
+}
