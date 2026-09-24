@@ -1,0 +1,18 @@
+{
+  "page": "pages/camera/camera.js",
+  "operation": "CAM-007 full-area automatic-height request",
+  "suppliedCurrentOperationInputs": {
+    "horizontalFov": 75,
+    "widthMeters": 6,
+    "depthMeters": 4,
+    "subjectHeightMeters": 1.8,
+    "heightMode": "auto",
+    "marginPercent": 10
+  },
+  "verticalFovSuppliedForOperation": false,
+  "pageVerticalFovCandidate": "36",
+  "actualCalculationVerticalFov": 36,
+  "actualCoverageVerified": true,
+  "actualPrimaryDistanceMeters": 4.5,
+  "unsafeCandidateConsumed": true
+}

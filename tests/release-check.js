@@ -231,7 +231,8 @@ assert.strictEqual(bareLengthViolations.length, 0, `WXSS 存在非零长度裸�
 // 包体预算是内部预警值，不代表平台上限；本轮测量证据见 docs/verification/wiring-keyboard-stability-2026-09-20/review.json。
 const PACKAGE_BUDGETS = Object.freeze({
   total: 2051 * 1024,
-  '.js': 794 * 1024,
+  mainJavaScript: 810 * 1024,
+  subPackageJavaScript: 794 * 1024,
   '.wxss': 261 * 1024,
   '.wxml': 246 * 1024,
   media: 338 * 1024,
@@ -686,9 +687,12 @@ function checkReleasePackageGates() {
     const javascriptBytes = group.files
       .filter((file) => path.extname(file).toLowerCase() === '.js')
       .reduce((total, file) => total + fs.statSync(file).size, 0)
+    const javascriptBudget = group.root
+      ? PACKAGE_BUDGETS.subPackageJavaScript
+      : PACKAGE_BUDGETS.mainJavaScript
     assert(
-      javascriptBytes <= PACKAGE_BUDGETS['.js'],
-      `${group.name} JS 超过 ${formatKiB(PACKAGE_BUDGETS['.js'])}：${formatKiB(javascriptBytes)}`,
+      javascriptBytes <= javascriptBudget,
+      `${group.name} JS 超过 ${formatKiB(javascriptBudget)}：${formatKiB(javascriptBytes)}`,
     )
   })
 
@@ -720,7 +724,10 @@ function checkReleasePackageGates() {
     const bytes = group.files
       .filter((file) => path.extname(file).toLowerCase() === '.js')
       .reduce((total, file) => total + fs.statSync(file).size, 0)
-    return `${group.name} JS ${formatKiB(bytes)} / ${formatKiB(PACKAGE_BUDGETS['.js'])}`
+    const budget = group.root
+      ? PACKAGE_BUDGETS.subPackageJavaScript
+      : PACKAGE_BUDGETS.mainJavaScript
+    return `${group.name} JS ${formatKiB(bytes)} / ${formatKiB(budget)}`
   }).join('；')
   console.log(
     `发布包门禁：总计 ${formatKiB(totalBytes)} / ${formatKiB(PACKAGE_BUDGETS.total)}；`

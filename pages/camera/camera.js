@@ -14,6 +14,14 @@ const {
 const { findValueIndex, readPreferences, writePreferences } = require('../../utils/preferences')
 const { vibrate } = require('../../utils/haptics')
 const {
+  createOperationMethods,
+  prepareOperation,
+  disposeOperation,
+  captureOperationResult,
+  isOperationResultCurrent,
+  invalidateOperation,
+} = require('../../utils/operation-inputs')
+const {
   cancelResultReportGeneration,
   createResultReportData,
   createResultReportMethods,
@@ -47,9 +55,54 @@ const resultReportMethods = createResultReportMethods({
   emptyToast: '暂无可生成的安装结果',
 })
 
+const CAMERA_OPERATION_FIELDS = {
+  horizontalFov: { label: '水平视场角', unit: 'deg' },
+  verticalFov: {
+    label: '垂直视场角', unit: 'deg',
+    read: (page) => Number(page.data.customVerticalFovText),
+  },
+  sceneMode: { label: '场景类型', unit: 'key' },
+  widthMeters: { label: '区域宽度', unit: 'm' },
+  depthMeters: { label: '区域纵深', unit: 'm' },
+  subjectHeightMeters: { label: '人物最高点', unit: 'm' },
+  heightMode: { label: '安装高度模式', unit: 'key' },
+  cameraHeightMeters: { label: '已有镜头中心高', unit: 'm' },
+  marginPercent: { label: '构图余量', unit: '%' },
+}
+const cameraOperationMethods = createOperationMethods({
+  id: 'full-area',
+  kinds: ['horizontal-only'],
+  fields: CAMERA_OPERATION_FIELDS,
+  requiredFields: {
+    'full-area': Object.keys(CAMERA_OPERATION_FIELDS).filter((field) => field !== 'cameraHeightMeters'),
+    'horizontal-only': Object.keys(CAMERA_OPERATION_FIELDS).filter((field) => field !== 'verticalFov' && field !== 'cameraHeightMeters'),
+  },
+})
+
 function findCameraIndex(model) {
   const index = selectableCameras.findIndex((camera) => camera.model === model)
   return index >= 0 ? index : selectableCameras.findIndex((camera) => camera.model === DEFAULT_MODEL)
+}
+
+function operationInputError(facts, kind) {
+  if (!facts || typeof facts !== 'object' || Array.isArray(facts)) return ''
+  if (kind !== 'full-area' && kind !== 'horizontal-only') return 'invalid operation kind'
+  if (facts.sceneMode !== undefined && facts.sceneMode !== 'ground') return 'unsupported scene mode'
+  if (facts.heightMode !== undefined && facts.heightMode !== 'auto' && facts.heightMode !== 'fixed') return 'invalid height mode'
+  if (facts.marginPercent !== undefined
+    && (!Number.isFinite(Number(facts.marginPercent)) || Number(facts.marginPercent) < 0 || Number(facts.marginPercent) > 50)) return 'invalid margin'
+  if (facts.heightMode === 'fixed'
+    && (!Number.isFinite(Number(facts.cameraHeightMeters)) || Number(facts.cameraHeightMeters) <= 0)) return 'fixed camera height is required'
+  return ''
+}
+
+const CAMERA_INPUT_FIELDS = {
+  customHorizontalFovText: ['horizontalFov', 'deg'],
+  customVerticalFovText: ['verticalFov', 'deg'],
+  groundWidthText: ['widthMeters', 'm'],
+  groundDepthText: ['depthMeters', 'm'],
+  subjectHeightText: ['subjectHeightMeters', 'm'],
+  fixedCameraHeightText: ['cameraHeightMeters', 'm'],
 }
 
 function buildCameraOptions() {
@@ -203,12 +256,15 @@ Page({
     selectorVisible: false,
     selectorKeyword: '',
     selectorItems: [],
+    operationSnapshot: null,
+    operationActive: false,
     ...createResultReportData(),
   },
 
   onLoad() {
     const finishInitialization = startMeasurement('摄像机/初始化总耗时')
     this._pageVisible = false
+    this._cameraUnloaded = false
     const preferences = readPreferences(PREFERENCE_KEY)
     const sourceModeIndex = preferences.sourceMode === 'custom' ? 1 : 0
     const cameraIndex = findCameraIndex(preferences.cameraModel || DEFAULT_MODEL)
@@ -258,11 +314,75 @@ Page({
     this.flushPendingCalculation()
   },
   onUnload() {
+    disposeOperation(this)
+    if (this._cameraUnloaded) return
+    this._cameraUnloaded = true
     this._pageVisible = false
     this.invalidatePreviewCanvas()
     this.cancelPendingCalculation()
     cancelResultReportGeneration(this)
     printPerformanceSummary('摄像机/')
+  },
+
+  ...cameraOperationMethods,
+
+  beginStructuredOperation(facts = {}, kind = 'full-area') {
+    const error = operationInputError(facts, kind)
+    if (error) facts = { __cameraOperationRejected: error }
+    return cameraOperationMethods.beginStructuredOperation.call(this, facts, kind)
+  },
+
+  endOperation() {
+    cameraOperationMethods.endStructuredOperation.call(this)
+    this.commitCalculatedState()
+  },
+
+  onOperationStateChange(snapshot) {
+    if (this._cameraUnloaded) return
+    const previous = this.data.operationSnapshot
+    const shouldCalculate = Boolean(snapshot?.ready
+      && (!previous || previous.id !== snapshot.id || previous.revision !== snapshot.revision))
+    const blockers = new Set(snapshot?.blockers || [])
+    const fields = snapshot?.fields.filter((field) => field.value !== undefined || blockers.has(field.key))
+      .map((field) => field.value === undefined && blockers.has(field.key)
+        ? { ...field, displayValue: '待输入' }
+        : field)
+    const displaySnapshot = snapshot && { ...snapshot, fields }
+    this.setData({ operationSnapshot: displaySnapshot, operationActive: Boolean(snapshot?.active) }, () => {
+      if (!shouldCalculate || this._cameraUnloaded) return
+      const current = this.getOperationSnapshot()
+      if (!current?.ready || current.id !== snapshot.id || current.revision !== snapshot.revision) return
+      const operation = prepareOperation(this)
+      if (operation.blocked || operationInputError(operation.state, current.kind)) {
+        invalidateOperation(this, 'invalid-camera-operation-input')
+        return
+      }
+      this.commitCalculatedState()
+    })
+  },
+
+  onOperationInvalidate(reason) {
+    this.cancelPendingCalculation()
+    cancelResultReportGeneration(this)
+    this.resultReportSignature = ''
+    this.resultReportPendingSignature = ''
+    this.setData({
+      result: null,
+      currentFavorite: false,
+      calculationError: reason === 'end' ? '' : '本次操作输入已变化，请重新确认后计算。',
+      resultReportImagePath: '',
+      resultReportPreviewVisible: false,
+      isGeneratingResultReport: false,
+      operationActive: false,
+    })
+  },
+
+  hasCurrentOperationResult(result = this.data.result) {
+    if (this._cameraUnloaded || !result || this.data.result !== result) return false
+    const snapshot = this.getOperationSnapshot()
+    if (!snapshot) return true
+    const guard = captureOperationResult(this, result)
+    return Boolean(snapshot.active && snapshot.ready && guard && isOperationResultCurrent(this, guard))
   },
   onResize() {
     this.invalidatePreviewCanvas()
@@ -273,6 +393,7 @@ Page({
     const sourceModeIndex = Number(event.currentTarget.dataset.index)
     if (!Number.isInteger(sourceModeIndex) || sourceModeIndex === this.data.sourceModeIndex) return
     vibrate('light')
+    if (this.getOperationSnapshot()?.active) invalidateOperation(this, 'camera-mode-changed')
     this.commitCalculatedState({ sourceModeIndex })
   },
 
@@ -280,6 +401,7 @@ Page({
     const definitionModeIndex = Number(event.currentTarget.dataset.index)
     if (!Number.isInteger(definitionModeIndex) || definitionModeIndex === this.data.definitionModeIndex) return
     vibrate('light')
+    if (this.getOperationSnapshot()?.active) invalidateOperation(this, 'camera-optics-changed')
     this.commitCalculatedState({ definitionModeIndex })
   },
 
@@ -287,6 +409,7 @@ Page({
     const customMountTypeIndex = Number(event.currentTarget.dataset.index)
     if (!Number.isInteger(customMountTypeIndex) || customMountTypeIndex === this.data.customMountTypeIndex) return
     vibrate('light')
+    if (this.getOperationSnapshot()?.active) invalidateOperation(this, 'camera-mount-changed')
     this.commitCalculatedState({
       customMountTypeIndex,
     })
@@ -296,6 +419,7 @@ Page({
     const sceneModeIndex = Number(event.currentTarget.dataset.index)
     if (!Number.isInteger(sceneModeIndex) || sceneModeIndex === this.data.sceneModeIndex) return
     vibrate('light')
+    if (this.getOperationSnapshot()?.active) invalidateOperation(this, 'camera-scene-changed')
     this.commitCalculatedState({ sceneModeIndex })
   },
 
@@ -303,6 +427,13 @@ Page({
     const heightModeIndex = Number(event.currentTarget.dataset.index)
     if (!Number.isInteger(heightModeIndex) || heightModeIndex === this.data.heightModeIndex) return
     vibrate('light')
+    if (this.getOperationSnapshot()?.active) {
+      const heightMode = this.data.heightModes[heightModeIndex].value
+      this.setData({ heightModeIndex })
+      this.setOperationCandidate('heightMode', heightMode, 'key')
+      return
+    }
+    if (this.getOperationSnapshot()) { this.setData({ heightModeIndex }); return }
     this.commitCalculatedState({ heightModeIndex })
   },
 
@@ -310,6 +441,12 @@ Page({
     const marginIndex = Number(event.detail.value)
     if (!Number.isInteger(marginIndex) || marginIndex === this.data.marginIndex) return
     vibrate('light')
+    if (this.getOperationSnapshot()?.active) {
+      this.setData({ marginIndex })
+      this.setOperationCandidate('marginPercent', this.data.marginOptions[marginIndex], '%')
+      return
+    }
+    if (this.getOperationSnapshot()) { this.setData({ marginIndex }); return }
     this.commitCalculatedState({ marginIndex })
   },
 
@@ -331,6 +468,7 @@ Page({
     const viewIndex = Number(event.currentTarget.dataset.index)
     if (!Number.isInteger(viewIndex) || viewIndex === this.data.viewIndex) return
     vibrate('light')
+    if (this.getOperationSnapshot()?.active) invalidateOperation(this, 'camera-model-view-changed')
     this.commitCalculatedState({
       viewIndex,
       selectedMountLabel: selectableCameras[this.data.cameraIndex].views[viewIndex].mountLabel,
@@ -338,7 +476,17 @@ Page({
   },
 
   onFieldInput(event) {
-    this.setData({ [event.currentTarget.dataset.field]: event.detail.value })
+    const field = event.currentTarget.dataset.field
+    const value = event.detail.value
+    const snapshot = this.getOperationSnapshot()
+    this.setData({ [field]: value })
+    if (snapshot?.active) {
+      const operationField = CAMERA_INPUT_FIELDS[field]
+      if (operationField) this.setOperationCandidate(operationField[0], Number(value), operationField[1])
+      else invalidateOperation(this, 'camera-optics-changed')
+      return
+    }
+    if (snapshot) return
     this.scheduleCalculation()
   },
 
@@ -382,6 +530,7 @@ Page({
     const cameraIndex = Number(event.currentTarget.dataset.index)
     const camera = selectableCameras[cameraIndex]
     if (cameraIndex !== this.data.cameraIndex) vibrate('light')
+    if (this.getOperationSnapshot()?.active) invalidateOperation(this, 'camera-model-changed')
     this.commitCalculatedState({
       cameraIndex,
       viewOptions: buildViewOptions(camera),
@@ -413,9 +562,73 @@ Page({
     return this.commitCalculatedState({}, afterCommit)
   },
 
+  commitStructuredCalculatedState(operation) {
+    const values = operation.state
+    const kind = this.getOperationSnapshot()?.kind
+    const sceneMode = values.sceneMode
+    const fov = kind === 'horizontal-only'
+      ? { horizontalOnly: true, horizontalFov: Number(values.horizontalFov) }
+      : resolveCustomFov({
+        definitionMode: 'angles',
+        horizontalFov: Number(values.horizontalFov),
+        verticalFov: Number(values.verticalFov),
+      })
+    const options = {
+      widthMeters: Number(values.widthMeters),
+      depthMeters: Number(values.depthMeters),
+      subjectHeightMeters: Number(values.subjectHeightMeters),
+      heightMode: values.heightMode,
+      marginRatio: Number(values.marginPercent) / 100,
+      ...(values.heightMode === 'fixed' ? { cameraHeightMeters: Number(values.cameraHeightMeters) } : {}),
+    }
+    const finishCoreCalculation = startMeasurement('摄像机/核心几何计算', { sceneMode, structured: true, kind })
+    const result = fov?.horizontalOnly
+      ? calculateHorizontalOnlyPlacement(fov, { sceneMode, ...options })
+      : calculateGroundAreaPlacement(fov, options)
+    finishCoreCalculation({ success: Boolean(result), horizontalOnly: Boolean(fov?.horizontalOnly) })
+    if (!result) {
+      this.setData({ result: null, calculationError: '请检查本次操作的视场角、区域尺寸、高度模式和构图余量。' })
+      return null
+    }
+
+    if (!operation.commit(result)) return null
+    Object.assign(result, {
+      displayModel: '自定义摄像机', displayView: '本次操作确认参数',
+      sourceText: '本次结构化操作明确提供的视场角与场景尺寸。',
+      sourceNote: result.horizontalOnly ? '本次操作仅确认水平视场角。' : '',
+      endpointLabel: '本次确认视角', mountType: 'unspecified',
+      mountLabel: '安装结构待现场确认', requiresInitialAim: false,
+      aimValue: '待现场确认', aimLabel: '安装方式待确认',
+      distanceMeaning: result.horizontalOnly ? '水平覆盖参考距离（非完整安装距离）' : '当前模型下理论最小距离',
+      endpointExplanation: result.horizontalOnly ? '本次操作未确认垂直覆盖。' : '按本次明确确认的水平与垂直视场角计算。',
+    })
+    const calculationProcess = buildCalculationProcess(result)
+    Object.assign(result, { calculationRows: calculationProcess.rows,
+      calculationConclusion: calculationProcess.conclusion, calculationVisual: calculationProcess.visual })
+    this._canvasCache = null
+    this.setData({ result, calculationError: '' }, () => {
+      if (!this.hasCurrentOperationResult(result)) return
+      if (this._pageVisible) syncPageFavorite(this)
+      this.drawPreview()
+    })
+    return result
+  },
+
   commitCalculatedState(changes = {}, afterCommit) {
     const finishCalculation = startMeasurement('摄像机/计算到结果更新')
     this.cancelPendingCalculation()
+    if (this._cameraUnloaded) return null
+    const operation = prepareOperation(this)
+    if (operation.disposed) return null
+    if (operation.structured && operation.blocked) {
+      if (Object.keys(changes).length) {
+        const selectedCamera = Number.isInteger(changes.cameraIndex)
+          ? buildSelectedCamera(selectableCameras[changes.cameraIndex]) : undefined
+        this.setData({ ...changes, ...(selectedCamera ? { selectedCamera } : {}) })
+      }
+      return null
+    }
+    if (operation.structured) return this.commitStructuredCalculatedState(operation)
     const state = { ...this.data, ...changes }
     const selectedCamera = buildSelectedCamera(selectableCameras[state.cameraIndex])
     const fov = this.getFovDefinition(state)
@@ -615,13 +828,33 @@ Page({
     }
   },
 
+  getOperationPreferences() {
+    const snapshot = this.getOperationSnapshot()
+    if (!snapshot?.active || !snapshot.ready) return null
+    const values = Object.fromEntries(snapshot.fields.filter((field) => field.confirmed).map((field) => [field.key, field.value]))
+    return {
+      sourceMode: 'custom',
+      definitionMode: 'angles',
+      sceneMode: values.sceneMode,
+      heightMode: values.heightMode,
+      marginPercent: values.marginPercent,
+      customHorizontalFovText: String(values.horizontalFov),
+      customVerticalFovText: values.verticalFov === undefined ? '' : String(values.verticalFov),
+      groundWidthText: String(values.widthMeters),
+      groundDepthText: String(values.depthMeters),
+      subjectHeightText: String(values.subjectHeightMeters),
+      ...(values.cameraHeightMeters === undefined ? {} : { fixedCameraHeightText: String(values.cameraHeightMeters) }),
+    }
+  },
+
   getRecordLookupPayload() {
-    return this.data.result
-      ? { module: 'camera', preferences: this.getPreferences() }
-      : null
+    if (!this.hasCurrentOperationResult()) return null
+    const preferences = this.getOperationSnapshot() ? this.getOperationPreferences() : this.getPreferences()
+    return preferences ? { module: 'camera', preferences } : null
   },
 
   getResultText(state = this.data, result = state.result) {
+    if (arguments.length === 0 && !this.hasCurrentOperationResult(result)) return ''
     if (!result) return ''
     const sceneRows = result.sceneMode === 'ground'
       ? [
@@ -658,26 +891,37 @@ Page({
   },
 
   getRecordPayload(state = this.data, result = state.result) {
+    if (arguments.length === 0 && !this.hasCurrentOperationResult(result)) return null
     const resultText = this.getResultText(state, result)
     if (!resultText) return null
+    const preferences = (state.cameraStructuredOperation || this.getOperationSnapshot())
+      ? this.getOperationPreferences()
+      : this.getPreferences(state)
+    if (!preferences) return null
     return {
       module: 'camera',
       title: `${result.displayModel} · ${result.sceneLabel}`,
       summary: `${result.endpointLabel} · ${result.primaryDistanceLabel} ${result.primaryDistanceMeters} m · ${result.mountLabel}`,
-      preferences: this.getPreferences(state),
+      preferences,
       resultText,
     }
   },
 
   ...resultReportMethods,
   copyResult() {
+    if (!this.hasCurrentOperationResult()) return
     const resultText = this.getResultText()
     if (!resultText) return
     vibrate('medium')
     wx.setClipboardData({ data: resultText })
   },
-  toggleCurrentFavorite() { togglePageFavorite(this) },
-  saveToActiveProject() { addPageToActiveProject(this) },
+  toggleCurrentFavorite() {
+    if (!this.getOperationSnapshot() && this.hasCurrentOperationResult()) togglePageFavorite(this)
+  },
+  saveToActiveProject() {
+    if (this.getOperationSnapshot()) return
+    return addPageToActiveProject(this)
+  },
 })
 
 finishCameraModuleLoad({ sourceModels: cameras.length, selectableModels: selectableCameras.length })

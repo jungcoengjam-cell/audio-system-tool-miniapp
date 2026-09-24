@@ -35,6 +35,8 @@
       <view wx:if="{{inputError}}" class="warning-card"><view class="warning-title">暂时无法计算</view><view class="warning-text">{{inputError}}</view></view>
     </view>
 
+    <include src="../common/operation-confirmation.wxml" />
+
     <view wx:if="{{result}}" class="result-card">
       <view class="result-heading"><view><view class="result-label">推荐净屏</view><view class="result-subtitle">{{result.unitLabel}} · 水平居中安装</view></view><view class="status-chip">{{result.ratioText}}</view></view>
       <view class="screen-dimension">{{result.dimensionText}}</view><view class="screen-layout">{{result.layoutText}}</view>

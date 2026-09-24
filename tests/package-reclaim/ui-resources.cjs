@@ -30,9 +30,23 @@ function expandIncludes(source, fromFile, stack = []) {
 for (const [relativePath, expectedHash] of Object.entries(baseline.expandedWxmlSha256)) {
   assert.match(expectedHash, /^[0-9a-f]{64}$/, `missing test-first WXML hash: ${relativePath}`)
   const file = path.join(root, relativePath)
-  const expanded = expandIncludes(fs.readFileSync(file, 'utf8'), file)
+  const source = fs.readFileSync(file, 'utf8')
+  const manualSource = relativePath === 'pages/venue/venue.wxml'
+    ? source.replace(/\r?\n[ \t]*\r?\n[ \t]*<include src="\.\.\/common\/operation-confirmation\.wxml"\s*\/>[ \t]*\r?\n[ \t]*\r?\n/, '\r\n\r\n') : source
+  const expanded = expandIncludes(manualSource, file)
   assert.equal(sha256(Buffer.from(normalizeLineEndings(expanded))), expectedHash, `expanded WXML changed: ${relativePath}`)
 }
+
+assert.match(read('pages/venue/venue.wxml'), /operation-confirmation\.wxml/,
+  'venue structured confirmation UI is missing')
+assert.match(read('pages/common/operation-confirmation.wxml'), /confirmOperationField/,
+  'venue confirmation template has no real confirm action')
+assert.match(read('pages/common/operation-confirmation.wxml'), /!operationActive/,
+  'venue confirmation template hides an invalidated operation')
+assert.match(read('pages/common/operation-confirmation.wxml'), /endOperation/,
+  'venue confirmation template has no explicit end action')
+assert.match(read('pages/common/operation-confirmation.wxml'), /item\.confirmed/,
+  'venue confirmation template must show confirmation state accurately')
 
 const keptImagePath = path.join(root, 'assets/home/module-audio-wiring-catalog.png')
 assert.equal(sha256(fs.readFileSync(keptImagePath)), baseline.xlrImageSha256, 'kept XLR image bytes changed')

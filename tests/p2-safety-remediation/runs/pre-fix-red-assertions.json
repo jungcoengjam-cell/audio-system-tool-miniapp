@@ -1,0 +1,3039 @@
+{
+  "phase": "pre-fix red regression checkpoint",
+  "source": "real production page handlers + deterministic cores with isolated in-memory wx environment",
+  "caseIds": [
+    "V2-AUD-005",
+    "V2-AUD-006",
+    "V2-AUD-007",
+    "LED-001",
+    "LED-003",
+    "LED-005",
+    "LED-006",
+    "DMX-010",
+    "CAM-007",
+    "DMX-004",
+    "DMX-006",
+    "PW-007"
+  ],
+  "intendedRedCount": 9,
+  "controlsBlocked": 3,
+  "manualCompatibility": {
+    "venue": {
+      "explicitDimensions": [
+        "14",
+        "9",
+        "3"
+      ],
+      "resultFloorAreaSquareMeters": 126
+    },
+    "ledScreen": {
+      "manuallySelectedUnit": "cabinetStandard",
+      "resultUnit": "cabinetStandard"
+    },
+    "dmxGuide": {
+      "selectedModes": [
+        3,
+        6
+      ]
+    },
+    "camera": {
+      "manuallyEnteredVerticalFov": 24,
+      "resultVerticalFov": 24
+    }
+  },
+  "failures": [
+    {
+      "id": "V2-AUD-005",
+      "assertionName": "AssertionError",
+      "assertionMessage": "V2-AUD-005: structured operation must not generate an engineering result before its blocker is confirmed\n+ actual - expected\n\n+ {\n+   calculationReserveDb: 3,\n+   capacityVerification: 'source-review-required',\n+   coverageEnvelopeText: '几何包络至少 74.0°H × 25.8°V',\n+   coverageVerification: 'unverified',\n+   depthMeters: 12,\n+   directVariationDb: 12.7,\n+   directVariationDbRaw: 12.650521301430103,\n+   distanceLossDb: 20.2,\n+   distanceLossDbRaw: 20.201643965380818,\n+   farthestDistance: 10.2,\n+   farthestDistanceRaw: 10.234866877492838,\n+   fillCount: 2,\n+   fillSummary: '建议增加 2 只后区补声音箱',\n+   firstListeningDistance: 2,\n+   floorAreaSquareMeters: 96,\n+   frontWidthMeters: 8,\n+   heightDeltaMeters: 1.3,\n+   heightDifferenceMeters: 1.3,\n+   kind: 'report',\n+   lastListeningDistance: 10,\n+   lastListeningDistanceRaw: 10,\n+   layoutComparisonSummary: '比较 6 组位置与指向，采用左右对称前置方案。',\n+   layoutPositionLines: [\n+     'M1 距左 2.25 m、距前 0.00 m、正向后排',\n+     'M2 距左 5.75 m、距前 0.00 m、正向后排'\n+   ],\n+   layoutSelection: {\n+     basis: 'nominal-geometry',\n+     candidateCount: 6,\n+     candidates: [\n+       {\n+         id: 'ratio-1-axis',\n+         metrics: {\n+           distanceVariationDbRaw: 12.650521301430103,\n+           farthestDistanceRaw: 10.234866877492838,\n+           farthestHorizontalDistanceRaw: 10.151970252123476,\n+           nearestDistanceRaw: 2.3853720883753127,\n+           nearestHorizontalDistanceRaw: 2,\n+           nominalGeometryCovered: true,\n+           normalizedOverAngle: 0,\n+           requiredHorizontalCoverageRaw: 73.92464430113311,\n+           requiredVerticalCoverageRaw: 25.726629384053194\n+         },\n+         positionRatio: 0.25,\n+         yawMode: 'axis'\n+       },\n+       {\n+         id: 'ratio-1-bisector',\n+         metrics: {\n+           distanceVariationDbRaw: 12.650521301430103,\n+           farthestDistanceRaw: 10.234866877492838,\n+           farthestHorizontalDistanceRaw: 10.151970252123476,\n+           nearestDistanceRaw: 2.3853720883753127,\n+           nearestHorizontalDistanceRaw: 2,\n+           nominalGeometryCovered: true,\n+           normalizedOverAngle: 0,\n+           requiredHorizontalCoverageRaw: 73.92464430113311,\n+           requiredVerticalCoverageRaw: 25.726629384053194\n+         },\n+         positionRatio: 0.25,\n+         yawMode: 'bisector'\n+       },\n+       {\n+         id: 'ratio-2-axis',\n+         metrics: {\n+           distanceVariationDbRaw: 12.806400707705096,\n+           farthestDistanceRaw: 10.420202733152555,\n+           farthestHorizontalDistanceRaw: 10.338792240876106,\n+           nearestDistanceRaw: 2.3853720883753127,\n+           nearestHorizontalDistanceRaw: 2,\n+           nominalGeometryCovered: true,\n+           normalizedOverAngle: 0,\n+           requiredHorizontalCoverageRaw: 96.93884451448609,\n+           requiredVerticalCoverageRaw: 25.857106991393888\n+         },\n+         positionRatio: 0.125,\n+         yawMode: 'axis'\n+       },\n+       {\n+         id: 'ratio-2-bisector',\n+         metrics: {\n+           distanceVariationDbRaw: 12.806400707705096,\n+           farthestDistanceRaw: 10.420202733152555,\n+           farthestHorizontalDistanceRaw: 10.338792240876106,\n+           nearestDistanceRaw: 2.3853720883753127,\n+           nearestHorizontalDistanceRaw: 2,\n+           nominalGeometryCovered: true,\n+           normalizedOverAngle: 0,\n+           requiredHorizontalCoverageRaw: 70.53481498020493,\n+           requiredVerticalCoverageRaw: 34.08898310352658\n+         },\n+         positionRatio: 0.125,\n+         yawMode: 'bisector'\n+       },\n+       {\n+         id: 'ratio-3-axis',\n+         metrics: {\n+           distanceVariationDbRaw: 12.806400707705096,\n+           farthestDistanceRaw: 10.420202733152555,\n+           farthestHorizontalDistanceRaw: 10.338792240876106,\n+           nearestDistanceRaw: 2.3853720883753127,\n+           nearestHorizontalDistanceRaw: 2,\n+           nominalGeometryCovered: true,\n+           normalizedOverAngle: 0,\n+           requiredHorizontalCoverageRaw: 96.93884451448609,\n+           requiredVerticalCoverageRaw: 25.857106991393888\n+         },\n+         positionRatio: 0.375,\n+         yawMode: 'axis'\n+       },\n+       {\n+         id: 'ratio-3-bisector',\n+         metrics: {\n+           distanceVariationDbRaw: 12.806400707705096,\n+           farthestDistanceRaw: 10.420202733152555,\n+           farthestHorizontalDistanceRaw: 10.338792240876106,\n+           nearestDistanceRaw: 2.3853720883753127,\n+           nearestHorizontalDistanceRaw: 2,\n+           nominalGeometryCovered: true,\n+           normalizedOverAngle: 0,\n+           requiredHorizontalCoverageRaw: 70.53481498020493,\n+           requiredVerticalCoverageRaw: 34.08898310352658\n+         },\n+         positionRatio: 0.375,\n+         yawMode: 'bisector'\n+       }\n+     ],\n+     selectedId: 'ratio-1-axis',\n+     summary: '比较 6 组位置与指向，采用左右对称前置方案。'\n+   },\n+   listeningSideMargin: 0.5,\n+   listeningSideMarginRaw: 0.5,\n+   listeningWidth: 7,\n+   mainCount: 2,\n+   mainDirectSoundPass: false,\n+   mainSpeakerPositions: [\n+     {\n+       aimDownDeg: 20.160552863770054,\n+       aimYawDeg: 0,\n+       depthMeters: 0,\n+       widthMeters: 2.25\n+     },\n+     {\n+       aimDownDeg: 20.160552863770054,\n+       aimYawDeg: 0,\n+       depthMeters: 0,\n+       widthMeters: 5.75\n+     }\n+   ],\n+   mainSystemSummary: '主扩 2 只',\n+   minimumHorizontalCoverage: 73.9,\n+   minimumHorizontalCoverageRaw: 73.92464430113311,\n+   minimumVerticalCoverage: 25.7,\n+   minimumVerticalCoverageRaw: 25.726629384053194,\n+   nearestDistance: 2.4,\n+   nearestDistanceRaw: 2.3853720883753127,\n+   planDisplayIntro: '色阶仅表示等向点源的距离衰减与能量相加；标称角范围是理想几何包络，不代表真实覆盖。',\n+   reasons: [\n+     '目标为 会议类扩声 二级，其最大声压级能力目标为不小于 95 dB SPL。',\n+     '按“短边前置主扩”估算，场地横向宽度约 8 m、纵深约 12 m；实际听音区宽度约 7 m，首排至最后一排为 2～10 m。',\n+     '首排距离为 2 m、最远听音位置约 10.2 m；两点的自由场直达声差约 12.7 dB。',\n+     '本模块按最大声压级能力目标额外预留 3 dB，用于前期容量估算；单只主扩建议具备约 118.2 dB SPL @ 1m 的能力。',\n+     '主扩水平几何最低需求约 73.92°，显示档位为 90°；垂直几何最低需求约 25.73°，显示档位为 30°，初始下倾角约 20.2°。候选型号的标称 H/V 角另行复核。',\n+     '仅靠前置主扩时，首排与后排的直达声差超过本次预估控制值；建议增加一组后区补声，使后区声压过渡更平缓。'\n+   ],\n+   recommendedAimDownDeg: 20.2,\n+   recommendedAimDownDegRaw: 20.160552863770054,\n+   recommendedHorizontalCoverage: 90,\n+   recommendedVerticalCoverage: 30,\n+   requiredSplAtOneMeter: 118.2,\n+   requiredSplAtOneMeterRaw: 118.20164396538081,\n+   reviewWarnings: [\n+     '标称角仅作几何筛选；频段指向性与最大声压测试口径尚待核验。'\n+   ],\n+   speakerCenterHeight: 2.5,\n+   speakerCenterHeightRaw: 2.5,\n+   speakerRecommendation: {\n+     fillPlacementGroups: [\n+       {\n+         count: 2,\n+         label: '补声组',\n+         mainDropDb: 6,\n+         mainToFillDistanceMeters: 4.6,\n+         mainToFillDistanceMetersRaw: 4.578460222006302,\n+         serviceAreaLabel: '后区听音区域'\n+       }\n+     ],\n+     fillRequirement: {\n+       assumedListeningDistance: 3.3,\n+       assumedListeningDistanceRaw: 3.3333333333333335,\n+       requiredMaximumSplDb: 108.5,\n+       requiredMaximumSplDbRaw: 108.45757490560675\n+     },\n+     hasMainMatch: true,\n+     mainRequirement: {\n+       horizontalCoverageDeg: 90,\n+       horizontalCoverageRequiredDeg: 73.92464430113311,\n+       requiredMaximumSplDb: 118.2,\n+       requiredMaximumSplDbRaw: 118.20164396538081,\n+       verticalCoverageDeg: 30,\n+       verticalCoverageRequiredDeg: 25.726629384053194\n+     },\n+     missingParts: [],\n+     notes: [\n+       '仅从已登记角色、标称覆盖角和最大声压字段的公司音箱资料中筛选；最大声压测试口径待核对，覆盖角可变或参数不完整的型号不参与自动推荐。',\n+       '补声位置用于粗略确定安装区域；实际电平、延时、相位与指向必须在安装完成后按现场测量确定。'\n+     ],\n+     packages: [\n+       {\n+         fill: {\n+           assumedListeningDistance: 3.3,\n+           capacityMarginDb: 10.5,\n+           capacityMarginDbRaw: 10.542425094393252,\n+           count: 2,\n+           horizontalCoverageDeg: 80,\n+           maximumSplDb: 119,\n+           model: 'KS-08AT',\n+           placementGroups: [\n+             {\n+               count: 2,\n+               label: '补声组',\n+               mainDropDb: 6,\n+               mainToFillDistanceMeters: 4.6,\n+               mainToFillDistanceMetersRaw: 4.578460222006302,\n+               serviceAreaLabel: '后区听音区域'\n+             }\n+           ],\n+           requiredMaximumSplDb: 108.5,\n+           requiredMaximumSplDbRaw: 108.45757490560675,\n+           role: '补声/延时',\n+           source: 'KS-08AT 产品说明书（额定最大声压级）',\n+           type: '定覆盖全频',\n+           verticalCoverageDeg: 60\n+         },\n+         label: '方案 A',\n+         main: {\n+           capacityMarginDb: 10.8,\n+           capacityMarginDbRaw: 10.79835603461919,\n+           count: 2,\n+           coverageExcessDeg: 90.34872631481369,\n+           horizontalCoverageDeg: 100,\n+           maximumSplDb: 129,\n+           model: 'KF-D10F',\n+           role: '主扩',\n+           score: 43.24184715777765,\n+           source: 'KF-D10F 产品说明书',\n+           type: '定覆盖全频',\n+           verticalCoverageDeg: 90\n+         }\n+       },\n+       {\n+         fill: {\n+           assumedListeningDistance: 3.3,\n+           capacityMarginDb: 10.5,\n+           capacityMarginDbRaw: 10.542425094393252,\n+           count: 2,\n+           horizontalCoverageDeg: 80,\n+           maximumSplDb: 119,\n+           model: 'KS-08AT',\n+           placementGroups: [\n+             {\n+               count: 2,\n+               label: '补声组',\n+               mainDropDb: 6,\n+               mainToFillDistanceMeters: 4.6,\n+               mainToFillDistanceMetersRaw: 4.578460222006302,\n+               serviceAreaLabel: '后区听音区域'\n+             }\n+           ],\n+           requiredMaximumSplDb: 108.5,\n+           requiredMaximumSplDbRaw: 108.45757490560675,\n+           role: '补声/延时',\n+           source: 'KS-08AT 产品说明书（额定最大声压级）',\n+           type: '定覆盖全频',\n+           verticalCoverageDeg: 60\n+         },\n+         label: '方案 B',\n+         main: {\n+           capacityMarginDb: 13.8,\n+           capacityMarginDbRaw: 13.79835603461919,\n+           count: 2,\n+           coverageExcessDeg: 90.34872631481369,\n+           horizontalCoverageDeg: 100,\n+           maximumSplDb: 132,\n+           model: 'KF-D12F',\n+           role: '主扩',\n+           score: 52.24184715777765,\n+           source: 'KF-D12F 产品说明书',\n+           type: '定覆盖全频',\n+           verticalCoverageDeg: 90\n+         }\n+       },\n+       {\n+         fill: {\n+           assumedListeningDistance: 3.3,\n+           capacityMarginDb: 10.5,\n+           capacityMarginDbRaw: 10.542425094393252,\n+           count: 2,\n+           horizontalCoverageDeg: 80,\n+           maximumSplDb: 119,\n+           model: 'KS-08AT',\n+           placementGroups: [\n+             {\n+               count: 2,\n+               label: '补声组',\n+               mainDropDb: 6,\n+               mainToFillDistanceMeters: 4.6,\n+               mainToFillDistanceMetersRaw: 4.578460222006302,\n+               serviceAreaLabel: '后区听音区域'\n+             }\n+           ],\n+           requiredMaximumSplDb: 108.5,\n+           requiredMaximumSplDbRaw: 108.45757490560675,\n+           role: '补声/延时',\n+           source: 'KS-08AT 产品说明书（额定最大声压级）',\n+           type: '定覆盖全频',\n+           verticalCoverageDeg: 60\n+         },\n+         label: '方案 C',\n+         main: {\n+           capacityMarginDb: 14.8,\n+           capacityMarginDbRaw: 14.79835603461919,\n+           count: 2,\n+           coverageExcessDeg: 90.34872631481369,\n+           horizontalCoverageDeg: 100,\n+           maximumSplDb: 133,\n+           model: 'KF-D15F',\n+           role: '主扩',\n+           score: 55.24184715777765,\n+           source: 'KF-D15F 产品说明书',\n+           type: '定覆盖全频',\n+           verticalCoverageDeg: 90\n+         }\n+       }\n+     ],\n+     qualificationStatus: 'provisional',\n+     reviewWarnings: [\n+       '标称角仅作几何筛选；频段指向性与最大声压测试口径尚待核验。'\n+     ],\n+     systemLabel: '点声源 L/R 主扩',\n+     systemReason: '本模块仅针对普通矩形会议室，以定覆盖点声源作为左右主扩进行初步选型。'\n+   },\n+   standardLabel: '会议类扩声 二级',\n+   standardMaxSpl: 95,\n+   uniformityCheckDb: 8,\n+   uniformityStatus: '主扩直达声差偏大，需补声处理',\n+   venueScale: '中型会议室'\n+ }\n- null\n",
+      "actualLegacyOutputPresent": true,
+      "missing": [
+        "venue.room_length_m"
+      ],
+      "implicitValue": {
+        "lengthText": "12",
+        "widthText": "8",
+        "heightText": "4"
+      }
+    },
+    {
+      "id": "V2-AUD-006",
+      "assertionName": "AssertionError",
+      "assertionMessage": "V2-AUD-006: structured operation must not generate an engineering result before its blocker is confirmed\n+ actual - expected\n\n+ {\n+   calculationReserveDb: 3,\n+   capacityVerification: 'source-review-required',\n+   coverageEnvelopeText: '几何包络至少 63.5°H × 16.8°V',\n+   coverageVerification: 'unverified',\n+   depthMeters: 12,\n+   directVariationDb: 10.7,\n+   directVariationDbRaw: 10.73764630935792,\n+   distanceLossDb: 21,\n+   distanceLossDbRaw: 21.0274233614457,\n+   farthestDistance: 11.3,\n+   farthestDistanceRaw: 11.255665240224586,\n+   fillCount: 2,\n+   fillSummary: '建议增加 2 只后区补声音箱',\n+   firstListeningDistance: 3,\n+   floorAreaSquareMeters: 96,\n+   frontWidthMeters: 8,\n+   heightDeltaMeters: 1.3,\n+   heightDifferenceMeters: 1.3,\n+   kind: 'report',\n+   lastListeningDistance: 11,\n+   lastListeningDistanceRaw: 11,\n+   layoutComparisonSummary: '比较 6 组位置与指向，采用左右对称前置方案。',\n+   layoutPositionLines: [\n+     'M1 距左 2.00 m、距前 0.00 m、正向后排',\n+     'M2 距左 6.00 m、距前 0.00 m、正向后排'\n+   ],\n+   layoutSelection: {\n+     basis: 'nominal-geometry',\n+     candidateCount: 6,\n+     candidates: [\n+       {\n+         id: 'ratio-1-axis',\n+         metrics: {\n+           distanceVariationDbRaw: 10.73764630935792,\n+           farthestDistanceRaw: 11.255665240224586,\n+           farthestHorizontalDistanceRaw: 11.180339887498947,\n+           nearestDistanceRaw: 3.269556544854363,\n+           nearestHorizontalDistanceRaw: 3,\n+           nominalGeometryCovered: true,\n+           normalizedOverAngle: 0,\n+           requiredHorizontalCoverageRaw: 63.459836995952635,\n+           requiredVerticalCoverageRaw: 16.796378028750546\n+         },\n+         positionRatio: 0.25,\n+         yawMode: 'axis'\n+       },\n+       {\n+         id: 'ratio-1-bisector',\n+         metrics: {\n+           distanceVariationDbRaw: 10.73764630935792,\n+           farthestDistanceRaw: 11.255665240224586,\n+           farthestHorizontalDistanceRaw: 11.180339887498947,\n+           nearestDistanceRaw: 3.269556544854363,\n+           nearestHorizontalDistanceRaw: 3,\n+           nominalGeometryCovered: true,\n+           normalizedOverAngle: 0,\n+           requiredHorizontalCoverageRaw: 63.459836995952635,\n+           requiredVerticalCoverageRaw: 16.796378028750546\n+         },\n+         positionRatio: 0.25,\n+         yawMode: 'bisector'\n+       },\n+       {\n+         id: 'ratio-2-axis',\n+         metrics: {\n+           distanceVariationDbRaw: 10.90575092458339,\n+           farthestDistanceRaw: 11.475626344561764,\n+           farthestHorizontalDistanceRaw: 11.40175425099138,\n+           nearestDistanceRaw: 3.269556544854363,\n+           nearestHorizontalDistanceRaw: 3,\n+           nominalGeometryCovered: true,\n+           normalizedOverAngle: 0,\n+           requiredHorizontalCoverageRaw: 85.7013554054107,\n+           requiredVerticalCoverageRaw: 16.92405852679629\n+         },\n+         positionRatio: 0.125,\n+         yawMode: 'axis'\n+       },\n+       {\n+         id: 'ratio-2-bisector',\n+         metrics: {\n+           distanceVariationDbRaw: 10.90575092458339,\n+           farthestDistanceRaw: 11.475626344561764,\n+           farthestHorizontalDistanceRaw: 11.40175425099138,\n+           nearestDistanceRaw: 3.269556544854363,\n+           nearestHorizontalDistanceRaw: 3,\n+           nominalGeometryCovered: true,\n+           normalizedOverAngle: 0,\n+           requiredHorizontalCoverageRaw: 60.530947558284886,\n+           requiredVerticalCoverageRaw: 21.653069757118068\n+         },\n+         positionRatio: 0.125,\n+         yawMode: 'bisector'\n+       },\n+       {\n+         id: 'ratio-3-axis',\n+         metrics: {\n+           distanceVariationDbRaw: 10.90575092458339,\n+           farthestDistanceRaw: 11.475626344561764,\n+           farthestHorizontalDistanceRaw: 11.40175425099138,\n+           nearestDistanceRaw: 3.269556544854363,\n+           nearestHorizontalDistanceRaw: 3,\n+           nominalGeometryCovered: true,\n+           normalizedOverAngle: 0,\n+           requiredHorizontalCoverageRaw: 85.7013554054107,\n+           requiredVerticalCoverageRaw: 16.92405852679629\n+         },\n+         positionRatio: 0.375,\n+         yawMode: 'axis'\n+       },\n+       {\n+         id: 'ratio-3-bisector',\n+         metrics: {\n+           distanceVariationDbRaw: 10.90575092458339,\n+           farthestDistanceRaw: 11.475626344561764,\n+           farthestHorizontalDistanceRaw: 11.40175425099138,\n+           nearestDistanceRaw: 3.269556544854363,\n+           nearestHorizontalDistanceRaw: 3,\n+           nominalGeometryCovered: true,\n+           normalizedOverAngle: 0,\n+           requiredHorizontalCoverageRaw: 60.530947558284886,\n+           requiredVerticalCoverageRaw: 21.653069757118068\n+         },\n+         positionRatio: 0.375,\n+         yawMode: 'bisector'\n+       }\n+     ],\n+     selectedId: 'ratio-1-axis',\n+     summary: '比较 6 组位置与指向，采用左右对称前置方案。'\n+   },\n+   listeningSideMargin: 0,\n+   listeningSideMarginRaw: 0,\n+   listeningWidth: 8,\n+   mainCount: 2,\n+   mainDirectSoundPass: false,\n+   mainSpeakerPositions: [\n+     {\n+       aimDownDeg: 15.030503794370128,\n+       aimYawDeg: 0,\n+       depthMeters: 0,\n+       widthMeters: 2\n+     },\n+     {\n+       aimDownDeg: 15.030503794370128,\n+       aimYawDeg: 0,\n+       depthMeters: 0,\n+       widthMeters: 6\n+     }\n+   ],\n+   mainSystemSummary: '主扩 2 只',\n+   minimumHorizontalCoverage: 63.5,\n+   minimumHorizontalCoverageRaw: 63.459836995952635,\n+   minimumVerticalCoverage: 16.8,\n+   minimumVerticalCoverageRaw: 16.796378028750546,\n+   nearestDistance: 3.3,\n+   nearestDistanceRaw: 3.269556544854363,\n+   planDisplayIntro: '色阶仅表示等向点源的距离衰减与能量相加；标称角范围是理想几何包络，不代表真实覆盖。',\n+   reasons: [\n+     '目标为 会议类扩声 一级，其最大声压级能力目标为不小于 98 dB SPL。',\n+     '按“短边前置主扩”估算，场地横向宽度约 8 m、纵深约 12 m；实际听音区宽度约 8 m，首排至最后一排为 3～11 m。',\n+     '首排距离为 3 m、最远听音位置约 11.3 m；两点的自由场直达声差约 10.7 dB。',\n+     '本模块按最大声压级能力目标额外预留 3 dB，用于前期容量估算；单只主扩建议具备约 122 dB SPL @ 1m 的能力。',\n+     '主扩水平几何最低需求约 63.46°，显示档位为 90°；垂直几何最低需求约 16.80°，显示档位为 30°，初始下倾角约 15°。候选型号的标称 H/V 角另行复核。',\n+     '仅靠前置主扩时，首排与后排的直达声差超过本次预估控制值；建议增加一组后区补声，使后区声压过渡更平缓。'\n+   ],\n+   recommendedAimDownDeg: 15,\n+   recommendedAimDownDegRaw: 15.030503794370128,\n+   recommendedHorizontalCoverage: 90,\n+   recommendedVerticalCoverage: 30,\n+   requiredSplAtOneMeter: 122,\n+   requiredSplAtOneMeterRaw: 122.0274233614457,\n+   reviewWarnings: [\n+     '标称角仅作几何筛选；频段指向性与最大声压测试口径尚待核验。'\n+   ],\n+   speakerCenterHeight: 2.5,\n+   speakerCenterHeightRaw: 2.5,\n+   speakerRecommendation: {\n+     fillPlacementGroups: [\n+       {\n+         count: 2,\n+         label: '补声组',\n+         mainDropDb: 6,\n+         mainToFillDistanceMeters: 6.4,\n+         mainToFillDistanceMetersRaw: 6.392781595844556,\n+         serviceAreaLabel: '后区听音区域'\n+       }\n+     ],\n+     fillRequirement: {\n+       assumedListeningDistance: 3.7,\n+       assumedListeningDistanceRaw: 3.6666666666666665,\n+       requiredMaximumSplDb: 112.3,\n+       requiredMaximumSplDbRaw: 112.28542860877126\n+     },\n+     hasMainMatch: true,\n+     mainRequirement: {\n+       horizontalCoverageDeg: 90,\n+       horizontalCoverageRequiredDeg: 63.459836995952635,\n+       requiredMaximumSplDb: 122,\n+       requiredMaximumSplDbRaw: 122.0274233614457,\n+       verticalCoverageDeg: 30,\n+       verticalCoverageRequiredDeg: 16.796378028750546\n+     },\n+     missingParts: [],\n+     notes: [\n+       '仅从已登记角色、标称覆盖角和最大声压字段的公司音箱资料中筛选；最大声压测试口径待核对，覆盖角可变或参数不完整的型号不参与自动推荐。',\n+       '补声位置用于粗略确定安装区域；实际电平、延时、相位与指向必须在安装完成后按现场测量确定。'\n+     ],\n+     packages: [\n+       {\n+         fill: {\n+           assumedListeningDistance: 3.7,\n+           capacityMarginDb: 6.7,\n+           capacityMarginDbRaw: 6.714571391228745,\n+           count: 2,\n+           horizontalCoverageDeg: 80,\n+           maximumSplDb: 119,\n+           model: 'KS-08AT',\n+           placementGroups: [\n+             {\n+               count: 2,\n+               label: '补声组',\n+               mainDropDb: 6,\n+               mainToFillDistanceMeters: 6.4,\n+               mainToFillDistanceMetersRaw: 6.392781595844556,\n+               serviceAreaLabel: '后区听音区域'\n+             }\n+           ],\n+           requiredMaximumSplDb: 112.3,\n+           requiredMaximumSplDbRaw: 112.28542860877126,\n+           role: '补声/延时',\n+           source: 'KS-08AT 产品说明书（额定最大声压级）',\n+           type: '定覆盖全频',\n+           verticalCoverageDeg: 60\n+         },\n+         label: '方案 A',\n+         main: {\n+           capacityMarginDb: 7,\n+           capacityMarginDbRaw: 6.972576638554301,\n+           count: 2,\n+           coverageExcessDeg: 109.74378497529682,\n+           horizontalCoverageDeg: 100,\n+           maximumSplDb: 129,\n+           model: 'KF-D10F',\n+           role: '主扩',\n+           score: 34.16925419703562,\n+           source: 'KF-D10F 产品说明书',\n+           type: '定覆盖全频',\n+           verticalCoverageDeg: 90\n+         }\n+       },\n+       {\n+         fill: {\n+           assumedListeningDistance: 3.7,\n+           capacityMarginDb: 6.7,\n+           capacityMarginDbRaw: 6.714571391228745,\n+           count: 2,\n+           horizontalCoverageDeg: 80,\n+           maximumSplDb: 119,\n+           model: 'KS-08AT',\n+           placementGroups: [\n+             {\n+               count: 2,\n+               label: '补声组',\n+               mainDropDb: 6,\n+               mainToFillDistanceMeters: 6.4,\n+               mainToFillDistanceMetersRaw: 6.392781595844556,\n+               serviceAreaLabel: '后区听音区域'\n+             }\n+           ],\n+           requiredMaximumSplDb: 112.3,\n+           requiredMaximumSplDbRaw: 112.28542860877126,\n+           role: '补声/延时',\n+           source: 'KS-08AT 产品说明书（额定最大声压级）',\n+           type: '定覆盖全频',\n+           verticalCoverageDeg: 60\n+         },\n+         label: '方案 B',\n+         main: {\n+           capacityMarginDb: 10,\n+           capacityMarginDbRaw: 9.972576638554301,\n+           count: 2,\n+           coverageExcessDeg: 109.74378497529682,\n+           horizontalCoverageDeg: 100,\n+           maximumSplDb: 132,\n+           model: 'KF-D12F',\n+           role: '主扩',\n+           score: 43.16925419703562,\n+           source: 'KF-D12F 产品说明书',\n+           type: '定覆盖全频',\n+           verticalCoverageDeg: 90\n+         }\n+       },\n+       {\n+         fill: {\n+           assumedListeningDistance: 3.7,\n+           capacityMarginDb: 6.7,\n+           capacityMarginDbRaw: 6.714571391228745,\n+           count: 2,\n+           horizontalCoverageDeg: 80,\n+           maximumSplDb: 119,\n+           model: 'KS-08AT',\n+           placementGroups: [\n+             {\n+               count: 2,\n+               label: '补声组',\n+               mainDropDb: 6,\n+               mainToFillDistanceMeters: 6.4,\n+               mainToFillDistanceMetersRaw: 6.392781595844556,\n+               serviceAreaLabel: '后区听音区域'\n+             }\n+           ],\n+           requiredMaximumSplDb: 112.3,\n+           requiredMaximumSplDbRaw: 112.28542860877126,\n+           role: '补声/延时',\n+           source: 'KS-08AT 产品说明书（额定最大声压级）',\n+           type: '定覆盖全频',\n+           verticalCoverageDeg: 60\n+         },\n+         label: '方案 C',\n+         main: {\n+           capacityMarginDb: 13,\n+           capacityMarginDbRaw: 12.972576638554301,\n+           count: 2,\n+           coverageExcessDeg: 49.743784975296826,\n+           horizontalCoverageDeg: 70,\n+           maximumSplDb: 135,\n+           model: 'KF-D12H',\n+           role: '主扩',\n+           score: 44.96925419703562,\n+           source: 'KF-D12H 产品说明书',\n+           type: '定覆盖全频',\n+           verticalCoverageDeg: 60\n+         }\n+       }\n+     ],\n+     qualificationStatus: 'provisional',\n+     reviewWarnings: [\n+       '标称角仅作几何筛选；频段指向性与最大声压测试口径尚待核验。'\n+     ],\n+     systemLabel: '点声源 L/R 主扩',\n+     systemReason: '本模块仅针对普通矩形会议室，以定覆盖点声源作为左右主扩进行初步选型。'\n+   },\n+   standardLabel: '会议类扩声 一级',\n+   standardMaxSpl: 98,\n+   uniformityCheckDb: 6,\n+   uniformityStatus: '主扩直达声差偏大，需补声处理',\n+   venueScale: '中型会议室'\n+ }\n- null\n",
+      "actualLegacyOutputPresent": true,
+      "missing": [
+        "venue.room_width_m"
+      ],
+      "implicitValue": {
+        "lengthText": "12",
+        "widthText": "8",
+        "heightText": "4"
+      }
+    },
+    {
+      "id": "V2-AUD-007",
+      "assertionName": "AssertionError",
+      "assertionMessage": "V2-AUD-007: structured operation must not generate an engineering result before its blocker is confirmed\n+ actual - expected\n\n+ {\n+   calculationReserveDb: 3,\n+   capacityVerification: 'source-review-required',\n+   coverageEnvelopeText: '几何包络至少 74.0°H × 25.8°V',\n+   coverageVerification: 'unverified',\n+   depthMeters: 12,\n+   directVariationDb: 12.7,\n+   directVariationDbRaw: 12.650521301430103,\n+   distanceLossDb: 20.2,\n+   distanceLossDbRaw: 20.201643965380818,\n+   farthestDistance: 10.2,\n+   farthestDistanceRaw: 10.234866877492838,\n+   fillCount: 2,\n+   fillSummary: '建议增加 2 只后区补声音箱',\n+   firstListeningDistance: 2,\n+   floorAreaSquareMeters: 96,\n+   frontWidthMeters: 8,\n+   heightDeltaMeters: 1.3,\n+   heightDifferenceMeters: 1.3,\n+   kind: 'report',\n+   lastListeningDistance: 10,\n+   lastListeningDistanceRaw: 10,\n+   layoutComparisonSummary: '比较 6 组位置与指向，采用左右对称前置方案。',\n+   layoutPositionLines: [\n+     'M1 距左 2.25 m、距前 0.00 m、正向后排',\n+     'M2 距左 5.75 m、距前 0.00 m、正向后排'\n+   ],\n+   layoutSelection: {\n+     basis: 'nominal-geometry',\n+     candidateCount: 6,\n+     candidates: [\n+       {\n+         id: 'ratio-1-axis',\n+         metrics: {\n+           distanceVariationDbRaw: 12.650521301430103,\n+           farthestDistanceRaw: 10.234866877492838,\n+           farthestHorizontalDistanceRaw: 10.151970252123476,\n+           nearestDistanceRaw: 2.3853720883753127,\n+           nearestHorizontalDistanceRaw: 2,\n+           nominalGeometryCovered: true,\n+           normalizedOverAngle: 0,\n+           requiredHorizontalCoverageRaw: 73.92464430113311,\n+           requiredVerticalCoverageRaw: 25.726629384053194\n+         },\n+         positionRatio: 0.25,\n+         yawMode: 'axis'\n+       },\n+       {\n+         id: 'ratio-1-bisector',\n+         metrics: {\n+           distanceVariationDbRaw: 12.650521301430103,\n+           farthestDistanceRaw: 10.234866877492838,\n+           farthestHorizontalDistanceRaw: 10.151970252123476,\n+           nearestDistanceRaw: 2.3853720883753127,\n+           nearestHorizontalDistanceRaw: 2,\n+           nominalGeometryCovered: true,\n+           normalizedOverAngle: 0,\n+           requiredHorizontalCoverageRaw: 73.92464430113311,\n+           requiredVerticalCoverageRaw: 25.726629384053194\n+         },\n+         positionRatio: 0.25,\n+         yawMode: 'bisector'\n+       },\n+       {\n+         id: 'ratio-2-axis',\n+         metrics: {\n+           distanceVariationDbRaw: 12.806400707705096,\n+           farthestDistanceRaw: 10.420202733152555,\n+           farthestHorizontalDistanceRaw: 10.338792240876106,\n+           nearestDistanceRaw: 2.3853720883753127,\n+           nearestHorizontalDistanceRaw: 2,\n+           nominalGeometryCovered: true,\n+           normalizedOverAngle: 0,\n+           requiredHorizontalCoverageRaw: 96.93884451448609,\n+           requiredVerticalCoverageRaw: 25.857106991393888\n+         },\n+         positionRatio: 0.125,\n+         yawMode: 'axis'\n+       },\n+       {\n+         id: 'ratio-2-bisector',\n+         metrics: {\n+           distanceVariationDbRaw: 12.806400707705096,\n+           farthestDistanceRaw: 10.420202733152555,\n+           farthestHorizontalDistanceRaw: 10.338792240876106,\n+           nearestDistanceRaw: 2.3853720883753127,\n+           nearestHorizontalDistanceRaw: 2,\n+           nominalGeometryCovered: true,\n+           normalizedOverAngle: 0,\n+           requiredHorizontalCoverageRaw: 70.53481498020493,\n+           requiredVerticalCoverageRaw: 34.08898310352658\n+         },\n+         positionRatio: 0.125,\n+         yawMode: 'bisector'\n+       },\n+       {\n+         id: 'ratio-3-axis',\n+         metrics: {\n+           distanceVariationDbRaw: 12.806400707705096,\n+           farthestDistanceRaw: 10.420202733152555,\n+           farthestHorizontalDistanceRaw: 10.338792240876106,\n+           nearestDistanceRaw: 2.3853720883753127,\n+           nearestHorizontalDistanceRaw: 2,\n+           nominalGeometryCovered: true,\n+           normalizedOverAngle: 0,\n+           requiredHorizontalCoverageRaw: 96.93884451448609,\n+           requiredVerticalCoverageRaw: 25.857106991393888\n+         },\n+         positionRatio: 0.375,\n+         yawMode: 'axis'\n+       },\n+       {\n+         id: 'ratio-3-bisector',\n+         metrics: {\n+           distanceVariationDbRaw: 12.806400707705096,\n+           farthestDistanceRaw: 10.420202733152555,\n+           farthestHorizontalDistanceRaw: 10.338792240876106,\n+           nearestDistanceRaw: 2.3853720883753127,\n+           nearestHorizontalDistanceRaw: 2,\n+           nominalGeometryCovered: true,\n+           normalizedOverAngle: 0,\n+           requiredHorizontalCoverageRaw: 70.53481498020493,\n+           requiredVerticalCoverageRaw: 34.08898310352658\n+         },\n+         positionRatio: 0.375,\n+         yawMode: 'bisector'\n+       }\n+     ],\n+     selectedId: 'ratio-1-axis',\n+     summary: '比较 6 组位置与指向，采用左右对称前置方案。'\n+   },\n+   listeningSideMargin: 0.5,\n+   listeningSideMarginRaw: 0.5,\n+   listeningWidth: 7,\n+   mainCount: 2,\n+   mainDirectSoundPass: false,\n+   mainSpeakerPositions: [\n+     {\n+       aimDownDeg: 20.160552863770054,\n+       aimYawDeg: 0,\n+       depthMeters: 0,\n+       widthMeters: 2.25\n+     },\n+     {\n+       aimDownDeg: 20.160552863770054,\n+       aimYawDeg: 0,\n+       depthMeters: 0,\n+       widthMeters: 5.75\n+     }\n+   ],\n+   mainSystemSummary: '主扩 2 只',\n+   minimumHorizontalCoverage: 73.9,\n+   minimumHorizontalCoverageRaw: 73.92464430113311,\n+   minimumVerticalCoverage: 25.7,\n+   minimumVerticalCoverageRaw: 25.726629384053194,\n+   nearestDistance: 2.4,\n+   nearestDistanceRaw: 2.3853720883753127,\n+   planDisplayIntro: '色阶仅表示等向点源的距离衰减与能量相加；标称角范围是理想几何包络，不代表真实覆盖。',\n+   reasons: [\n+     '目标为 会议类扩声 二级，其最大声压级能力目标为不小于 95 dB SPL。',\n+     '按“短边前置主扩”估算，场地横向宽度约 8 m、纵深约 12 m；实际听音区宽度约 7 m，首排至最后一排为 2～10 m。',\n+     '首排距离为 2 m、最远听音位置约 10.2 m；两点的自由场直达声差约 12.7 dB。',\n+     '本模块按最大声压级能力目标额外预留 3 dB，用于前期容量估算；单只主扩建议具备约 118.2 dB SPL @ 1m 的能力。',\n+     '主扩水平几何最低需求约 73.92°，显示档位为 90°；垂直几何最低需求约 25.73°，显示档位为 30°，初始下倾角约 20.2°。候选型号的标称 H/V 角另行复核。',\n+     '仅靠前置主扩时，首排与后排的直达声差超过本次预估控制值；建议增加一组后区补声，使后区声压过渡更平缓。'\n+   ],\n+   recommendedAimDownDeg: 20.2,\n+   recommendedAimDownDegRaw: 20.160552863770054,\n+   recommendedHorizontalCoverage: 90,\n+   recommendedVerticalCoverage: 30,\n+   requiredSplAtOneMeter: 118.2,\n+   requiredSplAtOneMeterRaw: 118.20164396538081,\n+   reviewWarnings: [\n+     '标称角仅作几何筛选；频段指向性与最大声压测试口径尚待核验。'\n+   ],\n+   speakerCenterHeight: 2.5,\n+   speakerCenterHeightRaw: 2.5,\n+   speakerRecommendation: {\n+     fillPlacementGroups: [\n+       {\n+         count: 2,\n+         label: '补声组',\n+         mainDropDb: 6,\n+         mainToFillDistanceMeters: 4.6,\n+         mainToFillDistanceMetersRaw: 4.578460222006302,\n+         serviceAreaLabel: '后区听音区域'\n+       }\n+     ],\n+     fillRequirement: {\n+       assumedListeningDistance: 3.3,\n+       assumedListeningDistanceRaw: 3.3333333333333335,\n+       requiredMaximumSplDb: 108.5,\n+       requiredMaximumSplDbRaw: 108.45757490560675\n+     },\n+     hasMainMatch: true,\n+     mainRequirement: {\n+       horizontalCoverageDeg: 90,\n+       horizontalCoverageRequiredDeg: 73.92464430113311,\n+       requiredMaximumSplDb: 118.2,\n+       requiredMaximumSplDbRaw: 118.20164396538081,\n+       verticalCoverageDeg: 30,\n+       verticalCoverageRequiredDeg: 25.726629384053194\n+     },\n+     missingParts: [],\n+     notes: [\n+       '仅从已登记角色、标称覆盖角和最大声压字段的公司音箱资料中筛选；最大声压测试口径待核对，覆盖角可变或参数不完整的型号不参与自动推荐。',\n+       '补声位置用于粗略确定安装区域；实际电平、延时、相位与指向必须在安装完成后按现场测量确定。'\n+     ],\n+     packages: [\n+       {\n+         fill: {\n+           assumedListeningDistance: 3.3,\n+           capacityMarginDb: 10.5,\n+           capacityMarginDbRaw: 10.542425094393252,\n+           count: 2,\n+           horizontalCoverageDeg: 80,\n+           maximumSplDb: 119,\n+           model: 'KS-08AT',\n+           placementGroups: [\n+             {\n+               count: 2,\n+               label: '补声组',\n+               mainDropDb: 6,\n+               mainToFillDistanceMeters: 4.6,\n+               mainToFillDistanceMetersRaw: 4.578460222006302,\n+               serviceAreaLabel: '后区听音区域'\n+             }\n+           ],\n+           requiredMaximumSplDb: 108.5,\n+           requiredMaximumSplDbRaw: 108.45757490560675,\n+           role: '补声/延时',\n+           source: 'KS-08AT 产品说明书（额定最大声压级）',\n+           type: '定覆盖全频',\n+           verticalCoverageDeg: 60\n+         },\n+         label: '方案 A',\n+         main: {\n+           capacityMarginDb: 10.8,\n+           capacityMarginDbRaw: 10.79835603461919,\n+           count: 2,\n+           coverageExcessDeg: 90.34872631481369,\n+           horizontalCoverageDeg: 100,\n+           maximumSplDb: 129,\n+           model: 'KF-D10F',\n+           role: '主扩',\n+           score: 43.24184715777765,\n+           source: 'KF-D10F 产品说明书',\n+           type: '定覆盖全频',\n+           verticalCoverageDeg: 90\n+         }\n+       },\n+       {\n+         fill: {\n+           assumedListeningDistance: 3.3,\n+           capacityMarginDb: 10.5,\n+           capacityMarginDbRaw: 10.542425094393252,\n+           count: 2,\n+           horizontalCoverageDeg: 80,\n+           maximumSplDb: 119,\n+           model: 'KS-08AT',\n+           placementGroups: [\n+             {\n+               count: 2,\n+               label: '补声组',\n+               mainDropDb: 6,\n+               mainToFillDistanceMeters: 4.6,\n+               mainToFillDistanceMetersRaw: 4.578460222006302,\n+               serviceAreaLabel: '后区听音区域'\n+             }\n+           ],\n+           requiredMaximumSplDb: 108.5,\n+           requiredMaximumSplDbRaw: 108.45757490560675,\n+           role: '补声/延时',\n+           source: 'KS-08AT 产品说明书（额定最大声压级）',\n+           type: '定覆盖全频',\n+           verticalCoverageDeg: 60\n+         },\n+         label: '方案 B',\n+         main: {\n+           capacityMarginDb: 13.8,\n+           capacityMarginDbRaw: 13.79835603461919,\n+           count: 2,\n+           coverageExcessDeg: 90.34872631481369,\n+           horizontalCoverageDeg: 100,\n+           maximumSplDb: 132,\n+           model: 'KF-D12F',\n+           role: '主扩',\n+           score: 52.24184715777765,\n+           source: 'KF-D12F 产品说明书',\n+           type: '定覆盖全频',\n+           verticalCoverageDeg: 90\n+         }\n+       },\n+       {\n+         fill: {\n+           assumedListeningDistance: 3.3,\n+           capacityMarginDb: 10.5,\n+           capacityMarginDbRaw: 10.542425094393252,\n+           count: 2,\n+           horizontalCoverageDeg: 80,\n+           maximumSplDb: 119,\n+           model: 'KS-08AT',\n+           placementGroups: [\n+             {\n+               count: 2,\n+               label: '补声组',\n+               mainDropDb: 6,\n+               mainToFillDistanceMeters: 4.6,\n+               mainToFillDistanceMetersRaw: 4.578460222006302,\n+               serviceAreaLabel: '后区听音区域'\n+             }\n+           ],\n+           requiredMaximumSplDb: 108.5,\n+           requiredMaximumSplDbRaw: 108.45757490560675,\n+           role: '补声/延时',\n+           source: 'KS-08AT 产品说明书（额定最大声压级）',\n+           type: '定覆盖全频',\n+           verticalCoverageDeg: 60\n+         },\n+         label: '方案 C',\n+         main: {\n+           capacityMarginDb: 14.8,\n+           capacityMarginDbRaw: 14.79835603461919,\n+           count: 2,\n+           coverageExcessDeg: 90.34872631481369,\n+           horizontalCoverageDeg: 100,\n+           maximumSplDb: 133,\n+           model: 'KF-D15F',\n+           role: '主扩',\n+           score: 55.24184715777765,\n+           source: 'KF-D15F 产品说明书',\n+           type: '定覆盖全频',\n+           verticalCoverageDeg: 90\n+         }\n+       }\n+     ],\n+     qualificationStatus: 'provisional',\n+     reviewWarnings: [\n+       '标称角仅作几何筛选；频段指向性与最大声压测试口径尚待核验。'\n+     ],\n+     systemLabel: '点声源 L/R 主扩',\n+     systemReason: '本模块仅针对普通矩形会议室，以定覆盖点声源作为左右主扩进行初步选型。'\n+   },\n+   standardLabel: '会议类扩声 二级',\n+   standardMaxSpl: 95,\n+   uniformityCheckDb: 8,\n+   uniformityStatus: '主扩直达声差偏大，需补声处理',\n+   venueScale: '中型会议室'\n+ }\n- null\n",
+      "actualLegacyOutputPresent": true,
+      "missing": [
+        "venue.room_height_m"
+      ],
+      "implicitValue": {
+        "lengthText": "12",
+        "widthText": "8",
+        "heightText": "4"
+      }
+    },
+    {
+      "id": "LED-001",
+      "assertionName": "AssertionError",
+      "assertionMessage": "LED-001: structured operation must not generate an engineering result before its blocker is confirmed\n+ actual - expected\n\n+ {\n+   actualBottomMarginMeters: 0.27,\n+   actualRatio: 1.714,\n+   actualTopMarginMeters: 0.27,\n+   columns: 9,\n+   comfortableMaximumMeters: 6,\n+   comfortableMinimumMeters: 3.4,\n+   comfortableRangeText: '3.4～6 m',\n+   diagramHeightRpx: 315,\n+   dimensionText: '5.76 × 3.36 m',\n+   estimatedPixelHeight: 1680,\n+   estimatedPixelWidth: 2880,\n+   frameStyle: 'left:13.375%;top:6.750%;width:73.250%;height:86.500%',\n+   frameWidthCentimeters: 5,\n+   frameWidthMeters: 0.05,\n+   frameWidthText: '5 cm / 边',\n+   horizontalMarginMeters: 1.07,\n+   horizontalMarginText: '1.07 m / 侧',\n+   installedDimensionText: '5.86 × 3.46 m',\n+   installedHeightMeters: 3.46,\n+   installedWidthMeters: 5.86,\n+   layoutText: '横向箱体 9 × 纵向箱体 7，总共 63 块',\n+   minimumDistanceMeters: 2,\n+   pitchMode: 'specified',\n+   pitchModeLabel: '指定点间距',\n+   pitchText: 'P2',\n+   pixelPitch: 2,\n+   ratioCloseToTarget: false,\n+   ratioText: '1.71:1',\n+   resolutionText: '约 2880 × 1680',\n+   rows: 7,\n+   screenHeightMeters: 3.36,\n+   screenStyle: 'left:0.853%;top:1.445%;width:98.294%;height:97.110%;background-size:11.111% 14.286%',\n+   screenWidthMeters: 5.76,\n+   statusKey: 'fit',\n+   statusLabel: '观看距离匹配',\n+   statusText: '最近观看位置处于该点间距的舒适观看范围。',\n+   targetAspectRatio: 1.7777777777777777,\n+   targetAspectRatioKey: '16:9',\n+   totalUnits: 63,\n+   unitKey: 'cabinetStandard',\n+   unitLabel: '常规箱体',\n+   unitSizeText: '640 × 480 mm',\n+   unitType: 'cabinet',\n+   verticalMarginText: '0.27 / 0.27 m',\n+   viewingDistanceMeters: 5\n+ }\n- null\n",
+      "actualLegacyOutputPresent": true,
+      "missing": [
+        "led_screen.assembly_unit_width_mm",
+        "led_screen.assembly_unit_height_mm"
+      ],
+      "implicitValue": "cabinetStandard"
+    },
+    {
+      "id": "LED-003",
+      "assertionName": "AssertionError",
+      "assertionMessage": "LED-003: structured operation must not generate an engineering result before its blocker is confirmed\n+ actual - expected\n\n+ {\n+   actualBottomMarginMeters: 0.21,\n+   actualRatio: 1.826,\n+   actualTopMarginMeters: 0.21,\n+   columns: 21,\n+   comfortableMaximumMeters: 5.58,\n+   comfortableMinimumMeters: 3.16,\n+   comfortableRangeText: '3.16～5.58 m',\n+   diagramHeightRpx: 368,\n+   dimensionText: '6.72 × 3.68 m',\n+   estimatedPixelHeight: 1978,\n+   estimatedPixelWidth: 3613,\n+   frameStyle: 'left:2.639%;top:5.000%;width:94.722%;height:90.000%',\n+   frameWidthCentimeters: 5,\n+   frameWidthMeters: 0.05,\n+   frameWidthText: '5 cm / 边',\n+   horizontalMarginMeters: 0.19,\n+   horizontalMarginText: '0.19 m / 侧',\n+   installedDimensionText: '6.82 × 3.78 m',\n+   installedHeightMeters: 3.78,\n+   installedWidthMeters: 6.82,\n+   layoutText: '横向模组 21 × 纵向模组 23，总共 483 块',\n+   minimumDistanceMeters: 1.86,\n+   pitchMode: 'specified',\n+   pitchModeLabel: '指定点间距',\n+   pitchText: 'P1.86',\n+   pixelPitch: 1.86,\n+   ratioCloseToTarget: false,\n+   ratioText: '1.83:1',\n+   resolutionText: '约 3613 × 1978',\n+   rows: 23,\n+   screenHeightMeters: 3.68,\n+   screenStyle: 'left:0.733%;top:1.323%;width:98.534%;height:97.354%;background-size:4.762% 4.348%',\n+   screenWidthMeters: 6.72,\n+   statusKey: 'fit',\n+   statusLabel: '观看距离匹配',\n+   statusText: '最近观看位置处于该点间距的舒适观看范围。',\n+   targetAspectRatio: 1.7777777777777777,\n+   targetAspectRatioKey: '16:9',\n+   totalUnits: 483,\n+   unitKey: 'module',\n+   unitLabel: '模组',\n+   unitSizeText: '320 × 160 mm',\n+   unitType: 'module',\n+   verticalMarginText: '0.21 / 0.21 m',\n+   viewingDistanceMeters: 4\n+ }\n- null\n",
+      "actualLegacyOutputPresent": true,
+      "missing": [
+        "led_screen.assembly_unit_width_mm",
+        "led_screen.assembly_unit_height_mm"
+      ],
+      "implicitValue": "module"
+    },
+    {
+      "id": "LED-005",
+      "assertionName": "AssertionError",
+      "assertionMessage": "LED-005: structured operation must not generate an engineering result before its blocker is confirmed\n+ actual - expected\n\n+ {\n+   actualBottomMarginMeters: 0.19,\n+   actualRatio: 1.818,\n+   actualTopMarginMeters: 0.24,\n+   columns: 20,\n+   comfortableMaximumMeters: 6,\n+   comfortableMinimumMeters: 3.4,\n+   comfortableRangeText: '3.4～6 m',\n+   diagramHeightRpx: 354,\n+   dimensionText: '6.4 × 3.52 m',\n+   estimatedPixelHeight: 1760,\n+   estimatedPixelWidth: 3200,\n+   frameStyle: 'left:4.861%;top:5.926%;width:90.278%;height:89.383%',\n+   frameWidthCentimeters: 5,\n+   frameWidthMeters: 0.05,\n+   frameWidthText: '5 cm / 边',\n+   horizontalMarginMeters: 0.35,\n+   horizontalMarginText: '0.35 m / 侧',\n+   installedDimensionText: '6.5 × 3.62 m',\n+   installedHeightMeters: 3.62,\n+   installedWidthMeters: 6.5,\n+   layoutText: '横向模组 20 × 纵向模组 22，总共 440 块',\n+   minimumDistanceMeters: 2,\n+   pitchMode: 'recommended',\n+   pitchModeLabel: '系统推荐',\n+   pitchText: 'P2',\n+   pixelPitch: 2,\n+   ratioCloseToTarget: false,\n+   ratioText: '1.82:1',\n+   resolutionText: '约 3200 × 1760',\n+   rows: 22,\n+   screenHeightMeters: 3.52,\n+   screenStyle: 'left:0.769%;top:1.381%;width:98.462%;height:97.238%;background-size:5.000% 4.545%',\n+   screenWidthMeters: 6.4,\n+   statusKey: 'fit',\n+   statusLabel: '观看距离匹配',\n+   statusText: '最近观看位置处于该点间距的舒适观看范围。',\n+   targetAspectRatio: 1.7777777777777777,\n+   targetAspectRatioKey: '16:9',\n+   totalUnits: 440,\n+   unitKey: 'module',\n+   unitLabel: '模组',\n+   unitSizeText: '320 × 160 mm',\n+   unitType: 'module',\n+   verticalMarginText: '0.24 / 0.19 m',\n+   viewingDistanceMeters: 4.5\n+ }\n- null\n",
+      "actualLegacyOutputPresent": true,
+      "missing": [
+        "led_screen.assembly_unit_width_mm",
+        "led_screen.assembly_unit_height_mm",
+        "led_screen.assembly_unit"
+      ],
+      "implicitValue": "module"
+    },
+    {
+      "id": "LED-006",
+      "assertionName": "AssertionError",
+      "assertionMessage": "LED-006: structured operation must not generate an engineering result before its blocker is confirmed\n+ actual - expected\n\n+ {\n+   actualBottomMarginMeters: 0.225,\n+   actualRatio: 1.867,\n+   actualTopMarginMeters: 0.275,\n+   columns: 14,\n+   comfortableMaximumMeters: 6,\n+   comfortableMinimumMeters: 3.4,\n+   comfortableRangeText: '3.4～6 m',\n+   diagramHeightRpx: 315,\n+   dimensionText: '4.48 × 2.4 m',\n+   estimatedPixelHeight: 1200,\n+   estimatedPixelWidth: 2240,\n+   frameStyle: 'left:11.833%;top:9.167%;width:76.333%;height:83.333%',\n+   frameWidthCentimeters: 5,\n+   frameWidthMeters: 0.05,\n+   frameWidthText: '5 cm / 边',\n+   horizontalMarginMeters: 0.71,\n+   horizontalMarginText: '0.71 m / 侧',\n+   installedDimensionText: '4.58 × 2.5 m',\n+   installedHeightMeters: 2.5,\n+   installedWidthMeters: 4.58,\n+   layoutText: '横向模组 14 × 纵向模组 15，总共 210 块',\n+   minimumDistanceMeters: 2,\n+   pitchMode: 'recommended',\n+   pitchModeLabel: '系统推荐',\n+   pitchText: 'P2',\n+   pixelPitch: 2,\n+   ratioCloseToTarget: false,\n+   ratioText: '1.87:1',\n+   resolutionText: '约 2240 × 1200',\n+   rows: 15,\n+   screenHeightMeters: 2.4,\n+   screenStyle: 'left:1.092%;top:2.000%;width:97.817%;height:96.000%;background-size:7.143% 6.667%',\n+   screenWidthMeters: 4.48,\n+   statusKey: 'fit',\n+   statusLabel: '观看距离匹配',\n+   statusText: '最近观看位置处于该点间距的舒适观看范围。',\n+   targetAspectRatio: 1.7777777777777777,\n+   targetAspectRatioKey: '16:9',\n+   totalUnits: 210,\n+   unitKey: 'module',\n+   unitLabel: '模组',\n+   unitSizeText: '320 × 160 mm',\n+   unitType: 'module',\n+   verticalMarginText: '0.275 / 0.225 m',\n+   viewingDistanceMeters: 4\n+ }\n- null\n",
+      "actualLegacyOutputPresent": true,
+      "missing": [
+        "led_screen.assembly_unit_width_mm",
+        "led_screen.assembly_unit_height_mm",
+        "led_screen.assembly_unit"
+      ],
+      "implicitValue": "module"
+    },
+    {
+      "id": "DMX-010",
+      "assertionName": "AssertionError",
+      "assertionMessage": "DMX-010: structured operation must not generate an engineering result before its blocker is confirmed\n+ actual - expected\n\n+ {\n+   actualRangeText: '',\n+   channelCount: 6,\n+   channels: [\n+     {\n+       channel: 1,\n+       name: '调光',\n+       ranges: [\n+         {\n+           description: '暗至亮',\n+           range: '0–255'\n+         }\n+       ],\n+       summary: '暗至亮'\n+     },\n+     {\n+       channel: 2,\n+       name: '频闪',\n+       ranges: [\n+         {\n+           description: '关闭',\n+           range: '0–5'\n+         },\n+         {\n+           description: '常规频闪慢至快',\n+           range: '6–255'\n+         }\n+       ],\n+       summary: '常规频闪慢至快'\n+     },\n+     {\n+       channel: 3,\n+       name: 'WW暖白',\n+       ranges: [\n+         {\n+           description: '暖白',\n+           range: '0–255'\n+         }\n+       ],\n+       summary: '暖白'\n+     },\n+     {\n+       channel: 4,\n+       name: 'CW冷白',\n+       ranges: [\n+         {\n+           description: '冷白',\n+           range: '0–255'\n+         }\n+       ],\n+       summary: '冷白'\n+     },\n+     {\n+       channel: 5,\n+       name: 'C-Temp色温',\n+       ranges: [\n+         {\n+           description: '关闭',\n+           range: '0–5'\n+         },\n+         {\n+           description: '低至高',\n+           range: '6–255'\n+         }\n+       ],\n+       summary: '色温'\n+     },\n+     {\n+       channel: 6,\n+       name: 'ZOOM',\n+       ranges: [\n+         {\n+           description: '变焦',\n+           range: '0–255'\n+         }\n+       ],\n+       summary: '变焦'\n+     }\n+   ],\n+   modeLabel: '6 CH',\n+   model: 'TL-SL333',\n+   modes: [\n+     {\n+       channelCount: 6,\n+       label: '6 CH',\n+       selected: true\n+     },\n+     {\n+       channelCount: 3,\n+       label: '3 CH',\n+       selected: false\n+     }\n+   ],\n+   source: 'TL-SL333-UM-CN.pdf',\n+   sourcePageText: 'PDF第3页（说明书标注第8页）',\n+   sourcePages: [\n+     3\n+   ],\n+   verification: 'checked',\n+   verificationStatus: '已核对'\n+ }\n- null\n",
+      "actualLegacyOutputPresent": true,
+      "missing": "dmx_address.channels_per_fixture",
+      "implicitValue": 6
+    },
+    {
+      "id": "CAM-007",
+      "assertionName": "AssertionError",
+      "assertionMessage": "CAM-007: structured operation must not generate an engineering result before its blocker is confirmed\n+ actual - expected\n\n+ {\n+   aimAngleDegrees: -15.1,\n+   aimDirection: '向下',\n+   aimLabel: '现场调整水平与俯仰',\n+   aimText: '向下 15.1°',\n+   aimValue: '云台取景',\n+   calculationConclusion: '当前独立水平/垂直视场角模型下，理论最小距离为 4.5 m；两轴校核通过。',\n+   calculationDistanceMeters: 4.300643730375979,\n+   calculationRows: [\n+     {\n+       formula: '有效宽度 = 原宽度 × (1 + 余量)',\n+       substitution: '6 × (1 + 10%)',\n+       title: '加入构图余量',\n+       value: '6.6 m'\n+     },\n+     {\n+       formula: 'Dₕ = 有效宽度 ÷ [2 × tan(水平视场角 ÷ 2)]',\n+       substitution: '6.6 ÷ [2 × tan(75° ÷ 2)]',\n+       title: '计算水平最低距离',\n+       value: '4.3 m'\n+     },\n+     {\n+       formula: '从水平最低距离起求解：垂直包络角 ≤ 镜头垂直视场角',\n+       substitution: '镜头高 2.3 m，有效高度 0–1.98 m，有效纵深 4.4 m，垂直角 36°',\n+       title: '满足水平约束后校核垂直距离',\n+       value: '4.3 m'\n+     },\n+     {\n+       formula: '满足水平约束的距离 + 纵深方向构图余量',\n+       substitution: '4.3 + 0.2',\n+       title: '换算到实际区域前沿',\n+       value: '4.5 m'\n+     }\n+   ],\n+   calculationVisual: {\n+     depthMarginMeters: 0.2,\n+     hasDepthMargin: true,\n+     horizontalBarPercent: 100,\n+     limitingAxisLabel: '水平下限处垂直校核通过',\n+     limitingDistanceMeters: '4.3',\n+     verticalBarPercent: 100\n+   },\n+   cameraHeightMeters: 2.3,\n+   cameraSetbackMeters: 4.5,\n+   coverageVerified: true,\n+   depthMarginMeters: 0.2,\n+   depthMeters: 4,\n+   diagonalFov: 79.6,\n+   displayModel: '自定义摄像机',\n+   displayView: '已知视场角',\n+   distanceConstraintText: '水平下限处垂直校核通过',\n+   distanceMeaning: '当前模型下理论最小距离',\n+   distanceToCenterMeters: 6.5,\n+   distanceToFarEdgeMeters: 8.5,\n+   effectiveDepthMeters: 4.4,\n+   effectiveNearDistanceMeters: 4.3,\n+   effectiveSubjectHeightMeters: 1.98,\n+   effectiveWidthMeters: 6.6,\n+   endpointExplanation: '该结果按当前固定或自定义视场角计算。',\n+   endpointLabel: '自定义视角',\n+   fovSource: '自定义视场角',\n+   heightBasis: '人物最高点 + 0.5 m 安装余量',\n+   heightMode: 'auto',\n+   heightSummary: '建议镜头中心高 2.3 m',\n+   horizontalFov: 75,\n+   horizontalMinimumDistanceMeters: 4.3,\n+   horizontalUtilizationPercent: 100,\n+   marginPercent: 10,\n+   marginRatio: 0.1,\n+   mountLabel: '机械云台',\n+   mountType: 'ptz',\n+   primaryDistanceLabel: '距拍摄区前沿',\n+   primaryDistanceMeters: 4.5,\n+   requiredHorizontalFov: 75,\n+   requiredVerticalFov: 26,\n+   requiresInitialAim: false,\n+   sceneLabel: '地面区域',\n+   sceneMode: 'ground',\n+   sourceNote: '',\n+   sourceText: '用户输入参数；请以所用摄像机说明书为准。',\n+   subjectHeightMeters: 1.8,\n+   tiltDegrees: 15.1,\n+   verticalFov: 36,\n+   verticalMinimumDistanceMeters: 4.3,\n+   verticalSource: '用户输入',\n+   verticalUtilizationPercent: 72.3,\n+   widthMeters: 6\n+ }\n- null\n",
+      "actualLegacyOutputPresent": true,
+      "missing": "camera_fov.vfov_deg",
+      "implicitValue": "36"
+    }
+  ],
+  "observations": [
+    {
+      "id": "V2-AUD-005",
+      "expectedGuard": "block result until exact blocker value is confirmed for this operation",
+      "observedLegacyResult": true,
+      "evidence": {
+        "missingParameter": [
+          "venue.room_length_m"
+        ],
+        "untouchedPageValues": {
+          "lengthText": "12",
+          "widthText": "8",
+          "heightText": "4"
+        },
+        "result": {
+          "kind": "report",
+          "floorAreaSquareMeters": 96,
+          "venueScale": "中型会议室",
+          "standardLabel": "会议类扩声 二级",
+          "standardMaxSpl": 95,
+          "calculationReserveDb": 3,
+          "frontWidthMeters": 8,
+          "depthMeters": 12,
+          "firstListeningDistance": 2,
+          "lastListeningDistance": 10,
+          "lastListeningDistanceRaw": 10,
+          "listeningWidth": 7,
+          "listeningSideMargin": 0.5,
+          "listeningSideMarginRaw": 0.5,
+          "farthestDistance": 10.2,
+          "farthestDistanceRaw": 10.234866877492838,
+          "nearestDistance": 2.4,
+          "nearestDistanceRaw": 2.3853720883753127,
+          "distanceLossDb": 20.2,
+          "distanceLossDbRaw": 20.201643965380818,
+          "directVariationDb": 12.7,
+          "directVariationDbRaw": 12.650521301430103,
+          "uniformityCheckDb": 8,
+          "uniformityStatus": "主扩直达声差偏大，需补声处理",
+          "mainDirectSoundPass": false,
+          "mainCount": 2,
+          "mainSystemSummary": "主扩 2 只",
+          "fillCount": 2,
+          "fillSummary": "建议增加 2 只后区补声音箱",
+          "requiredSplAtOneMeter": 118.2,
+          "requiredSplAtOneMeterRaw": 118.20164396538081,
+          "minimumHorizontalCoverage": 73.9,
+          "minimumHorizontalCoverageRaw": 73.92464430113311,
+          "recommendedHorizontalCoverage": 90,
+          "minimumVerticalCoverage": 25.7,
+          "minimumVerticalCoverageRaw": 25.726629384053194,
+          "recommendedVerticalCoverage": 30,
+          "speakerCenterHeight": 2.5,
+          "speakerCenterHeightRaw": 2.5,
+          "heightDeltaMeters": 1.3,
+          "heightDifferenceMeters": 1.3,
+          "recommendedAimDownDeg": 20.2,
+          "recommendedAimDownDegRaw": 20.160552863770054,
+          "mainSpeakerPositions": [
+            {
+              "widthMeters": 2.25,
+              "depthMeters": 0,
+              "aimYawDeg": 0,
+              "aimDownDeg": 20.160552863770054
+            },
+            {
+              "widthMeters": 5.75,
+              "depthMeters": 0,
+              "aimYawDeg": 0,
+              "aimDownDeg": 20.160552863770054
+            }
+          ],
+          "layoutSelection": {
+            "candidateCount": 6,
+            "selectedId": "ratio-1-axis",
+            "basis": "nominal-geometry",
+            "summary": "比较 6 组位置与指向，采用左右对称前置方案。",
+            "candidates": [
+              {
+                "id": "ratio-1-axis",
+                "positionRatio": 0.25,
+                "yawMode": "axis",
+                "metrics": {
+                  "requiredHorizontalCoverageRaw": 73.92464430113311,
+                  "requiredVerticalCoverageRaw": 25.726629384053194,
+                  "nearestDistanceRaw": 2.3853720883753127,
+                  "farthestDistanceRaw": 10.234866877492838,
+                  "nearestHorizontalDistanceRaw": 2,
+                  "farthestHorizontalDistanceRaw": 10.151970252123476,
+                  "distanceVariationDbRaw": 12.650521301430103,
+                  "normalizedOverAngle": 0,
+                  "nominalGeometryCovered": true
+                }
+              },
+              {
+                "id": "ratio-1-bisector",
+                "positionRatio": 0.25,
+                "yawMode": "bisector",
+                "metrics": {
+                  "requiredHorizontalCoverageRaw": 73.92464430113311,
+                  "requiredVerticalCoverageRaw": 25.726629384053194,
+                  "nearestDistanceRaw": 2.3853720883753127,
+                  "farthestDistanceRaw": 10.234866877492838,
+                  "nearestHorizontalDistanceRaw": 2,
+                  "farthestHorizontalDistanceRaw": 10.151970252123476,
+                  "distanceVariationDbRaw": 12.650521301430103,
+                  "normalizedOverAngle": 0,
+                  "nominalGeometryCovered": true
+                }
+              },
+              {
+                "id": "ratio-2-axis",
+                "positionRatio": 0.125,
+                "yawMode": "axis",
+                "metrics": {
+                  "requiredHorizontalCoverageRaw": 96.93884451448609,
+                  "requiredVerticalCoverageRaw": 25.857106991393888,
+                  "nearestDistanceRaw": 2.3853720883753127,
+                  "farthestDistanceRaw": 10.420202733152555,
+                  "nearestHorizontalDistanceRaw": 2,
+                  "farthestHorizontalDistanceRaw": 10.338792240876106,
+                  "distanceVariationDbRaw": 12.806400707705096,
+                  "normalizedOverAngle": 0,
+                  "nominalGeometryCovered": true
+                }
+              },
+              {
+                "id": "ratio-2-bisector",
+                "positionRatio": 0.125,
+                "yawMode": "bisector",
+                "metrics": {
+                  "requiredHorizontalCoverageRaw": 70.53481498020493,
+                  "requiredVerticalCoverageRaw": 34.08898310352658,
+                  "nearestDistanceRaw": 2.3853720883753127,
+                  "farthestDistanceRaw": 10.420202733152555,
+                  "nearestHorizontalDistanceRaw": 2,
+                  "farthestHorizontalDistanceRaw": 10.338792240876106,
+                  "distanceVariationDbRaw": 12.806400707705096,
+                  "normalizedOverAngle": 0,
+                  "nominalGeometryCovered": true
+                }
+              },
+              {
+                "id": "ratio-3-axis",
+                "positionRatio": 0.375,
+                "yawMode": "axis",
+                "metrics": {
+                  "requiredHorizontalCoverageRaw": 96.93884451448609,
+                  "requiredVerticalCoverageRaw": 25.857106991393888,
+                  "nearestDistanceRaw": 2.3853720883753127,
+                  "farthestDistanceRaw": 10.420202733152555,
+                  "nearestHorizontalDistanceRaw": 2,
+                  "farthestHorizontalDistanceRaw": 10.338792240876106,
+                  "distanceVariationDbRaw": 12.806400707705096,
+                  "normalizedOverAngle": 0,
+                  "nominalGeometryCovered": true
+                }
+              },
+              {
+                "id": "ratio-3-bisector",
+                "positionRatio": 0.375,
+                "yawMode": "bisector",
+                "metrics": {
+                  "requiredHorizontalCoverageRaw": 70.53481498020493,
+                  "requiredVerticalCoverageRaw": 34.08898310352658,
+                  "nearestDistanceRaw": 2.3853720883753127,
+                  "farthestDistanceRaw": 10.420202733152555,
+                  "nearestHorizontalDistanceRaw": 2,
+                  "farthestHorizontalDistanceRaw": 10.338792240876106,
+                  "distanceVariationDbRaw": 12.806400707705096,
+                  "normalizedOverAngle": 0,
+                  "nominalGeometryCovered": true
+                }
+              }
+            ]
+          },
+          "coverageVerification": "unverified",
+          "capacityVerification": "source-review-required",
+          "speakerRecommendation": {
+            "systemLabel": "点声源 L/R 主扩",
+            "systemReason": "本模块仅针对普通矩形会议室，以定覆盖点声源作为左右主扩进行初步选型。",
+            "qualificationStatus": "provisional",
+            "hasMainMatch": true,
+            "packages": [
+              {
+                "label": "方案 A",
+                "main": {
+                  "model": "KF-D10F",
+                  "role": "主扩",
+                  "type": "定覆盖全频",
+                  "horizontalCoverageDeg": 100,
+                  "verticalCoverageDeg": 90,
+                  "maximumSplDb": 129,
+                  "source": "KF-D10F 产品说明书",
+                  "capacityMarginDb": 10.8,
+                  "capacityMarginDbRaw": 10.79835603461919,
+                  "coverageExcessDeg": 90.34872631481369,
+                  "score": 43.24184715777765,
+                  "count": 2
+                },
+                "fill": {
+                  "model": "KS-08AT",
+                  "role": "补声/延时",
+                  "type": "定覆盖全频",
+                  "horizontalCoverageDeg": 80,
+                  "verticalCoverageDeg": 60,
+                  "maximumSplDb": 119,
+                  "source": "KS-08AT 产品说明书（额定最大声压级）",
+                  "capacityMarginDb": 10.5,
+                  "capacityMarginDbRaw": 10.542425094393252,
+                  "count": 2,
+                  "requiredMaximumSplDb": 108.5,
+                  "requiredMaximumSplDbRaw": 108.45757490560675,
+                  "assumedListeningDistance": 3.3,
+                  "placementGroups": [
+                    {
+                      "label": "补声组",
+                      "count": 2,
+                      "mainToFillDistanceMeters": 4.6,
+                      "mainToFillDistanceMetersRaw": 4.578460222006302,
+                      "serviceAreaLabel": "后区听音区域",
+                      "mainDropDb": 6
+                    }
+                  ]
+                }
+              },
+              {
+                "label": "方案 B",
+                "main": {
+                  "model": "KF-D12F",
+                  "role": "主扩",
+                  "type": "定覆盖全频",
+                  "horizontalCoverageDeg": 100,
+                  "verticalCoverageDeg": 90,
+                  "maximumSplDb": 132,
+                  "source": "KF-D12F 产品说明书",
+                  "capacityMarginDb": 13.8,
+                  "capacityMarginDbRaw": 13.79835603461919,
+                  "coverageExcessDeg": 90.34872631481369,
+                  "score": 52.24184715777765,
+                  "count": 2
+                },
+                "fill": {
+                  "model": "KS-08AT",
+                  "role": "补声/延时",
+                  "type": "定覆盖全频",
+                  "horizontalCoverageDeg": 80,
+                  "verticalCoverageDeg": 60,
+                  "maximumSplDb": 119,
+                  "source": "KS-08AT 产品说明书（额定最大声压级）",
+                  "capacityMarginDb": 10.5,
+                  "capacityMarginDbRaw": 10.542425094393252,
+                  "count": 2,
+                  "requiredMaximumSplDb": 108.5,
+                  "requiredMaximumSplDbRaw": 108.45757490560675,
+                  "assumedListeningDistance": 3.3,
+                  "placementGroups": [
+                    {
+                      "label": "补声组",
+                      "count": 2,
+                      "mainToFillDistanceMeters": 4.6,
+                      "mainToFillDistanceMetersRaw": 4.578460222006302,
+                      "serviceAreaLabel": "后区听音区域",
+                      "mainDropDb": 6
+                    }
+                  ]
+                }
+              },
+              {
+                "label": "方案 C",
+                "main": {
+                  "model": "KF-D15F",
+                  "role": "主扩",
+                  "type": "定覆盖全频",
+                  "horizontalCoverageDeg": 100,
+                  "verticalCoverageDeg": 90,
+                  "maximumSplDb": 133,
+                  "source": "KF-D15F 产品说明书",
+                  "capacityMarginDb": 14.8,
+                  "capacityMarginDbRaw": 14.79835603461919,
+                  "coverageExcessDeg": 90.34872631481369,
+                  "score": 55.24184715777765,
+                  "count": 2
+                },
+                "fill": {
+                  "model": "KS-08AT",
+                  "role": "补声/延时",
+                  "type": "定覆盖全频",
+                  "horizontalCoverageDeg": 80,
+                  "verticalCoverageDeg": 60,
+                  "maximumSplDb": 119,
+                  "source": "KS-08AT 产品说明书（额定最大声压级）",
+                  "capacityMarginDb": 10.5,
+                  "capacityMarginDbRaw": 10.542425094393252,
+                  "count": 2,
+                  "requiredMaximumSplDb": 108.5,
+                  "requiredMaximumSplDbRaw": 108.45757490560675,
+                  "assumedListeningDistance": 3.3,
+                  "placementGroups": [
+                    {
+                      "label": "补声组",
+                      "count": 2,
+                      "mainToFillDistanceMeters": 4.6,
+                      "mainToFillDistanceMetersRaw": 4.578460222006302,
+                      "serviceAreaLabel": "后区听音区域",
+                      "mainDropDb": 6
+                    }
+                  ]
+                }
+              }
+            ],
+            "mainRequirement": {
+              "requiredMaximumSplDb": 118.2,
+              "requiredMaximumSplDbRaw": 118.20164396538081,
+              "horizontalCoverageDeg": 90,
+              "horizontalCoverageRequiredDeg": 73.92464430113311,
+              "verticalCoverageDeg": 30,
+              "verticalCoverageRequiredDeg": 25.726629384053194
+            },
+            "fillRequirement": {
+              "assumedListeningDistance": 3.3,
+              "assumedListeningDistanceRaw": 3.3333333333333335,
+              "requiredMaximumSplDb": 108.5,
+              "requiredMaximumSplDbRaw": 108.45757490560675
+            },
+            "fillPlacementGroups": [
+              {
+                "label": "补声组",
+                "count": 2,
+                "mainToFillDistanceMeters": 4.6,
+                "mainToFillDistanceMetersRaw": 4.578460222006302,
+                "serviceAreaLabel": "后区听音区域",
+                "mainDropDb": 6
+              }
+            ],
+            "missingParts": [],
+            "reviewWarnings": [
+              "标称角仅作几何筛选；频段指向性与最大声压测试口径尚待核验。"
+            ],
+            "notes": [
+              "仅从已登记角色、标称覆盖角和最大声压字段的公司音箱资料中筛选；最大声压测试口径待核对，覆盖角可变或参数不完整的型号不参与自动推荐。",
+              "补声位置用于粗略确定安装区域；实际电平、延时、相位与指向必须在安装完成后按现场测量确定。"
+            ]
+          },
+          "reviewWarnings": [
+            "标称角仅作几何筛选；频段指向性与最大声压测试口径尚待核验。"
+          ],
+          "reasons": [
+            "目标为 会议类扩声 二级，其最大声压级能力目标为不小于 95 dB SPL。",
+            "按“短边前置主扩”估算，场地横向宽度约 8 m、纵深约 12 m；实际听音区宽度约 7 m，首排至最后一排为 2～10 m。",
+            "首排距离为 2 m、最远听音位置约 10.2 m；两点的自由场直达声差约 12.7 dB。",
+            "本模块按最大声压级能力目标额外预留 3 dB，用于前期容量估算；单只主扩建议具备约 118.2 dB SPL @ 1m 的能力。",
+            "主扩水平几何最低需求约 73.92°，显示档位为 90°；垂直几何最低需求约 25.73°，显示档位为 30°，初始下倾角约 20.2°。候选型号的标称 H/V 角另行复核。",
+            "仅靠前置主扩时，首排与后排的直达声差超过本次预估控制值；建议增加一组后区补声，使后区声压过渡更平缓。"
+          ],
+          "layoutComparisonSummary": "比较 6 组位置与指向，采用左右对称前置方案。",
+          "layoutPositionLines": [
+            "M1 距左 2.25 m、距前 0.00 m、正向后排",
+            "M2 距左 5.75 m、距前 0.00 m、正向后排"
+          ],
+          "coverageEnvelopeText": "几何包络至少 74.0°H × 25.8°V",
+          "planDisplayIntro": "色阶仅表示等向点源的距离衰减与能量相加；标称角范围是理想几何包络，不代表真实覆盖。"
+        },
+        "reportData": {
+          "kind": "report",
+          "floorAreaSquareMeters": 96,
+          "venueScale": "中型会议室",
+          "standardLabel": "会议类扩声 二级",
+          "standardMaxSpl": 95,
+          "calculationReserveDb": 3,
+          "frontWidthMeters": 8,
+          "depthMeters": 12,
+          "firstListeningDistance": 2,
+          "lastListeningDistance": 10,
+          "lastListeningDistanceRaw": 10,
+          "listeningWidth": 7,
+          "listeningSideMargin": 0.5,
+          "listeningSideMarginRaw": 0.5,
+          "farthestDistance": 10.2,
+          "farthestDistanceRaw": 10.234866877492838,
+          "nearestDistance": 2.4,
+          "nearestDistanceRaw": 2.3853720883753127,
+          "distanceLossDb": 20.2,
+          "distanceLossDbRaw": 20.201643965380818,
+          "directVariationDb": 12.7,
+          "directVariationDbRaw": 12.650521301430103,
+          "uniformityCheckDb": 8,
+          "uniformityStatus": "主扩直达声差偏大，需补声处理",
+          "mainDirectSoundPass": false,
+          "mainCount": 2,
+          "mainSystemSummary": "主扩 2 只",
+          "fillCount": 2,
+          "fillSummary": "建议增加 2 只后区补声音箱",
+          "requiredSplAtOneMeter": 118.2,
+          "requiredSplAtOneMeterRaw": 118.20164396538081,
+          "minimumHorizontalCoverage": 73.9,
+          "minimumHorizontalCoverageRaw": 73.92464430113311,
+          "recommendedHorizontalCoverage": 90,
+          "minimumVerticalCoverage": 25.7,
+          "minimumVerticalCoverageRaw": 25.726629384053194,
+          "recommendedVerticalCoverage": 30,
+          "speakerCenterHeight": 2.5,
+          "speakerCenterHeightRaw": 2.5,
+          "heightDeltaMeters": 1.3,
+          "heightDifferenceMeters": 1.3,
+          "recommendedAimDownDeg": 20.2,
+          "recommendedAimDownDegRaw": 20.160552863770054,
+          "mainSpeakerPositions": [
+            {
+              "widthMeters": 2.25,
+              "depthMeters": 0,
+              "aimYawDeg": 0,
+              "aimDownDeg": 20.160552863770054
+            },
+            {
+              "widthMeters": 5.75,
+              "depthMeters": 0,
+              "aimYawDeg": 0,
+              "aimDownDeg": 20.160552863770054
+            }
+          ],
+          "layoutSelection": {
+            "candidateCount": 6,
+            "selectedId": "ratio-1-axis",
+            "basis": "nominal-geometry",
+            "summary": "比较 6 组位置与指向，采用左右对称前置方案。",
+            "candidates": [
+              {
+                "id": "ratio-1-axis",
+                "positionRatio": 0.25,
+                "yawMode": "axis",
+                "metrics": {
+                  "requiredHorizontalCoverageRaw": 73.92464430113311,
+                  "requiredVerticalCoverageRaw": 25.726629384053194,
+                  "nearestDistanceRaw": 2.3853720883753127,
+                  "farthestDistanceRaw": 10.234866877492838,
+                  "nearestHorizontalDistanceRaw": 2,
+                  "farthestHorizontalDistanceRaw": 10.151970252123476,
+                  "distanceVariationDbRaw": 12.650521301430103,
+                  "normalizedOverAngle": 0,
+                  "nominalGeometryCovered": true
+                }
+              },
+              {
+                "id": "ratio-1-bisector",
+                "positionRatio": 0.25,
+                "yawMode": "bisector",
+                "metrics": {
+                  "requiredHorizontalCoverageRaw": 73.92464430113311,
+                  "requiredVerticalCoverageRaw": 25.726629384053194,
+                  "nearestDistanceRaw": 2.3853720883753127,
+                  "farthestDistanceRaw": 10.234866877492838,
+                  "nearestHorizontalDistanceRaw": 2,
+                  "farthestHorizontalDistanceRaw": 10.151970252123476,
+                  "distanceVariationDbRaw": 12.650521301430103,
+                  "normalizedOverAngle": 0,
+                  "nominalGeometryCovered": true
+                }
+              },
+              {
+                "id": "ratio-2-axis",
+                "positionRatio": 0.125,
+                "yawMode": "axis",
+                "metrics": {
+                  "requiredHorizontalCoverageRaw": 96.93884451448609,
+                  "requiredVerticalCoverageRaw": 25.857106991393888,
+                  "nearestDistanceRaw": 2.3853720883753127,
+                  "farthestDistanceRaw": 10.420202733152555,
+                  "nearestHorizontalDistanceRaw": 2,
+                  "farthestHorizontalDistanceRaw": 10.338792240876106,
+                  "distanceVariationDbRaw": 12.806400707705096,
+                  "normalizedOverAngle": 0,
+                  "nominalGeometryCovered": true
+                }
+              },
+              {
+                "id": "ratio-2-bisector",
+                "positionRatio": 0.125,
+                "yawMode": "bisector",
+                "metrics": {
+                  "requiredHorizontalCoverageRaw": 70.53481498020493,
+                  "requiredVerticalCoverageRaw": 34.08898310352658,
+                  "nearestDistanceRaw": 2.3853720883753127,
+                  "farthestDistanceRaw": 10.420202733152555,
+                  "nearestHorizontalDistanceRaw": 2,
+                  "farthestHorizontalDistanceRaw": 10.338792240876106,
+                  "distanceVariationDbRaw": 12.806400707705096,
+                  "normalizedOverAngle": 0,
+                  "nominalGeometryCovered": true
+                }
+              },
+              {
+                "id": "ratio-3-axis",
+                "positionRatio": 0.375,
+                "yawMode": "axis",
+                "metrics": {
+                  "requiredHorizontalCoverageRaw": 96.93884451448609,
+                  "requiredVerticalCoverageRaw": 25.857106991393888,
+                  "nearestDistanceRaw": 2.3853720883753127,
+                  "farthestDistanceRaw": 10.420202733152555,
+                  "nearestHorizontalDistanceRaw": 2,
+                  "farthestHorizontalDistanceRaw": 10.338792240876106,
+                  "distanceVariationDbRaw": 12.806400707705096,
+                  "normalizedOverAngle": 0,
+                  "nominalGeometryCovered": true
+                }
+              },
+              {
+                "id": "ratio-3-bisector",
+                "positionRatio": 0.375,
+                "yawMode": "bisector",
+                "metrics": {
+                  "requiredHorizontalCoverageRaw": 70.53481498020493,
+                  "requiredVerticalCoverageRaw": 34.08898310352658,
+                  "nearestDistanceRaw": 2.3853720883753127,
+                  "farthestDistanceRaw": 10.420202733152555,
+                  "nearestHorizontalDistanceRaw": 2,
+                  "farthestHorizontalDistanceRaw": 10.338792240876106,
+                  "distanceVariationDbRaw": 12.806400707705096,
+                  "normalizedOverAngle": 0,
+                  "nominalGeometryCovered": true
+                }
+              }
+            ]
+          },
+          "coverageVerification": "unverified",
+          "capacityVerification": "source-review-required",
+          "speakerRecommendation": {
+            "systemLabel": "点声源 L/R 主扩",
+            "systemReason": "本模块仅针对普通矩形会议室，以定覆盖点声源作为左右主扩进行初步选型。",
+            "qualificationStatus": "provisional",
+            "hasMainMatch": true,
+            "packages": [
+              {
+                "label": "方案 A",
+                "main": {
+                  "model": "KF-D10F",
+                  "role": "主扩",
+                  "type": "定覆盖全频",
+                  "horizontalCoverageDeg": 100,
+                  "verticalCoverageDeg": 90,
+                  "maximumSplDb": 129,
+                  "source": "KF-D10F 产品说明书",
+                  "capacityMarginDb": 10.8,
+                  "capacityMarginDbRaw": 10.79835603461919,
+                  "coverageExcessDeg": 90.34872631481369,
+                  "score": 43.24184715777765,
+                  "count": 2
+                },
+                "fill": {
+                  "model": "KS-08AT",
+                  "role": "补声/延时",
+                  "type": "定覆盖全频",
+                  "horizontalCoverageDeg": 80,
+                  "verticalCoverageDeg": 60,
+                  "maximumSplDb": 119,
+                  "source": "KS-08AT 产品说明书（额定最大声压级）",
+                  "capacityMarginDb": 10.5,
+                  "capacityMarginDbRaw": 10.542425094393252,
+                  "count": 2,
+                  "requiredMaximumSplDb": 108.5,
+                  "requiredMaximumSplDbRaw": 108.45757490560675,
+                  "assumedListeningDistance": 3.3,
+                  "placementGroups": [
+                    {
+                      "label": "补声组",
+                      "count": 2,
+                      "mainToFillDistanceMeters": 4.6,
+                      "mainToFillDistanceMetersRaw": 4.578460222006302,
+                      "serviceAreaLabel": "后区听音区域",
+                      "mainDropDb": 6
+                    }
+                  ]
+                }
+              },
+              {
+                "label": "方案 B",
+                "main": {
+                  "model": "KF-D12F",
+                  "role": "主扩",
+                  "type": "定覆盖全频",
+                  "horizontalCoverageDeg": 100,
+                  "verticalCoverageDeg": 90,
+                  "maximumSplDb": 132,
+                  "source": "KF-D12F 产品说明书",
+                  "capacityMarginDb": 13.8,
+                  "capacityMarginDbRaw": 13.79835603461919,
+                  "coverageExcessDeg": 90.34872631481369,
+                  "score": 52.24184715777765,
+                  "count": 2
+                },
+                "fill": {
+                  "model": "KS-08AT",
+                  "role": "补声/延时",
+                  "type": "定覆盖全频",
+                  "horizontalCoverageDeg": 80,
+                  "verticalCoverageDeg": 60,
+                  "maximumSplDb": 119,
+                  "source": "KS-08AT 产品说明书（额定最大声压级）",
+                  "capacityMarginDb": 10.5,
+                  "capacityMarginDbRaw": 10.542425094393252,
+                  "count": 2,
+                  "requiredMaximumSplDb": 108.5,
+                  "requiredMaximumSplDbRaw": 108.45757490560675,
+                  "assumedListeningDistance": 3.3,
+                  "placementGroups": [
+                    {
+                      "label": "补声组",
+                      "count": 2,
+                      "mainToFillDistanceMeters": 4.6,
+                      "mainToFillDistanceMetersRaw": 4.578460222006302,
+                      "serviceAreaLabel": "后区听音区域",
+                      "mainDropDb": 6
+                    }
+                  ]
+                }
+              },
+              {
+                "label": "方案 C",
+                "main": {
+                  "model": "KF-D15F",
+                  "role": "主扩",
+                  "type": "定覆盖全频",
+                  "horizontalCoverageDeg": 100,
+                  "verticalCoverageDeg": 90,
+                  "maximumSplDb": 133,
+                  "source": "KF-D15F 产品说明书",
+                  "capacityMarginDb": 14.8,
+                  "capacityMarginDbRaw": 14.79835603461919,
+                  "coverageExcessDeg": 90.34872631481369,
+                  "score": 55.24184715777765,
+                  "count": 2
+                },
+                "fill": {
+                  "model": "KS-08AT",
+                  "role": "补声/延时",
+                  "type": "定覆盖全频",
+                  "horizontalCoverageDeg": 80,
+                  "verticalCoverageDeg": 60,
+                  "maximumSplDb": 119,
+                  "source": "KS-08AT 产品说明书（额定最大声压级）",
+                  "capacityMarginDb": 10.5,
+                  "capacityMarginDbRaw": 10.542425094393252,
+                  "count": 2,
+                  "requiredMaximumSplDb": 108.5,
+                  "requiredMaximumSplDbRaw": 108.45757490560675,
+                  "assumedListeningDistance": 3.3,
+                  "placementGroups": [
+                    {
+                      "label": "补声组",
+                      "count": 2,
+                      "mainToFillDistanceMeters": 4.6,
+                      "mainToFillDistanceMetersRaw": 4.578460222006302,
+                      "serviceAreaLabel": "后区听音区域",
+                      "mainDropDb": 6
+                    }
+                  ]
+                }
+              }
+            ],
+            "mainRequirement": {
+              "requiredMaximumSplDb": 118.2,
+              "requiredMaximumSplDbRaw": 118.20164396538081,
+              "horizontalCoverageDeg": 90,
+              "horizontalCoverageRequiredDeg": 73.92464430113311,
+              "verticalCoverageDeg": 30,
+              "verticalCoverageRequiredDeg": 25.726629384053194
+            },
+            "fillRequirement": {
+              "assumedListeningDistance": 3.3,
+              "assumedListeningDistanceRaw": 3.3333333333333335,
+              "requiredMaximumSplDb": 108.5,
+              "requiredMaximumSplDbRaw": 108.45757490560675
+            },
+            "fillPlacementGroups": [
+              {
+                "label": "补声组",
+                "count": 2,
+                "mainToFillDistanceMeters": 4.6,
+                "mainToFillDistanceMetersRaw": 4.578460222006302,
+                "serviceAreaLabel": "后区听音区域",
+                "mainDropDb": 6
+              }
+            ],
+            "missingParts": [],
+            "reviewWarnings": [
+              "标称角仅作几何筛选；频段指向性与最大声压测试口径尚待核验。"
+            ],
+            "notes": [
+              "仅从已登记角色、标称覆盖角和最大声压字段的公司音箱资料中筛选；最大声压测试口径待核对，覆盖角可变或参数不完整的型号不参与自动推荐。",
+              "补声位置用于粗略确定安装区域；实际电平、延时、相位与指向必须在安装完成后按现场测量确定。"
+            ]
+          },
+          "reviewWarnings": [
+            "标称角仅作几何筛选；频段指向性与最大声压测试口径尚待核验。"
+          ],
+          "reasons": [
+            "目标为 会议类扩声 二级，其最大声压级能力目标为不小于 95 dB SPL。",
+            "按“短边前置主扩”估算，场地横向宽度约 8 m、纵深约 12 m；实际听音区宽度约 7 m，首排至最后一排为 2～10 m。",
+            "首排距离为 2 m、最远听音位置约 10.2 m；两点的自由场直达声差约 12.7 dB。",
+            "本模块按最大声压级能力目标额外预留 3 dB，用于前期容量估算；单只主扩建议具备约 118.2 dB SPL @ 1m 的能力。",
+            "主扩水平几何最低需求约 73.92°，显示档位为 90°；垂直几何最低需求约 25.73°，显示档位为 30°，初始下倾角约 20.2°。候选型号的标称 H/V 角另行复核。",
+            "仅靠前置主扩时，首排与后排的直达声差超过本次预估控制值；建议增加一组后区补声，使后区声压过渡更平缓。"
+          ],
+          "layoutComparisonSummary": "比较 6 组位置与指向，采用左右对称前置方案。",
+          "layoutPositionLines": [
+            "M1 距左 2.25 m、距前 0.00 m、正向后排",
+            "M2 距左 5.75 m、距前 0.00 m、正向后排"
+          ],
+          "coverageEnvelopeText": "几何包络至少 74.0°H × 25.8°V",
+          "planDisplayIntro": "色阶仅表示等向点源的距离衰减与能量相加；标称角范围是理想几何包络，不代表真实覆盖。"
+        }
+      }
+    },
+    {
+      "id": "V2-AUD-006",
+      "expectedGuard": "block result until exact blocker value is confirmed for this operation",
+      "observedLegacyResult": true,
+      "evidence": {
+        "missingParameter": [
+          "venue.room_width_m"
+        ],
+        "untouchedPageValues": {
+          "lengthText": "12",
+          "widthText": "8",
+          "heightText": "4"
+        },
+        "result": {
+          "kind": "report",
+          "floorAreaSquareMeters": 96,
+          "venueScale": "中型会议室",
+          "standardLabel": "会议类扩声 一级",
+          "standardMaxSpl": 98,
+          "calculationReserveDb": 3,
+          "frontWidthMeters": 8,
+          "depthMeters": 12,
+          "firstListeningDistance": 3,
+          "lastListeningDistance": 11,
+          "lastListeningDistanceRaw": 11,
+          "listeningWidth": 8,
+          "listeningSideMargin": 0,
+          "listeningSideMarginRaw": 0,
+          "farthestDistance": 11.3,
+          "farthestDistanceRaw": 11.255665240224586,
+          "nearestDistance": 3.3,
+          "nearestDistanceRaw": 3.269556544854363,
+          "distanceLossDb": 21,
+          "distanceLossDbRaw": 21.0274233614457,
+          "directVariationDb": 10.7,
+          "directVariationDbRaw": 10.73764630935792,
+          "uniformityCheckDb": 6,
+          "uniformityStatus": "主扩直达声差偏大，需补声处理",
+          "mainDirectSoundPass": false,
+          "mainCount": 2,
+          "mainSystemSummary": "主扩 2 只",
+          "fillCount": 2,
+          "fillSummary": "建议增加 2 只后区补声音箱",
+          "requiredSplAtOneMeter": 122,
+          "requiredSplAtOneMeterRaw": 122.0274233614457,
+          "minimumHorizontalCoverage": 63.5,
+          "minimumHorizontalCoverageRaw": 63.459836995952635,
+          "recommendedHorizontalCoverage": 90,
+          "minimumVerticalCoverage": 16.8,
+          "minimumVerticalCoverageRaw": 16.796378028750546,
+          "recommendedVerticalCoverage": 30,
+          "speakerCenterHeight": 2.5,
+          "speakerCenterHeightRaw": 2.5,
+          "heightDeltaMeters": 1.3,
+          "heightDifferenceMeters": 1.3,
+          "recommendedAimDownDeg": 15,
+          "recommendedAimDownDegRaw": 15.030503794370128,
+          "mainSpeakerPositions": [
+            {
+              "widthMeters": 2,
+              "depthMeters": 0,
+              "aimYawDeg": 0,
+              "aimDownDeg": 15.030503794370128
+            },
+            {
+              "widthMeters": 6,
+              "depthMeters": 0,
+              "aimYawDeg": 0,
+              "aimDownDeg": 15.030503794370128
+            }
+          ],
+          "layoutSelection": {
+            "candidateCount": 6,
+            "selectedId": "ratio-1-axis",
+            "basis": "nominal-geometry",
+            "summary": "比较 6 组位置与指向，采用左右对称前置方案。",
+            "candidates": [
+              {
+                "id": "ratio-1-axis",
+                "positionRatio": 0.25,
+                "yawMode": "axis",
+                "metrics": {
+                  "requiredHorizontalCoverageRaw": 63.459836995952635,
+                  "requiredVerticalCoverageRaw": 16.796378028750546,
+                  "nearestDistanceRaw": 3.269556544854363,
+                  "farthestDistanceRaw": 11.255665240224586,
+                  "nearestHorizontalDistanceRaw": 3,
+                  "farthestHorizontalDistanceRaw": 11.180339887498947,
+                  "distanceVariationDbRaw": 10.73764630935792,
+                  "normalizedOverAngle": 0,
+                  "nominalGeometryCovered": true
+                }
+              },
+              {
+                "id": "ratio-1-bisector",
+                "positionRatio": 0.25,
+                "yawMode": "bisector",
+                "metrics": {
+                  "requiredHorizontalCoverageRaw": 63.459836995952635,
+                  "requiredVerticalCoverageRaw": 16.796378028750546,
+                  "nearestDistanceRaw": 3.269556544854363,
+                  "farthestDistanceRaw": 11.255665240224586,
+                  "nearestHorizontalDistanceRaw": 3,
+                  "farthestHorizontalDistanceRaw": 11.180339887498947,
+                  "distanceVariationDbRaw": 10.73764630935792,
+                  "normalizedOverAngle": 0,
+                  "nominalGeometryCovered": true
+                }
+              },
+              {
+                "id": "ratio-2-axis",
+                "positionRatio": 0.125,
+                "yawMode": "axis",
+                "metrics": {
+                  "requiredHorizontalCoverageRaw": 85.7013554054107,
+                  "requiredVerticalCoverageRaw": 16.92405852679629,
+                  "nearestDistanceRaw": 3.269556544854363,
+                  "farthestDistanceRaw": 11.475626344561764,
+                  "nearestHorizontalDistanceRaw": 3,
+                  "farthestHorizontalDistanceRaw": 11.40175425099138,
+                  "distanceVariationDbRaw": 10.90575092458339,
+                  "normalizedOverAngle": 0,
+                  "nominalGeometryCovered": true
+                }
+              },
+              {
+                "id": "ratio-2-bisector",
+                "positionRatio": 0.125,
+                "yawMode": "bisector",
+                "metrics": {
+                  "requiredHorizontalCoverageRaw": 60.530947558284886,
+                  "requiredVerticalCoverageRaw": 21.653069757118068,
+                  "nearestDistanceRaw": 3.269556544854363,
+                  "farthestDistanceRaw": 11.475626344561764,
+                  "nearestHorizontalDistanceRaw": 3,
+                  "farthestHorizontalDistanceRaw": 11.40175425099138,
+                  "distanceVariationDbRaw": 10.90575092458339,
+                  "normalizedOverAngle": 0,
+                  "nominalGeometryCovered": true
+                }
+              },
+              {
+                "id": "ratio-3-axis",
+                "positionRatio": 0.375,
+                "yawMode": "axis",
+                "metrics": {
+                  "requiredHorizontalCoverageRaw": 85.7013554054107,
+                  "requiredVerticalCoverageRaw": 16.92405852679629,
+                  "nearestDistanceRaw": 3.269556544854363,
+                  "farthestDistanceRaw": 11.475626344561764,
+                  "nearestHorizontalDistanceRaw": 3,
+                  "farthestHorizontalDistanceRaw": 11.40175425099138,
+                  "distanceVariationDbRaw": 10.90575092458339,
+                  "normalizedOverAngle": 0,
+                  "nominalGeometryCovered": true
+                }
+              },
+              {
+                "id": "ratio-3-bisector",
+                "positionRatio": 0.375,
+                "yawMode": "bisector",
+                "metrics": {
+                  "requiredHorizontalCoverageRaw": 60.530947558284886,
+                  "requiredVerticalCoverageRaw": 21.653069757118068,
+                  "nearestDistanceRaw": 3.269556544854363,
+                  "farthestDistanceRaw": 11.475626344561764,
+                  "nearestHorizontalDistanceRaw": 3,
+                  "farthestHorizontalDistanceRaw": 11.40175425099138,
+                  "distanceVariationDbRaw": 10.90575092458339,
+                  "normalizedOverAngle": 0,
+                  "nominalGeometryCovered": true
+                }
+              }
+            ]
+          },
+          "coverageVerification": "unverified",
+          "capacityVerification": "source-review-required",
+          "speakerRecommendation": {
+            "systemLabel": "点声源 L/R 主扩",
+            "systemReason": "本模块仅针对普通矩形会议室，以定覆盖点声源作为左右主扩进行初步选型。",
+            "qualificationStatus": "provisional",
+            "hasMainMatch": true,
+            "packages": [
+              {
+                "label": "方案 A",
+                "main": {
+                  "model": "KF-D10F",
+                  "role": "主扩",
+                  "type": "定覆盖全频",
+                  "horizontalCoverageDeg": 100,
+                  "verticalCoverageDeg": 90,
+                  "maximumSplDb": 129,
+                  "source": "KF-D10F 产品说明书",
+                  "capacityMarginDb": 7,
+                  "capacityMarginDbRaw": 6.972576638554301,
+                  "coverageExcessDeg": 109.74378497529682,
+                  "score": 34.16925419703562,
+                  "count": 2
+                },
+                "fill": {
+                  "model": "KS-08AT",
+                  "role": "补声/延时",
+                  "type": "定覆盖全频",
+                  "horizontalCoverageDeg": 80,
+                  "verticalCoverageDeg": 60,
+                  "maximumSplDb": 119,
+                  "source": "KS-08AT 产品说明书（额定最大声压级）",
+                  "capacityMarginDb": 6.7,
+                  "capacityMarginDbRaw": 6.714571391228745,
+                  "count": 2,
+                  "requiredMaximumSplDb": 112.3,
+                  "requiredMaximumSplDbRaw": 112.28542860877126,
+                  "assumedListeningDistance": 3.7,
+                  "placementGroups": [
+                    {
+                      "label": "补声组",
+                      "count": 2,
+                      "mainToFillDistanceMeters": 6.4,
+                      "mainToFillDistanceMetersRaw": 6.392781595844556,
+                      "serviceAreaLabel": "后区听音区域",
+                      "mainDropDb": 6
+                    }
+                  ]
+                }
+              },
+              {
+                "label": "方案 B",
+                "main": {
+                  "model": "KF-D12F",
+                  "role": "主扩",
+                  "type": "定覆盖全频",
+                  "horizontalCoverageDeg": 100,
+                  "verticalCoverageDeg": 90,
+                  "maximumSplDb": 132,
+                  "source": "KF-D12F 产品说明书",
+                  "capacityMarginDb": 10,
+                  "capacityMarginDbRaw": 9.972576638554301,
+                  "coverageExcessDeg": 109.74378497529682,
+                  "score": 43.16925419703562,
+                  "count": 2
+                },
+                "fill": {
+                  "model": "KS-08AT",
+                  "role": "补声/延时",
+                  "type": "定覆盖全频",
+                  "horizontalCoverageDeg": 80,
+                  "verticalCoverageDeg": 60,
+                  "maximumSplDb": 119,
+                  "source": "KS-08AT 产品说明书（额定最大声压级）",
+                  "capacityMarginDb": 6.7,
+                  "capacityMarginDbRaw": 6.714571391228745,
+                  "count": 2,
+                  "requiredMaximumSplDb": 112.3,
+                  "requiredMaximumSplDbRaw": 112.28542860877126,
+                  "assumedListeningDistance": 3.7,
+                  "placementGroups": [
+                    {
+                      "label": "补声组",
+                      "count": 2,
+                      "mainToFillDistanceMeters": 6.4,
+                      "mainToFillDistanceMetersRaw": 6.392781595844556,
+                      "serviceAreaLabel": "后区听音区域",
+                      "mainDropDb": 6
+                    }
+                  ]
+                }
+              },
+              {
+                "label": "方案 C",
+                "main": {
+                  "model": "KF-D12H",
+                  "role": "主扩",
+                  "type": "定覆盖全频",
+                  "horizontalCoverageDeg": 70,
+                  "verticalCoverageDeg": 60,
+                  "maximumSplDb": 135,
+                  "source": "KF-D12H 产品说明书",
+                  "capacityMarginDb": 13,
+                  "capacityMarginDbRaw": 12.972576638554301,
+                  "coverageExcessDeg": 49.743784975296826,
+                  "score": 44.96925419703562,
+                  "count": 2
+                },
+                "fill": {
+                  "model": "KS-08AT",
+                  "role": "补声/延时",
+                  "type": "定覆盖全频",
+                  "horizontalCoverageDeg": 80,
+                  "verticalCoverageDeg": 60,
+                  "maximumSplDb": 119,
+                  "source": "KS-08AT 产品说明书（额定最大声压级）",
+                  "capacityMarginDb": 6.7,
+                  "capacityMarginDbRaw": 6.714571391228745,
+                  "count": 2,
+                  "requiredMaximumSplDb": 112.3,
+                  "requiredMaximumSplDbRaw": 112.28542860877126,
+                  "assumedListeningDistance": 3.7,
+                  "placementGroups": [
+                    {
+                      "label": "补声组",
+                      "count": 2,
+                      "mainToFillDistanceMeters": 6.4,
+                      "mainToFillDistanceMetersRaw": 6.392781595844556,
+                      "serviceAreaLabel": "后区听音区域",
+                      "mainDropDb": 6
+                    }
+                  ]
+                }
+              }
+            ],
+            "mainRequirement": {
+              "requiredMaximumSplDb": 122,
+              "requiredMaximumSplDbRaw": 122.0274233614457,
+              "horizontalCoverageDeg": 90,
+              "horizontalCoverageRequiredDeg": 63.459836995952635,
+              "verticalCoverageDeg": 30,
+              "verticalCoverageRequiredDeg": 16.796378028750546
+            },
+            "fillRequirement": {
+              "assumedListeningDistance": 3.7,
+              "assumedListeningDistanceRaw": 3.6666666666666665,
+              "requiredMaximumSplDb": 112.3,
+              "requiredMaximumSplDbRaw": 112.28542860877126
+            },
+            "fillPlacementGroups": [
+              {
+                "label": "补声组",
+                "count": 2,
+                "mainToFillDistanceMeters": 6.4,
+                "mainToFillDistanceMetersRaw": 6.392781595844556,
+                "serviceAreaLabel": "后区听音区域",
+                "mainDropDb": 6
+              }
+            ],
+            "missingParts": [],
+            "reviewWarnings": [
+              "标称角仅作几何筛选；频段指向性与最大声压测试口径尚待核验。"
+            ],
+            "notes": [
+              "仅从已登记角色、标称覆盖角和最大声压字段的公司音箱资料中筛选；最大声压测试口径待核对，覆盖角可变或参数不完整的型号不参与自动推荐。",
+              "补声位置用于粗略确定安装区域；实际电平、延时、相位与指向必须在安装完成后按现场测量确定。"
+            ]
+          },
+          "reviewWarnings": [
+            "标称角仅作几何筛选；频段指向性与最大声压测试口径尚待核验。"
+          ],
+          "reasons": [
+            "目标为 会议类扩声 一级，其最大声压级能力目标为不小于 98 dB SPL。",
+            "按“短边前置主扩”估算，场地横向宽度约 8 m、纵深约 12 m；实际听音区宽度约 8 m，首排至最后一排为 3～11 m。",
+            "首排距离为 3 m、最远听音位置约 11.3 m；两点的自由场直达声差约 10.7 dB。",
+            "本模块按最大声压级能力目标额外预留 3 dB，用于前期容量估算；单只主扩建议具备约 122 dB SPL @ 1m 的能力。",
+            "主扩水平几何最低需求约 63.46°，显示档位为 90°；垂直几何最低需求约 16.80°，显示档位为 30°，初始下倾角约 15°。候选型号的标称 H/V 角另行复核。",
+            "仅靠前置主扩时，首排与后排的直达声差超过本次预估控制值；建议增加一组后区补声，使后区声压过渡更平缓。"
+          ],
+          "layoutComparisonSummary": "比较 6 组位置与指向，采用左右对称前置方案。",
+          "layoutPositionLines": [
+            "M1 距左 2.00 m、距前 0.00 m、正向后排",
+            "M2 距左 6.00 m、距前 0.00 m、正向后排"
+          ],
+          "coverageEnvelopeText": "几何包络至少 63.5°H × 16.8°V",
+          "planDisplayIntro": "色阶仅表示等向点源的距离衰减与能量相加；标称角范围是理想几何包络，不代表真实覆盖。"
+        },
+        "reportData": {
+          "kind": "report",
+          "floorAreaSquareMeters": 96,
+          "venueScale": "中型会议室",
+          "standardLabel": "会议类扩声 一级",
+          "standardMaxSpl": 98,
+          "calculationReserveDb": 3,
+          "frontWidthMeters": 8,
+          "depthMeters": 12,
+          "firstListeningDistance": 3,
+          "lastListeningDistance": 11,
+          "lastListeningDistanceRaw": 11,
+          "listeningWidth": 8,
+          "listeningSideMargin": 0,
+          "listeningSideMarginRaw": 0,
+          "farthestDistance": 11.3,
+          "farthestDistanceRaw": 11.255665240224586,
+          "nearestDistance": 3.3,
+          "nearestDistanceRaw": 3.269556544854363,
+          "distanceLossDb": 21,
+          "distanceLossDbRaw": 21.0274233614457,
+          "directVariationDb": 10.7,
+          "directVariationDbRaw": 10.73764630935792,
+          "uniformityCheckDb": 6,
+          "uniformityStatus": "主扩直达声差偏大，需补声处理",
+          "mainDirectSoundPass": false,
+          "mainCount": 2,
+          "mainSystemSummary": "主扩 2 只",
+          "fillCount": 2,
+          "fillSummary": "建议增加 2 只后区补声音箱",
+          "requiredSplAtOneMeter": 122,
+          "requiredSplAtOneMeterRaw": 122.0274233614457,
+          "minimumHorizontalCoverage": 63.5,
+          "minimumHorizontalCoverageRaw": 63.459836995952635,
+          "recommendedHorizontalCoverage": 90,
+          "minimumVerticalCoverage": 16.8,
+          "minimumVerticalCoverageRaw": 16.796378028750546,
+          "recommendedVerticalCoverage": 30,
+          "speakerCenterHeight": 2.5,
+          "speakerCenterHeightRaw": 2.5,
+          "heightDeltaMeters": 1.3,
+          "heightDifferenceMeters": 1.3,
+          "recommendedAimDownDeg": 15,
+          "recommendedAimDownDegRaw": 15.030503794370128,
+          "mainSpeakerPositions": [
+            {
+              "widthMeters": 2,
+              "depthMeters": 0,
+              "aimYawDeg": 0,
+              "aimDownDeg": 15.030503794370128
+            },
+            {
+              "widthMeters": 6,
+              "depthMeters": 0,
+              "aimYawDeg": 0,
+              "aimDownDeg": 15.030503794370128
+            }
+          ],
+          "layoutSelection": {
+            "candidateCount": 6,
+            "selectedId": "ratio-1-axis",
+            "basis": "nominal-geometry",
+            "summary": "比较 6 组位置与指向，采用左右对称前置方案。",
+            "candidates": [
+              {
+                "id": "ratio-1-axis",
+                "positionRatio": 0.25,
+                "yawMode": "axis",
+                "metrics": {
+                  "requiredHorizontalCoverageRaw": 63.459836995952635,
+                  "requiredVerticalCoverageRaw": 16.796378028750546,
+                  "nearestDistanceRaw": 3.269556544854363,
+                  "farthestDistanceRaw": 11.255665240224586,
+                  "nearestHorizontalDistanceRaw": 3,
+                  "farthestHorizontalDistanceRaw": 11.180339887498947,
+                  "distanceVariationDbRaw": 10.73764630935792,
+                  "normalizedOverAngle": 0,
+                  "nominalGeometryCovered": true
+                }
+              },
+              {
+                "id": "ratio-1-bisector",
+                "positionRatio": 0.25,
+                "yawMode": "bisector",
+                "metrics": {
+                  "requiredHorizontalCoverageRaw": 63.459836995952635,
+                  "requiredVerticalCoverageRaw": 16.796378028750546,
+                  "nearestDistanceRaw": 3.269556544854363,
+                  "farthestDistanceRaw": 11.255665240224586,
+                  "nearestHorizontalDistanceRaw": 3,
+                  "farthestHorizontalDistanceRaw": 11.180339887498947,
+                  "distanceVariationDbRaw": 10.73764630935792,
+                  "normalizedOverAngle": 0,
+                  "nominalGeometryCovered": true
+                }
+              },
+              {
+                "id": "ratio-2-axis",
+                "positionRatio": 0.125,
+                "yawMode": "axis",
+                "metrics": {
+                  "requiredHorizontalCoverageRaw": 85.7013554054107,
+                  "requiredVerticalCoverageRaw": 16.92405852679629,
+                  "nearestDistanceRaw": 3.269556544854363,
+                  "farthestDistanceRaw": 11.475626344561764,
+                  "nearestHorizontalDistanceRaw": 3,
+                  "farthestHorizontalDistanceRaw": 11.40175425099138,
+                  "distanceVariationDbRaw": 10.90575092458339,
+                  "normalizedOverAngle": 0,
+                  "nominalGeometryCovered": true
+                }
+              },
+              {
+                "id": "ratio-2-bisector",
+                "positionRatio": 0.125,
+                "yawMode": "bisector",
+                "metrics": {
+                  "requiredHorizontalCoverageRaw": 60.530947558284886,
+                  "requiredVerticalCoverageRaw": 21.653069757118068,
+                  "nearestDistanceRaw": 3.269556544854363,
+                  "farthestDistanceRaw": 11.475626344561764,
+                  "nearestHorizontalDistanceRaw": 3,
+                  "farthestHorizontalDistanceRaw": 11.40175425099138,
+                  "distanceVariationDbRaw": 10.90575092458339,
+                  "normalizedOverAngle": 0,
+                  "nominalGeometryCovered": true
+                }
+              },
+              {
+                "id": "ratio-3-axis",
+                "positionRatio": 0.375,
+                "yawMode": "axis",
+                "metrics": {
+                  "requiredHorizontalCoverageRaw": 85.7013554054107,
+                  "requiredVerticalCoverageRaw": 16.92405852679629,
+                  "nearestDistanceRaw": 3.269556544854363,
+                  "farthestDistanceRaw": 11.475626344561764,
+                  "nearestHorizontalDistanceRaw": 3,
+                  "farthestHorizontalDistanceRaw": 11.40175425099138,
+                  "distanceVariationDbRaw": 10.90575092458339,
+                  "normalizedOverAngle": 0,
+                  "nominalGeometryCovered": true
+                }
+              },
+              {
+                "id": "ratio-3-bisector",
+                "positionRatio": 0.375,
+                "yawMode": "bisector",
+                "metrics": {
+                  "requiredHorizontalCoverageRaw": 60.530947558284886,
+                  "requiredVerticalCoverageRaw": 21.653069757118068,
+                  "nearestDistanceRaw": 3.269556544854363,
+                  "farthestDistanceRaw": 11.475626344561764,
+                  "nearestHorizontalDistanceRaw": 3,
+                  "farthestHorizontalDistanceRaw": 11.40175425099138,
+                  "distanceVariationDbRaw": 10.90575092458339,
+                  "normalizedOverAngle": 0,
+                  "nominalGeometryCovered": true
+                }
+              }
+            ]
+          },
+          "coverageVerification": "unverified",
+          "capacityVerification": "source-review-required",
+          "speakerRecommendation": {
+            "systemLabel": "点声源 L/R 主扩",
+            "systemReason": "本模块仅针对普通矩形会议室，以定覆盖点声源作为左右主扩进行初步选型。",
+            "qualificationStatus": "provisional",
+            "hasMainMatch": true,
+            "packages": [
+              {
+                "label": "方案 A",
+                "main": {
+                  "model": "KF-D10F",
+                  "role": "主扩",
+                  "type": "定覆盖全频",
+                  "horizontalCoverageDeg": 100,
+                  "verticalCoverageDeg": 90,
+                  "maximumSplDb": 129,
+                  "source": "KF-D10F 产品说明书",
+                  "capacityMarginDb": 7,
+                  "capacityMarginDbRaw": 6.972576638554301,
+                  "coverageExcessDeg": 109.74378497529682,
+                  "score": 34.16925419703562,
+                  "count": 2
+                },
+                "fill": {
+                  "model": "KS-08AT",
+                  "role": "补声/延时",
+                  "type": "定覆盖全频",
+                  "horizontalCoverageDeg": 80,
+                  "verticalCoverageDeg": 60,
+                  "maximumSplDb": 119,
+                  "source": "KS-08AT 产品说明书（额定最大声压级）",
+                  "capacityMarginDb": 6.7,
+                  "capacityMarginDbRaw": 6.714571391228745,
+                  "count": 2,
+                  "requiredMaximumSplDb": 112.3,
+                  "requiredMaximumSplDbRaw": 112.28542860877126,
+                  "assumedListeningDistance": 3.7,
+                  "placementGroups": [
+                    {
+                      "label": "补声组",
+                      "count": 2,
+                      "mainToFillDistanceMeters": 6.4,
+                      "mainToFillDistanceMetersRaw": 6.392781595844556,
+                      "serviceAreaLabel": "后区听音区域",
+                      "mainDropDb": 6
+                    }
+                  ]
+                }
+              },
+              {
+                "label": "方案 B",
+                "main": {
+                  "model": "KF-D12F",
+                  "role": "主扩",
+                  "type": "定覆盖全频",
+                  "horizontalCoverageDeg": 100,
+                  "verticalCoverageDeg": 90,
+                  "maximumSplDb": 132,
+                  "source": "KF-D12F 产品说明书",
+                  "capacityMarginDb": 10,
+                  "capacityMarginDbRaw": 9.972576638554301,
+                  "coverageExcessDeg": 109.74378497529682,
+                  "score": 43.16925419703562,
+                  "count": 2
+                },
+                "fill": {
+                  "model": "KS-08AT",
+                  "role": "补声/延时",
+                  "type": "定覆盖全频",
+                  "horizontalCoverageDeg": 80,
+                  "verticalCoverageDeg": 60,
+                  "maximumSplDb": 119,
+                  "source": "KS-08AT 产品说明书（额定最大声压级）",
+                  "capacityMarginDb": 6.7,
+                  "capacityMarginDbRaw": 6.714571391228745,
+                  "count": 2,
+                  "requiredMaximumSplDb": 112.3,
+                  "requiredMaximumSplDbRaw": 112.28542860877126,
+                  "assumedListeningDistance": 3.7,
+                  "placementGroups": [
+                    {
+                      "label": "补声组",
+                      "count": 2,
+                      "mainToFillDistanceMeters": 6.4,
+                      "mainToFillDistanceMetersRaw": 6.392781595844556,
+                      "serviceAreaLabel": "后区听音区域",
+                      "mainDropDb": 6
+                    }
+                  ]
+                }
+              },
+              {
+                "label": "方案 C",
+                "main": {
+                  "model": "KF-D12H",
+                  "role": "主扩",
+                  "type": "定覆盖全频",
+                  "horizontalCoverageDeg": 70,
+                  "verticalCoverageDeg": 60,
+                  "maximumSplDb": 135,
+                  "source": "KF-D12H 产品说明书",
+                  "capacityMarginDb": 13,
+                  "capacityMarginDbRaw": 12.972576638554301,
+                  "coverageExcessDeg": 49.743784975296826,
+                  "score": 44.96925419703562,
+                  "count": 2
+                },
+                "fill": {
+                  "model": "KS-08AT",
+                  "role": "补声/延时",
+                  "type": "定覆盖全频",
+                  "horizontalCoverageDeg": 80,
+                  "verticalCoverageDeg": 60,
+                  "maximumSplDb": 119,
+                  "source": "KS-08AT 产品说明书（额定最大声压级）",
+                  "capacityMarginDb": 6.7,
+                  "capacityMarginDbRaw": 6.714571391228745,
+                  "count": 2,
+                  "requiredMaximumSplDb": 112.3,
+                  "requiredMaximumSplDbRaw": 112.28542860877126,
+                  "assumedListeningDistance": 3.7,
+                  "placementGroups": [
+                    {
+                      "label": "补声组",
+                      "count": 2,
+                      "mainToFillDistanceMeters": 6.4,
+                      "mainToFillDistanceMetersRaw": 6.392781595844556,
+                      "serviceAreaLabel": "后区听音区域",
+                      "mainDropDb": 6
+                    }
+                  ]
+                }
+              }
+            ],
+            "mainRequirement": {
+              "requiredMaximumSplDb": 122,
+              "requiredMaximumSplDbRaw": 122.0274233614457,
+              "horizontalCoverageDeg": 90,
+              "horizontalCoverageRequiredDeg": 63.459836995952635,
+              "verticalCoverageDeg": 30,
+              "verticalCoverageRequiredDeg": 16.796378028750546
+            },
+            "fillRequirement": {
+              "assumedListeningDistance": 3.7,
+              "assumedListeningDistanceRaw": 3.6666666666666665,
+              "requiredMaximumSplDb": 112.3,
+              "requiredMaximumSplDbRaw": 112.28542860877126
+            },
+            "fillPlacementGroups": [
+              {
+                "label": "补声组",
+                "count": 2,
+                "mainToFillDistanceMeters": 6.4,
+                "mainToFillDistanceMetersRaw": 6.392781595844556,
+                "serviceAreaLabel": "后区听音区域",
+                "mainDropDb": 6
+              }
+            ],
+            "missingParts": [],
+            "reviewWarnings": [
+              "标称角仅作几何筛选；频段指向性与最大声压测试口径尚待核验。"
+            ],
+            "notes": [
+              "仅从已登记角色、标称覆盖角和最大声压字段的公司音箱资料中筛选；最大声压测试口径待核对，覆盖角可变或参数不完整的型号不参与自动推荐。",
+              "补声位置用于粗略确定安装区域；实际电平、延时、相位与指向必须在安装完成后按现场测量确定。"
+            ]
+          },
+          "reviewWarnings": [
+            "标称角仅作几何筛选；频段指向性与最大声压测试口径尚待核验。"
+          ],
+          "reasons": [
+            "目标为 会议类扩声 一级，其最大声压级能力目标为不小于 98 dB SPL。",
+            "按“短边前置主扩”估算，场地横向宽度约 8 m、纵深约 12 m；实际听音区宽度约 8 m，首排至最后一排为 3～11 m。",
+            "首排距离为 3 m、最远听音位置约 11.3 m；两点的自由场直达声差约 10.7 dB。",
+            "本模块按最大声压级能力目标额外预留 3 dB，用于前期容量估算；单只主扩建议具备约 122 dB SPL @ 1m 的能力。",
+            "主扩水平几何最低需求约 63.46°，显示档位为 90°；垂直几何最低需求约 16.80°，显示档位为 30°，初始下倾角约 15°。候选型号的标称 H/V 角另行复核。",
+            "仅靠前置主扩时，首排与后排的直达声差超过本次预估控制值；建议增加一组后区补声，使后区声压过渡更平缓。"
+          ],
+          "layoutComparisonSummary": "比较 6 组位置与指向，采用左右对称前置方案。",
+          "layoutPositionLines": [
+            "M1 距左 2.00 m、距前 0.00 m、正向后排",
+            "M2 距左 6.00 m、距前 0.00 m、正向后排"
+          ],
+          "coverageEnvelopeText": "几何包络至少 63.5°H × 16.8°V",
+          "planDisplayIntro": "色阶仅表示等向点源的距离衰减与能量相加；标称角范围是理想几何包络，不代表真实覆盖。"
+        }
+      }
+    },
+    {
+      "id": "V2-AUD-007",
+      "expectedGuard": "block result until exact blocker value is confirmed for this operation",
+      "observedLegacyResult": true,
+      "evidence": {
+        "missingParameter": [
+          "venue.room_height_m"
+        ],
+        "untouchedPageValues": {
+          "lengthText": "12",
+          "widthText": "8",
+          "heightText": "4"
+        },
+        "result": {
+          "kind": "report",
+          "floorAreaSquareMeters": 96,
+          "venueScale": "中型会议室",
+          "standardLabel": "会议类扩声 二级",
+          "standardMaxSpl": 95,
+          "calculationReserveDb": 3,
+          "frontWidthMeters": 8,
+          "depthMeters": 12,
+          "firstListeningDistance": 2,
+          "lastListeningDistance": 10,
+          "lastListeningDistanceRaw": 10,
+          "listeningWidth": 7,
+          "listeningSideMargin": 0.5,
+          "listeningSideMarginRaw": 0.5,
+          "farthestDistance": 10.2,
+          "farthestDistanceRaw": 10.234866877492838,
+          "nearestDistance": 2.4,
+          "nearestDistanceRaw": 2.3853720883753127,
+          "distanceLossDb": 20.2,
+          "distanceLossDbRaw": 20.201643965380818,
+          "directVariationDb": 12.7,
+          "directVariationDbRaw": 12.650521301430103,
+          "uniformityCheckDb": 8,
+          "uniformityStatus": "主扩直达声差偏大，需补声处理",
+          "mainDirectSoundPass": false,
+          "mainCount": 2,
+          "mainSystemSummary": "主扩 2 只",
+          "fillCount": 2,
+          "fillSummary": "建议增加 2 只后区补声音箱",
+          "requiredSplAtOneMeter": 118.2,
+          "requiredSplAtOneMeterRaw": 118.20164396538081,
+          "minimumHorizontalCoverage": 73.9,
+          "minimumHorizontalCoverageRaw": 73.92464430113311,
+          "recommendedHorizontalCoverage": 90,
+          "minimumVerticalCoverage": 25.7,
+          "minimumVerticalCoverageRaw": 25.726629384053194,
+          "recommendedVerticalCoverage": 30,
+          "speakerCenterHeight": 2.5,
+          "speakerCenterHeightRaw": 2.5,
+          "heightDeltaMeters": 1.3,
+          "heightDifferenceMeters": 1.3,
+          "recommendedAimDownDeg": 20.2,
+          "recommendedAimDownDegRaw": 20.160552863770054,
+          "mainSpeakerPositions": [
+            {
+              "widthMeters": 2.25,
+              "depthMeters": 0,
+              "aimYawDeg": 0,
+              "aimDownDeg": 20.160552863770054
+            },
+            {
+              "widthMeters": 5.75,
+              "depthMeters": 0,
+              "aimYawDeg": 0,
+              "aimDownDeg": 20.160552863770054
+            }
+          ],
+          "layoutSelection": {
+            "candidateCount": 6,
+            "selectedId": "ratio-1-axis",
+            "basis": "nominal-geometry",
+            "summary": "比较 6 组位置与指向，采用左右对称前置方案。",
+            "candidates": [
+              {
+                "id": "ratio-1-axis",
+                "positionRatio": 0.25,
+                "yawMode": "axis",
+                "metrics": {
+                  "requiredHorizontalCoverageRaw": 73.92464430113311,
+                  "requiredVerticalCoverageRaw": 25.726629384053194,
+                  "nearestDistanceRaw": 2.3853720883753127,
+                  "farthestDistanceRaw": 10.234866877492838,
+                  "nearestHorizontalDistanceRaw": 2,
+                  "farthestHorizontalDistanceRaw": 10.151970252123476,
+                  "distanceVariationDbRaw": 12.650521301430103,
+                  "normalizedOverAngle": 0,
+                  "nominalGeometryCovered": true
+                }
+              },
+              {
+                "id": "ratio-1-bisector",
+                "positionRatio": 0.25,
+                "yawMode": "bisector",
+                "metrics": {
+                  "requiredHorizontalCoverageRaw": 73.92464430113311,
+                  "requiredVerticalCoverageRaw": 25.726629384053194,
+                  "nearestDistanceRaw": 2.3853720883753127,
+                  "farthestDistanceRaw": 10.234866877492838,
+                  "nearestHorizontalDistanceRaw": 2,
+                  "farthestHorizontalDistanceRaw": 10.151970252123476,
+                  "distanceVariationDbRaw": 12.650521301430103,
+                  "normalizedOverAngle": 0,
+                  "nominalGeometryCovered": true
+                }
+              },
+              {
+                "id": "ratio-2-axis",
+                "positionRatio": 0.125,
+                "yawMode": "axis",
+                "metrics": {
+                  "requiredHorizontalCoverageRaw": 96.93884451448609,
+                  "requiredVerticalCoverageRaw": 25.857106991393888,
+                  "nearestDistanceRaw": 2.3853720883753127,
+                  "farthestDistanceRaw": 10.420202733152555,
+                  "nearestHorizontalDistanceRaw": 2,
+                  "farthestHorizontalDistanceRaw": 10.338792240876106,
+                  "distanceVariationDbRaw": 12.806400707705096,
+                  "normalizedOverAngle": 0,
+                  "nominalGeometryCovered": true
+                }
+              },
+              {
+                "id": "ratio-2-bisector",
+                "positionRatio": 0.125,
+                "yawMode": "bisector",
+                "metrics": {
+                  "requiredHorizontalCoverageRaw": 70.53481498020493,
+                  "requiredVerticalCoverageRaw": 34.08898310352658,
+                  "nearestDistanceRaw": 2.3853720883753127,
+                  "farthestDistanceRaw": 10.420202733152555,
+                  "nearestHorizontalDistanceRaw": 2,
+                  "farthestHorizontalDistanceRaw": 10.338792240876106,
+                  "distanceVariationDbRaw": 12.806400707705096,
+                  "normalizedOverAngle": 0,
+                  "nominalGeometryCovered": true
+                }
+              },
+              {
+                "id": "ratio-3-axis",
+                "positionRatio": 0.375,
+                "yawMode": "axis",
+                "metrics": {
+                  "requiredHorizontalCoverageRaw": 96.93884451448609,
+                  "requiredVerticalCoverageRaw": 25.857106991393888,
+                  "nearestDistanceRaw": 2.3853720883753127,
+                  "farthestDistanceRaw": 10.420202733152555,
+                  "nearestHorizontalDistanceRaw": 2,
+                  "farthestHorizontalDistanceRaw": 10.338792240876106,
+                  "distanceVariationDbRaw": 12.806400707705096,
+                  "normalizedOverAngle": 0,
+                  "nominalGeometryCovered": true
+                }
+              },
+              {
+                "id": "ratio-3-bisector",
+                "positionRatio": 0.375,
+                "yawMode": "bisector",
+                "metrics": {
+                  "requiredHorizontalCoverageRaw": 70.53481498020493,
+                  "requiredVerticalCoverageRaw": 34.08898310352658,
+                  "nearestDistanceRaw": 2.3853720883753127,
+                  "farthestDistanceRaw": 10.420202733152555,
+                  "nearestHorizontalDistanceRaw": 2,
+                  "farthestHorizontalDistanceRaw": 10.338792240876106,
+                  "distanceVariationDbRaw": 12.806400707705096,
+                  "normalizedOverAngle": 0,
+                  "nominalGeometryCovered": true
+                }
+              }
+            ]
+          },
+          "coverageVerification": "unverified",
+          "capacityVerification": "source-review-required",
+          "speakerRecommendation": {
+            "systemLabel": "点声源 L/R 主扩",
+            "systemReason": "本模块仅针对普通矩形会议室，以定覆盖点声源作为左右主扩进行初步选型。",
+            "qualificationStatus": "provisional",
+            "hasMainMatch": true,
+            "packages": [
+              {
+                "label": "方案 A",
+                "main": {
+                  "model": "KF-D10F",
+                  "role": "主扩",
+                  "type": "定覆盖全频",
+                  "horizontalCoverageDeg": 100,
+                  "verticalCoverageDeg": 90,
+                  "maximumSplDb": 129,
+                  "source": "KF-D10F 产品说明书",
+                  "capacityMarginDb": 10.8,
+                  "capacityMarginDbRaw": 10.79835603461919,
+                  "coverageExcessDeg": 90.34872631481369,
+                  "score": 43.24184715777765,
+                  "count": 2
+                },
+                "fill": {
+                  "model": "KS-08AT",
+                  "role": "补声/延时",
+                  "type": "定覆盖全频",
+                  "horizontalCoverageDeg": 80,
+                  "verticalCoverageDeg": 60,
+                  "maximumSplDb": 119,
+                  "source": "KS-08AT 产品说明书（额定最大声压级）",
+                  "capacityMarginDb": 10.5,
+                  "capacityMarginDbRaw": 10.542425094393252,
+                  "count": 2,
+                  "requiredMaximumSplDb": 108.5,
+                  "requiredMaximumSplDbRaw": 108.45757490560675,
+                  "assumedListeningDistance": 3.3,
+                  "placementGroups": [
+                    {
+                      "label": "补声组",
+                      "count": 2,
+                      "mainToFillDistanceMeters": 4.6,
+                      "mainToFillDistanceMetersRaw": 4.578460222006302,
+                      "serviceAreaLabel": "后区听音区域",
+                      "mainDropDb": 6
+                    }
+                  ]
+                }
+              },
+              {
+                "label": "方案 B",
+                "main": {
+                  "model": "KF-D12F",
+                  "role": "主扩",
+                  "type": "定覆盖全频",
+                  "horizontalCoverageDeg": 100,
+                  "verticalCoverageDeg": 90,
+                  "maximumSplDb": 132,
+                  "source": "KF-D12F 产品说明书",
+                  "capacityMarginDb": 13.8,
+                  "capacityMarginDbRaw": 13.79835603461919,
+                  "coverageExcessDeg": 90.34872631481369,
+                  "score": 52.24184715777765,
+                  "count": 2
+                },
+                "fill": {
+                  "model": "KS-08AT",
+                  "role": "补声/延时",
+                  "type": "定覆盖全频",
+                  "horizontalCoverageDeg": 80,
+                  "verticalCoverageDeg": 60,
+                  "maximumSplDb": 119,
+                  "source": "KS-08AT 产品说明书（额定最大声压级）",
+                  "capacityMarginDb": 10.5,
+                  "capacityMarginDbRaw": 10.542425094393252,
+                  "count": 2,
+                  "requiredMaximumSplDb": 108.5,
+                  "requiredMaximumSplDbRaw": 108.45757490560675,
+                  "assumedListeningDistance": 3.3,
+                  "placementGroups": [
+                    {
+                      "label": "补声组",
+                      "count": 2,
+                      "mainToFillDistanceMeters": 4.6,
+                      "mainToFillDistanceMetersRaw": 4.578460222006302,
+                      "serviceAreaLabel": "后区听音区域",
+                      "mainDropDb": 6
+                    }
+                  ]
+                }
+              },
+              {
+                "label": "方案 C",
+                "main": {
+                  "model": "KF-D15F",
+                  "role": "主扩",
+                  "type": "定覆盖全频",
+                  "horizontalCoverageDeg": 100,
+                  "verticalCoverageDeg": 90,
+                  "maximumSplDb": 133,
+                  "source": "KF-D15F 产品说明书",
+                  "capacityMarginDb": 14.8,
+                  "capacityMarginDbRaw": 14.79835603461919,
+                  "coverageExcessDeg": 90.34872631481369,
+                  "score": 55.24184715777765,
+                  "count": 2
+                },
+                "fill": {
+                  "model": "KS-08AT",
+                  "role": "补声/延时",
+                  "type": "定覆盖全频",
+                  "horizontalCoverageDeg": 80,
+                  "verticalCoverageDeg": 60,
+                  "maximumSplDb": 119,
+                  "source": "KS-08AT 产品说明书（额定最大声压级）",
+                  "capacityMarginDb": 10.5,
+                  "capacityMarginDbRaw": 10.542425094393252,
+                  "count": 2,
+                  "requiredMaximumSplDb": 108.5,
+                  "requiredMaximumSplDbRaw": 108.45757490560675,
+                  "assumedListeningDistance": 3.3,
+                  "placementGroups": [
+                    {
+                      "label": "补声组",
+                      "count": 2,
+                      "mainToFillDistanceMeters": 4.6,
+                      "mainToFillDistanceMetersRaw": 4.578460222006302,
+                      "serviceAreaLabel": "后区听音区域",
+                      "mainDropDb": 6
+                    }
+                  ]
+                }
+              }
+            ],
+            "mainRequirement": {
+              "requiredMaximumSplDb": 118.2,
+              "requiredMaximumSplDbRaw": 118.20164396538081,
+              "horizontalCoverageDeg": 90,
+              "horizontalCoverageRequiredDeg": 73.92464430113311,
+              "verticalCoverageDeg": 30,
+              "verticalCoverageRequiredDeg": 25.726629384053194
+            },
+            "fillRequirement": {
+              "assumedListeningDistance": 3.3,
+              "assumedListeningDistanceRaw": 3.3333333333333335,
+              "requiredMaximumSplDb": 108.5,
+              "requiredMaximumSplDbRaw": 108.45757490560675
+            },
+            "fillPlacementGroups": [
+              {
+                "label": "补声组",
+                "count": 2,
+                "mainToFillDistanceMeters": 4.6,
+                "mainToFillDistanceMetersRaw": 4.578460222006302,
+                "serviceAreaLabel": "后区听音区域",
+                "mainDropDb": 6
+              }
+            ],
+            "missingParts": [],
+            "reviewWarnings": [
+              "标称角仅作几何筛选；频段指向性与最大声压测试口径尚待核验。"
+            ],
+            "notes": [
+              "仅从已登记角色、标称覆盖角和最大声压字段的公司音箱资料中筛选；最大声压测试口径待核对，覆盖角可变或参数不完整的型号不参与自动推荐。",
+              "补声位置用于粗略确定安装区域；实际电平、延时、相位与指向必须在安装完成后按现场测量确定。"
+            ]
+          },
+          "reviewWarnings": [
+            "标称角仅作几何筛选；频段指向性与最大声压测试口径尚待核验。"
+          ],
+          "reasons": [
+            "目标为 会议类扩声 二级，其最大声压级能力目标为不小于 95 dB SPL。",
+            "按“短边前置主扩”估算，场地横向宽度约 8 m、纵深约 12 m；实际听音区宽度约 7 m，首排至最后一排为 2～10 m。",
+            "首排距离为 2 m、最远听音位置约 10.2 m；两点的自由场直达声差约 12.7 dB。",
+            "本模块按最大声压级能力目标额外预留 3 dB，用于前期容量估算；单只主扩建议具备约 118.2 dB SPL @ 1m 的能力。",
+            "主扩水平几何最低需求约 73.92°，显示档位为 90°；垂直几何最低需求约 25.73°，显示档位为 30°，初始下倾角约 20.2°。候选型号的标称 H/V 角另行复核。",
+            "仅靠前置主扩时，首排与后排的直达声差超过本次预估控制值；建议增加一组后区补声，使后区声压过渡更平缓。"
+          ],
+          "layoutComparisonSummary": "比较 6 组位置与指向，采用左右对称前置方案。",
+          "layoutPositionLines": [
+            "M1 距左 2.25 m、距前 0.00 m、正向后排",
+            "M2 距左 5.75 m、距前 0.00 m、正向后排"
+          ],
+          "coverageEnvelopeText": "几何包络至少 74.0°H × 25.8°V",
+          "planDisplayIntro": "色阶仅表示等向点源的距离衰减与能量相加；标称角范围是理想几何包络，不代表真实覆盖。"
+        },
+        "reportData": {
+          "kind": "report",
+          "floorAreaSquareMeters": 96,
+          "venueScale": "中型会议室",
+          "standardLabel": "会议类扩声 二级",
+          "standardMaxSpl": 95,
+          "calculationReserveDb": 3,
+          "frontWidthMeters": 8,
+          "depthMeters": 12,
+          "firstListeningDistance": 2,
+          "lastListeningDistance": 10,
+          "lastListeningDistanceRaw": 10,
+          "listeningWidth": 7,
+          "listeningSideMargin": 0.5,
+          "listeningSideMarginRaw": 0.5,
+          "farthestDistance": 10.2,
+          "farthestDistanceRaw": 10.234866877492838,
+          "nearestDistance": 2.4,
+          "nearestDistanceRaw": 2.3853720883753127,
+          "distanceLossDb": 20.2,
+          "distanceLossDbRaw": 20.201643965380818,
+          "directVariationDb": 12.7,
+          "directVariationDbRaw": 12.650521301430103,
+          "uniformityCheckDb": 8,
+          "uniformityStatus": "主扩直达声差偏大，需补声处理",
+          "mainDirectSoundPass": false,
+          "mainCount": 2,
+          "mainSystemSummary": "主扩 2 只",
+          "fillCount": 2,
+          "fillSummary": "建议增加 2 只后区补声音箱",
+          "requiredSplAtOneMeter": 118.2,
+          "requiredSplAtOneMeterRaw": 118.20164396538081,
+          "minimumHorizontalCoverage": 73.9,
+          "minimumHorizontalCoverageRaw": 73.92464430113311,
+          "recommendedHorizontalCoverage": 90,
+          "minimumVerticalCoverage": 25.7,
+          "minimumVerticalCoverageRaw": 25.726629384053194,
+          "recommendedVerticalCoverage": 30,
+          "speakerCenterHeight": 2.5,
+          "speakerCenterHeightRaw": 2.5,
+          "heightDeltaMeters": 1.3,
+          "heightDifferenceMeters": 1.3,
+          "recommendedAimDownDeg": 20.2,
+          "recommendedAimDownDegRaw": 20.160552863770054,
+          "mainSpeakerPositions": [
+            {
+              "widthMeters": 2.25,
+              "depthMeters": 0,
+              "aimYawDeg": 0,
+              "aimDownDeg": 20.160552863770054
+            },
+            {
+              "widthMeters": 5.75,
+              "depthMeters": 0,
+              "aimYawDeg": 0,
+              "aimDownDeg": 20.160552863770054
+            }
+          ],
+          "layoutSelection": {
+            "candidateCount": 6,
+            "selectedId": "ratio-1-axis",
+            "basis": "nominal-geometry",
+            "summary": "比较 6 组位置与指向，采用左右对称前置方案。",
+            "candidates": [
+              {
+                "id": "ratio-1-axis",
+                "positionRatio": 0.25,
+                "yawMode": "axis",
+                "metrics": {
+                  "requiredHorizontalCoverageRaw": 73.92464430113311,
+                  "requiredVerticalCoverageRaw": 25.726629384053194,
+                  "nearestDistanceRaw": 2.3853720883753127,
+                  "farthestDistanceRaw": 10.234866877492838,
+                  "nearestHorizontalDistanceRaw": 2,
+                  "farthestHorizontalDistanceRaw": 10.151970252123476,
+                  "distanceVariationDbRaw": 12.650521301430103,
+                  "normalizedOverAngle": 0,
+                  "nominalGeometryCovered": true
+                }
+              },
+              {
+                "id": "ratio-1-bisector",
+                "positionRatio": 0.25,
+                "yawMode": "bisector",
+                "metrics": {
+                  "requiredHorizontalCoverageRaw": 73.92464430113311,
+                  "requiredVerticalCoverageRaw": 25.726629384053194,
+                  "nearestDistanceRaw": 2.3853720883753127,
+                  "farthestDistanceRaw": 10.234866877492838,
+                  "nearestHorizontalDistanceRaw": 2,
+                  "farthestHorizontalDistanceRaw": 10.151970252123476,
+                  "distanceVariationDbRaw": 12.650521301430103,
+                  "normalizedOverAngle": 0,
+                  "nominalGeometryCovered": true
+                }
+              },
+              {
+                "id": "ratio-2-axis",
+                "positionRatio": 0.125,
+                "yawMode": "axis",
+                "metrics": {
+                  "requiredHorizontalCoverageRaw": 96.93884451448609,
+                  "requiredVerticalCoverageRaw": 25.857106991393888,
+                  "nearestDistanceRaw": 2.3853720883753127,
+                  "farthestDistanceRaw": 10.420202733152555,
+                  "nearestHorizontalDistanceRaw": 2,
+                  "farthestHorizontalDistanceRaw": 10.338792240876106,
+                  "distanceVariationDbRaw": 12.806400707705096,
+                  "normalizedOverAngle": 0,
+                  "nominalGeometryCovered": true
+                }
+              },
+              {
+                "id": "ratio-2-bisector",
+                "positionRatio": 0.125,
+                "yawMode": "bisector",
+                "metrics": {
+                  "requiredHorizontalCoverageRaw": 70.53481498020493,
+                  "requiredVerticalCoverageRaw": 34.08898310352658,
+                  "nearestDistanceRaw": 2.3853720883753127,
+                  "farthestDistanceRaw": 10.420202733152555,
+                  "nearestHorizontalDistanceRaw": 2,
+                  "farthestHorizontalDistanceRaw": 10.338792240876106,
+                  "distanceVariationDbRaw": 12.806400707705096,
+                  "normalizedOverAngle": 0,
+                  "nominalGeometryCovered": true
+                }
+              },
+              {
+                "id": "ratio-3-axis",
+                "positionRatio": 0.375,
+                "yawMode": "axis",
+                "metrics": {
+                  "requiredHorizontalCoverageRaw": 96.93884451448609,
+                  "requiredVerticalCoverageRaw": 25.857106991393888,
+                  "nearestDistanceRaw": 2.3853720883753127,
+                  "farthestDistanceRaw": 10.420202733152555,
+                  "nearestHorizontalDistanceRaw": 2,
+                  "farthestHorizontalDistanceRaw": 10.338792240876106,
+                  "distanceVariationDbRaw": 12.806400707705096,
+                  "normalizedOverAngle": 0,
+                  "nominalGeometryCovered": true
+                }
+              },
+              {
+                "id": "ratio-3-bisector",
+                "positionRatio": 0.375,
+                "yawMode": "bisector",
+                "metrics": {
+                  "requiredHorizontalCoverageRaw": 70.53481498020493,
+                  "requiredVerticalCoverageRaw": 34.08898310352658,
+                  "nearestDistanceRaw": 2.3853720883753127,
+                  "farthestDistanceRaw": 10.420202733152555,
+                  "nearestHorizontalDistanceRaw": 2,
+                  "farthestHorizontalDistanceRaw": 10.338792240876106,
+                  "distanceVariationDbRaw": 12.806400707705096,
+                  "normalizedOverAngle": 0,
+                  "nominalGeometryCovered": true
+                }
+              }
+            ]
+          },
+          "coverageVerification": "unverified",
+          "capacityVerification": "source-review-required",
+          "speakerRecommendation": {
+            "systemLabel": "点声源 L/R 主扩",
+            "systemReason": "本模块仅针对普通矩形会议室，以定覆盖点声源作为左右主扩进行初步选型。",
+            "qualificationStatus": "provisional",
+            "hasMainMatch": true,
+            "packages": [
+              {
+                "label": "方案 A",
+                "main": {
+                  "model": "KF-D10F",
+                  "role": "主扩",
+                  "type": "定覆盖全频",
+                  "horizontalCoverageDeg": 100,
+                  "verticalCoverageDeg": 90,
+                  "maximumSplDb": 129,
+                  "source": "KF-D10F 产品说明书",
+                  "capacityMarginDb": 10.8,
+                  "capacityMarginDbRaw": 10.79835603461919,
+                  "coverageExcessDeg": 90.34872631481369,
+                  "score": 43.24184715777765,
+                  "count": 2
+                },
+                "fill": {
+                  "model": "KS-08AT",
+                  "role": "补声/延时",
+                  "type": "定覆盖全频",
+                  "horizontalCoverageDeg": 80,
+                  "verticalCoverageDeg": 60,
+                  "maximumSplDb": 119,
+                  "source": "KS-08AT 产品说明书（额定最大声压级）",
+                  "capacityMarginDb": 10.5,
+                  "capacityMarginDbRaw": 10.542425094393252,
+                  "count": 2,
+                  "requiredMaximumSplDb": 108.5,
+                  "requiredMaximumSplDbRaw": 108.45757490560675,
+                  "assumedListeningDistance": 3.3,
+                  "placementGroups": [
+                    {
+                      "label": "补声组",
+                      "count": 2,
+                      "mainToFillDistanceMeters": 4.6,
+                      "mainToFillDistanceMetersRaw": 4.578460222006302,
+                      "serviceAreaLabel": "后区听音区域",
+                      "mainDropDb": 6
+                    }
+                  ]
+                }
+              },
+              {
+                "label": "方案 B",
+                "main": {
+                  "model": "KF-D12F",
+                  "role": "主扩",
+                  "type": "定覆盖全频",
+                  "horizontalCoverageDeg": 100,
+                  "verticalCoverageDeg": 90,
+                  "maximumSplDb": 132,
+                  "source": "KF-D12F 产品说明书",
+                  "capacityMarginDb": 13.8,
+                  "capacityMarginDbRaw": 13.79835603461919,
+                  "coverageExcessDeg": 90.34872631481369,
+                  "score": 52.24184715777765,
+                  "count": 2
+                },
+                "fill": {
+                  "model": "KS-08AT",
+                  "role": "补声/延时",
+                  "type": "定覆盖全频",
+                  "horizontalCoverageDeg": 80,
+                  "verticalCoverageDeg": 60,
+                  "maximumSplDb": 119,
+                  "source": "KS-08AT 产品说明书（额定最大声压级）",
+                  "capacityMarginDb": 10.5,
+                  "capacityMarginDbRaw": 10.542425094393252,
+                  "count": 2,
+                  "requiredMaximumSplDb": 108.5,
+                  "requiredMaximumSplDbRaw": 108.45757490560675,
+                  "assumedListeningDistance": 3.3,
+                  "placementGroups": [
+                    {
+                      "label": "补声组",
+                      "count": 2,
+                      "mainToFillDistanceMeters": 4.6,
+                      "mainToFillDistanceMetersRaw": 4.578460222006302,
+                      "serviceAreaLabel": "后区听音区域",
+                      "mainDropDb": 6
+                    }
+                  ]
+                }
+              },
+              {
+                "label": "方案 C",
+                "main": {
+                  "model": "KF-D15F",
+                  "role": "主扩",
+                  "type": "定覆盖全频",
+                  "horizontalCoverageDeg": 100,
+                  "verticalCoverageDeg": 90,
+                  "maximumSplDb": 133,
+                  "source": "KF-D15F 产品说明书",
+                  "capacityMarginDb": 14.8,
+                  "capacityMarginDbRaw": 14.79835603461919,
+                  "coverageExcessDeg": 90.34872631481369,
+                  "score": 55.24184715777765,
+                  "count": 2
+                },
+                "fill": {
+                  "model": "KS-08AT",
+                  "role": "补声/延时",
+                  "type": "定覆盖全频",
+                  "horizontalCoverageDeg": 80,
+                  "verticalCoverageDeg": 60,
+                  "maximumSplDb": 119,
+                  "source": "KS-08AT 产品说明书（额定最大声压级）",
+                  "capacityMarginDb": 10.5,
+                  "capacityMarginDbRaw": 10.542425094393252,
+                  "count": 2,
+                  "requiredMaximumSplDb": 108.5,
+                  "requiredMaximumSplDbRaw": 108.45757490560675,
+                  "assumedListeningDistance": 3.3,
+                  "placementGroups": [
+                    {
+                      "label": "补声组",
+                      "count": 2,
+                      "mainToFillDistanceMeters": 4.6,
+                      "mainToFillDistanceMetersRaw": 4.578460222006302,
+                      "serviceAreaLabel": "后区听音区域",
+                      "mainDropDb": 6
+                    }
+                  ]
+                }
+              }
+            ],
+            "mainRequirement": {
+              "requiredMaximumSplDb": 118.2,
+              "requiredMaximumSplDbRaw": 118.20164396538081,
+              "horizontalCoverageDeg": 90,
+              "horizontalCoverageRequiredDeg": 73.92464430113311,
+              "verticalCoverageDeg": 30,
+              "verticalCoverageRequiredDeg": 25.726629384053194
+            },
+            "fillRequirement": {
+              "assumedListeningDistance": 3.3,
+              "assumedListeningDistanceRaw": 3.3333333333333335,
+              "requiredMaximumSplDb": 108.5,
+              "requiredMaximumSplDbRaw": 108.45757490560675
+            },
+            "fillPlacementGroups": [
+              {
+                "label": "补声组",
+                "count": 2,
+                "mainToFillDistanceMeters": 4.6,
+                "mainToFillDistanceMetersRaw": 4.578460222006302,
+                "serviceAreaLabel": "后区听音区域",
+                "mainDropDb": 6
+              }
+            ],
+            "missingParts": [],
+            "reviewWarnings": [
+              "标称角仅作几何筛选；频段指向性与最大声压测试口径尚待核验。"
+            ],
+            "notes": [
+              "仅从已登记角色、标称覆盖角和最大声压字段的公司音箱资料中筛选；最大声压测试口径待核对，覆盖角可变或参数不完整的型号不参与自动推荐。",
+              "补声位置用于粗略确定安装区域；实际电平、延时、相位与指向必须在安装完成后按现场测量确定。"
+            ]
+          },
+          "reviewWarnings": [
+            "标称角仅作几何筛选；频段指向性与最大声压测试口径尚待核验。"
+          ],
+          "reasons": [
+            "目标为 会议类扩声 二级，其最大声压级能力目标为不小于 95 dB SPL。",
+            "按“短边前置主扩”估算，场地横向宽度约 8 m、纵深约 12 m；实际听音区宽度约 7 m，首排至最后一排为 2～10 m。",
+            "首排距离为 2 m、最远听音位置约 10.2 m；两点的自由场直达声差约 12.7 dB。",
+            "本模块按最大声压级能力目标额外预留 3 dB，用于前期容量估算；单只主扩建议具备约 118.2 dB SPL @ 1m 的能力。",
+            "主扩水平几何最低需求约 73.92°，显示档位为 90°；垂直几何最低需求约 25.73°，显示档位为 30°，初始下倾角约 20.2°。候选型号的标称 H/V 角另行复核。",
+            "仅靠前置主扩时，首排与后排的直达声差超过本次预估控制值；建议增加一组后区补声，使后区声压过渡更平缓。"
+          ],
+          "layoutComparisonSummary": "比较 6 组位置与指向，采用左右对称前置方案。",
+          "layoutPositionLines": [
+            "M1 距左 2.25 m、距前 0.00 m、正向后排",
+            "M2 距左 5.75 m、距前 0.00 m、正向后排"
+          ],
+          "coverageEnvelopeText": "几何包络至少 74.0°H × 25.8°V",
+          "planDisplayIntro": "色阶仅表示等向点源的距离衰减与能量相加；标称角范围是理想几何包络，不代表真实覆盖。"
+        }
+      }
+    },
+    {
+      "id": "LED-001",
+      "expectedGuard": "block result until exact blocker value is confirmed for this operation",
+      "observedLegacyResult": true,
+      "evidence": {
+        "missingParameters": [
+          "led_screen.assembly_unit_width_mm",
+          "led_screen.assembly_unit_height_mm"
+        ],
+        "selectedAssemblyKey": "cabinetStandard",
+        "result": {
+          "unitKey": "cabinetStandard",
+          "unitType": "cabinet",
+          "unitLabel": "常规箱体",
+          "unitSizeText": "640 × 480 mm",
+          "columns": 9,
+          "rows": 7,
+          "totalUnits": 63,
+          "screenWidthMeters": 5.76,
+          "screenHeightMeters": 3.36,
+          "dimensionText": "5.76 × 3.36 m",
+          "frameWidthMeters": 0.05,
+          "frameWidthCentimeters": 5,
+          "frameWidthText": "5 cm / 边",
+          "installedWidthMeters": 5.86,
+          "installedHeightMeters": 3.46,
+          "installedDimensionText": "5.86 × 3.46 m",
+          "actualRatio": 1.714,
+          "targetAspectRatioKey": "16:9",
+          "targetAspectRatio": 1.7777777777777777,
+          "ratioText": "1.71:1",
+          "ratioCloseToTarget": false,
+          "horizontalMarginMeters": 1.07,
+          "horizontalMarginText": "1.07 m / 侧",
+          "actualTopMarginMeters": 0.27,
+          "actualBottomMarginMeters": 0.27,
+          "verticalMarginText": "0.27 / 0.27 m",
+          "estimatedPixelWidth": 2880,
+          "estimatedPixelHeight": 1680,
+          "resolutionText": "约 2880 × 1680",
+          "pixelPitch": 2,
+          "pitchText": "P2",
+          "pitchMode": "specified",
+          "pitchModeLabel": "指定点间距",
+          "viewingDistanceMeters": 5,
+          "minimumDistanceMeters": 2,
+          "comfortableMinimumMeters": 3.4,
+          "comfortableMaximumMeters": 6,
+          "comfortableRangeText": "3.4～6 m",
+          "statusKey": "fit",
+          "statusLabel": "观看距离匹配",
+          "statusText": "最近观看位置处于该点间距的舒适观看范围。",
+          "layoutText": "横向箱体 9 × 纵向箱体 7，总共 63 块",
+          "diagramHeightRpx": 315,
+          "frameStyle": "left:13.375%;top:6.750%;width:73.250%;height:86.500%",
+          "screenStyle": "left:0.853%;top:1.445%;width:98.294%;height:97.110%;background-size:11.111% 14.286%"
+        },
+        "reportData": {
+          "unitKey": "cabinetStandard",
+          "unitType": "cabinet",
+          "unitLabel": "常规箱体",
+          "unitSizeText": "640 × 480 mm",
+          "columns": 9,
+          "rows": 7,
+          "totalUnits": 63,
+          "screenWidthMeters": 5.76,
+          "screenHeightMeters": 3.36,
+          "dimensionText": "5.76 × 3.36 m",
+          "frameWidthMeters": 0.05,
+          "frameWidthCentimeters": 5,
+          "frameWidthText": "5 cm / 边",
+          "installedWidthMeters": 5.86,
+          "installedHeightMeters": 3.46,
+          "installedDimensionText": "5.86 × 3.46 m",
+          "actualRatio": 1.714,
+          "targetAspectRatioKey": "16:9",
+          "targetAspectRatio": 1.7777777777777777,
+          "ratioText": "1.71:1",
+          "ratioCloseToTarget": false,
+          "horizontalMarginMeters": 1.07,
+          "horizontalMarginText": "1.07 m / 侧",
+          "actualTopMarginMeters": 0.27,
+          "actualBottomMarginMeters": 0.27,
+          "verticalMarginText": "0.27 / 0.27 m",
+          "estimatedPixelWidth": 2880,
+          "estimatedPixelHeight": 1680,
+          "resolutionText": "约 2880 × 1680",
+          "pixelPitch": 2,
+          "pitchText": "P2",
+          "pitchMode": "specified",
+          "pitchModeLabel": "指定点间距",
+          "viewingDistanceMeters": 5,
+          "minimumDistanceMeters": 2,
+          "comfortableMinimumMeters": 3.4,
+          "comfortableMaximumMeters": 6,
+          "comfortableRangeText": "3.4～6 m",
+          "statusKey": "fit",
+          "statusLabel": "观看距离匹配",
+          "statusText": "最近观看位置处于该点间距的舒适观看范围。",
+          "layoutText": "横向箱体 9 × 纵向箱体 7，总共 63 块",
+          "diagramHeightRpx": 315,
+          "frameStyle": "left:13.375%;top:6.750%;width:73.250%;height:86.500%",
+          "screenStyle": "left:0.853%;top:1.445%;width:98.294%;height:97.110%;background-size:11.111% 14.286%"
+        }
+      }
+    },
+    {
+      "id": "LED-003",
+      "expectedGuard": "block result until exact blocker value is confirmed for this operation",
+      "observedLegacyResult": true,
+      "evidence": {
+        "missingParameters": [
+          "led_screen.assembly_unit_width_mm",
+          "led_screen.assembly_unit_height_mm"
+        ],
+        "selectedAssemblyKey": "module",
+        "result": {
+          "unitKey": "module",
+          "unitType": "module",
+          "unitLabel": "模组",
+          "unitSizeText": "320 × 160 mm",
+          "columns": 21,
+          "rows": 23,
+          "totalUnits": 483,
+          "screenWidthMeters": 6.72,
+          "screenHeightMeters": 3.68,
+          "dimensionText": "6.72 × 3.68 m",
+          "frameWidthMeters": 0.05,
+          "frameWidthCentimeters": 5,
+          "frameWidthText": "5 cm / 边",
+          "installedWidthMeters": 6.82,
+          "installedHeightMeters": 3.78,
+          "installedDimensionText": "6.82 × 3.78 m",
+          "actualRatio": 1.826,
+          "targetAspectRatioKey": "16:9",
+          "targetAspectRatio": 1.7777777777777777,
+          "ratioText": "1.83:1",
+          "ratioCloseToTarget": false,
+          "horizontalMarginMeters": 0.19,
+          "horizontalMarginText": "0.19 m / 侧",
+          "actualTopMarginMeters": 0.21,
+          "actualBottomMarginMeters": 0.21,
+          "verticalMarginText": "0.21 / 0.21 m",
+          "estimatedPixelWidth": 3613,
+          "estimatedPixelHeight": 1978,
+          "resolutionText": "约 3613 × 1978",
+          "pixelPitch": 1.86,
+          "pitchText": "P1.86",
+          "pitchMode": "specified",
+          "pitchModeLabel": "指定点间距",
+          "viewingDistanceMeters": 4,
+          "minimumDistanceMeters": 1.86,
+          "comfortableMinimumMeters": 3.16,
+          "comfortableMaximumMeters": 5.58,
+          "comfortableRangeText": "3.16～5.58 m",
+          "statusKey": "fit",
+          "statusLabel": "观看距离匹配",
+          "statusText": "最近观看位置处于该点间距的舒适观看范围。",
+          "layoutText": "横向模组 21 × 纵向模组 23，总共 483 块",
+          "diagramHeightRpx": 368,
+          "frameStyle": "left:2.639%;top:5.000%;width:94.722%;height:90.000%",
+          "screenStyle": "left:0.733%;top:1.323%;width:98.534%;height:97.354%;background-size:4.762% 4.348%"
+        },
+        "reportData": {
+          "unitKey": "module",
+          "unitType": "module",
+          "unitLabel": "模组",
+          "unitSizeText": "320 × 160 mm",
+          "columns": 21,
+          "rows": 23,
+          "totalUnits": 483,
+          "screenWidthMeters": 6.72,
+          "screenHeightMeters": 3.68,
+          "dimensionText": "6.72 × 3.68 m",
+          "frameWidthMeters": 0.05,
+          "frameWidthCentimeters": 5,
+          "frameWidthText": "5 cm / 边",
+          "installedWidthMeters": 6.82,
+          "installedHeightMeters": 3.78,
+          "installedDimensionText": "6.82 × 3.78 m",
+          "actualRatio": 1.826,
+          "targetAspectRatioKey": "16:9",
+          "targetAspectRatio": 1.7777777777777777,
+          "ratioText": "1.83:1",
+          "ratioCloseToTarget": false,
+          "horizontalMarginMeters": 0.19,
+          "horizontalMarginText": "0.19 m / 侧",
+          "actualTopMarginMeters": 0.21,
+          "actualBottomMarginMeters": 0.21,
+          "verticalMarginText": "0.21 / 0.21 m",
+          "estimatedPixelWidth": 3613,
+          "estimatedPixelHeight": 1978,
+          "resolutionText": "约 3613 × 1978",
+          "pixelPitch": 1.86,
+          "pitchText": "P1.86",
+          "pitchMode": "specified",
+          "pitchModeLabel": "指定点间距",
+          "viewingDistanceMeters": 4,
+          "minimumDistanceMeters": 1.86,
+          "comfortableMinimumMeters": 3.16,
+          "comfortableMaximumMeters": 5.58,
+          "comfortableRangeText": "3.16～5.58 m",
+          "statusKey": "fit",
+          "statusLabel": "观看距离匹配",
+          "statusText": "最近观看位置处于该点间距的舒适观看范围。",
+          "layoutText": "横向模组 21 × 纵向模组 23，总共 483 块",
+          "diagramHeightRpx": 368,
+          "frameStyle": "left:2.639%;top:5.000%;width:94.722%;height:90.000%",
+          "screenStyle": "left:0.733%;top:1.323%;width:98.534%;height:97.354%;background-size:4.762% 4.348%"
+        }
+      }
+    },
+    {
+      "id": "LED-005",
+      "expectedGuard": "block result until exact blocker value is confirmed for this operation",
+      "observedLegacyResult": true,
+      "evidence": {
+        "missingParameters": [
+          "led_screen.assembly_unit_width_mm",
+          "led_screen.assembly_unit_height_mm",
+          "led_screen.assembly_unit"
+        ],
+        "selectedAssemblyKey": "module",
+        "result": {
+          "unitKey": "module",
+          "unitType": "module",
+          "unitLabel": "模组",
+          "unitSizeText": "320 × 160 mm",
+          "columns": 20,
+          "rows": 22,
+          "totalUnits": 440,
+          "screenWidthMeters": 6.4,
+          "screenHeightMeters": 3.52,
+          "dimensionText": "6.4 × 3.52 m",
+          "frameWidthMeters": 0.05,
+          "frameWidthCentimeters": 5,
+          "frameWidthText": "5 cm / 边",
+          "installedWidthMeters": 6.5,
+          "installedHeightMeters": 3.62,
+          "installedDimensionText": "6.5 × 3.62 m",
+          "actualRatio": 1.818,
+          "targetAspectRatioKey": "16:9",
+          "targetAspectRatio": 1.7777777777777777,
+          "ratioText": "1.82:1",
+          "ratioCloseToTarget": false,
+          "horizontalMarginMeters": 0.35,
+          "horizontalMarginText": "0.35 m / 侧",
+          "actualTopMarginMeters": 0.24,
+          "actualBottomMarginMeters": 0.19,
+          "verticalMarginText": "0.24 / 0.19 m",
+          "estimatedPixelWidth": 3200,
+          "estimatedPixelHeight": 1760,
+          "resolutionText": "约 3200 × 1760",
+          "pixelPitch": 2,
+          "pitchText": "P2",
+          "pitchMode": "recommended",
+          "pitchModeLabel": "系统推荐",
+          "viewingDistanceMeters": 4.5,
+          "minimumDistanceMeters": 2,
+          "comfortableMinimumMeters": 3.4,
+          "comfortableMaximumMeters": 6,
+          "comfortableRangeText": "3.4～6 m",
+          "statusKey": "fit",
+          "statusLabel": "观看距离匹配",
+          "statusText": "最近观看位置处于该点间距的舒适观看范围。",
+          "layoutText": "横向模组 20 × 纵向模组 22，总共 440 块",
+          "diagramHeightRpx": 354,
+          "frameStyle": "left:4.861%;top:5.926%;width:90.278%;height:89.383%",
+          "screenStyle": "left:0.769%;top:1.381%;width:98.462%;height:97.238%;background-size:5.000% 4.545%"
+        },
+        "reportData": {
+          "unitKey": "module",
+          "unitType": "module",
+          "unitLabel": "模组",
+          "unitSizeText": "320 × 160 mm",
+          "columns": 20,
+          "rows": 22,
+          "totalUnits": 440,
+          "screenWidthMeters": 6.4,
+          "screenHeightMeters": 3.52,
+          "dimensionText": "6.4 × 3.52 m",
+          "frameWidthMeters": 0.05,
+          "frameWidthCentimeters": 5,
+          "frameWidthText": "5 cm / 边",
+          "installedWidthMeters": 6.5,
+          "installedHeightMeters": 3.62,
+          "installedDimensionText": "6.5 × 3.62 m",
+          "actualRatio": 1.818,
+          "targetAspectRatioKey": "16:9",
+          "targetAspectRatio": 1.7777777777777777,
+          "ratioText": "1.82:1",
+          "ratioCloseToTarget": false,
+          "horizontalMarginMeters": 0.35,
+          "horizontalMarginText": "0.35 m / 侧",
+          "actualTopMarginMeters": 0.24,
+          "actualBottomMarginMeters": 0.19,
+          "verticalMarginText": "0.24 / 0.19 m",
+          "estimatedPixelWidth": 3200,
+          "estimatedPixelHeight": 1760,
+          "resolutionText": "约 3200 × 1760",
+          "pixelPitch": 2,
+          "pitchText": "P2",
+          "pitchMode": "recommended",
+          "pitchModeLabel": "系统推荐",
+          "viewingDistanceMeters": 4.5,
+          "minimumDistanceMeters": 2,
+          "comfortableMinimumMeters": 3.4,
+          "comfortableMaximumMeters": 6,
+          "comfortableRangeText": "3.4～6 m",
+          "statusKey": "fit",
+          "statusLabel": "观看距离匹配",
+          "statusText": "最近观看位置处于该点间距的舒适观看范围。",
+          "layoutText": "横向模组 20 × 纵向模组 22，总共 440 块",
+          "diagramHeightRpx": 354,
+          "frameStyle": "left:4.861%;top:5.926%;width:90.278%;height:89.383%",
+          "screenStyle": "left:0.769%;top:1.381%;width:98.462%;height:97.238%;background-size:5.000% 4.545%"
+        }
+      }
+    },
+    {
+      "id": "LED-006",
+      "expectedGuard": "block result until exact blocker value is confirmed for this operation",
+      "observedLegacyResult": true,
+      "evidence": {
+        "missingParameters": [
+          "led_screen.assembly_unit_width_mm",
+          "led_screen.assembly_unit_height_mm",
+          "led_screen.assembly_unit"
+        ],
+        "selectedAssemblyKey": "module",
+        "result": {
+          "unitKey": "module",
+          "unitType": "module",
+          "unitLabel": "模组",
+          "unitSizeText": "320 × 160 mm",
+          "columns": 14,
+          "rows": 15,
+          "totalUnits": 210,
+          "screenWidthMeters": 4.48,
+          "screenHeightMeters": 2.4,
+          "dimensionText": "4.48 × 2.4 m",
+          "frameWidthMeters": 0.05,
+          "frameWidthCentimeters": 5,
+          "frameWidthText": "5 cm / 边",
+          "installedWidthMeters": 4.58,
+          "installedHeightMeters": 2.5,
+          "installedDimensionText": "4.58 × 2.5 m",
+          "actualRatio": 1.867,
+          "targetAspectRatioKey": "16:9",
+          "targetAspectRatio": 1.7777777777777777,
+          "ratioText": "1.87:1",
+          "ratioCloseToTarget": false,
+          "horizontalMarginMeters": 0.71,
+          "horizontalMarginText": "0.71 m / 侧",
+          "actualTopMarginMeters": 0.275,
+          "actualBottomMarginMeters": 0.225,
+          "verticalMarginText": "0.275 / 0.225 m",
+          "estimatedPixelWidth": 2240,
+          "estimatedPixelHeight": 1200,
+          "resolutionText": "约 2240 × 1200",
+          "pixelPitch": 2,
+          "pitchText": "P2",
+          "pitchMode": "recommended",
+          "pitchModeLabel": "系统推荐",
+          "viewingDistanceMeters": 4,
+          "minimumDistanceMeters": 2,
+          "comfortableMinimumMeters": 3.4,
+          "comfortableMaximumMeters": 6,
+          "comfortableRangeText": "3.4～6 m",
+          "statusKey": "fit",
+          "statusLabel": "观看距离匹配",
+          "statusText": "最近观看位置处于该点间距的舒适观看范围。",
+          "layoutText": "横向模组 14 × 纵向模组 15，总共 210 块",
+          "diagramHeightRpx": 315,
+          "frameStyle": "left:11.833%;top:9.167%;width:76.333%;height:83.333%",
+          "screenStyle": "left:1.092%;top:2.000%;width:97.817%;height:96.000%;background-size:7.143% 6.667%"
+        },
+        "reportData": {
+          "unitKey": "module",
+          "unitType": "module",
+          "unitLabel": "模组",
+          "unitSizeText": "320 × 160 mm",
+          "columns": 14,
+          "rows": 15,
+          "totalUnits": 210,
+          "screenWidthMeters": 4.48,
+          "screenHeightMeters": 2.4,
+          "dimensionText": "4.48 × 2.4 m",
+          "frameWidthMeters": 0.05,
+          "frameWidthCentimeters": 5,
+          "frameWidthText": "5 cm / 边",
+          "installedWidthMeters": 4.58,
+          "installedHeightMeters": 2.5,
+          "installedDimensionText": "4.58 × 2.5 m",
+          "actualRatio": 1.867,
+          "targetAspectRatioKey": "16:9",
+          "targetAspectRatio": 1.7777777777777777,
+          "ratioText": "1.87:1",
+          "ratioCloseToTarget": false,
+          "horizontalMarginMeters": 0.71,
+          "horizontalMarginText": "0.71 m / 侧",
+          "actualTopMarginMeters": 0.275,
+          "actualBottomMarginMeters": 0.225,
+          "verticalMarginText": "0.275 / 0.225 m",
+          "estimatedPixelWidth": 2240,
+          "estimatedPixelHeight": 1200,
+          "resolutionText": "约 2240 × 1200",
+          "pixelPitch": 2,
+          "pitchText": "P2",
+          "pitchMode": "recommended",
+          "pitchModeLabel": "系统推荐",
+          "viewingDistanceMeters": 4,
+          "minimumDistanceMeters": 2,
+          "comfortableMinimumMeters": 3.4,
+          "comfortableMaximumMeters": 6,
+          "comfortableRangeText": "3.4～6 m",
+          "statusKey": "fit",
+          "statusLabel": "观看距离匹配",
+          "statusText": "最近观看位置处于该点间距的舒适观看范围。",
+          "layoutText": "横向模组 14 × 纵向模组 15，总共 210 块",
+          "diagramHeightRpx": 315,
+          "frameStyle": "left:11.833%;top:9.167%;width:76.333%;height:83.333%",
+          "screenStyle": "left:1.092%;top:2.000%;width:97.817%;height:96.000%;background-size:7.143% 6.667%"
+        }
+      }
+    },
+    {
+      "id": "DMX-010",
+      "expectedGuard": "block result until exact blocker value is confirmed for this operation",
+      "observedLegacyResult": true,
+      "evidence": {
+        "missingParameter": "dmx_address.channels_per_fixture",
+        "requestedMode": null,
+        "displayedChannelCount": 6,
+        "selectedMode": 6,
+        "result": {
+          "model": "TL-SL333",
+          "source": "TL-SL333-UM-CN.pdf",
+          "sourcePages": [
+            3
+          ],
+          "sourcePageText": "PDF第3页（说明书标注第8页）",
+          "verification": "checked",
+          "verificationStatus": "已核对",
+          "channelCount": 6,
+          "modeLabel": "6 CH",
+          "channels": [
+            {
+              "channel": 1,
+              "name": "调光",
+              "summary": "暗至亮",
+              "ranges": [
+                {
+                  "range": "0–255",
+                  "description": "暗至亮"
+                }
+              ]
+            },
+            {
+              "channel": 2,
+              "name": "频闪",
+              "summary": "常规频闪慢至快",
+              "ranges": [
+                {
+                  "range": "0–5",
+                  "description": "关闭"
+                },
+                {
+                  "range": "6–255",
+                  "description": "常规频闪慢至快"
+                }
+              ]
+            },
+            {
+              "channel": 3,
+              "name": "WW暖白",
+              "summary": "暖白",
+              "ranges": [
+                {
+                  "range": "0–255",
+                  "description": "暖白"
+                }
+              ]
+            },
+            {
+              "channel": 4,
+              "name": "CW冷白",
+              "summary": "冷白",
+              "ranges": [
+                {
+                  "range": "0–255",
+                  "description": "冷白"
+                }
+              ]
+            },
+            {
+              "channel": 5,
+              "name": "C-Temp色温",
+              "summary": "色温",
+              "ranges": [
+                {
+                  "range": "0–5",
+                  "description": "关闭"
+                },
+                {
+                  "range": "6–255",
+                  "description": "低至高"
+                }
+              ]
+            },
+            {
+              "channel": 6,
+              "name": "ZOOM",
+              "summary": "变焦",
+              "ranges": [
+                {
+                  "range": "0–255",
+                  "description": "变焦"
+                }
+              ]
+            }
+          ],
+          "modes": [
+            {
+              "channelCount": 6,
+              "label": "6 CH",
+              "selected": true
+            },
+            {
+              "channelCount": 3,
+              "label": "3 CH",
+              "selected": false
+            }
+          ],
+          "actualRangeText": ""
+        }
+      }
+    },
+    {
+      "id": "CAM-007",
+      "expectedGuard": "block result until exact blocker value is confirmed for this operation",
+      "observedLegacyResult": true,
+      "evidence": {
+        "missingParameter": "camera_fov.vfov_deg",
+        "implicitPageValue": "36",
+        "result": {
+          "horizontalFov": 75,
+          "verticalFov": 36,
+          "diagonalFov": 79.6,
+          "verticalSource": "用户输入",
+          "fovSource": "自定义视场角",
+          "sceneMode": "ground",
+          "sceneLabel": "地面区域",
+          "widthMeters": 6,
+          "depthMeters": 4,
+          "subjectHeightMeters": 1.8,
+          "cameraHeightMeters": 2.3,
+          "heightMode": "auto",
+          "heightBasis": "人物最高点 + 0.5 m 安装余量",
+          "effectiveWidthMeters": 6.6,
+          "effectiveDepthMeters": 4.4,
+          "effectiveSubjectHeightMeters": 1.98,
+          "horizontalMinimumDistanceMeters": 4.3,
+          "verticalMinimumDistanceMeters": 4.3,
+          "depthMarginMeters": 0.2,
+          "cameraSetbackMeters": 4.5,
+          "distanceToCenterMeters": 6.5,
+          "distanceToFarEdgeMeters": 8.5,
+          "effectiveNearDistanceMeters": 4.3,
+          "calculationDistanceMeters": 4.300643730375979,
+          "requiredHorizontalFov": 75,
+          "requiredVerticalFov": 26,
+          "distanceConstraintText": "水平下限处垂直校核通过",
+          "aimAngleDegrees": -15.1,
+          "aimDirection": "向下",
+          "tiltDegrees": 15.1,
+          "aimText": "向下 15.1°",
+          "marginRatio": 0.1,
+          "primaryDistanceLabel": "距拍摄区前沿",
+          "primaryDistanceMeters": 4.5,
+          "coverageVerified": true,
+          "horizontalUtilizationPercent": 100,
+          "verticalUtilizationPercent": 72.3,
+          "marginPercent": 10,
+          "displayModel": "自定义摄像机",
+          "displayView": "已知视场角",
+          "sourceText": "用户输入参数；请以所用摄像机说明书为准。",
+          "sourceNote": "",
+          "endpointLabel": "自定义视角",
+          "mountType": "ptz",
+          "mountLabel": "机械云台",
+          "requiresInitialAim": false,
+          "aimValue": "云台取景",
+          "aimLabel": "现场调整水平与俯仰",
+          "heightSummary": "建议镜头中心高 2.3 m",
+          "distanceMeaning": "当前模型下理论最小距离",
+          "endpointExplanation": "该结果按当前固定或自定义视场角计算。",
+          "calculationRows": [
+            {
+              "title": "加入构图余量",
+              "formula": "有效宽度 = 原宽度 × (1 + 余量)",
+              "substitution": "6 × (1 + 10%)",
+              "value": "6.6 m"
+            },
+            {
+              "title": "计算水平最低距离",
+              "formula": "Dₕ = 有效宽度 ÷ [2 × tan(水平视场角 ÷ 2)]",
+              "substitution": "6.6 ÷ [2 × tan(75° ÷ 2)]",
+              "value": "4.3 m"
+            },
+            {
+              "title": "满足水平约束后校核垂直距离",
+              "formula": "从水平最低距离起求解：垂直包络角 ≤ 镜头垂直视场角",
+              "substitution": "镜头高 2.3 m，有效高度 0–1.98 m，有效纵深 4.4 m，垂直角 36°",
+              "value": "4.3 m"
+            },
+            {
+              "title": "换算到实际区域前沿",
+              "formula": "满足水平约束的距离 + 纵深方向构图余量",
+              "substitution": "4.3 + 0.2",
+              "value": "4.5 m"
+            }
+          ],
+          "calculationConclusion": "当前独立水平/垂直视场角模型下，理论最小距离为 4.5 m；两轴校核通过。",
+          "calculationVisual": {
+            "horizontalBarPercent": 100,
+            "verticalBarPercent": 100,
+            "limitingDistanceMeters": "4.3",
+            "limitingAxisLabel": "水平下限处垂直校核通过",
+            "hasDepthMargin": true,
+            "depthMarginMeters": 0.2
+          }
+        },
+        "reportData": {
+          "horizontalFov": 75,
+          "verticalFov": 36,
+          "diagonalFov": 79.6,
+          "verticalSource": "用户输入",
+          "fovSource": "自定义视场角",
+          "sceneMode": "ground",
+          "sceneLabel": "地面区域",
+          "widthMeters": 6,
+          "depthMeters": 4,
+          "subjectHeightMeters": 1.8,
+          "cameraHeightMeters": 2.3,
+          "heightMode": "auto",
+          "heightBasis": "人物最高点 + 0.5 m 安装余量",
+          "effectiveWidthMeters": 6.6,
+          "effectiveDepthMeters": 4.4,
+          "effectiveSubjectHeightMeters": 1.98,
+          "horizontalMinimumDistanceMeters": 4.3,
+          "verticalMinimumDistanceMeters": 4.3,
+          "depthMarginMeters": 0.2,
+          "cameraSetbackMeters": 4.5,
+          "distanceToCenterMeters": 6.5,
+          "distanceToFarEdgeMeters": 8.5,
+          "effectiveNearDistanceMeters": 4.3,
+          "calculationDistanceMeters": 4.300643730375979,
+          "requiredHorizontalFov": 75,
+          "requiredVerticalFov": 26,
+          "distanceConstraintText": "水平下限处垂直校核通过",
+          "aimAngleDegrees": -15.1,
+          "aimDirection": "向下",
+          "tiltDegrees": 15.1,
+          "aimText": "向下 15.1°",
+          "marginRatio": 0.1,
+          "primaryDistanceLabel": "距拍摄区前沿",
+          "primaryDistanceMeters": 4.5,
+          "coverageVerified": true,
+          "horizontalUtilizationPercent": 100,
+          "verticalUtilizationPercent": 72.3,
+          "marginPercent": 10,
+          "displayModel": "自定义摄像机",
+          "displayView": "已知视场角",
+          "sourceText": "用户输入参数；请以所用摄像机说明书为准。",
+          "sourceNote": "",
+          "endpointLabel": "自定义视角",
+          "mountType": "ptz",
+          "mountLabel": "机械云台",
+          "requiresInitialAim": false,
+          "aimValue": "云台取景",
+          "aimLabel": "现场调整水平与俯仰",
+          "heightSummary": "建议镜头中心高 2.3 m",
+          "distanceMeaning": "当前模型下理论最小距离",
+          "endpointExplanation": "该结果按当前固定或自定义视场角计算。",
+          "calculationRows": [
+            {
+              "title": "加入构图余量",
+              "formula": "有效宽度 = 原宽度 × (1 + 余量)",
+              "substitution": "6 × (1 + 10%)",
+              "value": "6.6 m"
+            },
+            {
+              "title": "计算水平最低距离",
+              "formula": "Dₕ = 有效宽度 ÷ [2 × tan(水平视场角 ÷ 2)]",
+              "substitution": "6.6 ÷ [2 × tan(75° ÷ 2)]",
+              "value": "4.3 m"
+            },
+            {
+              "title": "满足水平约束后校核垂直距离",
+              "formula": "从水平最低距离起求解：垂直包络角 ≤ 镜头垂直视场角",
+              "substitution": "镜头高 2.3 m，有效高度 0–1.98 m，有效纵深 4.4 m，垂直角 36°",
+              "value": "4.3 m"
+            },
+            {
+              "title": "换算到实际区域前沿",
+              "formula": "满足水平约束的距离 + 纵深方向构图余量",
+              "substitution": "4.3 + 0.2",
+              "value": "4.5 m"
+            }
+          ],
+          "calculationConclusion": "当前独立水平/垂直视场角模型下，理论最小距离为 4.5 m；两轴校核通过。",
+          "calculationVisual": {
+            "horizontalBarPercent": 100,
+            "verticalBarPercent": 100,
+            "limitingDistanceMeters": "4.3",
+            "limitingAxisLabel": "水平下限处垂直校核通过",
+            "hasDepthMargin": true,
+            "depthMarginMeters": 0.2
+          }
+        }
+      }
+    },
+    {
+      "id": "DMX-004",
+      "blocked": true,
+      "result": {
+        "error": "起始地址必须是 1 至 512 的整数。",
+        "valid": false
+      },
+      "rawAddress": "D001"
+    },
+    {
+      "id": "DMX-006",
+      "blocked": true,
+      "result": {
+        "error": "起始地址必须是 1 至 512 的整数。",
+        "valid": false
+      },
+      "rawAddress": "A01O"
+    },
+    {
+      "id": "PW-007",
+      "blocked": true,
+      "formError": "请填写来源和去向的设备名称、端口名称。",
+      "persistedLineCount": 0
+    }
+  ],
+  "offlineAttempts": []
+}

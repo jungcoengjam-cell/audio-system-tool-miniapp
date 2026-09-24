@@ -17,10 +17,10 @@ const {
   resetStaleResultReport,
 } = require('../../utils/result-report-controller')
 const {
-  addPageToActiveProject,
   syncPageFavorite,
   togglePageFavorite,
 } = require('../../utils/result-record-actions')
+const { addRecordToProject, createProject, getActiveProject } = require('../../utils/records')
 const {
   drawVenuePlan: renderVenuePlan,
   getVenuePlanCanvasHeight,
@@ -28,6 +28,13 @@ const {
   REPORT_HEATMAP_TICKS,
 } = require('./plan-renderer')
 const { calculatePagNagReview } = require('../../utils/venue-pag-nag')
+const {
+  createOperationMethods,
+  prepareOperation,
+  captureOperationResult,
+  isOperationResultCurrent,
+  invalidateOperation,
+} = require('../../utils/operation-inputs')
 const {
   formatDb,
   formatMargin,
@@ -47,6 +54,66 @@ const SCENE_MODES = [
   { value: 'report', label: '报告 / 培训型' },
   { value: 'discussion', label: '围桌讨论型' },
 ]
+
+const VENUE_REPORT_FIELDS = {
+  lengthText: { label: '场地长度', unit: 'm' },
+  widthText: { label: '场地宽度', unit: 'm' },
+  heightText: { label: '场地高度', unit: 'm' },
+  firstListeningDistanceText: { label: '首排距离', unit: 'm' },
+  lastListeningDistanceText: { label: '末排距离', unit: 'm' },
+  listeningWidthText: { label: '听音宽度', unit: 'm' },
+  gradeIndex: {
+    label: '目标等级', unit: 'index', display: (value) => value === undefined || value === '' || value === -1
+      ? '待确认' : STANDARD_CLASSES[0].grades[value]?.label || '无效等级',
+    read: (_page, data) => Number.isInteger(data.gradeIndex) && STANDARD_CLASSES[0].grades[data.gradeIndex]
+      ? data.gradeIndex : undefined,
+  },
+  layoutIndex: {
+    label: '主扩安装方向', unit: 'index', display: (value) => value === undefined || value === '' || value === -1
+      ? '待确认' : VENUE_LAYOUTS[value]?.label || '无效方向',
+    read: (_page, data) => Number.isInteger(data.layoutIndex) && VENUE_LAYOUTS[data.layoutIndex]
+      ? data.layoutIndex : undefined,
+  },
+}
+
+const VENUE_REPORT_CONTRACT = {
+  id: 'venue-report',
+  fields: VENUE_REPORT_FIELDS,
+  requiredFields: Object.keys(VENUE_REPORT_FIELDS),
+}
+
+const venueOperationMethods = createOperationMethods(VENUE_REPORT_CONTRACT)
+const VENUE_LAYOUTS = [
+  { value: 'short', label: '短边前置主扩（推荐）' },
+  { value: 'long', label: '长边前置主扩' },
+]
+
+function structuredVenueState(page, values) {
+  const gradeIndex = Number(values.gradeIndex)
+  const layoutIndex = Number(values.layoutIndex)
+  if (!Number.isInteger(gradeIndex) || !STANDARD_CLASSES[0].grades[gradeIndex]
+    || !Number.isInteger(layoutIndex) || !VENUE_LAYOUTS[layoutIndex]) return null
+  return {
+    sceneModes: SCENE_MODES,
+    sceneModeIndex: 0,
+    standardClasses: STANDARD_CLASSES,
+    standardClassIndex: 0,
+    gradeIndex,
+    layouts: VENUE_LAYOUTS,
+    layoutIndex,
+    lengthText: values.lengthText,
+    widthText: values.widthText,
+    heightText: values.heightText,
+    firstListeningDistanceText: values.firstListeningDistanceText,
+    lastListeningDistanceText: values.lastListeningDistanceText,
+    listeningWidthText: values.listeningWidthText,
+    showVenuePlan: page.data.showVenuePlan,
+  }
+}
+
+function structuredActive(page) {
+  return Boolean(page.getOperationSnapshot?.())
+}
 
 function compactVenueReviewWarning(warning) {
   const angleMatch = String(warning).match(/约\s*([\d.]+)°/)
@@ -313,10 +380,7 @@ Page({
     standardClasses: STANDARD_CLASSES,
     standardClassIndex: 0,
     gradeIndex: 0,
-    layouts: [
-      { value: 'short', label: '短边前置主扩（推荐）' },
-      { value: 'long', label: '长边前置主扩' },
-    ],
+    layouts: VENUE_LAYOUTS,
     layoutIndex: 0,
     lengthText: '12',
     widthText: '8',
@@ -354,6 +418,8 @@ Page({
     reportHeatmapGradient: REPORT_HEATMAP_GRADIENT,
     reportHeatmapTicks: REPORT_HEATMAP_TICKS,
     inputError: '',
+    operationActive: false,
+    operationSnapshot: null,
     showVenueDetails: false,
     showVenuePlan: false,
     handoffReview: null,
@@ -443,6 +509,68 @@ Page({
       clearTimeout(this.venueCalculateTimer)
       this.venueCalculateTimer = null
     }
+    invalidateOperation(this, 'unload')
+  },
+
+  onOperationStateChange(snapshot) {
+    const wasReady = Boolean(this.data.operationSnapshot?.ready)
+    const sameOperation = this.data.operationSnapshot?.id === snapshot?.id
+    const patch = { operationActive: Boolean(snapshot?.active), operationSnapshot: snapshot }
+    if (snapshot) {
+      const uiFields = Object.keys(VENUE_REPORT_FIELDS)
+      if (!this._venueManualUiSnapshot) {
+        this._venueManualUiSnapshot = Object.fromEntries(['sceneModeIndex', ...uiFields]
+          .map((key) => [key, this.data[key]]))
+      }
+      patch.sceneModeIndex = 0
+      for (const field of snapshot.fields) {
+        patch[field.key] = field.value === undefined
+          ? (field.key === 'gradeIndex' || field.key === 'layoutIndex' ? -1 : '')
+          : field.value
+      }
+    } else if (this._venueManualUiSnapshot) {
+      Object.assign(patch, this._venueManualUiSnapshot)
+      this._venueManualUiSnapshot = null
+    }
+    this.setData(patch)
+    if (sameOperation && !wasReady && snapshot?.ready) this.calculate()
+  },
+
+  onOperationInvalidate(reason) {
+    this.cancelVenuePlanWork()
+    this.invalidateVenuePlan()
+    cancelResultReportGeneration(this)
+    this.venueCoreCalculationCache = null
+    this.venueCoreActiveKey = ''
+    this.setData({
+      result: null,
+      currentFavorite: false,
+      planStats: null,
+      planElevation: null,
+      planImagePath: '',
+      handoffReview: null,
+      inputError: reason === 'unsupported-scene' ? '报告型结构化操作不支持围桌讨论模式，请结束本次操作后再切换。' : '',
+      ...resetStaleResultReport(this, null),
+    })
+  },
+
+  getOutputState() {
+    const snapshot = this.getOperationSnapshot()
+    if (!snapshot) return this.data
+    if (!snapshot.active || !snapshot.ready) return null
+    const values = Object.fromEntries(snapshot.fields.map((field) => [field.key, field.value]))
+    return structuredVenueState(this, values)
+  },
+
+  endOperation() {
+    this.endStructuredOperation()
+    this.calculate()
+  },
+
+  hasCurrentOperationResult(result = this.data.result) {
+    const snapshot = this.getOperationSnapshot()
+    const guard = snapshot && result ? captureOperationResult(this, result) : null
+    return !snapshot || Boolean(snapshot.active && snapshot.ready && guard && isOperationResultCurrent(this, guard))
   },
 
   setSelectionAndCalculate(field, index) {
@@ -452,17 +580,34 @@ Page({
   },
 
   onGradeTap(event) {
-    this.setSelectionAndCalculate('gradeIndex', Number(event.currentTarget.dataset.index))
+    const index = Number(event.currentTarget.dataset.index)
+    if (structuredActive(this)) {
+      const grade = STANDARD_CLASSES[0].grades[index]
+      if (grade) {
+        this.setData({ gradeIndex: index })
+        this.setOperationCandidate('gradeIndex', index, 'index')
+      }
+      return
+    }
+    this.setSelectionAndCalculate('gradeIndex', index)
   },
 
   onSceneModeTap(event) {
     const index = Number(event.currentTarget.dataset.index)
     if (!Number.isInteger(index) || this.data.sceneModeIndex === index) return
+    if (structuredActive(this)) {
+      invalidateOperation(this, 'unsupported-scene')
+      return
+    }
     this.clearVenuePlanCanvas()
     this.setSelectionAndCalculate('sceneModeIndex', index)
   },
 
   onDiscussionShapeTap(event) {
+    if (structuredActive(this)) {
+      invalidateOperation(this, 'unsupported-scene')
+      return
+    }
     this.setSelectionAndCalculate(
       'discussionTableShapeIndex',
       Number(event.currentTarget.dataset.index),
@@ -470,6 +615,10 @@ Page({
   },
 
   onDiscussionInstallationConditionTap(event) {
+    if (structuredActive(this)) {
+      invalidateOperation(this, 'unsupported-scene')
+      return
+    }
     this.setSelectionAndCalculate(
       'discussionInstallationConditionIndex',
       Number(event.currentTarget.dataset.index),
@@ -478,15 +627,33 @@ Page({
 
   onInput(event) {
     const field = event.currentTarget.dataset.field
+    if (structuredActive(this)) {
+      const descriptor = VENUE_REPORT_FIELDS[field]
+      if (!descriptor) {
+        invalidateOperation(this, 'unsupported-input')
+        return
+      }
+      this.setOperationCandidate(field, event.detail.value, descriptor.unit)
+      this.setData({ [field]: event.detail.value })
+      return
+    }
     this.setData({ [field]: event.detail.value }, () => this.queueCalculate())
   },
 
   onDiscussionPagNagToggle(event) {
+    if (structuredActive(this)) {
+      invalidateOperation(this, 'unsupported-scene')
+      return
+    }
     vibrate('light')
     this.calculate({ discussionPagNagEnabled: event.detail.value === true })
   },
 
   onDiscussionPagNagSpeakerModeChange(event) {
+    if (structuredActive(this)) {
+      invalidateOperation(this, 'unsupported-scene')
+      return
+    }
     const mode = event.currentTarget?.dataset?.mode
     if (!['single', 'multiple'].includes(mode)
       || mode === this.data.discussionPagNagSpeakerMode) return
@@ -505,6 +672,10 @@ Page({
   },
 
   onPagNagGuideSelect(event) {
+    if (structuredActive(this)) {
+      invalidateOperation(this, 'unsupported-scene')
+      return
+    }
     const key = String(event.currentTarget.dataset.key || '')
     if (!['ds', 'd0', 'dn', 'd1', 'd2', 'nom'].includes(key)
       || this.data.pagNagGuideKey === key) return
@@ -513,6 +684,19 @@ Page({
 
   onPickerChange(event) {
     const field = event.currentTarget.dataset.field
+    if (structuredActive(this)) {
+      if (field !== 'layoutIndex') {
+        invalidateOperation(this, 'unsupported-scene')
+        return
+      }
+      const index = Number(event.detail.value)
+      const layout = VENUE_LAYOUTS[index]
+      if (layout) {
+        this.setData({ layoutIndex: index })
+        this.setOperationCandidate('layoutIndex', index, 'index')
+      }
+      return
+    }
     this.setSelectionAndCalculate(field, Number(event.detail.value))
   },
 
@@ -536,7 +720,17 @@ Page({
       clearTimeout(this.venueCalculateTimer)
       this.venueCalculateTimer = null
     }
-    const state = { ...this.data, ...changes }
+    const operation = prepareOperation(this)
+    if (operation.blocked) return null
+    if (operation.structured && this.hasCurrentOperationResult()) return this.data.result
+    if (!isOperationResultCurrent(this, operation.guard)) return null
+    const state = operation.structured
+      ? structuredVenueState(this, operation.state)
+      : { ...this.data, ...changes }
+    if (!state) {
+      this.setData({ result: null, inputError: '结构化报告输入的等级或布置方向无效。' })
+      return null
+    }
     const standardClass = state.standardClasses[state.standardClassIndex]
     const grade = standardClass.grades[state.gradeIndex]
     const sceneMode = state.sceneModes[state.sceneModeIndex].value
@@ -569,12 +763,17 @@ Page({
         layout: state.layouts[state.layoutIndex].value,
       }
     const coreKey = JSON.stringify({ sceneMode, input: coreInput })
-    const coreCacheHit = this.venueCoreCalculationCache?.key === coreKey
+    const coreCacheHit = !operation.structured && this.venueCoreCalculationCache?.key === coreKey
     const calculatedResult = coreCacheHit
       ? this.venueCoreCalculationCache.result
       : sceneMode === 'discussion'
         ? calculateDiscussionEstimate(coreInput)
         : calculateVenueEstimate(coreInput)
+
+    if (!isOperationResultCurrent(this, operation.guard)) {
+      finishCalculation({ success: false })
+      return null
+    }
 
     if (calculatedResult.error) {
       finishCalculation({ success: false })
@@ -597,7 +796,7 @@ Page({
       return
     }
 
-    if (!coreCacheHit) this.venueCoreCalculationCache = { key: coreKey, result: calculatedResult }
+    if (!operation.structured && !coreCacheHit) this.venueCoreCalculationCache = { key: coreKey, result: calculatedResult }
     const coreUnchanged = coreCacheHit
       && this.venueCoreActiveKey === coreKey
       && Boolean(this.data.result)
@@ -620,6 +819,12 @@ Page({
     }
     const result = enrichVenueResult(pagNagReview ? { ...calculatedResult, pagNagReview } : calculatedResult)
 
+    const resultGuard = operation.structured ? operation.commit(result) : null
+    if (operation.structured && (!resultGuard || !isOperationResultCurrent(this, resultGuard))) {
+      finishCalculation({ success: false })
+      return null
+    }
+
     finishCalculation({ success: true, kind: result.kind, cached: coreCacheHit })
     let plan = null
     if (coreUnchanged) {
@@ -634,7 +839,7 @@ Page({
       }
     }
     this.venueCoreActiveKey = coreKey
-    if (!pagNagEnabled || pagNagReview) writePreferences(PREFERENCE_KEY, this.getPreferences(state))
+    if (!operation.structured && (!pagNagEnabled || pagNagReview)) writePreferences(PREFERENCE_KEY, this.getPreferences(state))
     if (pagNagEnabled && !pagNagReview) cancelResultReportGeneration(this)
     const nextState = { ...state, result }
     const hasResultReportSignature = Boolean(
@@ -676,7 +881,10 @@ Page({
       } : {}),
       ...resultReportChanges,
     })
+    const committedResult = coreUnchanged ? this.data.result : result
     this.setData(changesToCommit, () => {
+      if (this.data.result !== committedResult
+        || (operation.structured && !isOperationResultCurrent(this, resultGuard))) return
       if (this._pageVisible) syncPageFavorite(this)
       if (!coreUnchanged && this.data.showVenuePlan && this._pageVisible) this.measureVenuePlanCanvas()
       if (this.data.showVenueDetails && result.kind === 'report' && result.fillCount) {
@@ -927,9 +1135,15 @@ Page({
   },
 
   getPreferences(state = this.data) {
+    const snapshot = this.getOperationSnapshot()
+    if (snapshot) {
+      state = this.getOutputState()
+      if (!state) return null
+    }
     const standardClass = state.standardClasses[state.standardClassIndex]
+    const sceneMode = state.sceneModes[state.sceneModeIndex].value
     const preferences = {
-      sceneMode: state.sceneModes[state.sceneModeIndex].value,
+      sceneMode,
       standardClassKey: standardClass.key,
       gradeKey: standardClass.grades[state.gradeIndex].key,
       layout: state.layouts[state.layoutIndex].value,
@@ -939,6 +1153,9 @@ Page({
       firstListeningDistanceText: state.firstListeningDistanceText,
       lastListeningDistanceText: state.lastListeningDistanceText,
       listeningWidthText: state.listeningWidthText,
+    }
+    if (snapshot) return preferences
+    Object.assign(preferences, {
       discussionTableShape: state.discussionTableShapes[state.discussionTableShapeIndex].value,
       discussionInstallationCondition: state.discussionInstallationConditions[
         state.discussionInstallationConditionIndex
@@ -947,8 +1164,8 @@ Page({
       tableDiameterText: state.tableDiameterText,
       tableLengthText: state.tableLengthText,
       tableWidthText: state.tableWidthText,
-    }
-    if (preferences.sceneMode === 'discussion' && state.discussionPagNagEnabled === true) {
+    })
+    if (sceneMode === 'discussion' && state.discussionPagNagEnabled === true) {
       return {
         ...preferences,
         discussionPagNagEnabled: true,
@@ -970,9 +1187,10 @@ Page({
       this.flushCalculate()
       plan = this.pendingVenuePlan
     }
-    const { result } = this.data
-    if (!result) return ''
-    if (isPagNagIncomplete(this.data, result)) return ''
+    const state = this.getOutputState()
+    const result = this.data.result
+    if (!state || !result || !this.hasCurrentOperationResult(result)) return ''
+    if (isPagNagIncomplete(state, result)) return ''
     const currentPlan = this.venuePlanResult === result ? plan : null
     const planStats = currentPlan?.statistics || null
     const planElevation = currentPlan?.elevation || null
@@ -985,7 +1203,7 @@ Page({
       return [
         '会议室扩声预估｜围桌讨论型',
         '结果性质：前期拓扑与能力预估',
-        `场地：${this.data.lengthText} × ${this.data.widthText} × ${this.data.heightText} m`,
+        `场地：${state.lengthText} × ${state.widthText} × ${state.heightText} m`,
         `会议桌：${result.tableSummary} · ${result.participantCount} 人`,
         `使用方式：${result.audioModeLabel}`,
         `顶面条件：${result.installationConditionLabel}`,
@@ -1030,8 +1248,8 @@ Page({
     return [
       '会议室扩声预估',
       '结果性质：前期粗略方案',
-      `场地：${this.data.lengthText} × ${this.data.widthText} × ${this.data.heightText} m`,
-      `主扩方向：${this.data.layouts[this.data.layoutIndex].label}`,
+        `场地：${state.lengthText} × ${state.widthText} × ${state.heightText} m`,
+      `主扩方向：${state.layouts[state.layoutIndex].label}`,
       `听音区：宽 ${result.listeningWidth} m，距主扩 ${result.firstListeningDistance}～${result.lastListeningDistance} m`,
       `目标：${result.standardLabel}（最大声压级 ≥ ${result.standardMaxSpl} dB SPL）`,
       ...(result.reviewWarnings || []).map((warning) => `复核：${warning}`),
@@ -1058,7 +1276,8 @@ Page({
 
   getRecordPayload() {
     this.flushCalculate()
-    if (isPagNagIncomplete(this.data, this.data.result)) return null
+    const state = this.getOutputState()
+    if (!state || !this.data.result || !this.hasCurrentOperationResult() || isPagNagIncomplete(state, this.data.result)) return null
     const plan = this.ensureVenuePlan({ syncView: false })
     const resultText = this.getResultText(plan)
     if (!resultText) return null
@@ -1067,7 +1286,7 @@ Page({
     if (result.kind === 'discussion') {
       return {
         module: 'venue',
-        title: `${this.data.lengthText} × ${this.data.widthText} × ${this.data.heightText} m 围桌会议`,
+        title: `${state.lengthText} × ${state.widthText} × ${state.heightText} m 围桌会议`,
         summary: `${result.systemLabel} · ${result.speakerCount} 只 / ${result.zoneCount} 区`,
         preferences: this.getPreferences(),
         resultText,
@@ -1075,7 +1294,7 @@ Page({
     }
     return {
       module: 'venue',
-      title: `${this.data.lengthText} × ${this.data.widthText} × ${this.data.heightText} m 会议室`,
+        title: `${state.lengthText} × ${state.widthText} × ${state.heightText} m 会议室`,
       summary: `${result.standardLabel} · 主扩 ${result.mainCount} 只${result.fillCount ? ` + 补声 ${result.fillCount} 只` : ''}`,
       preferences: this.getPreferences(),
       resultText,
@@ -1091,7 +1310,11 @@ Page({
       state = state || this.data
       if (arguments.length < 2) result = state.result
     }
-    if (!result) return null
+    if (this.getOperationSnapshot()) {
+      state = this.getOutputState()
+      if (!state) return null
+    }
+    if (!result || !this.hasCurrentOperationResult(result)) return null
     if (isPagNagIncomplete(state, result)) return null
     const dimensions = `${state.lengthText} × ${state.widthText} × ${state.heightText} m`
     let title
@@ -1190,7 +1413,8 @@ Page({
 
   getRecordLookupPayload() {
     this.flushCalculate()
-    if (!this.data.result || isPagNagIncomplete(this.data, this.data.result)) return null
+    const state = this.getOutputState()
+    if (!state || !this.data.result || !this.hasCurrentOperationResult() || isPagNagIncomplete(state, this.data.result)) return null
     return { module: 'venue', preferences: this.getPreferences() }
   },
 
@@ -1198,7 +1422,8 @@ Page({
 
   copyResult() {
     this.flushCalculate()
-    if (isPagNagIncomplete(this.data, this.data.result)) return
+    const state = this.getOutputState()
+    if (!state || !this.hasCurrentOperationResult() || isPagNagIncomplete(state, this.data.result)) return
     const resultText = this.getResultText(this.ensureVenuePlan({ syncView: false }))
     if (!resultText) return
     vibrate('medium')
@@ -1210,8 +1435,38 @@ Page({
   },
 
   saveToActiveProject() {
-    addPageToActiveProject(this)
+    const payload = this.getRecordPayload()
+    const result = this.data.result
+    const guard = payload && result ? captureOperationResult(this, result) : null
+    if (!payload || !guard || !isOperationResultCurrent(this, guard)) return
+    const preferences = JSON.stringify(payload.preferences)
+    const current = () => this.data.result === result
+      && JSON.stringify(this.getPreferences()) === preferences
+      && isOperationResultCurrent(this, guard)
+    const save = (project) => {
+      if (!project || !current()) return
+      if (!addRecordToProject(payload, project.id)) {
+        wx.showToast({ title: '保存失败，请检查本地存储', icon: 'none' })
+        return
+      }
+      vibrate('medium')
+      wx.showToast({ title: `已加入${project.name}`, icon: 'none' })
+    }
+    const project = getActiveProject()
+    if (project) return save(project)
+    wx.showModal({
+      title: '新建现场项目', content: '', editable: true,
+      placeholderText: '例如：三楼会议室', confirmText: '创建并加入',
+      success: ({ confirm, content }) => {
+        if (!confirm || !current()) return
+        const created = createProject(content)
+        if (created) save(created)
+        else wx.showToast({ title: '请输入项目名称', icon: 'none' })
+      },
+    })
   },
+
+  ...venueOperationMethods,
 })
 
 finishVenueModuleLoad()

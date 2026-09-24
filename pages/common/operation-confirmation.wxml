@@ -1,0 +1,12 @@
+<view wx:if="{{operationSnapshot}}" class="card operation-confirm-card">
+  <view class="input-section-title">本次计算输入确认</view>
+  <view wx:if="{{!operationActive}}" class="warning-text">本次操作已失效，请结束后重新使用手动模式。</view>
+  <view wx:for="{{operationSnapshot.fields}}" wx:key="key" class="plan-stat-row">
+    <text>{{item.label || item.key}}：{{item.displayValue || item.value}}{{item.unit == 'index' ? '' : ' ' + item.unit}}</text>
+    <button wx:if="{{operationActive && !item.confirmed}}" size="mini" data-field="{{item.key}}" bindtap="confirmOperationField">确认</button>
+    <text wx:if="{{item.confirmed}}" class="field-label">已确认</text>
+    <text wx:else class="field-label">待确认</text>
+  </view>
+  <view wx:if="{{operationSnapshot.blockers.length}}" class="warning-text">确认缺少的输入后才会计算。</view>
+  <button size="mini" bindtap="endOperation">结束本次操作</button>
+</view>

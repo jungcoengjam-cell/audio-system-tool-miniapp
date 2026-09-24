@@ -5,6 +5,8 @@
       <view class="page-title">会议室扩声预估</view>
     </view>
 
+    <include src="../common/operation-confirmation.wxml" />
+
     <view class="scene-switch" role="tablist">
       <view
         wx:for="{{sceneModes}}"

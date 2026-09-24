@@ -1,0 +1,15 @@
+{
+  "test": "tests/p2-safety-remediation/minimal/camera-confirmation-card.cjs",
+  "status": "RED",
+  "firstFailure": {
+    "assertion": "horizontal-only card omits unused VFOV",
+    "observed": "display snapshot contains verticalFov with undefined value, deg unit, confirmed=false",
+    "gateSnapshotRetained": true
+  },
+  "remainingCases": [
+    "auto height hides absent cameraHeightMeters",
+    "full-area VFOV blocker displays 待输入",
+    "same displayed 36 confirmation",
+    "stale operation, value, and mode callbacks"
+  ]
+}
