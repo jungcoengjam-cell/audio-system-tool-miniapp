@@ -118,7 +118,12 @@ function resolveCustomFov(options) {
 }
 
 function calculateCoverage(fov, options = {}) {
-  if (!fov) return null
+  if (
+    !fov
+    || !isAngle(fov.horizontalFov)
+    || !isAngle(fov.verticalFov)
+    || !Number.isFinite(fov.diagonalFov)
+  ) return null
   const calculationMode = options.calculationMode || 'distance'
   const horizontalTangent = Math.tan(fov.horizontalFov * DEGREE / 2)
   const verticalTangent = Math.tan(fov.verticalFov * DEGREE / 2)
@@ -135,7 +140,7 @@ function calculateCoverage(fov, options = {}) {
   }
 
   const coverageHeightMeters = 2 * distanceMeters * verticalTangent
-  return {
+  const result = {
     ...fov,
     calculationMode,
     distanceMeters: round(distanceMeters, 2),
@@ -146,6 +151,16 @@ function calculateCoverage(fov, options = {}) {
     verticalFov: round(fov.verticalFov, 1),
     diagonalFov: round(fov.diagonalFov, 1),
   }
+  const requiredNumbers = [
+    result.distanceMeters,
+    result.coverageWidthMeters,
+    result.coverageHeightMeters,
+    result.coverageAreaSquareMeters,
+    result.horizontalFov,
+    result.verticalFov,
+    result.diagonalFov,
+  ]
+  return requiredNumbers.every(Number.isFinite) ? result : null
 }
 
 function angleToPoint(heightOffset, horizontalDistance) {

@@ -1,0 +1,89 @@
+{
+  "preFixSource": "git HEAD",
+  "inputs": {
+    "sensitivityVoltageOverflow": {
+      "inputStage": {
+        "controlType": "inputSensitivity",
+        "unit": "V",
+        "options": [
+          1.7976931348623157e+308
+        ]
+      },
+      "selectedStageValue": 1.7976931348623157e+308
+    },
+    "voltageGainUnderflow": {
+      "amplifier": {
+        "model": "Synthetic",
+        "stereoPower": {
+          "4": 100
+        }
+      },
+      "inputStage": {
+        "controlType": "voltageGain",
+        "unit": "dB",
+        "options": [
+          10000
+        ]
+      },
+      "selectedStageValue": 10000,
+      "mode": "stereo",
+      "loadImpedance": 4
+    },
+    "roundedTopLevelOverflow": {
+      "inputStage": {
+        "controlType": "inputSensitivity",
+        "unit": "V",
+        "options": [
+          1
+        ]
+      },
+      "selectedStageValue": 1,
+      "dspMaxOutputDbu": 1.7976931348623157e+308,
+      "targetPeakDbfs": 0
+    }
+  },
+  "outputs": {
+    "sensitivityVoltageOverflow": {
+      "valid": true,
+      "value": 1.7976931348623157e+308,
+      "selectionSource": "user",
+      "fullPowerInputVoltage": 1.7976931348623157e+308,
+      "fullPowerInputDbu": "+Infinity",
+      "calculationBasis": "manufacturerSensitivity"
+    },
+    "voltageGainUnderflow": {
+      "valid": true,
+      "value": 10000,
+      "selectionSource": "user",
+      "amplifierRatedPower": 100,
+      "amplifierRatedVoltage": 20,
+      "fullPowerInputVoltage": 0,
+      "fullPowerInputDbu": "-Infinity",
+      "calculationBasis": "ratedPowerAndVoltageGain"
+    },
+    "roundedTopLevelOverflow": {
+      "valid": true,
+      "value": 1,
+      "selectionSource": "user",
+      "fullPowerInputVoltage": 1,
+      "fullPowerInputDbu": 2.21,
+      "calculationBasis": "manufacturerSensitivity",
+      "dspMaxOutputDbu": "+Infinity",
+      "targetPeakDbfs": 0,
+      "targetDspOutputDbu": "+Infinity",
+      "programHeadroomDb": 12,
+      "nominalDspDbfs": -12,
+      "nominalDspOutputDbu": "+Infinity",
+      "nominalPostAttenuationDbu": 0,
+      "naturalFullPowerDbfs": "-Infinity",
+      "alignedFullPowerDbfs": 0,
+      "recommendedAttenuationDb": "+Infinity",
+      "driveShortfallDb": 0,
+      "availableAmplifierHeadroomDb": 2.21,
+      "alignmentMode": "attenuate",
+      "statusText": "目标峰值对应 Infinity dBu，需要约 Infinity dB 系统对齐衰减；应在 DSP 最终输出或功放输入衰减中择一执行，使额定输出点对齐 0 dBFS。",
+      "fieldVerificationRequired": true
+    }
+  },
+  "sha256": "0da4afc3c1f725f798494995b055cd947b5ff736419b4b304bc7f2b02d508376"
+}

@@ -1,0 +1,142 @@
+{
+  "createdAt": "2026-09-26T13:27:37.237Z",
+  "validOutputs": {
+    "gainResolve": {
+      "valid": true,
+      "value": 20,
+      "selectionSource": "user",
+      "amplifierRatedPower": 200,
+      "amplifierRatedVoltage": 28.284271247461902,
+      "fullPowerInputVoltage": 2.8284271247461903,
+      "fullPowerInputDbu": 11.24486581979323,
+      "calculationBasis": "ratedPowerAndVoltageGain"
+    },
+    "gainCalculate": {
+      "valid": true,
+      "value": 20,
+      "selectionSource": "user",
+      "amplifierRatedPower": 200,
+      "amplifierRatedVoltage": 28.284271247461902,
+      "fullPowerInputVoltage": 2.828,
+      "fullPowerInputDbu": 11.24,
+      "calculationBasis": "ratedPowerAndVoltageGain",
+      "dspMaxOutputDbu": 18.4,
+      "targetPeakDbfs": -6,
+      "targetDspOutputDbu": 12.4,
+      "programHeadroomDb": 12,
+      "nominalDspDbfs": -18,
+      "nominalDspOutputDbu": 0.4,
+      "nominalPostAttenuationDbu": -0.76,
+      "naturalFullPowerDbfs": -7.16,
+      "alignedFullPowerDbfs": -6,
+      "recommendedAttenuationDb": 1.16,
+      "driveShortfallDb": 0,
+      "availableAmplifierHeadroomDb": 12,
+      "alignmentMode": "attenuate",
+      "statusText": "目标峰值对应 12.4 dBu，需要约 1.16 dB 系统对齐衰减；应在 DSP 最终输出或功放输入衰减中择一执行，使额定输出点对齐 -6 dBFS。",
+      "fieldVerificationRequired": true
+    },
+    "limiter": {
+      "loadImpedance": 4,
+      "totalRatedPower": 100,
+      "wiringLabel": "单只音箱",
+      "highPassFrequency": 80,
+      "timingBand": "63–125 Hz",
+      "attackTimeMs": 8,
+      "releaseTimeMs": 128,
+      "timingReady": true,
+      "valid": true,
+      "amplifierRatedPower": 200,
+      "speakerAllowedVoltage": 20,
+      "amplifierRatedVoltage": 28.28,
+      "targetOutputVoltage": 20,
+      "limiterInputVoltage": 0.707,
+      "limiterInputDbu": -0.8,
+      "thresholdDbfs": -19.2,
+      "limitedBy": "speaker",
+      "statusText": "阈值按音箱额定功率计算。"
+    },
+    "splHelper": {
+      "oneMeterSpl": 112,
+      "spl": 93.9
+    },
+    "splAggregate": {
+      "model": "Baseline",
+      "sensitivityDb": 95,
+      "ratedPower": 100,
+      "totalRatedPower": 200,
+      "distanceMeters": 8,
+      "speakerCount": 2,
+      "summationMode": "distributed",
+      "summationGainDb": 3,
+      "singleOneMeterSpl": 115,
+      "singleSelectedSpl": 96.9,
+      "oneMeterSpl": 118,
+      "selectedSpl": 99.9,
+      "humanReference": {
+        "level": "高声压",
+        "title": "接近现场演出或高声压扩声的量级",
+        "description": "100 dB SPL 左右已经很响，会议场景通常仅将其作为最大声压能力参考。"
+      },
+      "meetingReference": {
+        "level": "一级数值门槛",
+        "title": "当前理论值高于会议类一级最大声压级参考值（≥98 dB）",
+        "description": "仅比较最大声压级数值，不能据此判定工程达标。 正式评价还需要测量频率响应、传声增益、稳态声场不均匀度和系统噪声。"
+      },
+      "distanceRows": [
+        {
+          "distanceMeters": 1,
+          "spl": 118,
+          "isSelected": false
+        },
+        {
+          "distanceMeters": 2,
+          "spl": 112,
+          "isSelected": false
+        },
+        {
+          "distanceMeters": 4,
+          "spl": 106,
+          "isSelected": false
+        },
+        {
+          "distanceMeters": 8,
+          "spl": 99.9,
+          "isSelected": true
+        },
+        {
+          "distanceMeters": 12,
+          "spl": 96.4,
+          "isSelected": false
+        },
+        {
+          "distanceMeters": 16,
+          "spl": 93.9,
+          "isSelected": false
+        },
+        {
+          "distanceMeters": 20,
+          "spl": 92,
+          "isSelected": false
+        }
+      ]
+    },
+    "camera": {
+      "horizontalFov": 60,
+      "verticalFov": 40,
+      "diagonalFov": 70,
+      "calculationMode": "distance",
+      "distanceMeters": 3,
+      "coverageWidthMeters": 3.46,
+      "coverageHeightMeters": 2.18,
+      "coverageAreaSquareMeters": 7.56
+    }
+  },
+  "validOutputsSha256": "259368f662bee4f062517f2fb53acfc0cdd82fe908d5e88e67e90556d3c06399",
+  "productionSha256": {
+    "utils/gain-structure.js": "d349c4c8f78337cd5a1d293f53ca99e4c5cd77f054cdfd99c22798dcefb09c45",
+    "utils/limiter.js": "d0c63896b6d13ccb090c182d3a36e89e35de95fb0c004d9fa3e6a930559907df",
+    "utils/spl.js": "091790cc4f6e4780439cbd8048f557a919c59d9e2eb7f512d0aeb25278a72574",
+    "utils/camera-fov.js": "41ba8e4f589c335073dbf67a936968162561d857e90fb5adcbb9bdb8a7aa87b2"
+  }
+}

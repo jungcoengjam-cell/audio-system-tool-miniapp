@@ -1,0 +1,69 @@
+{
+  "status": "PASSED",
+  "scope": {
+    "root": "tests/p2-safety-remediation/numeric-core-2026-09-26",
+    "credentialExcludedOutput": "tests/p2-safety-remediation/numeric-core-2026-09-26/evidence/new-files-quality-scan.json",
+    "credentialScannerItselfIncluded": true,
+    "whitespaceCheck": "git diff --no-index --check against NUL for each regular text file under the new directory; exit 1 is the expected added-file diff status, diagnostics are treated as failures",
+    "whitespaceExcludedOutput": "tests/p2-safety-remediation/numeric-core-2026-09-26/evidence/new-files-quality-scan.json"
+  },
+  "credentialRules": [
+    "private-key-marker",
+    "aws-access-key",
+    "github-token",
+    "slack-token",
+    "openai-style-token",
+    "google-api-token",
+    "jwt",
+    "authorization-bearer",
+    "credential-assignment",
+    "filename:environment-file",
+    "filename:private-config-file",
+    "filename:credential-or-key-file",
+    "filename:private-key-container"
+  ],
+  "files": {
+    "regularFilesFound": 24,
+    "textFilesScanned": 23,
+    "skipped": [],
+    "scannedPaths": [
+      "tests/p2-safety-remediation/numeric-core-2026-09-26/baseline.cjs",
+      "tests/p2-safety-remediation/numeric-core-2026-09-26/evidence/broader-frozen-evidence-manifest.json",
+      "tests/p2-safety-remediation/numeric-core-2026-09-26/evidence/credential-scan.json",
+      "tests/p2-safety-remediation/numeric-core-2026-09-26/evidence/gain-derived-red.cjs",
+      "tests/p2-safety-remediation/numeric-core-2026-09-26/evidence/gain-derived-red.json",
+      "tests/p2-safety-remediation/numeric-core-2026-09-26/evidence/historical-manifest.cjs",
+      "tests/p2-safety-remediation/numeric-core-2026-09-26/evidence/limiter-aggregate-red.cjs",
+      "tests/p2-safety-remediation/numeric-core-2026-09-26/evidence/limiter-aggregate-red.json",
+      "tests/p2-safety-remediation/numeric-core-2026-09-26/evidence/new-files-quality-scan.cjs",
+      "tests/p2-safety-remediation/numeric-core-2026-09-26/evidence/package-accounting.cjs",
+      "tests/p2-safety-remediation/numeric-core-2026-09-26/evidence/package-accounting.json",
+      "tests/p2-safety-remediation/numeric-core-2026-09-26/evidence/package-baseline.json",
+      "tests/p2-safety-remediation/numeric-core-2026-09-26/evidence/phase1-frozen-manifest.json",
+      "tests/p2-safety-remediation/numeric-core-2026-09-26/evidence/phase1-integrity.cjs",
+      "tests/p2-safety-remediation/numeric-core-2026-09-26/evidence/pre-fix-behavior.cjs",
+      "tests/p2-safety-remediation/numeric-core-2026-09-26/evidence/pre-fix-behavior.json",
+      "tests/p2-safety-remediation/numeric-core-2026-09-26/evidence/pre-fix-red-suite.cjs",
+      "tests/p2-safety-remediation/numeric-core-2026-09-26/evidence/pre-fix-red-suite.json",
+      "tests/p2-safety-remediation/numeric-core-2026-09-26/evidence/valid-output-baseline.json",
+      "tests/p2-safety-remediation/numeric-core-2026-09-26/evidence/valid-output-supplement.json",
+      "tests/p2-safety-remediation/numeric-core-2026-09-26/EXECUTION-REPORT.md",
+      "tests/p2-safety-remediation/numeric-core-2026-09-26/numeric-safety.test.cjs",
+      "tests/p2-safety-remediation/numeric-core-2026-09-26/supplemental-baseline.cjs"
+    ]
+  },
+  "findings": {
+    "credentials": [],
+    "whitespace": []
+  },
+  "limitations": [
+    "Pattern scan detects the listed literal token/key forms and sensitive filenames; it cannot guarantee detection of every secret encoding or credential form.",
+    "The generated report is excluded from credential input to avoid self-reference; it is JSON.stringify output with a single final LF.",
+    "The local credential scan supplements the existing scanner, whose scope remains tests/p2-safety plus tracked production text."
+  ],
+  "normalizerWarnings": {
+    "count": 23,
+    "kind": "Git for Windows LF-to-CRLF working-copy notices; not whitespace diagnostics."
+  },
+  "reportSha256": "8c057aec5325067c3fdc8d64998a9f25e5cf968c2969452c1b597ef45edd7e06"
+}

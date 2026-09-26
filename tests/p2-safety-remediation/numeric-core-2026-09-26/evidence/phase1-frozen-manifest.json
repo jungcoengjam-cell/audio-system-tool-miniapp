@@ -1,0 +1,131 @@
+{
+  "createdAt": "2026-09-26T13:29:29.977Z",
+  "count": 25,
+  "entries": [
+    {
+      "path": "tests/p2-jev/deterministic-core-numeric-safety-phase1/AUDIT-STATUS-AND-INTEGRITY.md",
+      "bytes": 5496,
+      "sha256": "e3a1b7e775a78555a3050c5f6d031b5d597f4aa345c0d000236f2b06a82f71a5"
+    },
+    {
+      "path": "tests/p2-jev/deterministic-core-numeric-safety-phase1/DETERMINISTIC-CORE-INVENTORY.md",
+      "bytes": 8267,
+      "sha256": "12fd2e933f819ab70ddd53d6125c4598cfe7d324a25fb783c05ccdff5f186104"
+    },
+    {
+      "path": "tests/p2-jev/deterministic-core-numeric-safety-phase1/FINDINGS-AND-FAILURE-CLASSES.md",
+      "bytes": 7621,
+      "sha256": "9ae1b10a116c6d682e571e4d6948e44bb761d880e479d7a2e517c0e1563b1070"
+    },
+    {
+      "path": "tests/p2-jev/deterministic-core-numeric-safety-phase1/JEV-STRUCTURED-REVIEW.md",
+      "bytes": 2408,
+      "sha256": "997dbc13adc5a0d98404a49a8c484c08ccf8eeb68d99d00cdef66b94905d22d7"
+    },
+    {
+      "path": "tests/p2-jev/deterministic-core-numeric-safety-phase1/NUMERIC-INPUT-CONTRACT-MATRIX.md",
+      "bytes": 12483,
+      "sha256": "73ac18f2c7c0833eed1adb6ffac1e11a60f72b396f945424e0a703d529d52a8b"
+    },
+    {
+      "path": "tests/p2-jev/deterministic-core-numeric-safety-phase1/NUMERIC-OUTPUT-CONTRACT-MATRIX.md",
+      "bytes": 5554,
+      "sha256": "88734afb5c1ddf403a478e3ee151127293f1cf87b1e314a72fd59c2893853af9"
+    },
+    {
+      "path": "tests/p2-jev/deterministic-core-numeric-safety-phase1/PRE-FIX-DIRECT-CORE-RESULTS-v2.json",
+      "bytes": 8006,
+      "sha256": "f7bcb677aac80e02e06259a714b328e13d5ffe74d9d20c1f0e49986600ca3d06"
+    },
+    {
+      "path": "tests/p2-jev/deterministic-core-numeric-safety-phase1/PRE-FIX-DIRECT-CORE-RESULTS.json",
+      "bytes": 7807,
+      "sha256": "04be4b2202adbfe6b3bb155a71f4487c95c47d1197fc8e2ad728f2d3beeb1d9b"
+    },
+    {
+      "path": "tests/p2-jev/deterministic-core-numeric-safety-phase1/PROBE-COVERAGE-MATRIX.md",
+      "bytes": 7509,
+      "sha256": "34941aec449c3561d843283dcfba447d9e88c43169464e92364aa829e68a6b1b"
+    },
+    {
+      "path": "tests/p2-jev/deterministic-core-numeric-safety-phase1/PROPOSED-PRODUCT-THREAD-HANDOFF.md",
+      "bytes": 14381,
+      "sha256": "036e51c8d8ee9cab7a750bb3d2833ff192fb9937c163a5f492abef5d8feacdb8"
+    },
+    {
+      "path": "tests/p2-jev/deterministic-core-numeric-safety-phase1/SOL-INDEPENDENT-REVIEW.md",
+      "bytes": 7500,
+      "sha256": "02643999c7ca6e7f29f8578e3eb629bf932081f42e115fa5ac9258a61c0649ca"
+    },
+    {
+      "path": "tests/p2-jev/deterministic-core-numeric-safety-phase1/STATIC-FAILURE-PATHS.md",
+      "bytes": 7936,
+      "sha256": "d8c0fc85f6a369befa137ade1caf4a5092e2ba680b3ec4c42a025f75af3e5fc0"
+    },
+    {
+      "path": "tests/p2-jev/deterministic-core-numeric-safety-phase1/direct-core-probes.cjs",
+      "bytes": 15231,
+      "sha256": "8b8aa8f9dcd401c469a1121998096612f254985b77d51fe44fc2ffafd4a57e51"
+    },
+    {
+      "path": "tests/p2-jev/deterministic-core-numeric-safety-phase1/jev-review.request.json",
+      "bytes": 3292,
+      "sha256": "83e8bfd19252bfc152432f1fd4f237b3adcbb5b46b8c6510dacc85e86e38d06f"
+    },
+    {
+      "path": "tests/p2-jev/deterministic-core-numeric-safety-phase1/jev-runs/2026-09-26T12-45-04-254Z-86678d7b/execution.json",
+      "bytes": 691,
+      "sha256": "7ff08c9f6177e5f8f7158384a9e5f1a640564bafb79517831c9863e7cf1fbcde"
+    },
+    {
+      "path": "tests/p2-jev/deterministic-core-numeric-safety-phase1/jev-runs/2026-09-26T12-45-04-254Z-86678d7b/request.json",
+      "bytes": 3292,
+      "sha256": "83e8bfd19252bfc152432f1fd4f237b3adcbb5b46b8c6510dacc85e86e38d06f"
+    },
+    {
+      "path": "tests/p2-jev/deterministic-core-numeric-safety-phase1/jev-runs/2026-09-26T12-45-04-254Z-86678d7b/response.raw",
+      "bytes": 287,
+      "sha256": "04a0946abc12faf56195319d99b76a4bb8061795fe3ad5c5bf8d137a68d6a4b1"
+    },
+    {
+      "path": "tests/p2-jev/deterministic-core-numeric-safety-phase1/runs/PRE-FIX-2026-09-26T12-34-16-132Z.json",
+      "bytes": 357897,
+      "sha256": "db4a77688428af42e1b3eaf448667dfac75537dd72f143e47d151d5aed451034"
+    },
+    {
+      "path": "tests/p2-jev/deterministic-core-numeric-safety-phase1/runs/PRE-FIX-2026-09-26T12-35-37-602Z.json",
+      "bytes": 396911,
+      "sha256": "b6d8dd2a901dd14ac41e0b68c6897716bf6a7d8ef1c43e70d6eee6dd5e673c47"
+    },
+    {
+      "path": "tests/p2-jev/deterministic-core-numeric-safety-phase1/runs/PRE-FIX-2026-09-26T12-37-06-723Z.json",
+      "bytes": 400637,
+      "sha256": "2c91ed2a160d2aaa20e6f6a7c030e0b09ea19507067910787e9c62c20280ba6d"
+    },
+    {
+      "path": "tests/p2-jev/deterministic-core-numeric-safety-phase1/runs/PRE-FIX-2026-09-26T12-39-38-541Z.json",
+      "bytes": 438485,
+      "sha256": "5a385847c7b58fb01afd9890757dc698505eb28c6e0c1c476a3077d023460b4e"
+    },
+    {
+      "path": "tests/p2-jev/deterministic-core-numeric-safety-phase1/runs/PRE-FIX-2026-09-26T12-42-38-120Z.json",
+      "bytes": 444411,
+      "sha256": "7d6c07614a4eaa7353f939e46cdc53ade58ffecd1fe61b71435f5680740fafe2"
+    },
+    {
+      "path": "tests/p2-jev/deterministic-core-numeric-safety-phase1/runs/PRE-FIX-2026-09-26T12-47-09-547Z.json",
+      "bytes": 444487,
+      "sha256": "dc28146062b25873ab9713709585ec7db52aec7708bcce63f1cd7e9a79f6897e"
+    },
+    {
+      "path": "tests/p2-jev/deterministic-core-numeric-safety-phase1/runs/PRE-FIX-2026-09-26T12-49-42-178Z.json",
+      "bytes": 445819,
+      "sha256": "b2c49a49e3f95e8b16add0a57b66d2534c22a41fae1425435500f9d36b047dd2"
+    },
+    {
+      "path": "tests/p2-jev/deterministic-core-numeric-safety-phase1/send-jev-review.cjs",
+      "bytes": 3545,
+      "sha256": "4b5ccf94f5a094f5e9c7ff9470cae826b910f87cef6de251f493b9a1ee869542"
+    }
+  ]
+}

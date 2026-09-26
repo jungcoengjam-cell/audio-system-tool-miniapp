@@ -1,0 +1,14 @@
+{
+  "capturedBeforeProductionEdits": true,
+  "command": "node tests/release-check.js",
+  "totalPackageKiB": { "used": 2056.4, "limit": 2067.0 },
+  "mainPackageJsKiB": { "used": 808.6, "limit": 818.0 },
+  "wxssKiB": { "used": 260.3, "limit": 261.0 },
+  "wxmlKiB": { "used": 245.0, "limit": 246.0 },
+  "largestJs": { "path": "pages/dmx-address/data/stage-lighting-channels.js", "usedKiB": 87.3, "limitKiB": 100.0 },
+  "affectedSubpackageJsKiB": {
+    "pages/dmx-address": { "used": 241.1, "limit": 794.0 },
+    "pages/audio-wiring": { "used": 96.5, "limit": 794.0 },
+    "pages/project-wiring": { "used": 72.1, "limit": 794.0 }
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "createdAt": "2026-09-26T13:30:42.490Z",
+  "validOutputs": {
+    "gainSensitivity": {
+      "valid": true,
+      "value": -10,
+      "selectionSource": "user",
+      "fullPowerInputVoltage": 0.245,
+      "fullPowerInputDbu": -10,
+      "calculationBasis": "manufacturerSensitivity",
+      "dspMaxOutputDbu": 18.4,
+      "targetPeakDbfs": -6,
+      "targetDspOutputDbu": 12.4,
+      "programHeadroomDb": 12,
+      "nominalDspDbfs": -18,
+      "nominalDspOutputDbu": 0.4,
+      "nominalPostAttenuationDbu": -22,
+      "naturalFullPowerDbfs": -28.4,
+      "alignedFullPowerDbfs": -6,
+      "recommendedAttenuationDb": 22.4,
+      "driveShortfallDb": 0,
+      "availableAmplifierHeadroomDb": 12,
+      "alignmentMode": "attenuate",
+      "statusText": "目标峰值对应 12.4 dBu，需要约 22.4 dB 系统对齐衰减；应在 DSP 最终输出或功放输入衰减中择一执行，使额定输出点对齐 -6 dBFS。",
+      "fieldVerificationRequired": true
+    },
+    "limiterTimingUnavailable": {
+      "loadImpedance": 4,
+      "totalRatedPower": 100,
+      "wiringLabel": "单只音箱",
+      "timingReady": false,
+      "valid": true,
+      "amplifierRatedPower": 200,
+      "speakerAllowedVoltage": 20,
+      "amplifierRatedVoltage": 28.28,
+      "targetOutputVoltage": 20,
+      "limiterInputVoltage": 0.707,
+      "limiterInputDbu": -0.8,
+      "thresholdDbfs": -19.2,
+      "limitedBy": "speaker",
+      "statusText": "阈值按音箱额定功率计算。"
+    },
+    "cameraTargetWidth": {
+      "horizontalFov": 60,
+      "verticalFov": 40,
+      "diagonalFov": 70,
+      "calculationMode": "targetWidth",
+      "distanceMeters": 5.2,
+      "coverageWidthMeters": 6,
+      "coverageHeightMeters": 3.78,
+      "coverageAreaSquareMeters": 22.69
+    }
+  },
+  "validOutputsSha256": "92a0f68b6214ac55833e521a4c6e3d1f2a860178871bf4521bb94c9a5b6f8fab"
+}

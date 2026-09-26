@@ -17,6 +17,12 @@ function dbuToVoltage(dbu) {
   return DBU_REFERENCE_VOLTAGE * (10 ** (dbu / 20))
 }
 
+function hasFiniteNumericFields(result) {
+  return Object.values(result)
+    .filter((value) => typeof value === 'number')
+    .every(Number.isFinite)
+}
+
 function findRatedPower(powerTable, loadImpedance) {
   const loadKey = Object.keys(powerTable || {}).find(
     (key) => Math.abs(Number(key) - loadImpedance) < 0.001,
@@ -77,7 +83,7 @@ function resolveFullPowerInput({
       }
     }
 
-    return {
+    const result = {
       ...selection,
       valid: true,
       fullPowerInputVoltage,
@@ -86,6 +92,9 @@ function resolveFullPowerInput({
         : voltageToDbu(fullPowerInputVoltage),
       calculationBasis: 'manufacturerSensitivity',
     }
+    return hasFiniteNumericFields(result)
+      ? result
+      : { valid: false, warning: '输入灵敏度无法得到有限的满功率输入电平。' }
   }
 
   if (inputStage.controlType !== 'voltageGain' || inputStage.unit !== 'dB') {
@@ -115,7 +124,7 @@ function resolveFullPowerInput({
   const amplifierRatedVoltage = Math.sqrt(amplifierRatedPower * loadImpedance)
   const fullPowerInputVoltage = amplifierRatedVoltage / (10 ** (selection.value / 20))
 
-  return {
+  const result = {
     ...selection,
     valid: true,
     amplifierRatedPower,
@@ -124,6 +133,9 @@ function resolveFullPowerInput({
     fullPowerInputDbu: voltageToDbu(fullPowerInputVoltage),
     calculationBasis: 'ratedPowerAndVoltageGain',
   }
+  return hasFiniteNumericFields(result)
+    ? result
+    : { valid: false, warning: '功放功率或输入级参数无法得到有限的满功率输入电平。' }
 }
 
 function calculateGainStructure(options = {}) {
@@ -182,7 +194,7 @@ function calculateGainStructure(options = {}) {
       ? `目标峰值对应 ${round(targetDspOutputDbu)} dBu，距离功放额定输出输入电平仍差约 ${round(driveShortfallDb)} dB；应调整功放档位或提高目标峰值，不能靠负衰减补足。`
       : `DSP 目标峰值与功放额定输出输入电平基本匹配，可从 0 dB 系统对齐衰减开始校准。`
 
-  return {
+  const result = {
     ...fullPower,
     valid: true,
     dspMaxOutputDbu: round(dspMaxOutputDbu),
@@ -205,6 +217,9 @@ function calculateGainStructure(options = {}) {
     statusText,
     fieldVerificationRequired: true,
   }
+  return hasFiniteNumericFields(result)
+    ? result
+    : { valid: false, warning: '计算结果超出有限数值范围，请核对功放功率、输入级与输出基准。' }
 }
 
 module.exports = {

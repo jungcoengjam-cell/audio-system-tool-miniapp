@@ -1,0 +1,30 @@
+{
+  "preFixSource": "git HEAD (production file had no task edits at baseline)",
+  "input": {
+    "amplifier": {
+      "model": "Synthetic",
+      "stereoPower": {
+        "8": 1.7976931348623157e+308
+      }
+    },
+    "speaker": {
+      "impedance": 4,
+      "ratedPower": 1.7976931348623157e+308
+    },
+    "count": 2,
+    "wiring": "series",
+    "mode": "stereo",
+    "sensitivityVoltage": 1
+  },
+  "preFix": {
+    "valid": true,
+    "totalRatedPower": "Infinity",
+    "loadImpedance": 8
+  },
+  "postFix": {
+    "valid": false,
+    "timingReady": false,
+    "warning": "当前设备参数超出有限数值范围，无法可靠计算限幅器。"
+  },
+  "sha256": "da6b2d6a4bacc4f12c14c6e06ed76dbdcec807a2dfcfcecf9b0769e8b3e5a42a"
+}

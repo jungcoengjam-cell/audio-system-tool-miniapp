@@ -91,7 +91,12 @@ function getMeetingReference(spl) {
 }
 
 function calculateSplAtDistance(sensitivityDb, ratedPower, distanceMeters, summationGainDb = 0) {
-  if (!Number.isFinite(sensitivityDb) || !Number.isFinite(ratedPower) || ratedPower <= 0) {
+  if (
+    !Number.isFinite(sensitivityDb)
+    || !Number.isFinite(ratedPower)
+    || ratedPower <= 0
+    || !Number.isFinite(summationGainDb)
+  ) {
     return null
   }
 
@@ -102,31 +107,46 @@ function calculateSplAtDistance(sensitivityDb, ratedPower, distanceMeters, summa
   const oneMeterSpl = sensitivityDb + 10 * Math.log10(ratedPower) + summationGainDb
   const spl = oneMeterSpl - 20 * Math.log10(distanceMeters)
 
-  return {
+  const result = {
     oneMeterSpl: round(oneMeterSpl),
     spl: round(spl),
   }
+  return Number.isFinite(result.oneMeterSpl) && Number.isFinite(result.spl)
+    ? result
+    : null
 }
 
 function buildDistanceRows(sensitivityDb, ratedPower, selectedDistance, summationGainDb) {
+  const effectiveSummationGainDb = summationGainDb === undefined ? 0 : summationGainDb
+  if (
+    !Number.isFinite(sensitivityDb)
+    || !Number.isFinite(ratedPower)
+    || ratedPower <= 0
+    || !Number.isFinite(selectedDistance)
+    || selectedDistance < 1
+    || !Number.isFinite(effectiveSummationGainDb)
+  ) return null
+
   const standardDistances = [1, 2, 4, 8, 12, 16, 20]
   const distances = [...new Set([...standardDistances, selectedDistance])]
     .sort((a, b) => a - b)
 
-  return distances.map((distanceMeters) => {
+  const rows = []
+  for (const distanceMeters of distances) {
     const calculated = calculateSplAtDistance(
       sensitivityDb,
       ratedPower,
       distanceMeters,
-      summationGainDb,
+      effectiveSummationGainDb,
     )
-
-    return {
+    if (!calculated) return null
+    rows.push({
       distanceMeters,
       spl: calculated.spl,
       isSelected: distanceMeters === selectedDistance,
-    }
-  })
+    })
+  }
+  return rows
 }
 
 function calculateSpeakerSpl(options = {}) {
@@ -162,11 +182,21 @@ function calculateSpeakerSpl(options = {}) {
     return null
   }
 
+  const totalRatedPower = speaker.ratedPower * speakerCount
+  if (!Number.isFinite(totalRatedPower)) return null
+  const distanceRows = buildDistanceRows(
+    speaker.sensitivityDb,
+    speaker.ratedPower,
+    distanceMeters,
+    summationGainDb,
+  )
+  if (!distanceRows) return null
+
   return {
     model: speaker.model,
     sensitivityDb: speaker.sensitivityDb,
     ratedPower: speaker.ratedPower,
-    totalRatedPower: speaker.ratedPower * speakerCount,
+    totalRatedPower,
     source: speaker.source,
     distanceMeters,
     speakerCount,
@@ -178,12 +208,7 @@ function calculateSpeakerSpl(options = {}) {
     selectedSpl: calculated.spl,
     humanReference: getHumanReference(calculated.spl),
     meetingReference: getMeetingReference(calculated.spl),
-    distanceRows: buildDistanceRows(
-      speaker.sensitivityDb,
-      speaker.ratedPower,
-      distanceMeters,
-      summationGainDb,
-    ),
+    distanceRows,
   }
 }
 

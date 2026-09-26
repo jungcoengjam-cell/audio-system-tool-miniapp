@@ -1,0 +1,83 @@
+{
+  "accounting": "same effective file and package grouping rules as tests/release-check.js",
+  "packageFiles": 183,
+  "totalBytes": {
+    "before": 2105767,
+    "after": 2108212,
+    "delta": 2445,
+    "limit": 2116608,
+    "remaining": 8396
+  },
+  "mainPackageJavaScriptBytes": {
+    "before": 828024,
+    "after": 830469,
+    "delta": 2445,
+    "limit": 837632,
+    "remaining": 7163
+  },
+  "subPackages": {
+    "pages/dmx-address": {
+      "javascriptBytes": 246860,
+      "deltaBytes": 0
+    },
+    "pages/audio-wiring": {
+      "javascriptBytes": 98829,
+      "deltaBytes": 0
+    },
+    "pages/project-wiring": {
+      "javascriptBytes": 73867,
+      "deltaBytes": 0
+    }
+  },
+  "wxssBytes": {
+    "before": 266518,
+    "after": 266518,
+    "delta": 0,
+    "limit": 267264,
+    "remaining": 746
+  },
+  "wxmlBytes": {
+    "before": 250901,
+    "after": 250901,
+    "delta": 0,
+    "limit": 251904,
+    "remaining": 1003
+  },
+  "mediaBytes": {
+    "before": 332872,
+    "after": 332872,
+    "delta": 0,
+    "limit": 346112,
+    "remaining": 13240
+  },
+  "largestJavaScript": {
+    "path": "pages/dmx-address/data/stage-lighting-channels.js",
+    "bytes": 89436,
+    "deltaBytes": 0,
+    "limit": 102400,
+    "remaining": 12964
+  },
+  "productionFiles": {
+    "utils/gain-structure.js": {
+      "beforeBytes": 7294,
+      "afterBytes": 7970,
+      "deltaBytes": 676
+    },
+    "utils/limiter.js": {
+      "beforeBytes": 4987,
+      "afterBytes": 5642,
+      "deltaBytes": 655
+    },
+    "utils/spl.js": {
+      "beforeBytes": 5464,
+      "afterBytes": 6154,
+      "deltaBytes": 690
+    },
+    "utils/camera-fov.js": {
+      "beforeBytes": 21584,
+      "afterBytes": 22008,
+      "deltaBytes": 424
+    }
+  },
+  "sha256": "55e7ce76d08131a3cb92f88aa79fe61957e082f1a5b7469557eef49014bacf37"
+}

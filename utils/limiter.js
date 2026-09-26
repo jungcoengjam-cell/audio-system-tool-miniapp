@@ -17,6 +17,12 @@ function round(value, digits = 2) {
   return Math.round(value * factor) / factor
 }
 
+function hasFiniteNumericFields(result) {
+  return Object.values(result)
+    .filter((value) => typeof value === 'number')
+    .every(Number.isFinite)
+}
+
 function getLoadImpedance(speakerImpedance, count, wiring) {
   if (count === 1) {
     return speakerImpedance
@@ -89,13 +95,21 @@ function calculateLimiter(options = {}) {
 
   const loadImpedance = getLoadImpedance(speaker.impedance, count, wiring)
   const totalRatedPower = speaker.ratedPower * count
+  const roundedLoadImpedance = round(loadImpedance)
+  if (!Number.isFinite(totalRatedPower) || !Number.isFinite(roundedLoadImpedance)) {
+    return {
+      valid: false,
+      timingReady: false,
+      warning: '当前设备参数超出有限数值范围，无法可靠计算限幅器。',
+    }
+  }
   const powerTable = mode === 'bridge'
     ? amplifier.bridgePower
     : amplifier.stereoPower
   const timing = calculateTiming(highPassFrequency)
 
   const base = {
-    loadImpedance: round(loadImpedance),
+    loadImpedance: roundedLoadImpedance,
     totalRatedPower,
     wiringLabel: count === 1
       ? '单只音箱'
@@ -140,7 +154,7 @@ function calculateLimiter(options = {}) {
   const thresholdDbfs = limiterInputDbu - DSP_MAX_OUTPUT_DBU
   const limitedByAmplifier = amplifierRatedVoltage < speakerAllowedVoltage
 
-  return {
+  const result = {
     ...resultBase,
     valid: true,
     amplifierRatedPower,
@@ -155,6 +169,13 @@ function calculateLimiter(options = {}) {
       ? '功放额定输出低于音箱额定承受能力，阈值按功放满功率输入限制。'
       : '阈值按音箱额定功率计算。',
   }
+  return hasFiniteNumericFields(result)
+    ? result
+    : {
+      ...resultBase,
+      valid: false,
+      warning: '功放功率表或输入参数无法得到有限的限幅结果。',
+    }
 }
 
 module.exports = {

@@ -1,0 +1,170 @@
+{
+  "status": "PRE_FIX_REGRESSIONS_CONFIRMED",
+  "source": "git HEAD versions of the four production cores",
+  "expectedFailingCases": [
+    "NC-GAIN-01",
+    "NC-LIM-01",
+    "NC-SPL-01",
+    "NC-SPL-02",
+    "NC-CAM-01",
+    "NC-CAM-02"
+  ],
+  "outcomes": [
+    {
+      "id": "NC-GAIN-01",
+      "expectedRegression": "failed before fix",
+      "failure": "Expected \"actual\" to be strictly unequal to: true",
+      "actual": {
+        "valid": true,
+        "value": 20,
+        "selectionSource": "user",
+        "amplifierRatedPower": -100,
+        "amplifierRatedVoltage": "NaN",
+        "fullPowerInputVoltage": "NaN",
+        "fullPowerInputDbu": "NaN",
+        "calculationBasis": "ratedPowerAndVoltageGain",
+        "dspMaxOutputDbu": 18.4,
+        "targetPeakDbfs": -6,
+        "targetDspOutputDbu": 12.4,
+        "programHeadroomDb": 12,
+        "nominalDspDbfs": -18,
+        "nominalDspOutputDbu": 0.4,
+        "nominalPostAttenuationDbu": 0.4,
+        "naturalFullPowerDbfs": "NaN",
+        "alignedFullPowerDbfs": "NaN",
+        "recommendedAttenuationDb": 0,
+        "driveShortfallDb": 0,
+        "availableAmplifierHeadroomDb": "NaN",
+        "alignmentMode": "direct",
+        "statusText": "DSP 目标峰值与功放额定输出输入电平基本匹配，可从 0 dB 系统对齐衰减开始校准。",
+        "fieldVerificationRequired": true
+      }
+    },
+    {
+      "id": "NC-LIM-01",
+      "expectedRegression": "failed before fix",
+      "failure": "Expected \"actual\" to be strictly unequal to: true",
+      "actual": {
+        "loadImpedance": 4,
+        "totalRatedPower": 100,
+        "wiringLabel": "单只音箱",
+        "timingReady": false,
+        "valid": true,
+        "amplifierRatedPower": "+Infinity",
+        "speakerAllowedVoltage": 20,
+        "amplifierRatedVoltage": "+Infinity",
+        "targetOutputVoltage": 20,
+        "limiterInputVoltage": 0,
+        "limiterInputDbu": "-Infinity",
+        "thresholdDbfs": "-Infinity",
+        "limitedBy": "speaker",
+        "statusText": "阈值按音箱额定功率计算。"
+      }
+    },
+    {
+      "id": "NC-SPL-01",
+      "expectedRegression": "failed before fix",
+      "failure": "Expected values to be strictly equal:\n+ actual - expected\n\n+ {\n+   distanceMeters: 1,\n+   distanceRows: [\n+     {\n+       distanceMeters: 1,\n+       isSelected: true,\n+       spl: 3180.5\n+     },\n+     {\n+       distanceMeters: 2,\n+       isSelected: false,\n+       spl: 3174.5\n+     },\n+     {\n+       distanceMeters: 4,\n+       isSelected: false,\n+       spl: 3168.5\n+     },\n+     {\n+       distanceMeters: 8,\n+       isSelected: false,\n+       spl: 3162.5\n+     },\n+     {\n+       distanceMeters: 12,\n+       isSelected: false,\n+       spl: 3159\n+     },\n+     {\n+       distanceMeters: 16,\n+       isSelected: false,\n+       spl: 3156.5\n+     },\n+     {\n+       distanceMeters: 20,\n+       isSelected: false,\n+       spl: 3154.5\n+     }\n+   ],\n+   humanReference: {\n+     description: '应严格控制工作时长、覆盖区域和限幅保护，并以现场测量为准。',\n+     level: '很高声压',\n+     title: '高声压演出扩声量级'\n+   },\n+   meetingReference: {\n+     description: '仅比较最大声压级数值，不能据此判定工程达标。 正式评价还需要测量频率响应、传声增益、稳态声场不均匀度和系统噪声。',\n+     level: '一级数值门槛',\n+     title: '当前理论值高于会议类一级最大声压级参考值（≥98 dB）'\n+   },\n+   model: undefined,\n+   oneMeterSpl: 3180.5,\n+   ratedPower: 1.7976931348623157e+308,\n+   selectedSpl: 3180.5,\n+   sensitivityDb: 95,\n+   singleOneMeterSpl: 3177.5,\n+   singleSelectedSpl: 3177.5,\n+   source: undefined,\n+   speakerCount: 2,\n+   summationGainDb: 3,\n+   summationMode: 'distributed',\n+   totalRatedPower: Infinity\n+ }\n- null\n",
+      "actual": {
+        "sensitivityDb": 95,
+        "ratedPower": 1.7976931348623157e+308,
+        "totalRatedPower": "+Infinity",
+        "distanceMeters": 1,
+        "speakerCount": 2,
+        "summationMode": "distributed",
+        "summationGainDb": 3,
+        "singleOneMeterSpl": 3177.5,
+        "singleSelectedSpl": 3177.5,
+        "oneMeterSpl": 3180.5,
+        "selectedSpl": 3180.5,
+        "humanReference": {
+          "level": "很高声压",
+          "title": "高声压演出扩声量级",
+          "description": "应严格控制工作时长、覆盖区域和限幅保护，并以现场测量为准。"
+        },
+        "meetingReference": {
+          "level": "一级数值门槛",
+          "title": "当前理论值高于会议类一级最大声压级参考值（≥98 dB）",
+          "description": "仅比较最大声压级数值，不能据此判定工程达标。 正式评价还需要测量频率响应、传声增益、稳态声场不均匀度和系统噪声。"
+        },
+        "distanceRows": [
+          {
+            "distanceMeters": 1,
+            "spl": 3180.5,
+            "isSelected": true
+          },
+          {
+            "distanceMeters": 2,
+            "spl": 3174.5,
+            "isSelected": false
+          },
+          {
+            "distanceMeters": 4,
+            "spl": 3168.5,
+            "isSelected": false
+          },
+          {
+            "distanceMeters": 8,
+            "spl": 3162.5,
+            "isSelected": false
+          },
+          {
+            "distanceMeters": 12,
+            "spl": 3159,
+            "isSelected": false
+          },
+          {
+            "distanceMeters": 16,
+            "spl": 3156.5,
+            "isSelected": false
+          },
+          {
+            "distanceMeters": 20,
+            "spl": 3154.5,
+            "isSelected": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "NC-SPL-02",
+      "expectedRegression": "failed before fix",
+      "failure": "Expected values to be strictly equal:\n+ actual - expected\n\n+ {\n+   oneMeterSpl: Infinity,\n+   spl: Infinity\n+ }\n- null\n",
+      "actual": {
+        "oneMeterSpl": "+Infinity",
+        "spl": "+Infinity"
+      }
+    },
+    {
+      "id": "NC-CAM-01",
+      "expectedRegression": "failed before fix",
+      "failure": "Expected values to be strictly equal:\n+ actual - expected\n\n+ {\n+   calculationMode: 'distance',\n+   coverageAreaSquareMeters: Infinity,\n+   coverageHeightMeters: Infinity,\n+   coverageWidthMeters: Infinity,\n+   diagonalFov: 70,\n+   distanceMeters: Infinity,\n+   horizontalFov: 60,\n+   verticalFov: 40\n+ }\n- null\n",
+      "actual": {
+        "horizontalFov": 60,
+        "verticalFov": 40,
+        "diagonalFov": 70,
+        "calculationMode": "distance",
+        "distanceMeters": "+Infinity",
+        "coverageWidthMeters": "+Infinity",
+        "coverageHeightMeters": "+Infinity",
+        "coverageAreaSquareMeters": "+Infinity"
+      }
+    },
+    {
+      "id": "NC-CAM-02",
+      "expectedRegression": "failed before fix",
+      "failure": "Expected values to be strictly equal:\n+ actual - expected\n\n+ {\n+   calculationMode: 'distance',\n+   coverageAreaSquareMeters: NaN,\n+   coverageHeightMeters: NaN,\n+   coverageWidthMeters: NaN,\n+   diagonalFov: NaN,\n+   distanceMeters: 3,\n+   horizontalFov: NaN,\n+   verticalFov: Infinity\n+ }\n- null\n",
+      "actual": {
+        "horizontalFov": "NaN",
+        "verticalFov": "+Infinity",
+        "diagonalFov": "NaN",
+        "calculationMode": "distance",
+        "distanceMeters": 3,
+        "coverageWidthMeters": "NaN",
+        "coverageHeightMeters": "NaN",
+        "coverageAreaSquareMeters": "NaN"
+      }
+    }
+  ],
+  "sha256": "f02bebad2cf6fed6b90f769953fe732bdefe400ded4b487511960ed9db811fd9"
+}
