@@ -40,6 +40,10 @@ function buildViewSignature(projects, records, activeProject, recordTabIndex) {
   return `${recordTabIndex}#${activeProject?.id || ''}#${projectSignature}#${recordSignature}`
 }
 
+function showWorkspaceReadError() {
+  wx.showToast({ title: '本地项目和收藏读取失败，请重试', icon: 'none' })
+}
+
 Page({
   data: {
     recordTabs: ['现场项目', '常用收藏'],
@@ -50,7 +54,7 @@ Page({
   },
 
   onShow() {
-    this.refreshWorkspace('onShow')
+    this.refreshWorkspace('onShow', { forceRead: true })
   },
 
   onHide() {
@@ -59,10 +63,18 @@ Page({
 
   refreshWorkspace(source = 'interaction', changes = {}) {
     const finishRefresh = startMeasurement('项目页/工作区刷新总耗时', { source })
-    const { projects: rawProjects, records: rawRecords, activeProject } = getWorkspaceSnapshot()
-    const recordTabIndex = changes.recordTabIndex ?? this.data.recordTabIndex
+    const { forceRead, ...viewChanges } = changes
+    const snapshot = getWorkspaceSnapshot({ forceRefresh: forceRead || Boolean(this.data.workspaceError) })
+    if (snapshot.ok === false) {
+      this.setData({ workspaceError: snapshot.error || '本地项目和收藏数据读取失败，请重试。' })
+      finishRefresh({ error: true })
+      return
+    }
+    const { projects: rawProjects, records: rawRecords, activeProject } = snapshot
+    const recordTabIndex = viewChanges.recordTabIndex ?? this.data.recordTabIndex
     const viewSignature = buildViewSignature(rawProjects, rawRecords, activeProject, recordTabIndex)
     if (viewSignature === this.workspaceViewSignature) {
+      if (this.data.workspaceError) this.setData({ workspaceError: '' })
       finishRefresh({ projects: rawProjects.length, records: rawRecords.length, skipped: true })
       return
     }
@@ -93,7 +105,8 @@ Page({
     this.workspaceViewSignature = viewSignature
     this.rawRecords = rawRecords
     this.setData({
-      ...changes,
+      ...viewChanges,
+      ...(this.data.workspaceError ? { workspaceError: '' } : {}),
       displayRecords: decoratedRecords,
       projects: rawProjects.map((project) => ({
         ...projectViewFields(project),
@@ -110,7 +123,12 @@ Page({
     this.refreshWorkspace('recordTab', { recordTabIndex: Number(event.currentTarget.dataset.index) })
   },
 
+  retryWorkspace() {
+    this.refreshWorkspace('retry', { forceRead: true })
+  },
+
   createProject() {
+    if (this.data.workspaceError) return showWorkspaceReadError()
     wx.showModal({
       title: '新建现场项目',
       content: '',
@@ -119,9 +137,10 @@ Page({
       confirmText: '创建',
       success: ({ confirm, content }) => {
         if (!confirm) return
+        if (this.data.workspaceError) return showWorkspaceReadError()
         const project = createProject(content)
         if (!project) {
-          wx.showToast({ title: '请输入项目名称', icon: 'none' })
+          wx.showToast({ title: content?.trim() ? '新建失败，请检查本地存储' : '请输入项目名称', icon: 'none' })
           return
         }
         this.refreshWorkspace()
@@ -144,6 +163,7 @@ Page({
   },
 
   activateProject(event) {
+    if (this.data.workspaceError) return showWorkspaceReadError()
     if (!setActiveProject(event.currentTarget.dataset.id)) {
       wx.showToast({ title: '设置失败，请重试', icon: 'none' })
       return
@@ -153,12 +173,14 @@ Page({
   },
 
   restoreRecord(event) {
+    if (this.data.workspaceError) return showWorkspaceReadError()
     const record = this.rawRecords.find((item) => item.id === event.currentTarget.dataset.id)
     const path = restoreRecord(record)
     if (path) wx.navigateTo({ url: path })
   },
 
   toggleRecordFavorite(event) {
+    if (this.data.workspaceError) return showWorkspaceReadError()
     const recordId = event.currentTarget.dataset.id
     const before = (this.rawRecords || []).find((item) => item.id === recordId)
     if (!before) return
@@ -173,6 +195,7 @@ Page({
   },
 
   addRecordToActiveProject(event) {
+    if (this.data.workspaceError) return showWorkspaceReadError()
     const project = this.data.activeProject
     const record = this.rawRecords.find((item) => item.id === event.currentTarget.dataset.id)
     if (!project || !record) return
@@ -185,6 +208,7 @@ Page({
   },
 
   deleteRecord(event) {
+    if (this.data.workspaceError) return showWorkspaceReadError()
     const recordId = event.currentTarget.dataset.id
     wx.showModal({
       title: '删除这条记录？',
@@ -192,6 +216,7 @@ Page({
       confirmColor: '#ff3b30',
       success: ({ confirm }) => {
         if (!confirm) return
+        if (this.data.workspaceError) return showWorkspaceReadError()
         if (!removeRecord(recordId)) {
           wx.showToast({ title: '删除失败，请重试', icon: 'none' })
           return
@@ -202,6 +227,7 @@ Page({
   },
 
   deleteProject(event) {
+    if (this.data.workspaceError) return showWorkspaceReadError()
     const projectId = event.currentTarget.dataset.id
     wx.showModal({
       title: '删除这个项目？',
@@ -209,6 +235,7 @@ Page({
       confirmColor: '#ff3b30',
       success: ({ confirm }) => {
         if (!confirm) return
+        if (this.data.workspaceError) return showWorkspaceReadError()
         if (!deleteProject(projectId)) {
           wx.showToast({ title: '删除失败，请重试', icon: 'none' })
           return

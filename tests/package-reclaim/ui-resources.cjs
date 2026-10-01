@@ -34,7 +34,38 @@ for (const [relativePath, expectedHash] of Object.entries(baseline.expandedWxmlS
   const manualSource = relativePath === 'pages/venue/venue.wxml'
     ? source.replace(/\r?\n[ \t]*\r?\n[ \t]*<include src="\.\.\/common\/operation-confirmation\.wxml"\s*\/>[ \t]*\r?\n[ \t]*\r?\n/, '\r\n\r\n') : source
   const expanded = expandIncludes(manualSource, file)
-  assert.equal(sha256(Buffer.from(normalizeLineEndings(expanded))), expectedHash, `expanded WXML changed: ${relativePath}`)
+  let hashInput = normalizeLineEndings(expanded)
+  const projectSaveButtonCounts = new Map([
+    ['pages/cable/cable.wxml', 1],
+    ['pages/gain-structure/gain-structure.wxml', 1],
+    ['pages/spl/spl.wxml', 1],
+    ['pages/venue/venue.wxml', 2],
+  ])
+  if (projectSaveButtonCounts.has(relativePath)) {
+    const saveButtons = [...hashInput.matchAll(
+      /<button\b(?=[^>]*\bbindtap="saveToActiveProject")[^>]*>([\s\S]*?)<\/button>/g,
+    )]
+    assert.equal(saveButtons.length, projectSaveButtonCounts.get(relativePath),
+      `unexpected project-save button count: ${relativePath}`)
+    const approvedLabels = new Set([
+      '\u4fdd\u5b58\u81f3\u9879\u76ee',
+      '\u9009\u62e9\u9879\u76ee\u4fdd\u5b58',
+    ])
+    saveButtons.forEach(([button, label]) => {
+      const normalizedLabel = label.trim()
+      assert.equal(label, normalizedLabel, `project-save button has unexpected whitespace: ${relativePath}`)
+      assert(approvedLabels.has(normalizedLabel), `unexpected project-save button label: ${relativePath}`)
+    })
+    for (const match of saveButtons.reverse()) {
+      const [button, label] = match
+      const buttonIndex = match.index
+      const normalizedButton = button.replace(label, '\u52a0\u5165\u5f53\u524d\u9879\u76ee')
+      hashInput = hashInput.slice(0, buttonIndex)
+        + normalizedButton
+        + hashInput.slice(buttonIndex + button.length)
+    }
+  }
+  assert.equal(sha256(Buffer.from(hashInput)), expectedHash, `expanded WXML changed: ${relativePath}`)
 }
 
 assert.match(read('pages/venue/venue.wxml'), /operation-confirmation\.wxml/,

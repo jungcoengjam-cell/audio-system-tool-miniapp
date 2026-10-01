@@ -377,7 +377,7 @@
         <view class="result-output-actions"><button class="result-image-button" disabled="{{isGeneratingResultReport || pagNagOutputBlocked}}" bindtap="generateResultReportImage">{{isGeneratingResultReport ? '正在生成…' : '生成结果图片'}}</button><button class="copy-result-button" disabled="{{pagNagOutputBlocked}}" bindtap="copyResult">复制文字</button></view>
         <view class="result-record-actions">
           <button class="result-record-button {{currentFavorite ? 'result-record-button-active' : ''}}" disabled="{{pagNagOutputBlocked}}" bindtap="toggleCurrentFavorite">{{currentFavorite ? '★ 已收藏' : '☆ 收藏常用'}}</button>
-          <button class="result-record-button" disabled="{{pagNagOutputBlocked}}" bindtap="saveToActiveProject">加入当前项目</button>
+          <button class="result-record-button" disabled="{{pagNagOutputBlocked}}" bindtap="saveToActiveProject">选择项目保存</button>
         </view>
       </view>
       <view class="result-accordion-card {{showVenueDetails ? 'result-accordion-card-active' : ''}}">

@@ -7,3 +7,9 @@
 .project-actions{gap:8px;margin-top:8px}
 .project-actions .project-action{margin-right:0;margin-bottom:0}
 @media (prefers-color-scheme: dark){.project-action-primary{background:var(--theme-primary-fill);color:#fff}.project-action-secondary{background:var(--theme-accent-soft);color:var(--theme-accent-text)}}
+
+.workspace-error{display:flex;gap:14rpx;align-items:center;justify-content:space-between;margin:10rpx 0 16rpx;padding:18rpx 20rpx;border:1rpx solid var(--theme-warning);border-radius:18rpx;background:var(--theme-warning-soft)}
+.workspace-error-copy{flex:1;min-width:0}
+.workspace-error-title{color:var(--theme-warning);font-size:21rpx;font-weight:650}
+.workspace-error-text{margin-top:5rpx;color:var(--theme-text-secondary);font-size:18rpx;line-height:1.45}
+.workspace-retry{flex:none;margin:0;white-space:nowrap}

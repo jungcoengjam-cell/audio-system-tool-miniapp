@@ -1,5 +1,10 @@
 const { getProductDetail, markProductViewed } = require('../../utils/products')
 const { readPreferences, writePreferencesDetailed } = require('../../utils/preferences')
+const {
+  inspectDmxPreferences,
+  readDmxPreferencesStatus,
+  saveDmxProductImport,
+} = require('../../utils/dmx-product-import')
 
 const CALCULATOR_PATHS = {
   limiter: '/pages/limiter/limiter',
@@ -78,6 +83,17 @@ function projectProductDetail(detail) {
 Page({
   data: {
     product: null,
+    dmxImportVisible: false,
+    dmxImportModes: [],
+    dmxImportChannelCount: '',
+    dmxImportFixtureCount: '1',
+    dmxImportHasGroups: false,
+    dmxImportExistingGroupCount: 0,
+    dmxImportGroupsReadable: true,
+    dmxImportAction: '',
+    dmxImportError: '',
+    dmxImportSubmitting: false,
+    dmxImportAllocationHint: '',
   },
 
   onLoad(options = {}) {
@@ -103,6 +119,11 @@ Page({
     const product = this._productDetail
     if (!product || !CALCULATOR_PATHS[moduleKey]) return
 
+    if (moduleKey === 'dmxAddress' && product.type === 'lighting') {
+      this.openDmxProductImport(product)
+      return
+    }
+
     let writeResult = null
     if (moduleKey === 'limiter') {
       const key = 'audioTool.limiter.preferences'
@@ -121,27 +142,112 @@ Page({
       writeResult = writePreferencesDetailed(key, { ...readPreferences(key), sourceMode: 'library', cameraModel: product.model })
     }
 
-    if (moduleKey === 'dmxAddress' && product.type === 'lighting') {
-      const key = 'audioTool.dmxAddress.preferences'
-      const preferences = readPreferences(key)
-      const channelCount = product.channelModes[0]
-      writeResult = writePreferencesDetailed(key, {
-        ...preferences,
-        groups: [{
-          name: `${product.model} ${product.name}`,
-          fixtureModel: product.model,
-          channelCount: String(channelCount),
-          fixtureCount: '1',
-        }],
-      })
-    }
-
     if (writeResult && !writeResult.ok) {
       wx.showToast({ title: '设置保存失败，请重试', icon: 'none' })
       return
     }
 
     wx.navigateTo({ url: CALCULATOR_PATHS[moduleKey] })
+  },
+
+  openDmxProductImport(product = this._productDetail) {
+    if (!product || product.type !== 'lighting' || !Array.isArray(product.channelModes)
+      || !product.channelModes.length) {
+      wx.showToast({ title: '该灯具没有可用的厂家 DMX 通道模式', icon: 'none' })
+      return
+    }
+    const read = readDmxPreferencesStatus()
+    if (!read.ok) {
+      wx.showToast({ title: read.error, icon: 'none' })
+      return
+    }
+    const draft = inspectDmxPreferences(read.preferences)
+    this._dmxImportSubmitting = false
+    this._dmxImportOpenedSignature = JSON.stringify(read.preferences)
+    this.setData({
+      dmxImportVisible: true,
+      dmxImportModes: product.channelModes.map((channelCount) => ({
+        channelCount,
+        label: `${channelCount} CH`,
+      })),
+      dmxImportChannelCount: '',
+      dmxImportFixtureCount: '1',
+      dmxImportHasGroups: draft.hasGroups,
+      dmxImportExistingGroupCount: draft.existingGroupCount,
+      dmxImportGroupsReadable: draft.groupsReadable,
+      dmxImportAction: '',
+      dmxImportError: '',
+      dmxImportSubmitting: false,
+      dmxImportAllocationHint: read.preferences.allocationMode === 'manual'
+        ? '手动分域追加时，新组沿用现有末组域；替换时新组从 A 域开始。'
+        : '',
+    })
+  },
+
+  selectDmxImportMode(event) {
+    const channelCount = String(event.currentTarget.dataset.channelCount || '')
+    if (!this.data.dmxImportModes.some((mode) => String(mode.channelCount) === channelCount)) return
+    this.setData({ dmxImportChannelCount: channelCount, dmxImportError: '' })
+  },
+
+  onDmxImportFixtureCountInput(event) {
+    this.setData({ dmxImportFixtureCount: String(event.detail.value ?? ''), dmxImportError: '' })
+  },
+
+  selectDmxImportAction(event) {
+    const action = event.currentTarget.dataset.action
+    if (!['append', 'replace'].includes(action)) return
+    if (action === 'append' && !this.data.dmxImportGroupsReadable) return
+    this.setData({ dmxImportAction: action, dmxImportError: '' })
+  },
+
+  closeDmxProductImport() {
+    if (this._dmxImportSubmitting) return
+    this._dmxImportOpenedSignature = ''
+    this.setData({
+      dmxImportVisible: false,
+      dmxImportChannelCount: '',
+      dmxImportFixtureCount: '1',
+      dmxImportAction: '',
+      dmxImportError: '',
+    })
+  },
+
+  stopDmxImportTap() {},
+
+  confirmDmxProductImport() {
+    if (this._dmxImportSubmitting || !this.data.dmxImportVisible) return
+    this._dmxImportSubmitting = true
+    this.setData({ dmxImportSubmitting: true, dmxImportError: '' })
+    const product = this._productDetail
+    const read = readDmxPreferencesStatus()
+    if (!read.ok) {
+      this._dmxImportSubmitting = false
+      this.setData({ dmxImportSubmitting: false, dmxImportError: read.error })
+      return
+    }
+    if (JSON.stringify(read.preferences) !== this._dmxImportOpenedSignature) {
+      this._dmxImportSubmitting = false
+      this.setData({
+        dmxImportSubmitting: false,
+        dmxImportError: '现有 DMX 草稿在面板打开后已变化，请取消并重新打开确认。',
+      })
+      return
+    }
+    const result = saveDmxProductImport({
+      product,
+      channelCountText: this.data.dmxImportChannelCount,
+      fixtureCountText: this.data.dmxImportFixtureCount,
+      action: this.data.dmxImportAction,
+    })
+    if (!result.ok) {
+      this._dmxImportSubmitting = false
+      this.setData({ dmxImportSubmitting: false, dmxImportError: result.error })
+      return
+    }
+    this._dmxImportOpenedSignature = ''
+    this.setData({ dmxImportVisible: false })
+    wx.navigateTo({ url: CALCULATOR_PATHS.dmxAddress })
   },
 
   openDmxChannelGuide() {

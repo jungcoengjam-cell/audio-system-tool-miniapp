@@ -132,7 +132,7 @@
         <button class="result-image-button" disabled="{{isGeneratingResultReport}}" bindtap="generateResultReportImage">{{isGeneratingResultReport ? '正在生成…' : '生成结果图片'}}</button>
         <button class="copy-result-button" bindtap="copyResult">复制文字</button>
       </view>
-      <view wx:if="{{!operationActive}}" class="result-record-actions"><button class="result-record-button {{currentFavorite ? 'result-record-button-active' : ''}}" bindtap="toggleCurrentFavorite">{{currentFavorite ? '★ 已收藏' : '☆ 收藏常用'}}</button><button class="result-record-button" bindtap="saveToActiveProject">加入当前项目</button></view>
+      <view wx:if="{{!operationActive}}" class="result-record-actions"><button class="result-record-button {{currentFavorite ? 'result-record-button-active' : ''}}" bindtap="toggleCurrentFavorite">{{currentFavorite ? '★ 已收藏' : '☆ 收藏常用'}}</button><button class="result-record-button" bindtap="saveToActiveProject">选择项目保存</button></view>
       <view wx:if="{{operationActive}}" class="field-tip">结构化结果可复制或生成报告；收藏和加入项目暂不支持，避免无法无损恢复本次输入。</view>
     </view>
 

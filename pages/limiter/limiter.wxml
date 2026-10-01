@@ -126,7 +126,7 @@
       </view>
       <view class="result-record-actions">
         <button class="result-record-button {{currentFavorite ? 'result-record-button-active' : ''}}" bindtap="toggleCurrentFavorite">{{currentFavorite ? '★ 已收藏' : '☆ 收藏常用'}}</button>
-        <button class="result-record-button" bindtap="saveToActiveProject">加入当前项目</button>
+        <button class="result-record-button" bindtap="saveToActiveProject">选择项目保存</button>
       </view>
     </view>
 

@@ -10,6 +10,7 @@ let pageDefinition = null
 let clipboard = ''
 const toastTitles = []
 const modals = []
+const actionSheets = []
 
 function clone(value) {
   return value && typeof value === 'object' ? JSON.parse(JSON.stringify(value)) : value
@@ -27,6 +28,7 @@ global.wx = {
   removeStorageSync: (key) => storage.delete(key),
   showToast: ({ title }) => toastTitles.push(title),
   showModal: (options) => modals.push(options),
+  showActionSheet: (options) => actionSheets.push(options),
   setClipboardData: ({ data, success }) => { clipboard = data; if (success) success() },
   vibrateShort: () => {},
   hideLoading: () => {},
@@ -48,6 +50,7 @@ function reset() {
   storageWriteFailureKey = ''
   toastTitles.length = 0
   modals.length = 0
+  actionSheets.length = 0
   clipboard = ''
   pageDefinition = null
   ;['../utils/records', '../utils/preferences', '../utils/result-record-actions', '../pages/led-screen/led-screen',
@@ -102,7 +105,10 @@ function checkPageActionsAndPersistence() {
   const firstId = saved[0].id
   page.saveToActiveProject()
   assert.equal(modals.length, 1)
-  modals[0].success({ confirm: true, content: 'LED 现场项目' })
+  modals[0].success({ confirm: true, content: 'LED现场项目' })
+  assert.equal(modals.length, 2)
+  assert(modals[1].content.includes('LED现场项目'))
+  modals[1].success({ confirm: true })
   const project = records.getActiveProject()
   assert(project)
   saved = records.getProjectRecords(project.id)
@@ -113,6 +119,9 @@ function checkPageActionsAndPersistence() {
   page.toggleCurrentFavorite()
   assert.equal(records.getRecords()[0].id, firstId, '相同输入收藏应复用记录')
   page.saveToActiveProject()
+  const projectChooser = actionSheets[actionSheets.length - 1]
+  projectChooser.success({ tapIndex: projectChooser.itemList.findIndex((item) => item.startsWith(project.name)) })
+  modals[modals.length - 1].success({ confirm: true })
   assert.equal(records.getProjectRecords(project.id).length, 1, '加入项目应去重')
   assert.equal(records.restoreRecord(saved[0]), '/pages/led-screen/led-screen')
 }
@@ -185,6 +194,9 @@ function checkInvalidAndStorageFailures() {
   const project = projectRecords.createProject('写入失败项目')
   storageWriteFailureKey = 'audioTool.projects.v1'
   projectFailurePage.saveToActiveProject()
+  const failedProjectChooser = actionSheets[actionSheets.length - 1]
+  failedProjectChooser.success({ tapIndex: failedProjectChooser.itemList.findIndex((item) => item.startsWith(project.name)) })
+  modals[modals.length - 1].success({ confirm: true })
   assert(toastTitles.includes('保存失败，请检查本地存储'))
   storageWriteFailureKey = ''
   assert.equal(projectRecords.getProjectRecords(project.id).length, 0, '项目写入失败后残留了记录')

@@ -215,7 +215,7 @@ global.wx = {
   getAppBaseInfo: () => ({ theme: 'light' }),
 }
 Module._load = function loadPageDependencies(request, parent, isMain) {
-  if (request === '../../utils/records' && parent && parent.filename.includes('audio-system-tool-miniapp')) {
+  if (request === '../../utils/records' && parent && parent.filename === currentPageFile) {
     return recordsMock
   }
   return originalLoad.call(this, request, parent, isMain)

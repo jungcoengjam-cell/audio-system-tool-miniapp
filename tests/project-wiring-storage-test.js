@@ -105,6 +105,36 @@ assert.equal(failedReadSave.ok, false)
 assert.deepEqual(storage.get(PROJECTS_KEY), projectBeforeFailure, '读取失败后不能使用缓存盲写')
 readFailureKey = ''
 
+records = reset([project('p1', 'A 项目')])
+storage.set(RECORDS_KEY, [{
+  id: 'saved-record', module: 'limiter', preferences: { model: 'reference' }, resultText: 'limit result',
+  favorite: true, projectIds: ['p1'], createdAt: 1, updatedAt: 2,
+}])
+let workspace = records.getWorkspaceSnapshot()
+assert.equal(workspace.ok, true)
+assert.equal(workspace.projects[0].id, 'p1')
+assert.equal(workspace.records[0].id, 'saved-record')
+
+readFailureKey = PROJECTS_KEY
+workspace = records.getWorkspaceSnapshot({ forceRefresh: true })
+assert.equal(workspace.ok, false)
+assert.match(workspace.error, /本地项目和收藏数据读取失败/)
+assert.equal(workspace.projects[0].id, 'p1', 'force refresh failure preserves last successful project snapshot')
+assert.equal(workspace.records[0].id, 'saved-record', 'partial read failure preserves last successful records')
+const beforeBlockedCreate = clone(storage.get(PROJECTS_KEY))
+assert.equal(records.createProject('不应创建'), null, 'mutations refuse a failed storage read')
+assert.deepEqual(storage.get(PROJECTS_KEY), beforeBlockedCreate, 'failed snapshot cannot overwrite project storage')
+readFailureKey = ''
+
+records = reset([project('p1', 'A 项目')])
+readFailureKey = RECORDS_KEY
+workspace = records.getWorkspaceSnapshot({ forceRefresh: true })
+assert.equal(workspace.ok, false)
+readFailureKey = ''
+workspace = records.getWorkspaceSnapshot()
+assert.equal(workspace.ok, true, 'failed empty fallback is not cached as a successful read')
+assert.deepEqual(workspace.records, [], 'recovered empty storage remains a real empty state')
+
 records = reset([project('p1', 'A 项目', { wiringSchedule: { version: 999, revision: 0, nextNumber: 1, lines: [] } })])
 const unknownVersion = records.getProjectWiring('p1')
 assert.equal(unknownVersion.ok, false)

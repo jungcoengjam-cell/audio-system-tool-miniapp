@@ -228,13 +228,13 @@ const walkWxss = (directory) => {
 }
 walkWxss(root)
 assert.strictEqual(bareLengthViolations.length, 0, `WXSS 存在非零长度裸数字: ${JSON.stringify(bareLengthViolations.slice(0, 5))}`)
-// 包体预算是内部预警值，不代表平台上限；本轮测量证据见 docs/verification/wiring-keyboard-stability-2026-09-20/review.json。
+// 包体预算是内部预警值，不代表平台上限；按本轮灯具导入、项目保存界面与存储状态改动的有效资源大小校准。
 const PACKAGE_BUDGETS = Object.freeze({
-  total: 2067 * 1024,
-  mainJavaScript: 818 * 1024,
+  total: 2087 * 1024,
+  mainJavaScript: 835 * 1024,
   subPackageJavaScript: 794 * 1024,
-  '.wxss': 261 * 1024,
-  '.wxml': 246 * 1024,
+  '.wxss': 266 * 1024,
+  '.wxml': 252 * 1024,
   media: 338 * 1024,
   singleJavaScript: 100 * 1024,
 })
@@ -4567,9 +4567,65 @@ function checkPageControllers() {
   delete wx.createSelectorQuery
   delete wx.getWindowInfo
 
+  const activeProject = recordsApi.createProject('Release active project')
+  const project = recordsApi.createProject('Release selected project')
+  assert(activeProject && project)
+  assert.strictEqual(recordsApi.setActiveProject(activeProject.id).id, activeProject.id)
+  let projectSelectionOptions = null
+  let projectConfirmationOptions = null
+  const previousShowActionSheet = wx.showActionSheet
+  const previousShowModal = wx.showModal
+  const previousGetCurrentPages = global.getCurrentPages
+  const previousSplPageVisibility = splPage._pageVisible
+  splPage._pageVisible = true
+  global.getCurrentPages = () => [splPage]
+  wx.showActionSheet = (options) => { projectSelectionOptions = options }
+  wx.showModal = (options) => { projectConfirmationOptions = options }
+  const writesBeforeProjectSelection = storageWriteCount
+  const recordsBeforeProjectSelection = recordsApi.getRecords().length
   splPage.saveToActiveProject()
-  const project = recordsApi.getActiveProject()
-  assert(project && recordsApi.getActiveProject().id === project.id)
+  assert(projectSelectionOptions, 'saving a result must ask the user to choose a project')
+  assert.strictEqual(storageWriteCount, writesBeforeProjectSelection,
+    'opening the project chooser must not save the result')
+  assert.strictEqual(recordsApi.getRecords().length, recordsBeforeProjectSelection,
+    'the result must remain unsaved until a project is selected')
+  assert.strictEqual(recordsApi.getProjectRecords(project.id).length, 0)
+  const selectedProjectIndex = projectSelectionOptions.itemList.findIndex((item) => item.startsWith(project.name))
+  const activeProjectIndex = projectSelectionOptions.itemList.findIndex((item) => item.startsWith(activeProject.name))
+  assert(selectedProjectIndex >= 0 && activeProjectIndex >= 0)
+  assert.notStrictEqual(selectedProjectIndex, activeProjectIndex)
+  projectSelectionOptions.success({ tapIndex: selectedProjectIndex })
+  assert(projectConfirmationOptions, 'choosing a project must confirm the destination before saving')
+  assert(projectConfirmationOptions.content.includes(project.name))
+  assert.strictEqual(storageWriteCount, writesBeforeProjectSelection,
+    'choosing a project must not save until the destination confirmation')
+  assert.strictEqual(recordsApi.getRecords().length, recordsBeforeProjectSelection)
+  projectConfirmationOptions.success({ confirm: false })
+  assert.strictEqual(storageWriteCount, writesBeforeProjectSelection,
+    'cancelling the destination confirmation must not write the result')
+  assert.strictEqual(recordsApi.getRecords().length, recordsBeforeProjectSelection)
+  assert.strictEqual(recordsApi.getProjectRecords(project.id).length, 0)
+
+  projectSelectionOptions = null
+  projectConfirmationOptions = null
+  splPage.saveToActiveProject()
+  assert(projectSelectionOptions)
+  projectSelectionOptions.success({ tapIndex: selectedProjectIndex })
+  assert(projectConfirmationOptions)
+  projectConfirmationOptions.success({ confirm: true })
+  if (previousShowActionSheet === undefined) delete wx.showActionSheet
+  else wx.showActionSheet = previousShowActionSheet
+  if (previousShowModal === undefined) delete wx.showModal
+  else wx.showModal = previousShowModal
+  if (previousGetCurrentPages === undefined) delete global.getCurrentPages
+  else global.getCurrentPages = previousGetCurrentPages
+  if (previousSplPageVisibility === undefined) delete splPage._pageVisible
+  else splPage._pageVisible = previousSplPageVisibility
+  assert(recordsApi.getProjectRecords(project.id).length > 0)
+  assert.strictEqual(recordsApi.getProjectRecords(activeProject.id).length, 0,
+    'the result must be saved to the selected project rather than the active project')
+  assert.strictEqual(recordsApi.getActiveProject().id, activeProject.id,
+    'saving to a selected project must not switch the active project')
   storage.set('audioTool.records.v1', [
     ...storage.get('audioTool.records.v1'),
     {
@@ -4595,8 +4651,8 @@ function checkPageControllers() {
   recordsApi.addRecordToProject(limiterPayload, project.id)
   assert.strictEqual(recordsApi.getProjectRecords(project.id).length, 2)
   const workspaceSnapshot = recordsApi.getWorkspaceSnapshot()
-  assert.strictEqual(workspaceSnapshot.projects.length, 1)
-  assert.strictEqual(workspaceSnapshot.activeProject.id, project.id)
+  assert.strictEqual(workspaceSnapshot.projects.length, 2)
+  assert.strictEqual(workspaceSnapshot.activeProject.id, activeProject.id)
   assert.strictEqual(workspaceSnapshot.records.length, recordsApi.getRecords().length)
   const originalSetStorageSync = wx.setStorageSync
   const limiterRecordBeforeFailure = recordsApi.getRecordByPayload(limiterPayload)
@@ -5040,7 +5096,7 @@ function checkPageControllers() {
   assertWxmlHandlers(projectsPage, 'pages/projects/projects.wxml')
   projectsPage.onShow()
   assert.deepStrictEqual(projectsPage.data.recordTabs, ['现场项目', '常用收藏'])
-  assert.strictEqual(projectsPage.data.projects.length, 1)
+  assert.strictEqual(projectsPage.data.projects.length, 2)
   assert.strictEqual(projectsPage.data.recordTabIndex, 0, '项目首页默认展示现场项目')
   assert.strictEqual(projectsPage.data.displayRecords.length, 0, '项目首页不提前展示收藏记录')
   const repeatProjectsSetData = projectsPage.setData
@@ -5291,16 +5347,95 @@ function checkPageControllers() {
   assert(lightingDetailPage.data.product.specRows.length > 0)
   assert(lightingDetailPage.data.product.dmxChannelGuide.modes.length > 0)
   assert.strictEqual(lightingDetailPage.data.product.type, 'lighting')
+  assertWxmlHandlers(lightingDetailPage, 'pages/products/detail.wxml')
   const dmxPreferencesBeforeGuide = JSON.stringify(storage.get('audioTool.dmxAddress.preferences'))
   lightingDetailPage.openDmxChannelGuide()
   assert.strictEqual(navigatedUrl, '/pages/dmx-address/channel-guide?model=TL-SV3103')
   assert.strictEqual(JSON.stringify(storage.get('audioTool.dmxAddress.preferences')), dmxPreferencesBeforeGuide)
+
+  const dmxPreferencesKey = 'audioTool.dmxAddress.preferences'
+  const dmxPreferencesBeforeProductImport = storage.get(dmxPreferencesKey)
+  const existingDmxGroup = {
+    id: 'group-1',
+    name: 'Existing fixture',
+    fixtureSource: 'custom',
+    fixtureModel: '',
+    libraryChannelCount: '',
+    customName: 'Existing fixture',
+    customChannelCount: '8',
+    channelCount: '8',
+    fixtureCount: '2',
+    targetUniverse: 'A',
+  }
+  storage.set(dmxPreferencesKey, {
+    startAddressText: '1',
+    allocationMode: 'auto',
+    groups: [existingDmxGroup],
+  })
+  navigatedUrl = ''
+  const writesBeforeDmxImportOpen = storageWriteCount
   lightingDetailPage.openCalculator({ currentTarget: { dataset: { module: 'dmxAddress' } } })
+  assert.strictEqual(navigatedUrl, '')
+  assert.strictEqual(storageWriteCount, writesBeforeDmxImportOpen,
+    'opening DMX product import must not write preferences')
+  assert.strictEqual(lightingDetailPage.data.dmxImportVisible, true)
+  assert.deepStrictEqual(lightingDetailPage.data.dmxImportModes.map((mode) => mode.channelCount),
+    lightingDetailPage._productDetail.channelModes)
+  assert.strictEqual(lightingDetailPage.data.dmxImportChannelCount, '',
+    'DMX product import requires an explicit channel-mode choice')
+  assert.strictEqual(lightingDetailPage.data.dmxImportExistingGroupCount, 1)
+
+  const cancelFixtureCount = storageWriteCount
+  lightingDetailPage.selectDmxImportMode({ currentTarget: { dataset: { channelCount: 16 } } })
+  lightingDetailPage.onDmxImportFixtureCountInput({ detail: { value: '2' } })
+  lightingDetailPage.selectDmxImportAction({ currentTarget: { dataset: { action: 'append' } } })
+  lightingDetailPage.closeDmxProductImport()
+  assert.strictEqual(lightingDetailPage.data.dmxImportVisible, false)
+  assert.strictEqual(storageWriteCount, cancelFixtureCount, 'cancelling DMX product import must not write preferences')
+  assert.deepStrictEqual(storage.get(dmxPreferencesKey).groups, [existingDmxGroup],
+    'cancelling DMX product import must preserve existing groups')
+
+  navigatedUrl = ''
+  const writesBeforeDmxImportAppend = storageWriteCount
+  lightingDetailPage.openCalculator({ currentTarget: { dataset: { module: 'dmxAddress' } } })
+  assert.strictEqual(lightingDetailPage.data.dmxImportChannelCount, '')
+  lightingDetailPage.selectDmxImportMode({ currentTarget: { dataset: { channelCount: 16 } } })
+  lightingDetailPage.onDmxImportFixtureCountInput({ detail: { value: '2' } })
+  lightingDetailPage.confirmDmxProductImport()
+  assert.strictEqual(storageWriteCount, writesBeforeDmxImportAppend,
+    'DMX product import must require an explicit append or replace choice')
+  assert.strictEqual(lightingDetailPage.data.dmxImportVisible, true)
+  lightingDetailPage.selectDmxImportAction({ currentTarget: { dataset: { action: 'append' } } })
+  lightingDetailPage.confirmDmxProductImport()
   assert.strictEqual(navigatedUrl, '/pages/dmx-address/dmx-address')
-  const lightingGroup = storage.get('audioTool.dmxAddress.preferences').groups[0]
+  assert.strictEqual(storageWriteCount, writesBeforeDmxImportAppend + 1)
+  let importedDmxPreferences = storage.get(dmxPreferencesKey)
+  assert.strictEqual(importedDmxPreferences.groups.length, 2)
+  assert.deepStrictEqual(importedDmxPreferences.groups[0], existingDmxGroup,
+    'append must preserve the existing DMX group')
+  let lightingGroup = importedDmxPreferences.groups[1]
   assert.strictEqual(lightingGroup.fixtureModel, 'TL-SV3103')
   assert.strictEqual(lightingGroup.name, `${lightingDetailPage._productDetail.model} ${lightingDetailPage._productDetail.name}`)
-  assert.strictEqual(lightingGroup.channelCount, String(lightingDetailPage._productDetail.channelModes[0]))
+  assert.strictEqual(lightingGroup.channelCount, '16', 'import must use the selected channel mode')
+  assert.strictEqual(lightingGroup.fixtureCount, '2')
+
+  navigatedUrl = ''
+  const writesBeforeDmxImportReplace = storageWriteCount
+  lightingDetailPage.openCalculator({ currentTarget: { dataset: { module: 'dmxAddress' } } })
+  lightingDetailPage.selectDmxImportMode({ currentTarget: { dataset: { channelCount: 18 } } })
+  lightingDetailPage.onDmxImportFixtureCountInput({ detail: { value: '3' } })
+  lightingDetailPage.selectDmxImportAction({ currentTarget: { dataset: { action: 'replace' } } })
+  lightingDetailPage.confirmDmxProductImport()
+  assert.strictEqual(navigatedUrl, '/pages/dmx-address/dmx-address')
+  assert.strictEqual(storageWriteCount, writesBeforeDmxImportReplace + 1)
+  importedDmxPreferences = storage.get(dmxPreferencesKey)
+  assert.strictEqual(importedDmxPreferences.groups.length, 1,
+    'replace must leave only the imported DMX group')
+  lightingGroup = importedDmxPreferences.groups[0]
+  assert.strictEqual(lightingGroup.fixtureModel, 'TL-SV3103')
+  assert.strictEqual(lightingGroup.channelCount, '18', 'replace must use the selected channel mode')
+  assert.strictEqual(lightingGroup.fixtureCount, '3')
+  storage.set(dmxPreferencesKey, dmxPreferencesBeforeProductImport)
 
   const nonDmxLightingDetailPage = loadPage('pages/products/detail.js')
   nonDmxLightingDetailPage.onLoad({ type: 'lighting', model: 'TL-SL643' })
@@ -5743,6 +5878,7 @@ const auditRegressionScripts = [
   'dmx-core-regression.js',
   'dmx-group-input-test.js',
   'product-detail-route-test.js',
+  'result-project-target-test.js',
   'report-lifecycle-regression.js',
   'dmx-lifecycle-regression.js',
   'dmx-search-lifecycle-regression.js',

@@ -200,4 +200,107 @@
     <view class="not-found-title">未找到产品资料</view>
     <view class="not-found-text">该型号可能已更名、移除或链接参数不完整，请返回资料库重新选择。</view>
   </view>
+
+  <view
+    wx:if="{{dmxImportVisible}}"
+    class="dmx-import-overlay"
+    bindtap="closeDmxProductImport"
+    catchtouchmove="stopDmxImportTap"
+  >
+    <view class="dmx-import-sheet" catchtap="stopDmxImportTap">
+      <view class="dmx-import-handle"></view>
+      <view class="dmx-import-header">
+        <view class="dmx-import-heading">
+          <view class="dmx-import-title">带入 DMX 灯具</view>
+          <view class="dmx-import-product">{{product.model}} · {{product.summary}}</view>
+        </view>
+        <button class="dmx-import-close" aria-label="关闭" bindtap="closeDmxProductImport">×</button>
+      </view>
+
+      <scroll-view class="dmx-import-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+        <view class="dmx-import-section">
+          <view class="dmx-import-section-title">选择厂家通道模式</view>
+          <view wx:if="{{dmxImportModes.length == 1}}" class="dmx-import-hint">
+            本型号只有一种厂家模式。请点选 {{dmxImportModes[0].label}}，并确认与灯具菜单中的实际模式一致。
+          </view>
+          <view wx:else class="dmx-import-hint">请按灯具菜单中的实际模式选择；模式也必须与控台 Patch 一致。</view>
+          <view class="dmx-import-mode-list" role="radiogroup" aria-label="厂家通道模式">
+            <view
+              wx:for="{{dmxImportModes}}"
+              wx:key="channelCount"
+              class="dmx-import-choice {{dmxImportChannelCount == item.channelCount ? 'dmx-import-choice-selected' : ''}}"
+              role="radio"
+              aria-checked="{{dmxImportChannelCount == item.channelCount}}"
+              data-channel-count="{{item.channelCount}}"
+              bindtap="selectDmxImportMode"
+            >
+              <view class="dmx-import-radio-mark"></view>
+              <text>{{item.label}}</text>
+            </view>
+          </view>
+        </view>
+
+        <view class="dmx-import-section">
+          <view class="dmx-import-section-title">带入数量</view>
+          <view class="dmx-import-count-row">
+            <view class="dmx-import-count-copy">灯具数量</view>
+            <view class="dmx-import-count-input-wrap">
+              <input
+                class="dmx-import-count-input"
+                type="number"
+                maxlength="3"
+                value="{{dmxImportFixtureCount}}"
+                aria-label="灯具数量，1 至 200 台"
+                bindinput="onDmxImportFixtureCountInput"
+              />
+              <text class="dmx-import-count-unit">台</text>
+            </view>
+          </view>
+          <view class="dmx-import-hint">请输入 1–200 的整数；再次带入同型号会新增一组。</view>
+        </view>
+
+        <view wx:if="{{dmxImportHasGroups}}" class="dmx-import-section">
+          <view class="dmx-import-section-title">当前已有 {{dmxImportExistingGroupCount}} 组灯具</view>
+          <view wx:if="{{!dmxImportGroupsReadable}}" class="dmx-import-hint dmx-import-warning">
+            现有分组格式无法追加。可以明确选择替换，或取消以保留当前草稿。
+          </view>
+          <view wx:else class="dmx-import-hint">选择如何处理当前草稿；取消不会写入设置。</view>
+          <view class="dmx-import-action-list">
+            <view
+              class="dmx-import-action {{dmxImportAction == 'append' ? 'dmx-import-action-selected' : ''}} {{!dmxImportGroupsReadable ? 'dmx-import-action-disabled' : ''}}"
+              role="radio"
+              aria-checked="{{dmxImportAction == 'append'}}"
+              data-action="append"
+              bindtap="selectDmxImportAction"
+            >
+              <view class="dmx-import-action-title">追加到末尾</view>
+              <view class="dmx-import-action-copy">保留原分组顺序和设置，只增加这台灯具组。</view>
+            </view>
+            <view
+              class="dmx-import-action {{dmxImportAction == 'replace' ? 'dmx-import-action-selected' : ''}}"
+              role="radio"
+              aria-checked="{{dmxImportAction == 'replace'}}"
+              data-action="replace"
+              bindtap="selectDmxImportAction"
+            >
+              <view class="dmx-import-action-title">替换灯具分组</view>
+              <view class="dmx-import-action-copy">只替换分组；起始地址、编址方式等其他偏好保留。</view>
+            </view>
+          </view>
+        </view>
+        <view wx:else class="dmx-import-section dmx-import-empty-note">
+          当前没有已保存灯具组；确认后会把这台灯具作为第一组加入。
+        </view>
+        <view wx:if="{{dmxImportAllocationHint}}" class="dmx-import-hint dmx-import-allocation-hint">
+          {{dmxImportAllocationHint}}
+        </view>
+      </scroll-view>
+
+      <view wx:if="{{dmxImportError}}" class="dmx-import-error" role="alert">{{dmxImportError}}</view>
+      <view class="dmx-import-footer">
+        <button class="dmx-import-cancel" disabled="{{dmxImportSubmitting}}" bindtap="closeDmxProductImport">取消</button>
+        <button class="dmx-import-confirm" loading="{{dmxImportSubmitting}}" disabled="{{dmxImportSubmitting}}" bindtap="confirmDmxProductImport">确认带入</button>
+      </view>
+    </view>
+  </view>
 </scroll-view>

@@ -67,4 +67,6 @@ assert.equal(load({ type: 'unknown', model: samples[1].model }).model, samples[1
 assert.equal(storage.get(recentKey)[0].type, 'speaker')
 assert.equal(load({ model: samples[1].model }).model, samples[1].model)
 
+require('./dmx-product-import-test')
+
 console.log('product detail route handling PASS')

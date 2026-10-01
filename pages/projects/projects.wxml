@@ -14,6 +14,14 @@
       >{{item}}</view>
     </view>
 
+    <view wx:if="{{workspaceError}}" class="workspace-error">
+      <view class="workspace-error-copy">
+        <view class="workspace-error-title">本地项目和收藏读取失败</view>
+        <view class="workspace-error-text">保留上次成功显示。请重试后再进行保存或项目操作。</view>
+      </view>
+      <button class="record-action record-action-primary workspace-retry" bindtap="retryWorkspace">重试</button>
+    </view>
+
     <block wx:if="{{recordTabIndex == 1}}">
       <view wx:if="{{displayRecords.length}}" class="record-list">
         <view wx:for="{{displayRecords}}" wx:key="id" class="record-card record-card-{{item.theme}}">
@@ -33,7 +41,7 @@
           </view>
         </view>
       </view>
-      <view wx:else class="records-empty">
+      <view wx:elif="{{!workspaceError}}" class="records-empty">
         <view class="records-empty-mark">★</view>
         <view class="records-empty-title">还没有常用收藏</view>
         <view class="records-empty-text">在计算结果页点击“收藏常用”，即可保存在这里。</view>
@@ -45,7 +53,7 @@
         <view>
           <view class="project-toolbar-title">现场项目</view>
         </view>
-        <button class="project-create" bindtap="createProject">＋ 新建</button>
+        <button wx:if="{{!workspaceError}}" class="project-create" bindtap="createProject">＋ 新建</button>
       </view>
 
       <view wx:if="{{activeProject}}" class="active-project-strip">
@@ -77,7 +85,7 @@
         </view>
       </view>
 
-      <view wx:else class="records-empty records-empty-project">
+      <view wx:elif="{{!workspaceError}}" class="records-empty records-empty-project">
         <view class="records-empty-mark">＋</view>
         <view class="records-empty-title">还没有现场项目</view>
         <view class="records-empty-text">新建项目，整理线路和计算结果。</view>

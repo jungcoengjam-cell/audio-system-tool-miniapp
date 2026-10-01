@@ -136,7 +136,7 @@ Page({
   onLoad(options) {
     this.projectId = options.id || ''
     this._skipNextShowRefresh = true
-    this.refresh()
+    this.refresh({ forceRefresh: true })
   },
 
   onShow() {
@@ -144,7 +144,7 @@ Page({
       this._skipNextShowRefresh = false
       return
     }
-    if (this.projectId && !this.data.editing) this.refresh()
+    if (this.projectId && !this.data.editing) this.refresh({ forceRefresh: true })
   },
 
   onUnload() {
@@ -154,9 +154,25 @@ Page({
     printPerformanceSummary('项目详情/')
   },
 
-  refresh() {
+  refresh(options = {}) {
     const finishRefresh = startMeasurement('项目详情/刷新总耗时')
-    const { projects, records: allRecords, activeProject } = getWorkspaceSnapshot()
+    const snapshot = getWorkspaceSnapshot({
+      forceRefresh: options.forceRefresh === true || Boolean(this.data.workspaceError),
+    })
+    if (snapshot.ok === false) {
+      if (this.data.isGeneratingReport || this.reportPendingSignature) {
+        this.reportRevision = (this.reportRevision || 0) + 1
+        this.reportPendingSignature = ''
+        if (this.data.isGeneratingReport && typeof wx.hideLoading === 'function') wx.hideLoading()
+      }
+      this.setData({
+        workspaceError: snapshot.error || '本地项目和收藏数据读取失败，请重试。',
+        ...(this.data.isGeneratingReport ? { isGeneratingReport: false } : {}),
+      })
+      finishRefresh({ storageError: true })
+      return
+    }
+    const { projects, records: allRecords, activeProject } = snapshot
     const project = projects.find((item) => item.id === this.projectId) || null
     if (!project) {
       if (this.reportPendingSignature || this.reportSignature) {
@@ -166,6 +182,7 @@ Page({
         if (this.data.isGeneratingReport && typeof wx.hideLoading === 'function') wx.hideLoading()
       }
       if (this.projectViewSignature === 'missing') {
+        if (this.data.workspaceError) this.setData({ workspaceError: '' })
         finishRefresh({ skipped: true, missing: true })
         return
       }
@@ -180,6 +197,7 @@ Page({
         reportImagePath: '',
         reportPreviewVisible: false,
         isGeneratingReport: false,
+        ...(this.data.workspaceError ? { workspaceError: '' } : {}),
         missing: true,
       }, () => {
         finishViewUpdate()
@@ -214,6 +232,7 @@ Page({
       })),
     })
     if (viewSignature === this.projectViewSignature) {
+      if (this.data.workspaceError) this.setData({ workspaceError: '' })
       finishRefresh({ skipped: true, records: rawRecords.length })
       return
     }
@@ -262,6 +281,7 @@ Page({
       compareSelectedIds: [],
       comparison: null,
       storageHealth: getStorageHealth(),
+      ...(this.data.workspaceError ? { workspaceError: '' } : {}),
       ...(reportChanged ? { reportImagePath: '', reportPreviewVisible: false, isGeneratingReport: false } : {}),
       missing: false,
     }, () => {
@@ -271,8 +291,12 @@ Page({
     wx.setNavigationBarTitle({ title: project.name })
   },
 
+  retryWorkspace() {
+    this.refresh({ forceRefresh: true })
+  },
+
   activateProject() {
-    if (!this.data.project) return
+    if (!this.data.project || this.data.workspaceError) return
     if (!setActiveProject(this.data.project.id)) {
       wx.showToast({ title: '设置失败，请重试', icon: 'none' })
       return
@@ -283,7 +307,7 @@ Page({
 
   startEditProject() {
     const project = this.data.project
-    if (!project) return
+    if (!project || this.data.workspaceError) return
     const standardClassIndex = Math.max(0, STANDARD_CLASSES.findIndex((item) => item.key === project.standardClassKey))
     const standardClass = STANDARD_CLASSES[standardClassIndex]
     const gradeIndex = Math.max(0, standardClass.grades.findIndex((item) => item.key === project.gradeKey))
@@ -348,12 +372,13 @@ Page({
   },
 
   openProjectModule(event) {
+    if (this.data.workspaceError) return
     const path = prepareProjectModule(this.projectId, event.currentTarget.dataset.module)
     if (path) wx.navigateTo({ url: path })
   },
 
   openProjectWiring() {
-    if (!this.projectId) return
+    if (!this.projectId || this.data.workspaceError) return
     wx.navigateTo({ url: `/pages/project-wiring/index?id=${encodeURIComponent(this.projectId)}` })
   },
 
@@ -400,6 +425,7 @@ Page({
   },
 
   saveProjectDetails() {
+    if (this.data.workspaceError) return
     const updated = updateProject(this.projectId, this.data.projectForm)
     if (!updated) {
       wx.showToast({ title: '项目名称为空或已存在', icon: 'none' })
@@ -411,19 +437,21 @@ Page({
   },
 
   restoreRecord(event) {
+    if (this.data.workspaceError) return
     const record = this.rawRecords.find((item) => item.id === event.currentTarget.dataset.id)
     const path = restoreRecord(record)
     if (path) wx.navigateTo({ url: path })
   },
 
   removeProjectRecord(event) {
+    if (this.data.workspaceError) return
     const recordId = event.currentTarget.dataset.id
     wx.showModal({
       title: '从项目中移除？',
       content: '若该记录未收藏且不属于其他项目，移除后将同时清理。',
       confirmColor: '#ff3b30',
       success: ({ confirm }) => {
-        if (!confirm || !removeRecordFromProject(recordId, this.projectId)) return
+        if (!confirm || this.data.workspaceError || !removeRecordFromProject(recordId, this.projectId)) return
         this.refresh()
         wx.showToast({ title: '已从项目移除', icon: 'none' })
       },
@@ -431,6 +459,7 @@ Page({
   },
 
   getProjectReportText() {
+    if (this.data.workspaceError) return ''
     const project = this.data.project
     if (!project) return ''
 
@@ -471,6 +500,7 @@ Page({
   },
 
   copyProject() {
+    if (this.data.workspaceError) return
     const text = this.getProjectReportText()
     if (text) wx.setClipboardData({ data: text })
   },
@@ -483,6 +513,7 @@ Page({
   },
 
   generateProjectReportImage() {
+    if (this.data.workspaceError) return
     const payload = buildProjectReportPayload(this.data.project, this.data.recordGroups, {
       totalModuleCount: Object.keys(MODULES).length,
       generatedAt: formatTime(Date.now(), true),
@@ -576,14 +607,17 @@ Page({
   preventTouchMove() {},
 
   previewProjectReportImage() {
+    if (this.data.workspaceError) return
     previewGeneratedImage(this.data.reportImagePath)
   },
 
   shareProjectReportImage() {
+    if (this.data.workspaceError) return
     shareGeneratedImage(this.data.reportImagePath)
   },
 
   saveProjectReportImage() {
+    if (this.data.workspaceError) return
     saveGeneratedImage(this.data.reportImagePath)
   },
 })

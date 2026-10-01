@@ -63,7 +63,14 @@ assert.deepEqual(storage.get(projectKey), [{ id: 'project' }])
 let productDetailPage
 const navigations = []
 const toastTitles = []
-global.Page = (config) => { productDetailPage = config }
+global.Page = (config) => {
+  productDetailPage = config
+  productDetailPage.data = { ...config.data }
+  productDetailPage.setData = function setData(changes, callback) {
+    this.data = { ...this.data, ...changes }
+    if (callback) callback()
+  }
+}
 global.wx.navigateTo = ({ url }) => navigations.push(url)
 global.wx.showToast = ({ title }) => toastTitles.push(title)
 global.wx.setNavigationBarTitle = () => {}
@@ -76,9 +83,17 @@ const calculatorCases = [
   ['dmxAddress', fixture],
 ]
 calculatorCases.forEach(([module, detail]) => {
+  if (module === 'dmxAddress') storage.delete('audioTool.dmxAddress.preferences')
   productDetailPage._productDetail = detail
   storageFailure = false
   productDetailPage.openCalculator({ currentTarget: { dataset: { module } } })
+  if (module === 'dmxAddress') {
+    assert.equal(productDetailPage.data.dmxImportVisible, true, 'DMX 带入先打开确认面板')
+    productDetailPage.selectDmxImportMode({
+      currentTarget: { dataset: { channelCount: String(detail.channelModes[0]) } },
+    })
+    productDetailPage.confirmDmxProductImport()
+  }
   const navigationCount = navigations.length
   const storedPreferences = storage.get({
     limiter: 'audioTool.limiter.preferences',
@@ -101,6 +116,14 @@ calculatorCases.forEach(([module, detail]) => {
     assert.equal(storedPreferences.groups[0].channelCount, String(detail.channelModes[0]))
   }
   productDetailPage.openCalculator({ currentTarget: { dataset: { module } } })
+  if (module === 'dmxAddress') {
+    assert.equal(productDetailPage.data.dmxImportVisible, true)
+    productDetailPage.selectDmxImportMode({
+      currentTarget: { dataset: { channelCount: String(detail.channelModes[0]) } },
+    })
+    productDetailPage.selectDmxImportAction({ currentTarget: { dataset: { action: 'append' } } })
+    productDetailPage.confirmDmxProductImport()
+  }
   assert.equal(navigations.length, navigationCount + 1, `${module} 未变化偏好不应阻止导航`)
   storageFailure = true
   const failedNavigationCount = navigations.length
@@ -113,14 +136,27 @@ calculatorCases.forEach(([module, detail]) => {
     model: `${detail.model}-changed-for-review`,
   }
   productDetailPage.openCalculator({ currentTarget: { dataset: { module } } })
+  if (module === 'dmxAddress') {
+    productDetailPage.selectDmxImportMode({
+      currentTarget: { dataset: { channelCount: String(detail.channelModes[0]) } },
+    })
+    productDetailPage.selectDmxImportAction({ currentTarget: { dataset: { action: 'append' } } })
+    productDetailPage.confirmDmxProductImport()
+  }
   assert.equal(navigations.length, failedNavigationCount, `${module} 写入失败后仍然导航`)
   assert.equal(JSON.stringify(storage.get({
     limiter: 'audioTool.limiter.preferences', spl: 'audioTool.spl.preferences',
     camera: 'audioTool.camera.preferences', dmxAddress: 'audioTool.dmxAddress.preferences',
   }[module])), beforeFailedWrite, `${module} 写入失败改变了偏好存储`)
-  assert.equal(toastTitles.at(-1), '设置保存失败，请重试')
+  if (module === 'dmxAddress') {
+    assert.equal(productDetailPage.data.dmxImportVisible, true, 'DMX 写入失败时保留确认面板')
+    assert.equal(productDetailPage.data.dmxImportChannelCount, String(detail.channelModes[0]))
+    assert.equal(productDetailPage.data.dmxImportAction, 'append')
+    assert.match(productDetailPage.data.dmxImportError, /保存失败/)
+  } else assert.equal(toastTitles.at(-1), '设置保存失败，请重试')
   storageFailure = false
-  productDetailPage.openCalculator({ currentTarget: { dataset: { module } } })
+  if (module === 'dmxAddress') productDetailPage.confirmDmxProductImport()
+  else productDetailPage.openCalculator({ currentTarget: { dataset: { module } } })
   assert.equal(navigations.length, failedNavigationCount + 1, `${module} 写入失败后无法重试`)
 })
 

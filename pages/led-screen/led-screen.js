@@ -10,8 +10,7 @@ const {
   captureOperationResult,
   isOperationResultCurrent,
 } = require('../../utils/operation-inputs')
-const { syncPageFavorite, togglePageFavorite } = require('../../utils/result-record-actions')
-const { addRecordToProject, createProject, getActiveProject } = require('../../utils/records')
+const { addPageToActiveProject, syncPageFavorite, togglePageFavorite } = require('../../utils/result-record-actions')
 const {
   previewGeneratedImage,
   saveGeneratedImage,
@@ -729,31 +728,7 @@ Page({
   saveToActiveProject() {
     this.flushInputCalculation()
     const capture = this.captureCurrentOutput()
-    const payload = this.getRecordPayload()
-    if (!capture || !payload) return
-    const save = (project) => {
-      if (!project || !this.isCapturedOutputCurrent(capture)) return
-      if (!addRecordToProject(payload, project.id)) {
-        wx.showToast({ title: '保存失败，请检查本地存储', icon: 'none' })
-        return
-      }
-      vibrate('medium')
-      wx.showToast({ title: `已加入${project.name}`, icon: 'none' })
-    }
-    const activeProject = getActiveProject()
-    if (activeProject) {
-      save(activeProject)
-      return
-    }
-    wx.showModal({
-      title: '新建现场项目', content: '', editable: true,
-      placeholderText: '例如：三楼会议室', confirmText: '创建并加入',
-      success: ({ confirm, content }) => {
-        if (!confirm || !this.isCapturedOutputCurrent(capture)) return
-        const project = createProject(content)
-        if (project) save(project)
-        else wx.showToast({ title: '请输入项目名称', icon: 'none' })
-      },
-    })
+    if (!capture || !this.getRecordPayload()) return
+    return addPageToActiveProject(this, () => this.isCapturedOutputCurrent(capture))
   },
 })

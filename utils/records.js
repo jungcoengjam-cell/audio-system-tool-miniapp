@@ -5,6 +5,7 @@ const STORAGE_SCHEMA_KEY = 'audioTool.storageSchemaVersion'
 const STORAGE_SCHEMA_VERSION = 3
 const projectWiring = require('./project-wiring')
 const storageValueCache = new Map()
+const storageReadFailures = new Set()
 let mutationDepth = 0
 let mutationReadFailed = false
 let normalizedRecordSource
@@ -101,16 +102,21 @@ function readStorageValue(key, fallback) {
     const value = wx.getStorageSync(key)
     return { ok: true, value: value === undefined || value === null || value === '' ? fallback : value }
   } catch (error) {
+    storageReadFailures.add(key)
     if (mutationDepth > 0) mutationReadFailed = true
     return { ok: false, value: fallback }
   }
 }
 
-function readValue(key, fallback) {
-  if (storageValueCache.has(key)) return storageValueCache.get(key)
+function readValueResult(key, fallback) {
+  if (storageValueCache.has(key)) return { ok: true, value: storageValueCache.get(key) }
   const result = readStorageValue(key, fallback)
   if (result.ok) storageValueCache.set(key, result.value)
-  return result.value
+  return result
+}
+
+function readValue(key, fallback) {
+  return readValueResult(key, fallback).value
 }
 
 function writeValue(key, value) {
@@ -220,7 +226,9 @@ function ensureStorageSchema() {
 }
 
 function readNormalizedRecords() {
-  const records = readValue(RECORDS_KEY, [])
+  const result = readValueResult(RECORDS_KEY, [])
+  if (!result.ok) return normalizedRecords
+  const records = result.value
   if (records === normalizedRecordSource) return normalizedRecords
   normalizedRecordSource = records
   normalizedRecords = keepPersistentRecords(
@@ -231,7 +239,9 @@ function readNormalizedRecords() {
 }
 
 function readNormalizedProjects() {
-  const projects = readValue(PROJECTS_KEY, [])
+  const result = readValueResult(PROJECTS_KEY, [])
+  if (!result.ok) return normalizedProjects
+  const projects = result.value
   if (projects === normalizedProjectSource) return normalizedProjects
   normalizedProjectSource = projects
   normalizedProjects = Array.isArray(projects)
@@ -250,12 +260,21 @@ function getProjects() {
   return readNormalizedProjects()
 }
 
-function getWorkspaceSnapshot() {
+function getWorkspaceSnapshot(options = {}) {
+  if (options.forceRefresh) {
+    ;[STORAGE_SCHEMA_KEY, RECORDS_KEY, PROJECTS_KEY, ACTIVE_PROJECT_KEY].forEach((key) => storageValueCache.delete(key))
+    normalizedRecordSource = undefined
+    normalizedProjectSource = undefined
+  }
+  storageReadFailures.clear()
   ensureStorageSchema()
   const records = readNormalizedRecords()
   const projects = readNormalizedProjects()
   const activeId = readValue(ACTIVE_PROJECT_KEY, '')
+  const ok = storageReadFailures.size === 0
   return {
+    ok,
+    error: ok ? '' : '本地项目和收藏数据读取失败，请重试。',
     records,
     projects,
     activeProject: projects.find((project) => project.id === activeId) || null,

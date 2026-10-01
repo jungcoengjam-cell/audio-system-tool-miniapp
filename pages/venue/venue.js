@@ -16,11 +16,7 @@ const {
   createResultReportMethods,
   resetStaleResultReport,
 } = require('../../utils/result-report-controller')
-const {
-  syncPageFavorite,
-  togglePageFavorite,
-} = require('../../utils/result-record-actions')
-const { addRecordToProject, createProject, getActiveProject } = require('../../utils/records')
+const { addPageToActiveProject, syncPageFavorite, togglePageFavorite } = require('../../utils/result-record-actions')
 const {
   drawVenuePlan: renderVenuePlan,
   getVenuePlanCanvasHeight,
@@ -1440,30 +1436,9 @@ Page({
     const guard = payload && result ? captureOperationResult(this, result) : null
     if (!payload || !guard || !isOperationResultCurrent(this, guard)) return
     const preferences = JSON.stringify(payload.preferences)
-    const current = () => this.data.result === result
+    return addPageToActiveProject(this, () => this.data.result === result
       && JSON.stringify(this.getPreferences()) === preferences
-      && isOperationResultCurrent(this, guard)
-    const save = (project) => {
-      if (!project || !current()) return
-      if (!addRecordToProject(payload, project.id)) {
-        wx.showToast({ title: '保存失败，请检查本地存储', icon: 'none' })
-        return
-      }
-      vibrate('medium')
-      wx.showToast({ title: `已加入${project.name}`, icon: 'none' })
-    }
-    const project = getActiveProject()
-    if (project) return save(project)
-    wx.showModal({
-      title: '新建现场项目', content: '', editable: true,
-      placeholderText: '例如：三楼会议室', confirmText: '创建并加入',
-      success: ({ confirm, content }) => {
-        if (!confirm || !current()) return
-        const created = createProject(content)
-        if (created) save(created)
-        else wx.showToast({ title: '请输入项目名称', icon: 'none' })
-      },
-    })
+      && isOperationResultCurrent(this, guard))
   },
 
   ...venueOperationMethods,
