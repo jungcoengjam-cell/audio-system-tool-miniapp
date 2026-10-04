@@ -5,6 +5,7 @@ defAnchor,
 sideCanvasRange,
 posPoint,
 posKey,
+fixtureSort,
 renderMetrics,
 shorten,
 } = require('./layout-model')
@@ -39,6 +40,36 @@ let minimum = Infinity
 for (let i = 0; i < points.length; i += 1) for (let j = i + 1; j < points.length; j += 1) minimum = Math.min(minimum, Math.hypot(points[i].x - points[j].x, points[i].y - points[j].y))
 return Math.min(30, Math.max(10, minimum / 2 - 2)) / v
 }
+function getExportAddressLayout(snapshot) {
+const { data, stage } = snapshot, width = data.canvasWidth || CANVAS_WIDTH, height = data.canvasHeight || CANVAS_HEIGHT
+const r = getRenderRadius(snapshot, 1), limit = 2 * r + 4, map = new Map()
+snapshot.fixtures.forEach((f) => { const p = snapshot.positions[posKey(f)]; if (!p) return; const k = `${p.zone}:${p.positionIndex}`
+const b = map.get(k) || { definition: snapshot.definitions.find((d) => d.zone === p.zone && d.positionIndex === p.positionIndex), entries: [] }
+b.entries.push({ fixture: f, point: posPoint(p, stage, snapshot.frontAtBottom) }); map.set(k, b) })
+const bars = []
+map.forEach((b) => { if (!b.definition) return; const side = b.definition.zone.startsWith('side-'), axis = (e) => side ? e.point.y : e.point.x
+b.entries.sort((a, c) => axis(a) - axis(c) || fixtureSort(a.fixture, c.fixture)); b.gap = Infinity
+for (let i = 1; i < b.entries.length; i += 1) b.gap = Math.min(b.gap, Math.max(0, axis(b.entries[i]) - axis(b.entries[i - 1])))
+if (b.entries.length > 1 && b.gap < limit) bars.push(b) })
+bars.sort((a, b) => a.definition.locationIndex - b.definition.locationIndex)
+if (!bars.length) return { markers: new Map(), bars: [], canvasHeight: height, destWidth: width * 2, destHeight: height * 2 }
+const groups = data.groupLegend || [], metrics = renderMetrics(width, height, stage, groups.length, data.schemeIndex === 2), rows = Math.ceil(Math.min(8, groups.length) / (groups.length > 4 ? 2 : 1))
+const bottom = Math.max(stage.top + stage.height + 130, metrics.legendTop + (rows - 1) * metrics.legendStep + 30, metrics.noteY || 0, metrics.sideNoteY || 0, metrics.overflowY || 0)
+const markers = new Map(), dense = bars.some((b) => b.gap < 1.5), axisStart = 30, axisEnd = width - 30; let y = bottom + (dense ? 64 : 32)
+bars.forEach((b) => {
+const mr = Math.max(.35, Math.min(4.5, (b.gap - 1) / 2)); b.entries.forEach(({ fixture }) => markers.set(posKey(fixture), mr))
+const side = b.definition.zone.startsWith('side-'), range = sideCanvasRange(b.definition, stage, snapshot.frontAtBottom, (data.sidePairIndex || 0) + 1)
+const origin = side ? range.startY : stage.left, span = side ? range.endY - range.startY : stage.width, segments = []
+for (let start = 0; start < b.entries.length; start += 20) {
+const part = b.entries.slice(start, start + 20), headerY = y
+part.forEach((e, i) => { e.actualX = axisStart + Math.max(0, Math.min(1, ((side ? e.point.y : e.point.x) - origin) / (span || 1))) * (axisEnd - axisStart); e.slotX = axisStart + ((i + .5) / part.length) * (axisEnd - axisStart) })
+segments.push({ headerY, entries: part }); y += 70
+}
+y += 4; b.segments = segments
+})
+const canvasHeight = Math.ceil(y + 16), scale = Math.min(2, data.isLandscape ? 2 : 1500 / width, 4096 / canvasHeight)
+return { markers, bars, canvasHeight, destWidth: Math.floor(width * scale), destHeight: Math.floor(canvasHeight * scale) }
+}
 function drawDirectionArrow(ctx, startX, startY, endX, endY) {
 const angle = Math.atan2(endY - startY, endX - startX)
 ctx.beginPath()
@@ -52,12 +83,13 @@ ctx.stroke()
 
 function renderLayout(ctx, snapshot, options = {}) {
 const data = snapshot.data
-const canvasWidth = Number(data.canvasWidth) || CANVAS_WIDTH
-const canvasHeight = Number(data.canvasHeight) || CANVAS_HEIGHT
+const canvasWidth = data.canvasWidth || CANVAS_WIDTH
+const baseCanvasHeight = data.canvasHeight || CANVAS_HEIGHT
+const canvasHeight = options.exportMode ? (data.exportCanvasHeight || baseCanvasHeight) : baseCanvasHeight
 const viewScale = snapshot.viewScale
 const stage = snapshot.stage
 const groups = data.groupLegend || []
-const metrics = renderMetrics(canvasWidth, canvasHeight, stage, groups.length, data.schemeIndex === 2)
+const metrics = renderMetrics(canvasWidth, baseCanvasHeight, stage, groups.length, data.schemeIndex === 2)
 const widthMeters = snapshot.widthMeters
 const depthMeters = snapshot.depthMeters
 const frontAtBottom = snapshot.frontAtBottom
@@ -65,6 +97,8 @@ const theme = snapshot.theme
 const selectedKey = options.exportMode ? '' : snapshot.selectedKey
 const fixtures = snapshot.fixtures
 const fixtureCount = fixtures.length
+const exportLayout = options.exportMode ? getExportAddressLayout(snapshot) : null
+const hasDensityMode = exportLayout?.bars.some((bar) => bar.gap < 1.5)
 const radius = getRenderRadius(snapshot, viewScale)
 ctx.setFillStyle(theme.background)
 ctx.fillRect(0, 0, canvasWidth, canvasHeight)
@@ -134,6 +168,14 @@ const point = posPoint(position, stage, frontAtBottom)
 const { x, y } = point
 const color = GROUP_COLORS[fixture.groupIndex % GROUP_COLORS.length]
 const completed = snapshot.checkedKeys.has(snapshot.progKey(fixture))
+const markerRadius = exportLayout?.markers.get(key)
+if (markerRadius) {
+ctx.setFillStyle(color)
+ctx.beginPath()
+ctx.arc(x, y, markerRadius, 0, Math.PI * 2)
+ctx.fill()
+return
+}
 ctx.beginPath()
 ctx.setFillStyle(color)
 ctx.arc(x, y, radius, 0, Math.PI * 2)
@@ -221,6 +263,38 @@ ctx.setFontSize(14)
 if (data.schemeIndex === 2) ctx.fillText('侧光同一位置的展开仅为地址辨识，不代表安装高度。', metrics.titleX, metrics.sideNoteY)
 ctx.fillText('示意图用于位置与地址核对，不代表光束覆盖或照度模拟。', metrics.titleX, metrics.noteY)
 }
+if (exportLayout?.bars.length) {
+ctx.setTextAlign('left')
+ctx.setFillStyle(theme.secondary)
+ctx.setFontSize(12)
+ctx.fillText('标签辨址，刻度示真实位置（顶光/面光左→右，侧光上→下）。', metrics.titleX, exportLayout.bars[0].segments[0].headerY - (hasDensityMode ? 48 : 8))
+if (hasDensityMode) ctx.fillText('总览示密度，地址见分段图。', metrics.titleX, exportLayout.bars[0].segments[0].headerY - 30)
+ctx.setStrokeStyle(theme.border)
+ctx.setLineWidth(1)
+exportLayout.bars.forEach((bar) => bar.segments.forEach((segment, i) => {
+const first = i * 20 + 1, last = first + segment.entries.length - 1, side = bar.definition.zone.startsWith('side-')
+const axisY = segment.headerY + 35, labelY = axisY + 25
+ctx.setFillStyle(theme.text)
+ctx.setTextAlign('left')
+ctx.setFontSize(14)
+ctx.fillText(`${bar.definition.label} ${i + 1}/${bar.segments.length}段 ${first}-${last}台 ${side ? '上→下' : '左→右'}`, metrics.titleX, segment.headerY + 15)
+ctx.beginPath()
+ctx.moveTo(30, axisY)
+ctx.lineTo(canvasWidth - 30, axisY)
+segment.entries.forEach((entry) => {
+ctx.moveTo(entry.actualX, axisY)
+ctx.lineTo(entry.slotX, labelY - 5)
+})
+ctx.stroke()
+ctx.setTextAlign('center')
+ctx.setFontSize(12)
+segment.entries.forEach((entry) => {
+ctx.setFillStyle(GROUP_COLORS[entry.fixture.groupIndex % GROUP_COLORS.length])
+ctx.fillRect(entry.actualX - 1, axisY - 5, 2, 10)
+ctx.fillText(entry.fixture.addressText, entry.slotX, labelY)
+})
+}))
+}
 }
 
-module.exports = { renderLayout, getCanvasTheme, getMarkerTextColor, getFixtureRadius, getRenderRadius, GROUP_COLORS, CANVAS_THEMES }
+module.exports = { renderLayout, getCanvasTheme, getMarkerTextColor, getFixtureRadius, getRenderRadius, getExportAddressLayout, GROUP_COLORS, CANVAS_THEMES }

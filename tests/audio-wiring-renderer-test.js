@@ -240,4 +240,29 @@ assert.ok(reportLines.some((value) => value.includes('，')))
 assert.ok(!reportLines.some((value) => /^[，。；：、！？）》】〕〉”’」』…％]/.test(value)),
   'Chinese closing punctuation does not start a wrapped line')
 
+const reportViewModel = getWiringModel('stereo35', 'xlrBalanced', { sourceChannel: 'left' })
+const selectedReportConnectionId = reportViewModel.connections[0].id
+;[
+  { viewMode: 'wiring', face: 'mating', label: '当前视角：连线图' },
+  { viewMode: 'connectors', face: 'mating', label: '接头视角 · 插接面' },
+  { viewMode: 'connectors', face: 'solder', label: '接头视角 · 焊接面' },
+].forEach(({ viewMode, face, label }) => {
+  const options = { viewMode, face, selectedId: selectedReportConnectionId, theme: 'dark', scale: 2 }
+  const height = getReportHeight(640, reportViewModel, options)
+  const canvas = recorder()
+  const result = drawWiringReport(canvas.ctx, reportViewModel, 640, height, options)
+  assert.strictEqual(result.height, height, `${label} report height matches drawing`)
+  assertBounds(canvas.calls, 640, height)
+  const lines = canvas.calls.filter((call) => call[0] === 'fillText').map((call) => String(call[1]))
+  const text = lines.join('').replace(/\s/g, '')
+  assert(text.includes(label.replace(/\s/g, '')), `report identifies ${label}`)
+  assert(text.includes('悬空不接：输出R'), 'report retains the unconnected stereo output pin')
+  reportViewModel.connections.forEach((connection) => {
+    assert(text.includes(connection.fromLabel.replace(/\s/g, '')))
+    assert(text.includes(connection.toLabel.replace(/\s/g, '')))
+  })
+  assert(canvas.calls.some((call) => call[0] === 'setLineWidth' && call[1] === 4),
+    'report view retains the selected-connection highlight')
+})
+
 console.log('audio wiring renderer regression passed')

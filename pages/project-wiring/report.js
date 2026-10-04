@@ -13,6 +13,23 @@ const CONTENT_BOTTOM = 1640
 const BODY_WIDTH = 608
 const BODY_SIZE = 22
 const BODY_LINE_HEIGHT = 32
+const LINE_CARD_X = 40
+const LINE_CARD_WIDTH = 640
+const LINE_CONTENT_X = 56
+const LINE_CONTENT_WIDTH = 608
+const LINE_COLUMN_GAP = 24
+const LINE_COLUMN_WIDTH = (LINE_CONTENT_WIDTH - LINE_COLUMN_GAP) / 2
+const LINE_DESTINATION_X = LINE_CONTENT_X + LINE_COLUMN_WIDTH + LINE_COLUMN_GAP
+const LINE_MAX_PAGE_HEIGHT = 1500
+const LINE_CONTENT_BOTTOM = 1380
+const LINE_FOOTER_RESERVE = 112
+const LINE_VALUE_SIZE = 30
+const LINE_IMPORTANT_SIZE = 28
+const LINE_SMALL_SIZE = 18
+const LINE_PROJECT_NAME_SIZE = 28
+const LINE_SUMMARY_SIZE = 24
+const LINE_VALUE_HEIGHT = 39
+const LINE_BLOCK_GAP = 7
 
 const LIGHT = Object.freeze({
   background: '#f5f5f7', card: '#ffffff', text: '#1d1d1f', secondary: '#5f5f64',
@@ -66,6 +83,68 @@ function wrapText(value, width = BODY_WIDTH, size = BODY_SIZE) {
         lineWidth += nextWidth
       }
     })
+    result.push(line)
+  })
+  return result.length ? result : ['']
+}
+
+function estimateLineWidth(value, size) {
+  return [...String(value || '')].reduce((total, character) => {
+    if (/\s/.test(character)) return total + (size * 0.34)
+    if (/^[\x00-\xff]$/.test(character)) {
+      const width = /[._-]/.test(character) ? 0.5
+        : /[WM@#%]/.test(character) ? 1.15
+          : /[mw]/.test(character) ? 1
+            : character === 'I' ? 0.5
+              : /[A-Z]/.test(character) ? 0.9 : 0.68
+      return total + (size * width)
+    }
+    return total + size
+  }, 0)
+}
+
+function wrapLineValue(value, width, size) {
+  const result = []
+  String(value === null || value === undefined ? '' : value).split(/\r?\n/).forEach((paragraph) => {
+    let line = ''
+    const writeToken = (token) => {
+      if (line && estimateLineWidth(`${line}${token}`, size) <= width) {
+        line += token
+        return
+      }
+      if (line && CLOSING_PUNCTUATION.has(token) && [...line].length > 1) {
+        const characters = [...line]
+        const carried = characters.pop()
+        result.push(characters.join(''))
+        line = `${carried}${token}`
+        return
+      }
+      if (line) {
+        result.push(line)
+        line = ''
+      }
+      if (estimateLineWidth(token, size) <= width) {
+        line = token
+        return
+      }
+      let part = ''
+      ;[...token].forEach((character) => {
+        if (part && estimateLineWidth(`${part}${character}`, size) > width) {
+          if (CLOSING_PUNCTUATION.has(character) && [...part].length > 1) {
+            const characters = [...part]
+            const carried = characters.pop()
+            result.push(characters.join(''))
+            part = `${carried}${character}`
+          } else {
+            result.push(part)
+            part = character
+          }
+        } else part += character
+      })
+      line = part
+    }
+    const tokens = paragraph.match(/\s+|[A-Za-z0-9]+(?:[-._×/+：:][A-Za-z0-9]+)*|./gu) || ['']
+    tokens.forEach(writeToken)
     result.push(line)
   })
   return result.length ? result : ['']
@@ -166,6 +245,25 @@ function buildRows(schedule, summary, type) {
       connectorB,
       length,
       notes: line.notes || '',
+      fields: {
+        code: String(line.code || ''),
+        purpose: line.purpose || '用途待填写',
+        status: STATUS_LABELS[line.status] || '状态待确认',
+        from: {
+          device: line.fromDevice || '待填写',
+          port: line.fromPort || '待填写',
+          connector: connectorA,
+        },
+        to: {
+          device: line.toDevice || '待填写',
+          port: line.toPort || '待填写',
+          connector: connectorB,
+        },
+        cable,
+        spec,
+        length,
+        notes: line.notes || '',
+      },
       textLines: [
         `${index + 1}. ${line.code} · ${line.purpose || '用途待填写'} · ${STATUS_LABELS[line.status] || '状态待确认'}`,
         `起点：${from} → 终点：${to}`,
@@ -174,6 +272,333 @@ function buildRows(schedule, summary, type) {
         ...(line.notes ? [`备注：${line.notes}`] : []),
       ],
     }
+  })
+}
+
+function makeLinePart(id, label, value, x, width, options = {}) {
+  const fontSize = options.fontSize || LINE_VALUE_SIZE
+  const labelSize = options.labelSize || LINE_SMALL_SIZE
+  const lines = wrapLineValue(value, width, fontSize)
+  const labelWidth = estimateLineWidth(label, labelSize)
+  const inline = lines.length === 1 && estimateLineWidth(lines[0], fontSize) <= width - labelWidth - 8
+  const lineHeight = fontSize >= LINE_IMPORTANT_SIZE ? LINE_VALUE_HEIGHT : fontSize + 8
+  return {
+    id,
+    label,
+    lines,
+    x,
+    width,
+    fontSize,
+    labelSize,
+    role: options.role || 'text',
+    column: options.column || 'full',
+    inline,
+    lineHeight,
+    height: inline ? Math.max(fontSize, labelSize) + 12 : 52 + ((lines.length - 1) * lineHeight),
+  }
+}
+
+function makePartItems(part, top = 0, labelOverride = part.label, lines = part.lines) {
+  const label = labelOverride
+  const labelWidth = estimateLineWidth(label, part.labelSize)
+  const inline = part.inline && label === part.label && lines.length === 1
+  const items = []
+  if (inline) {
+    items.push({
+      text: label, x: part.x, y: top + 33, fontSize: part.labelSize,
+      colorRole: 'secondary', weight: 500, align: 'left', fieldId: `${part.id}.label`,
+      column: part.column, boundsX: part.x, boundsWidth: part.width,
+    })
+    items.push({
+      text: lines[0], x: part.x + labelWidth + 8, y: top + 33, fontSize: part.fontSize,
+      colorRole: part.role, weight: 600, align: 'left', fieldId: `${part.id}.value`,
+      column: part.column, boundsX: part.x + labelWidth + 8,
+      boundsWidth: Math.max(1, part.width - labelWidth - 8),
+    })
+    return items
+  }
+  items.push({
+    text: label, x: part.x, y: top + 17, fontSize: part.labelSize,
+    colorRole: 'secondary', weight: 500, align: 'left', fieldId: `${part.id}.label`,
+    column: part.column, boundsX: part.x, boundsWidth: part.width,
+  })
+  lines.forEach((text, index) => items.push({
+    text,
+    x: part.x,
+    y: top + 46 + (index * part.lineHeight),
+    fontSize: part.fontSize,
+    colorRole: part.role,
+    weight: 600,
+    align: 'left',
+    fieldId: `${part.id}.value`,
+    column: part.column,
+    boundsX: part.x,
+    boundsWidth: part.width,
+  }))
+  return items
+}
+
+function makeLineBlock(id, parts, height, options = {}) {
+  const items = parts.flatMap((part) => makePartItems(part))
+  return {
+    id,
+    parts,
+    items,
+    height: height || Math.max(...parts.map((part) => part.height), 0),
+    gapAfter: options.gapAfter === undefined ? LINE_BLOCK_GAP : options.gapAfter,
+    section: options.section || '',
+    endpointHeading: Boolean(options.endpointHeading),
+  }
+}
+
+function makeLineHeaderBlock(source, continuation = false) {
+  const code = `${source.fields.code || '线号待确认'}${continuation ? '（续）' : ''}`
+  const codeLines = wrapLineValue(code, LINE_CONTENT_WIDTH, 32)
+  const items = [
+    {
+      text: `第 ${source.number} 条`, x: LINE_CONTENT_X, y: 28, fontSize: 16,
+      colorRole: 'secondary', weight: 500, align: 'left', fieldId: 'sequence',
+      column: 'full', boundsX: LINE_CONTENT_X, boundsWidth: LINE_CONTENT_WIDTH,
+    },
+    {
+      text: source.fields.status, x: LINE_CONTENT_X + LINE_CONTENT_WIDTH, y: 30, fontSize: LINE_IMPORTANT_SIZE,
+      colorRole: 'accent', weight: 600, align: 'right', fieldId: 'status',
+      column: 'full', boundsX: LINE_CONTENT_X, boundsWidth: LINE_CONTENT_WIDTH,
+    },
+    ...codeLines.map((text, index) => ({
+      text, x: LINE_CONTENT_X, y: 68 + (index * 42), fontSize: 32,
+      colorRole: 'accent', weight: 700, align: 'left', fieldId: 'code',
+      column: 'full', boundsX: LINE_CONTENT_X, boundsWidth: LINE_CONTENT_WIDTH,
+    })),
+  ]
+  return {
+    id: continuation ? 'line-header-continuation' : 'line-header',
+    parts: [],
+    items,
+    height: 80 + ((codeLines.length - 1) * 42),
+    gapAfter: LINE_BLOCK_GAP,
+    section: '',
+  }
+}
+
+function makeEndpointHeadingBlock() {
+  return {
+    id: 'endpoint-headings',
+    parts: [],
+    items: [
+      {
+        text: '起点', x: LINE_CONTENT_X, y: 32, fontSize: LINE_IMPORTANT_SIZE,
+        colorRole: 'source', weight: 600, align: 'left', fieldId: 'from.heading',
+        column: 'left', boundsX: LINE_CONTENT_X, boundsWidth: LINE_COLUMN_WIDTH,
+      },
+      {
+        text: '终点', x: LINE_DESTINATION_X, y: 32, fontSize: LINE_IMPORTANT_SIZE,
+        colorRole: 'destination', weight: 600, align: 'left', fieldId: 'to.heading',
+        column: 'right', boundsX: LINE_DESTINATION_X, boundsWidth: LINE_COLUMN_WIDTH,
+      },
+    ],
+    height: 40,
+    gapAfter: 3,
+    section: 'endpoints',
+    endpointHeading: true,
+  }
+}
+
+function makeLineContentBlocks(source, continuation = false) {
+  const fields = source.fields
+  const start = LINE_CONTENT_X
+  const end = LINE_DESTINATION_X
+  const columnOptions = (column, role) => ({ column, role })
+  const blocks = [
+    makeLineHeaderBlock(source, continuation),
+    makeLineBlock('purpose', [makeLinePart('purpose', '用途', fields.purpose,
+      LINE_CONTENT_X, LINE_CONTENT_WIDTH, { fontSize: LINE_IMPORTANT_SIZE })]),
+    makeEndpointHeadingBlock(),
+  ]
+  const endpointFields = [
+    ['device', '设备'],
+    ['port', '端口'],
+    ['connector', '线缆侧端头'],
+  ]
+  endpointFields.forEach(([field, label]) => {
+    const leftPart = makeLinePart(`from.${field}`, label, fields.from[field], start,
+      LINE_COLUMN_WIDTH, columnOptions('left', 'source'))
+    const rightPart = makeLinePart(`to.${field}`, label, fields.to[field], end,
+      LINE_COLUMN_WIDTH, columnOptions('right', 'destination'))
+    blocks.push(makeLineBlock(`endpoint-${field}`, [leftPart, rightPart], 0, { section: 'endpoints' }))
+  })
+  blocks.push(makeLineBlock('cable-length', [
+    makeLinePart('cable', '线材', fields.cable, start, LINE_COLUMN_WIDTH,
+      { fontSize: LINE_IMPORTANT_SIZE, labelSize: 16, column: 'left' }),
+    makeLinePart('length', '长度', fields.length, end, LINE_COLUMN_WIDTH,
+      { fontSize: LINE_IMPORTANT_SIZE, labelSize: 16, column: 'right' }),
+  ]))
+  blocks.push(makeLineBlock('spec', [makeLinePart('spec', '规格', fields.spec,
+    LINE_CONTENT_X, LINE_CONTENT_WIDTH, { fontSize: LINE_IMPORTANT_SIZE })]))
+  if (fields.notes) {
+    blocks.push(makeLineBlock('notes', [makeLinePart('notes', '备注', fields.notes,
+      LINE_CONTENT_X, LINE_CONTENT_WIDTH, { fontSize: LINE_IMPORTANT_SIZE })]))
+  }
+  return blocks
+}
+
+function lineCardHeight(blocks) {
+  if (!blocks.length) return 0
+  return 24 + blocks.reduce((total, block, index) => total + block.height
+    + (index < blocks.length - 1 ? block.gapAfter : 0), 0)
+}
+
+function splitLineBlock(block, maximumHeight) {
+  const maximumLines = Math.max(1, Math.floor((maximumHeight - 53) / LINE_VALUE_HEIGHT) + 1)
+  const longest = Math.max(...block.parts.map((part) => part.lines.length))
+  if (longest <= maximumLines) return [block]
+  const chunks = []
+  for (let start = 0; start < longest; start += maximumLines) {
+    const parts = block.parts.map((part) => ({
+      ...part,
+      label: start ? `${part.label}（续）` : part.label,
+      lines: part.lines.slice(start, start + maximumLines),
+      inline: false,
+      height: 52 + (Math.min(part.lines.length - start, maximumLines) - 1) * part.lineHeight,
+    }))
+    chunks.push(makeLineBlock(block.id, parts, 0, { section: block.section }))
+  }
+  return chunks
+}
+
+function fragmentLineRow(source, maximumHeight) {
+  const originalBlocks = makeLineContentBlocks(source)
+  const header = originalBlocks[0]
+  let current = [header]
+  const fragments = []
+  const startContinuation = (nextBlock) => {
+    current = [makeLineHeaderBlock(source, true)]
+    if (nextBlock.section === 'endpoints' && !nextBlock.endpointHeading) current.push(makeEndpointHeadingBlock())
+  }
+  const finish = () => {
+    if (current.length) fragments.push(current)
+  }
+  originalBlocks.slice(1).forEach((block) => {
+    if (lineCardHeight([...current, block]) <= maximumHeight) {
+      current.push(block)
+      return
+    }
+    if (current.length > 1) {
+      finish()
+      startContinuation(block)
+    }
+    const available = maximumHeight - lineCardHeight(current) - block.gapAfter
+    if (block.height <= available) {
+      current.push(block)
+      return
+    }
+    const pieces = splitLineBlock(block, available)
+    pieces.forEach((piece, index) => {
+      if (lineCardHeight([...current, piece]) > maximumHeight) {
+        finish()
+        startContinuation(block)
+      }
+      current.push(piece)
+      if (index < pieces.length - 1) {
+        finish()
+        startContinuation(block)
+      }
+    })
+  })
+  finish()
+  return fragments.map((blocks, index) => ({ source, blocks, continuation: index > 0, partIndex: index }))
+}
+
+function layoutLineFragment(fragment, y) {
+  const row = fragment.source
+  let offset = 12
+  const blocks = []
+  fragment.blocks.forEach((block, index) => {
+    const items = block.items.map((item) => ({
+      ...item,
+      y: y + offset + item.y,
+      bounds: {
+        x: item.boundsX,
+        y: y + offset + item.y - item.fontSize,
+        width: item.boundsWidth,
+        height: item.fontSize + 4,
+      },
+    }))
+    blocks.push({ id: block.id, section: block.section, y: y + offset, height: block.height, items })
+    offset += block.height + (index < fragment.blocks.length - 1 ? block.gapAfter : 0)
+  })
+  const height = offset + 12
+  const drawItems = blocks.flatMap((block) => block.items)
+  return {
+    ...row,
+    kind: fragment.continuation ? 'continuation' : 'line',
+    key: `${row.key}:part:${fragment.partIndex}`,
+    lineId: row.key,
+    continuation: fragment.continuation,
+    partIndex: fragment.partIndex,
+    blocks,
+    drawItems,
+    lines: drawItems.map((item) => item.text),
+    x: LINE_CARD_X,
+    width: LINE_CARD_WIDTH,
+    y,
+    height,
+  }
+}
+
+function paginateLineRows(rows, projectName, title, summaryLine) {
+  const nameLines = wrapLineValue(projectName, LINE_CONTENT_WIDTH, LINE_PROJECT_NAME_SIZE)
+  const summaryLines = wrapLineValue(summaryLine, LINE_CONTENT_WIDTH, LINE_SUMMARY_SIZE)
+  const titleY = 58
+  const nameY = 86
+  const nameLineHeight = 36
+  const summaryY = nameY + (nameLines.length * nameLineHeight) + 5
+  const summaryLineHeight = 30
+  const startY = summaryY + (summaryLines.length * summaryLineHeight) + 15
+  const availableHeight = LINE_CONTENT_BOTTOM - startY
+  const fragmentRows = rows.flatMap((row) => fragmentLineRow(row, availableHeight))
+  const groups = []
+  let group = []
+  let used = 0
+  fragmentRows.forEach((fragment, index) => {
+    const estimatedHeight = lineCardHeight(fragment.blocks)
+    const forceBreak = fragment.continuation && index > 0
+    if (group.length && (forceBreak || used + estimatedHeight + 10 > availableHeight)) {
+      groups.push(group)
+      group = []
+      used = 0
+    }
+    const y = startY + used
+    const row = layoutLineFragment(fragment, y)
+    group.push(row)
+    used += row.height + 10
+  })
+  if (group.length) groups.push(group)
+  return groups.map((pageRows, index) => {
+    const contentBottom = pageRows.reduce((bottom, row) => Math.max(bottom, row.y + row.height), startY)
+    const height = Math.min(LINE_MAX_PAGE_HEIGHT, Math.max(420, contentBottom + LINE_FOOTER_RESERVE))
+    return freezeDeep({
+      type: 'lines',
+      title,
+      projectName,
+      width: REPORT_WIDTH,
+      height,
+      pageNumber: index + 1,
+      pageCount: groups.length,
+      nameLines,
+      subtitleLines: summaryLines,
+      titleY,
+      nameY,
+      nameLineHeight,
+      nameFontSize: LINE_PROJECT_NAME_SIZE,
+      summaryY,
+      summaryLineHeight,
+      summaryFontSize: LINE_SUMMARY_SIZE,
+      startY,
+      contentBottom,
+      footer: `第 ${index + 1} / ${groups.length} 页 · 以现场核对为准`,
+      rows: pageRows,
+    })
   })
 }
 
@@ -277,10 +702,14 @@ function buildScheduleReportPages(projectName, scheduleValue, type = 'lines') {
     ? `已知总长 ${summary.knownLengthText} · ${summary.unknownLengthCount} 条长度待确认`
     : normalizedType === 'labels'
       ? `共 ${summary.labels.length} 张标签 · 每条线路两端各一张`
-      : `共 ${summary.lineCount} 条线路 · ${summary.checkedCount} 条已核对 · ${summary.lineCount - summary.checkedCount} 条待核对`
+      : `共 ${summary.lineCount} 条 · 已核对 ${summary.checkedCount} 条 · 待核对 ${summary.lineCount - summary.checkedCount} 条`
   const text = buildScheduleText(name, schedule).replace(/规格待填写/g, '规格待确认')
   const rows = buildRows(schedule, summary, normalizedType)
-  const pages = rows.length ? paginateRows(rows, name, titles[normalizedType], [summaryLine], normalizedType) : []
+  const pages = rows.length
+    ? (normalizedType === 'lines'
+      ? paginateLineRows(rows, name, titles.lines, summaryLine)
+      : paginateRows(rows, name, titles[normalizedType], [summaryLine], normalizedType))
+    : []
   return freezeDeep({ pages, text, lineCount: summary.lineCount, type: normalizedType })
 }
 
@@ -323,9 +752,40 @@ function roundedRect(context, x, y, width, height, radius, fill, stroke) {
   }
 }
 
+function drawLineScheduleReport(context, page, colors) {
+  context.setFillStyle(colors.background)
+  context.fillRect(0, 0, page.width, page.height)
+  drawText(context, page.title, 40, page.titleY, 28, colors.text, 700)
+  page.nameLines.forEach((line, index) => drawText(context, line, LINE_CONTENT_X,
+    page.nameY + 26 + (index * page.nameLineHeight), page.nameFontSize, colors.secondary, 500))
+  page.subtitleLines.forEach((line, index) => drawText(context, line, LINE_CONTENT_X,
+    page.summaryY + 22 + (index * page.summaryLineHeight), page.summaryFontSize, colors.tertiary, 500))
+  const roleColors = {
+    text: colors.text,
+    secondary: colors.secondary,
+    accent: colors.accent,
+    source: colors.source,
+    destination: colors.destination,
+  }
+  page.rows.forEach((row) => {
+    roundedRect(context, row.x, row.y, row.width, row.height, 14, colors.card, colors.border)
+    row.drawItems.forEach((item) => drawText(context, item.text, item.x, item.y, item.fontSize,
+      roleColors[item.colorRole] || colors.text, item.weight, item.align))
+  })
+  context.setStrokeStyle(colors.border)
+  context.setLineWidth(1)
+  context.beginPath()
+  context.moveTo(40, page.height - 56)
+  context.lineTo(680, page.height - 56)
+  context.stroke()
+  drawText(context, page.footer, 40, page.height - 30, 13, colors.tertiary, 400)
+  return { height: page.height, contentHeight: page.height }
+}
+
 function drawScheduleReport(context, page, options = {}) {
   if (!context || !page || !Array.isArray(page.rows)) throw new TypeError('布线报告页面无效')
   const colors = palette(options.theme)
+  if (page.type === 'lines') return drawLineScheduleReport(context, page, colors)
   context.setFillStyle(colors.background)
   context.fillRect(0, 0, page.width, page.height)
   roundedRect(context, 40, 30, 168, 34, 17, colors.accentSoft)

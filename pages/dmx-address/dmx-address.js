@@ -207,6 +207,7 @@ result: this.buildCurrentResultView(result),
 switchWorkspace(event) {
 const workspace = event.currentTarget.dataset.workspace === 'plan' ? 'plan' : 'config'
 if (workspace === this.data.activeWorkspace) return
+if (workspace === 'plan') this.flushScheduledCalculation()
 vibrate('light')
 this.setData({ activeWorkspace: workspace })
 },
@@ -846,10 +847,10 @@ const activeFixtures = result.viewMode === 'group'
 const activeKeys = activeFixtures.map(getFixtureProgressKey)
 if (!activeKeys.some((key) => this._checkedFixtureKeys.has(key))) return
 wx.showModal({
-title: '清空设置标记',
+title: '清空地址设置标记',
 content: result.viewMode === 'group'
-? '确定清空当前灯具组的已设置标记吗？'
-: `确定清空 ${result.selectedUniverse.label} 域的已设置标记吗？`,
+? '确定清空当前灯具组的地址已设置标记吗？'
+: `确定清空 ${result.selectedUniverse.label} 域的地址已设置标记吗？`,
 success: ({ confirm }) => {
 if (!confirm) return
 activeKeys.forEach((key) => this._checkedFixtureKeys.delete(key))

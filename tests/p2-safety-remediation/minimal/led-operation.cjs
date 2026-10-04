@@ -37,6 +37,8 @@ function createPage(id) {
   if (facts.persisted) env.wx.setStorageSync('audioTool.ledScreen.preferences', facts.persisted)
   const page = env.loadPage('pages/led-screen/led-screen.js')
   page.onLoad()
+  global.getCurrentPages = () => [page]
+  page.onShow()
   env.flushNextTicks()
   return { env, page, facts }
 }

@@ -111,6 +111,11 @@ function structuredActive(page) {
   return Boolean(page.getOperationSnapshot?.())
 }
 
+function invalidateVenueNavigation(page) {
+  page._venueNavigationRevision = (page._venueNavigationRevision || 0) + 1
+  return page._venueNavigationRevision
+}
+
 function compactVenueReviewWarning(warning) {
   const angleMatch = String(warning).match(/约\s*([\d.]+)°/)
   const uncoveredMatch = String(warning).match(/仍有\s*(\d+)\s*个坐席未覆盖/)
@@ -369,6 +374,155 @@ function isPagNagIncomplete(state = {}, result = state.result) {
     && !result.pagNagReview
 }
 
+const PAG_NAG_GUIDE_FIELDS = [
+  { key: 'ds', stateKey: 'discussionPagNagDsText', label: 'Ds 嘴到话筒距离' },
+  { key: 'd0', stateKey: 'discussionPagNagD0Text', label: 'D0 发言人到最远听众距离' },
+  { key: 'dn', stateKey: 'discussionPagNagDnText', label: 'Dn 发言人到最近听众距离' },
+  { key: 'd1', stateKey: 'discussionPagNagD1Text', label: 'D1 话筒到送声音箱距离' },
+  { key: 'd2', stateKey: 'discussionPagNagD2Text', label: 'D2 音箱到最远听众距离' },
+  { key: 'nom', stateKey: 'discussionPagNagNomText', label: 'NOM 同时开放并送声的话筒数' },
+]
+
+function getPagNagMissingItems(state = {}) {
+  const multiple = state.discussionPagNagSpeakerMode === 'multiple'
+  return PAG_NAG_GUIDE_FIELDS
+    .filter((field) => String(state[field.stateKey] ?? '').trim() === '')
+    .map(({ key, label }) => ({
+      key,
+      label: key === 'd1' && multiple
+        ? 'D1 话筒到最近送声箱 A 距离'
+        : key === 'd2' && multiple
+          ? 'D2 音箱 B 到同一最远听众距离'
+          : label,
+    }))
+}
+
+function numberFromInput(value) {
+  if (value === undefined || value === null || String(value).trim() === '') return null
+  const number = Number(value)
+  return Number.isFinite(number) ? number : null
+}
+
+function displayInputValue(value) {
+  return String(value ?? '').trim() || '未填'
+}
+
+function displayInputWithUnit(value, unit = 'm') {
+  return String(value ?? '').trim() ? `${String(value).trim()} ${unit}` : '未填'
+}
+
+function displayCurrentInput(value, unit = 'm') {
+  const display = displayInputWithUnit(value, unit)
+  return display === '未填' ? '当前未填' : `当前 ${display}`
+}
+
+function getVenueInputErrorDetail(error, state = {}) {
+  if (!error) return ''
+  const length = numberFromInput(state.lengthText)
+  const width = numberFromInput(state.widthText)
+  const height = numberFromInput(state.heightText)
+  const positive = (value) => value !== null && value > 0
+
+  if (state.sceneModes?.[state.sceneModeIndex]?.value === 'discussion') {
+    if (error.startsWith('请完整输入场地尺寸')) {
+      const missing = []
+      if (!positive(length)) missing.push(`场地长度${displayCurrentInput(state.lengthText)}`)
+      if (!positive(width)) missing.push(`场地宽度${displayCurrentInput(state.widthText)}`)
+      if (!positive(height)) missing.push(`层高${displayCurrentInput(state.heightText)}`)
+      const shape = state.discussionTableShapes?.[state.discussionTableShapeIndex]?.value
+      if (shape === 'round' && !positive(numberFromInput(state.tableDiameterText))) {
+        missing.push(`圆桌直径${displayCurrentInput(state.tableDiameterText)}`)
+      }
+      if (shape === 'rectangular') {
+        if (!positive(numberFromInput(state.tableLengthText))) missing.push(`桌长${displayCurrentInput(state.tableLengthText)}`)
+        if (!positive(numberFromInput(state.tableWidthText))) missing.push(`桌宽${displayCurrentInput(state.tableWidthText)}`)
+      }
+      return missing.length ? `请检查：${missing.join('；')}；以上数值均需大于 0。` : ''
+    }
+    if (error.startsWith('参会人数请输入')) {
+      return `当前人数为 ${displayInputValue(state.participantCountText)}，需填写 4～40 的整数。`
+    }
+    if (error.startsWith('围桌讨论初版仅适用于')) {
+      const exceeded = []
+      if (positive(length) && positive(width) && length * width > 300) {
+        exceeded.push(`面积 ${length * width} m² > 300 m²`)
+      }
+      if (height !== null && height > 6) exceeded.push(`层高 ${height} m > 6 m`)
+      return exceeded.length ? `当前超出范围：${exceeded.join('；')}。` : ''
+    }
+    if (error.startsWith('当前层高不足 2.3 m')) {
+      return `当前层高为 ${displayInputValue(state.heightText)} m，自动布置要求层高至少 2.3 m。`
+    }
+    if (error === '请输入圆桌直径。') return '请填写圆桌直径，数值需大于 0。'
+    if (error === '请输入矩形会议桌的长度和宽度。') return '请分别填写桌长和桌宽，数值均需大于 0。'
+    if (error.startsWith('会议桌、座位环与墙面净距在当前房间内放不下')) {
+      const table = state.discussionTableShapes?.[state.discussionTableShapeIndex]?.value === 'round'
+        ? `圆桌直径 ${displayInputValue(state.tableDiameterText)} m`
+        : `矩形桌 ${displayInputValue(state.tableLengthText)} × ${displayInputValue(state.tableWidthText)} m`
+      return `当前场地为 ${displayInputValue(state.lengthText)} × ${displayInputValue(state.widthText)} m，${table}；可调整桌面尺寸或场地长宽后重试。`
+    }
+    return ''
+  }
+
+  const first = numberFromInput(state.firstListeningDistanceText)
+  const last = numberFromInput(state.lastListeningDistanceText)
+  const listeningWidth = numberFromInput(state.listeningWidthText)
+  const useShortWall = state.layouts?.[state.layoutIndex]?.value !== 'long'
+  const frontWidth = length === null || width === null
+    ? null : useShortWall ? Math.min(length, width) : Math.max(length, width)
+  const depth = length === null || width === null
+    ? null : useShortWall ? Math.max(length, width) : Math.min(length, width)
+
+  if (error.startsWith('请完整输入场地尺寸')) {
+    const missing = []
+    if (!positive(length)) missing.push(`场地长度${displayCurrentInput(state.lengthText)}`)
+    if (!positive(width)) missing.push(`场地宽度${displayCurrentInput(state.widthText)}`)
+    if (!positive(height)) missing.push(`层高${displayCurrentInput(state.heightText)}`)
+    if (!positive(first)) missing.push(`首排距离${displayCurrentInput(state.firstListeningDistanceText)}`)
+    return missing.length ? `请检查：${missing.join('；')}；以上数值均需大于 0。` : '请确认目标等级和布置方向已选择。'
+  }
+  if (error.startsWith('层高必须高于')) {
+    return `当前层高为 ${displayInputValue(state.heightText)} m，需高于 0.3 m。`
+  }
+  if (error.startsWith('本模块仅输出普通矩形会议室')) {
+    const exceeded = []
+    if (positive(length) && positive(width) && length * width > 300) exceeded.push(`面积 ${length * width} m² > 300 m²`)
+    if (depth !== null && depth > 20) exceeded.push(`当前方向纵深 ${depth} m > 20 m`)
+    if (height !== null && height > 6) exceeded.push(`层高 ${height} m > 6 m`)
+    return exceeded.length ? `当前超出范围：${exceeded.join('；')}。` : ''
+  }
+  if (error.startsWith('首排听音距离应小于')) {
+    return `当前首排距离为 ${displayInputWithUnit(state.firstListeningDistanceText)}，当前主扩方向纵深为 ${depth ?? '资料不足'} m；首排需小于纵深。`
+  }
+  if (error.startsWith('最后一排距离应大于 0')) {
+    if (last !== null && depth !== null && last > depth) {
+      return `当前末排距离为 ${last} m，超过当前方向纵深 ${depth} m。`
+    }
+    return `当前末排距离为 ${displayInputWithUnit(state.lastListeningDistanceText)}；需大于 0 且不超过当前方向纵深 ${depth ?? '资料不足'} m。`
+  }
+  if (error.startsWith('最后一排听音距离应大于首排')) {
+    return `当前首排 ${displayInputWithUnit(state.firstListeningDistanceText)}，末排 ${displayInputWithUnit(state.lastListeningDistanceText)}；末排需大于首排。`
+  }
+  if (error.startsWith('有效听音区宽度应大于 0')) {
+    if (listeningWidth !== null && frontWidth !== null && listeningWidth > frontWidth) {
+      return `当前听音宽度为 ${listeningWidth} m，超过当前方向场地宽度 ${frontWidth} m。`
+    }
+    return `当前听音宽度为 ${displayInputWithUnit(state.listeningWidthText)}；需大于 0 且不超过当前方向场地宽度 ${frontWidth ?? '资料不足'} m。`
+  }
+  return ''
+}
+
+function getNaturalSoundWarning(result) {
+  return result?.kind === 'discussion'
+    ? result.warnings?.find((warning) => String(warning).includes('建议先评估自然声')) || ''
+    : ''
+}
+
+function getNaturalSoundReportLine(result) {
+  if (!getNaturalSoundWarning(result)) return ''
+  return `自然声评估：最远坐席间距约${result.maximumParticipantDistanceMeters}m，低于Voice Lift通常优先参考的7.5m；建议先评估自然声。`
+}
+
 Page({
   data: {
     sceneModes: SCENE_MODES,
@@ -402,8 +556,15 @@ Page({
     discussionPagNagNomText: '',
     pagNagGuideKey: 'ds',
     discussionPagNagError: '',
+    discussionPagNagErrorField: '',
+    discussionPagNagErrorKind: '',
+    pagNagMissingItems: [],
     discussionPagNagDisplay: null,
     pagNagOutputBlocked: false,
+    showVenueInputHelp: false,
+    showPagNagGuideHelp: false,
+    pagNagInputFocused: false,
+    scrollTargetId: '',
     planCanvasWidth: DEFAULT_PLAN_CANVAS_WIDTH,
     planCanvasHeight: DEFAULT_PLAN_CANVAS_HEIGHT,
     planImagePath: '',
@@ -414,6 +575,9 @@ Page({
     reportHeatmapGradient: REPORT_HEATMAP_GRADIENT,
     reportHeatmapTicks: REPORT_HEATMAP_TICKS,
     inputError: '',
+    inputErrorDetail: '',
+    showDefaultExample: false,
+    discussionNaturalSoundWarning: '',
     operationActive: false,
     operationSnapshot: null,
     showVenueDetails: false,
@@ -424,7 +588,9 @@ Page({
 
   onLoad() {
     this._pageVisible = false
+    this._venueNavigationRevision = 0
     const preferences = readPreferences(PREFERENCE_KEY)
+    const showDefaultExample = Object.keys(preferences || {}).length === 0
     const standardClassIndex = findValueIndex(
       this.data.standardClasses,
       preferences.standardClassKey,
@@ -435,6 +601,7 @@ Page({
       && preferences.discussionPagNagEnabled === true
 
     this.calculate({
+      showDefaultExample,
       sceneModeIndex: findValueIndex(this.data.sceneModes, preferences.sceneMode, (item) => item.value),
       standardClassIndex,
       gradeIndex: findValueIndex(standardClass.grades, preferences.gradeKey, (item) => item.key),
@@ -490,7 +657,9 @@ Page({
   },
 
   onHide() {
+    invalidateVenueNavigation(this)
     this._pageVisible = false
+    if (this.data.pagNagInputFocused) this.setData({ pagNagInputFocused: false })
     this.cancelVenuePlanWork()
     cancelResultReportGeneration(this)
     this.flushCalculate()
@@ -498,6 +667,7 @@ Page({
   },
 
   onUnload() {
+    invalidateVenueNavigation(this)
     this._pageVisible = false
     this.cancelVenuePlanWork()
     cancelResultReportGeneration(this)
@@ -511,7 +681,16 @@ Page({
   onOperationStateChange(snapshot) {
     const wasReady = Boolean(this.data.operationSnapshot?.ready)
     const sameOperation = this.data.operationSnapshot?.id === snapshot?.id
-    const patch = { operationActive: Boolean(snapshot?.active), operationSnapshot: snapshot }
+    const wasActive = Boolean(this.data.operationSnapshot?.active)
+    if (snapshot?.active && (!wasActive || !sameOperation)) invalidateVenueNavigation(this)
+    const patch = {
+      operationActive: Boolean(snapshot?.active),
+      operationSnapshot: snapshot,
+      showVenueInputHelp: false,
+      showPagNagGuideHelp: false,
+      pagNagInputFocused: false,
+      ...(snapshot ? { showDefaultExample: false, inputErrorDetail: '' } : {}),
+    }
     if (snapshot) {
       const uiFields = Object.keys(VENUE_REPORT_FIELDS)
       if (!this._venueManualUiSnapshot) {
@@ -533,6 +712,7 @@ Page({
   },
 
   onOperationInvalidate(reason) {
+    invalidateVenueNavigation(this)
     this.cancelVenuePlanWork()
     this.invalidateVenuePlan()
     cancelResultReportGeneration(this)
@@ -540,11 +720,25 @@ Page({
     this.venueCoreActiveKey = ''
     this.setData({
       result: null,
+      ...(reason === 'unload' ? {} : {
+        showVenueInputHelp: false,
+        showPagNagGuideHelp: false,
+        pagNagInputFocused: false,
+      }),
       currentFavorite: false,
       planStats: null,
       planElevation: null,
       planImagePath: '',
       handoffReview: null,
+      showDefaultExample: false,
+      inputErrorDetail: '',
+      discussionNaturalSoundWarning: '',
+      discussionPagNagError: '',
+      discussionPagNagErrorField: '',
+      discussionPagNagErrorKind: '',
+      pagNagMissingItems: [],
+      discussionPagNagDisplay: null,
+      pagNagOutputBlocked: false,
       inputError: reason === 'unsupported-scene' ? '报告型结构化操作不支持围桌讨论模式，请结束本次操作后再切换。' : '',
       ...resetStaleResultReport(this, null),
     })
@@ -571,8 +765,27 @@ Page({
 
   setSelectionAndCalculate(field, index) {
     if (!Number.isInteger(index) || this.data[field] === index) return
+    invalidateVenueNavigation(this)
     vibrate('light')
-    this.calculate({ [field]: index })
+    this.calculate({
+      [field]: index,
+      showDefaultExample: false,
+      ...(field === 'sceneModeIndex' ? {
+        showVenueInputHelp: false,
+        showPagNagGuideHelp: false,
+        pagNagInputFocused: false,
+      } : {}),
+    })
+  },
+
+  toggleVenueInputHelp() {
+    invalidateVenueNavigation(this)
+    this.setData({ showVenueInputHelp: !this.data.showVenueInputHelp })
+  },
+
+  togglePagNagGuideHelp() {
+    invalidateVenueNavigation(this)
+    this.setData({ showPagNagGuideHelp: !this.data.showPagNagGuideHelp })
   },
 
   onGradeTap(event) {
@@ -580,7 +793,7 @@ Page({
     if (structuredActive(this)) {
       const grade = STANDARD_CLASSES[0].grades[index]
       if (grade) {
-        this.setData({ gradeIndex: index })
+        this.setData({ gradeIndex: index, showDefaultExample: false })
         this.setOperationCandidate('gradeIndex', index, 'index')
       }
       return
@@ -623,6 +836,7 @@ Page({
 
   onInput(event) {
     const field = event.currentTarget.dataset.field
+    invalidateVenueNavigation(this)
     if (structuredActive(this)) {
       const descriptor = VENUE_REPORT_FIELDS[field]
       if (!descriptor) {
@@ -630,10 +844,14 @@ Page({
         return
       }
       this.setOperationCandidate(field, event.detail.value, descriptor.unit)
-      this.setData({ [field]: event.detail.value })
+      this.setData({ [field]: event.detail.value, showDefaultExample: false })
       return
     }
-    this.setData({ [field]: event.detail.value }, () => this.queueCalculate())
+    this.setData({
+      [field]: event.detail.value,
+      showDefaultExample: false,
+      inputErrorDetail: '',
+    }, () => this.queueCalculate())
   },
 
   onDiscussionPagNagToggle(event) {
@@ -641,8 +859,14 @@ Page({
       invalidateOperation(this, 'unsupported-scene')
       return
     }
+    invalidateVenueNavigation(this)
     vibrate('light')
-    this.calculate({ discussionPagNagEnabled: event.detail.value === true })
+    this.calculate({
+      discussionPagNagEnabled: event.detail.value === true,
+      showDefaultExample: false,
+      showPagNagGuideHelp: false,
+      pagNagInputFocused: false,
+    })
   },
 
   onDiscussionPagNagSpeakerModeChange(event) {
@@ -651,8 +875,9 @@ Page({
       return
     }
     const mode = event.currentTarget?.dataset?.mode
-    if (!['single', 'multiple'].includes(mode)
-      || mode === this.data.discussionPagNagSpeakerMode) return
+    if (!['single', 'multiple'].includes(mode)) return
+    invalidateVenueNavigation(this)
+    if (mode === this.data.discussionPagNagSpeakerMode) return
     if (this.venueCalculateTimer) {
       clearTimeout(this.venueCalculateTimer)
       this.venueCalculateTimer = null
@@ -663,6 +888,9 @@ Page({
       discussionPagNagD1Text: '',
       discussionPagNagD2Text: '',
       pagNagGuideKey: 'd1',
+      showPagNagGuideHelp: false,
+      pagNagInputFocused: false,
+      showDefaultExample: false,
     })
     wx.showToast({ title: 'D1、D2 已清空，请重新测量', icon: 'none' })
   },
@@ -673,9 +901,59 @@ Page({
       return
     }
     const key = String(event.currentTarget.dataset.key || '')
-    if (!['ds', 'd0', 'dn', 'd1', 'd2', 'nom'].includes(key)
-      || this.data.pagNagGuideKey === key) return
-    this.setData({ pagNagGuideKey: key })
+    if (!['ds', 'd0', 'dn', 'd1', 'd2', 'nom'].includes(key)) return
+    invalidateVenueNavigation(this)
+    if (this.data.pagNagGuideKey === key) return
+    this.setData({
+      pagNagGuideKey: key,
+      showPagNagGuideHelp: false,
+      pagNagInputFocused: false,
+      showDefaultExample: false,
+    })
+  },
+
+  onPagNagInputBlur() {
+    if (this.data.pagNagInputFocused) this.setData({ pagNagInputFocused: false })
+  },
+
+  onPagNagReturnToInput() {
+    const result = this.data.result
+    if (structuredActive(this) || this.data.sceneModes?.[this.data.sceneModeIndex]?.value !== 'discussion'
+      || result?.kind !== 'discussion'
+      || this.data.discussionPagNagEnabled !== true
+      || !isPagNagIncomplete(this.data, result)) return
+    const navigationRevision = invalidateVenueNavigation(this)
+    const guideKeys = PAG_NAG_GUIDE_FIELDS.map((field) => field.key)
+    const fieldKey = guideKeys.includes(this.data.discussionPagNagErrorField)
+      ? this.data.discussionPagNagErrorField
+      : this.data.pagNagMissingItems?.[0]?.key
+    const key = fieldKey || this.data.pagNagGuideKey || 'ds'
+    this.setData({
+      pagNagGuideKey: key,
+      pagNagInputFocused: false,
+      showPagNagGuideHelp: false,
+      scrollTargetId: '',
+      showDefaultExample: false,
+    }, () => {
+      const showInput = () => this.setData({
+        scrollTargetId: 'pag-nag-input',
+        pagNagInputFocused: true,
+      })
+      const navigationIsCurrent = () => this._venueNavigationRevision === navigationRevision
+        && this._pageVisible
+        && this.data.result === result
+        && this.data.sceneModes?.[this.data.sceneModeIndex]?.value === 'discussion'
+        && this.data.result?.kind === 'discussion'
+        && this.data.discussionPagNagEnabled === true
+        && this.data.pagNagGuideKey === key
+        && isPagNagIncomplete(this.data, result)
+        && !structuredActive(this)
+      const guardedShowInput = () => {
+        if (navigationIsCurrent()) showInput()
+      }
+      if (typeof wx.nextTick === 'function') wx.nextTick(guardedShowInput)
+      else guardedShowInput()
+    })
   },
 
   onPickerChange(event) {
@@ -724,7 +1002,11 @@ Page({
       ? structuredVenueState(this, operation.state)
       : { ...this.data, ...changes }
     if (!state) {
-      this.setData({ result: null, inputError: '结构化报告输入的等级或布置方向无效。' })
+      this.setData({
+        result: null,
+        inputError: '结构化报告输入的等级或布置方向无效。',
+        inputErrorDetail: '',
+      })
       return null
     }
     const standardClass = state.standardClasses[state.standardClassIndex]
@@ -784,7 +1066,12 @@ Page({
         planImagePath: '',
         handoffReview: null,
         inputError: calculatedResult.error,
+        inputErrorDetail: getVenueInputErrorDetail(calculatedResult.error, state),
+        discussionNaturalSoundWarning: '',
         discussionPagNagError: '',
+        discussionPagNagErrorField: '',
+        discussionPagNagErrorKind: '',
+        pagNagMissingItems: [],
         discussionPagNagDisplay: null,
         pagNagOutputBlocked: sceneMode === 'discussion' && state.discussionPagNagEnabled === true,
         ...resetStaleResultReport(this, null),
@@ -800,6 +1087,9 @@ Page({
     const pagNagEnabled = sceneMode === 'discussion' && state.discussionPagNagEnabled === true
     let pagNagReview = null
     let discussionPagNagError = ''
+    let discussionPagNagErrorField = ''
+    let discussionPagNagErrorKind = ''
+    let pagNagMissingItems = []
     if (pagNagEnabled) {
       const review = calculatePagNagReview({
         ds: state.discussionPagNagDsText,
@@ -810,7 +1100,12 @@ Page({
         nom: state.discussionPagNagNomText,
         speakerMode: state.discussionPagNagSpeakerMode,
       })
-      if (review.error) discussionPagNagError = review.error
+      if (review.error) {
+        discussionPagNagError = review.error
+        discussionPagNagErrorField = review.field || ''
+        discussionPagNagErrorKind = review.errorKind || ''
+        pagNagMissingItems = getPagNagMissingItems(state)
+      }
       else pagNagReview = review
     }
     const result = enrichVenueResult(pagNagReview ? { ...calculatedResult, pagNagReview } : calculatedResult)
@@ -859,7 +1154,12 @@ Page({
     })
     Object.assign(changesToCommit, {
       inputError: '',
+      inputErrorDetail: '',
+      ...(!coreUnchanged ? { discussionNaturalSoundWarning: getNaturalSoundWarning(result) } : {}),
       discussionPagNagError,
+      discussionPagNagErrorField,
+      discussionPagNagErrorKind,
+      pagNagMissingItems,
       discussionPagNagDisplay: pagNagReview ? {
         pagText: formatDb(pagNagReview.pagDb),
         nagText: formatDb(pagNagReview.nagDb),
@@ -1028,6 +1328,7 @@ Page({
   },
 
   toggleVenueDetails() {
+    invalidateVenueNavigation(this)
     vibrate('light')
     const showVenueDetails = !this.data.showVenueDetails
     let handoffReview = null
@@ -1043,10 +1344,12 @@ Page({
       showVenueDetails,
       showVenuePlan: false,
       handoffReview,
+      scrollTargetId: '',
     })
   },
 
   toggleVenuePlan() {
+    invalidateVenueNavigation(this)
     vibrate('light')
     const showVenuePlan = !this.data.showVenuePlan
     let plan = null
@@ -1060,6 +1363,7 @@ Page({
     this.setData({
       showVenueDetails: false,
       showVenuePlan,
+      scrollTargetId: '',
       ...(plan ? {
         planStats: plan.statistics,
         planElevation: plan.elevation || null,
@@ -1319,6 +1623,8 @@ Page({
 
     if (result.kind === 'discussion') {
       const layoutSummary = result.layoutComparisonSummary || getLayoutComparisonSummary(result)
+      const naturalSoundReportLine = getNaturalSoundReportLine(result)
+      const pagNagResultLines = result.pagNagReview ? getPagNagResultLines(result.pagNagReview) : []
       title = `${dimensions} 围桌会议`
       summary = `${result.systemLabel} · ${result.speakerCount} 只 / ${result.zoneCount} 区`
       if (result.pagNagReview) {
@@ -1327,6 +1633,7 @@ Page({
           `场地：${dimensions} · 会议桌：${result.tableSummary} · ${result.participantCount} 人`,
           `目标：${result.standardLabel} · ≥ ${result.standardMaxSpl} dB SPL`,
           ...(result.reviewWarnings || []).map(compactVenueReviewWarning),
+          ...(naturalSoundReportLine ? [naturalSoundReportLine] : []),
           `系统建议：${result.systemLabel} · 布局：${layoutSummary}`,
           `音箱位置与间距：见布局图 · 分区 ${result.speakerCount} 只 / ${result.zoneCount} 区`,
           `安装建议：${result.installationRecommendationLabel} · 中心高度约 ${result.speakerHeight} m`,
@@ -1339,8 +1646,8 @@ Page({
           ...(result.pagNagReview?.basis === 'omnidirectional-multiple-speakers'
             ? ['多音箱取点：仅选播放本话筒的音箱；A距话筒最近，B距最远听众最近，可为同箱。'] : []),
           ...pagNagLines,
-          'NAG目标：近、远听众声音相当。',
-          ...getPagNagResultLines(result.pagNagReview),
+          ...pagNagResultLines.map((line, index) => index === 0
+            ? `${line}；NAG目标：近、远听众声音相当` : line),
           '资料边界：标称角范围与声学资料待核验；围桌图仅为几何参考，不代表真实覆盖或均匀度。',
         ].join('\n')
       } else {
@@ -1350,6 +1657,7 @@ Page({
           `会议桌：${result.tableSummary} · ${result.participantCount} 人`,
           `目标：${result.standardLabel} · ≥ ${result.standardMaxSpl} dB SPL`,
           ...(result.reviewWarnings || []).map(compactVenueReviewWarning),
+          ...(naturalSoundReportLine ? [naturalSoundReportLine] : []),
           `系统建议：${result.systemLabel}`,
           `布局比较：${layoutSummary}`,
           '音箱位置与间距：见布局图',

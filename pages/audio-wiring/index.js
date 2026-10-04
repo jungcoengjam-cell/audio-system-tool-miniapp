@@ -20,6 +20,8 @@ const {
 
 const DEFAULT_OUTPUT_ID = 'xlrBalanced'
 const DEFAULT_INPUT_ID = 'terminalBalanced'
+const WIRING_PREFERENCE_STORAGE_KEY = 'audioWiringPreferencesV1'
+const WIRING_PREFERENCE_VERSION = 1
 const EXPORT_CANVAS_ID = 'resultReportCanvas'
 const EXPORT_WIDTH = 720
 
@@ -181,13 +183,27 @@ function simplifySignalLabel(signalLabel) {
   return value
 }
 
+function splitSignalLabel(signalLabel) {
+  const parts = String(signalLabel || '').split(' · ')
+  return {
+    port: parts[0] || '',
+    type: parts.slice(1).join(' · '),
+  }
+}
+
 function getModelDisplayInfo(model) {
+  const outputSignal = splitSignalLabel(model && model.output && model.output.signalLabel)
+  const inputSignal = splitSignalLabel(model && model.input && model.input.signalLabel)
   return {
     noteItems: normalizeInfoItems(model && model.notes, '接线说明'),
     sourceItems: normalizeInfoItems(model && model.sources, '资料来源'),
     requirements: Array.isArray(model && model.requirements) ? model.requirements : [],
     selectionSummary: Array.isArray(model && model.selectionSummary) ? model.selectionSummary : [],
     criticalNotes: Array.isArray(model && model.criticalNotes) ? model.criticalNotes : [],
+    outputSignalPortLabel: outputSignal.port,
+    outputSignalTypeLabel: outputSignal.type,
+    inputSignalPortLabel: inputSignal.port,
+    inputSignalTypeLabel: inputSignal.type,
     wiringStatus: model && model.status || (model && model.supported ? 'ready' : 'unsupported'),
     outputSignalSummary: simplifySignalLabel(model && model.output && model.output.signalLabel),
     inputSignalSummary: simplifySignalLabel(model && model.input && model.input.signalLabel),
@@ -203,12 +219,66 @@ function getSafeDiagramHeight(width, model, options, fallback) {
   }
 }
 
-function getSafeReportHeight(width, model, fallback) {
+function getSafeReportHeight(width, model, fallback, options = {}) {
   if (!model || !model.supported) return fallback
   try {
-    return getReportHeight(width, model)
+    return getReportHeight(width, model, options)
   } catch (error) {
     return fallback
+  }
+}
+
+function getReportOptions(data = {}) {
+  const manualSelected = data.manualSelected || {}
+  const preferenceNotice = data.showRestoredHint
+    ? '已恢复上次接口，请按本次设备核对；接线条件需重新确认。'
+    : !manualSelected.output && !manualSelected.input
+      ? '默认示例，先核对实际两端接口。'
+      : !manualSelected.output || !manualSelected.input
+        ? '仍有接口为默认示例，请核对实际两端接口。'
+        : ''
+  return {
+    viewMode: data.viewMode === 'connectors' ? 'connectors' : 'wiring',
+    face: data.face === 'solder' ? 'solder' : 'mating',
+    selectedId: typeof data.selectedId === 'string' ? data.selectedId : '',
+    theme: data.theme === 'dark' ? 'dark' : 'light',
+    preferenceNotice,
+  }
+}
+
+function getDefaultWiringPreferences() {
+  return {
+    outputId: DEFAULT_OUTPUT_ID,
+    inputId: DEFAULT_INPUT_ID,
+    manualSelected: { output: false, input: false },
+    viewMode: 'wiring',
+    face: 'mating',
+  }
+}
+
+function isValidWiringPreferences(value) {
+  return Boolean(value && typeof value === 'object' && !Array.isArray(value)
+    && value.version === WIRING_PREFERENCE_VERSION
+    && OUTPUT_OPTIONS.some((option) => option.id === value.outputId)
+    && INPUT_OPTIONS.some((option) => option.id === value.inputId)
+    && value.manualSelected && typeof value.manualSelected === 'object'
+    && typeof value.manualSelected.output === 'boolean'
+    && typeof value.manualSelected.input === 'boolean'
+    && ['wiring', 'connectors'].includes(value.viewMode)
+    && ['mating', 'solder'].includes(value.face))
+}
+
+function serializeWiringPreferences(data = {}) {
+  return {
+    version: WIRING_PREFERENCE_VERSION,
+    outputId: data.outputId,
+    inputId: data.inputId,
+    manualSelected: {
+      output: Boolean(data.manualSelected && data.manualSelected.output),
+      input: Boolean(data.manualSelected && data.manualSelected.input),
+    },
+    viewMode: data.viewMode === 'connectors' ? 'connectors' : 'wiring',
+    face: data.face === 'solder' ? 'solder' : 'mating',
   }
 }
 
@@ -218,6 +288,9 @@ Page({
     inputOptions: INPUT_OPTIONS,
     outputId: DEFAULT_OUTPUT_ID,
     inputId: DEFAULT_INPUT_ID,
+    manualSelected: { output: false, input: false },
+    showRestoredHint: false,
+    wiringStorageWarning: '',
     selections: {},
     model: null,
     wiringStatus: 'unsupported',
@@ -236,6 +309,7 @@ Page({
     selectorSide: 'output',
     selectorTitle: '',
     selectorOptions: [],
+    selectorHelpVisible: false,
     diagramCanvasWidth: 320,
     diagramCanvasHeight: 340,
     resultReportCanvasWidth: EXPORT_WIDTH,
@@ -263,26 +337,59 @@ Page({
 
     const windowWidth = getWindowWidth()
     const diagramCanvasWidth = getCanvasWidth(windowWidth)
-    const outputId = OUTPUT_OPTIONS.some((item) => item.id === DEFAULT_OUTPUT_ID)
-      ? DEFAULT_OUTPUT_ID
-      : (OUTPUT_OPTIONS[0] && OUTPUT_OPTIONS[0].id)
-    const inputId = INPUT_OPTIONS.some((item) => item.id === DEFAULT_INPUT_ID)
-      ? DEFAULT_INPUT_ID
-      : (INPUT_OPTIONS[0] && INPUT_OPTIONS[0].id)
+    let preferences = getDefaultWiringPreferences()
+    let showRestoredHint = false
+    let wiringStorageWarning = ''
+    this._wiringStorageAvailable = typeof wx.getStorageSync === 'function'
+      && typeof wx.setStorageSync === 'function'
+    this._restoredReviewSides = { output: false, input: false }
+    this._restoredWiringPreferences = false
+    if (!this._wiringStorageAvailable) {
+      wiringStorageWarning = '当前环境无法记住接口和视角；本次设置仍可使用。'
+    } else {
+      try {
+        const stored = wx.getStorageSync(WIRING_PREFERENCE_STORAGE_KEY)
+        if (stored !== undefined && stored !== null && stored !== '') {
+          if (isValidWiringPreferences(stored)) {
+            preferences = {
+              outputId: stored.outputId,
+              inputId: stored.inputId,
+              manualSelected: { ...stored.manualSelected },
+              viewMode: stored.viewMode,
+              face: stored.face,
+            }
+            this._restoredWiringPreferences = true
+            showRestoredHint = true
+          } else {
+            wiringStorageWarning = '上次保存的设置无法识别，已恢复默认示例；本次仍可使用。'
+          }
+        }
+      } catch (error) {
+        wiringStorageWarning = '读取上次设置失败；本次仍可使用，但设置可能无法记住。'
+      }
+    }
+    const outputId = preferences.outputId
+    const inputId = preferences.inputId
     const model = getSafeWiringModel(outputId, inputId, {}, null)
     const theme = getCurrentTheme()
+    const reportOptions = getReportOptions({ ...preferences, showRestoredHint, theme })
     this.setData({
       outputId,
       inputId,
+      manualSelected: preferences.manualSelected,
+      showRestoredHint,
+      wiringStorageWarning,
       model,
       supported: model.status === 'ready' && model.supported,
       ...getModelDisplayInfo(model),
       outputOptions: OUTPUT_OPTIONS,
       inputOptions: INPUT_OPTIONS,
+      viewMode: preferences.viewMode,
+      face: preferences.face,
       theme,
       diagramCanvasWidth,
-      diagramCanvasHeight: getSafeDiagramHeight(diagramCanvasWidth, model, { viewMode: 'wiring', theme, showTitle: false }, 340),
-      resultReportCanvasHeight: getSafeReportHeight(EXPORT_WIDTH, model, 960),
+      diagramCanvasHeight: getSafeDiagramHeight(diagramCanvasWidth, model, { ...reportOptions, showTitle: false }, 340),
+      resultReportCanvasHeight: getSafeReportHeight(EXPORT_WIDTH, model, 960, reportOptions),
     })
   },
 
@@ -348,6 +455,30 @@ Page({
   invalidateWiringGeneration() {
     if (this._wiringLifecycle) this._wiringLifecycle.invalidate()
     this.clearWiringGenerationState()
+  },
+
+  persistWiringPreferences() {
+    if (!this._wiringStorageAvailable || typeof wx.setStorageSync !== 'function') return false
+    try {
+      wx.setStorageSync(WIRING_PREFERENCE_STORAGE_KEY, serializeWiringPreferences(this.data))
+      return true
+    } catch (error) {
+      this.setData({ wiringStorageWarning: '保存失败；本次设置仍可使用，但离开后可能无法恢复。' })
+      return false
+    }
+  },
+
+  markEndpointManuallySelected(side) {
+    const manualSelected = { ...this.data.manualSelected, [side]: true }
+    const changes = { manualSelected }
+    if (this._restoredWiringPreferences) {
+      this._restoredReviewSides[side] = true
+      if (this._restoredReviewSides.output && this._restoredReviewSides.input) {
+        this._restoredWiringPreferences = false
+        changes.showRestoredHint = false
+      }
+    }
+    return changes
   },
 
   finishWiringGeneration(token, changes = {}) {
@@ -477,6 +608,7 @@ Page({
     this.invalidateDiagramRender()
     this.setData({
       selectorVisible: true,
+      selectorHelpVisible: false,
       selectorSide: side,
       selectorTitle: side === 'input' ? '选择输入端' : '选择输出端',
       selectorOptions: options,
@@ -484,7 +616,16 @@ Page({
   },
 
   closeEndpointSelector() {
-    this.setData({ selectorVisible: false }, () => this.renderDiagram())
+    this.setData({ selectorVisible: false, selectorHelpVisible: false }, () => this.renderDiagram())
+  },
+
+  openEndpointHelp() {
+    if (!this.data.selectorVisible) return
+    this.setData({ selectorHelpVisible: true })
+  },
+
+  closeEndpointHelp() {
+    this.setData({ selectorHelpVisible: false })
   },
 
   selectEndpointOption(event) {
@@ -495,14 +636,27 @@ Page({
       this.invalidateWiringGeneration()
       this.invalidateDiagramRender()
       wx.showToast({ title: '接口选项无效，请重新选择', icon: 'none' })
-      this.setData({ selectorVisible: false }, () => this.renderDiagram())
+      this.setData({ selectorVisible: false, selectorHelpVisible: false }, () => this.renderDiagram())
       return
     }
 
     const outputId = side === 'output' ? id : this.data.outputId
     const inputId = side === 'input' ? id : this.data.inputId
     if (outputId === this.data.outputId && inputId === this.data.inputId) {
-      this.setData({ selectorVisible: false }, () => this.renderDiagram())
+      const changes = this.markEndpointManuallySelected(side)
+      const previousNotice = getReportOptions(this.data).preferenceNotice
+      const reportOptions = getReportOptions({ ...this.data, ...changes })
+      if (reportOptions.preferenceNotice !== previousNotice) {
+        this.invalidateWiringGeneration()
+        changes.resultReportCanvasHeight = getSafeReportHeight(EXPORT_WIDTH, this.data.model,
+          this.data.resultReportCanvasHeight, reportOptions)
+      }
+      changes.selectorVisible = false
+      changes.selectorHelpVisible = false
+      this.setData(changes, () => {
+        this.persistWiringPreferences()
+        this.renderDiagram()
+      })
       return
     }
     this.invalidateWiringGeneration()
@@ -511,10 +665,13 @@ Page({
     const model = getSafeWiringModel(outputId, inputId, selections, this.data.model)
     const output = this.data.outputOptions.find((item) => item.id === outputId)
     const input = this.data.inputOptions.find((item) => item.id === inputId)
+    const endpointReview = this.markEndpointManuallySelected(side)
+    const reportOptions = getReportOptions({ ...this.data, ...endpointReview, selectedId: '' })
     this._diagramNeedsRender = true
     this.setData({
       outputId,
       inputId,
+      ...endpointReview,
       selections,
       model,
       supported: model.status === 'ready' && model.supported,
@@ -523,6 +680,7 @@ Page({
       selectedId: '',
       selectedConnection: null,
       selectorVisible: false,
+      selectorHelpVisible: false,
       explanationExpanded: false,
       diagramCanvasHeight: getSafeDiagramHeight(this.data.diagramCanvasWidth, model, {
         viewMode: this.data.viewMode,
@@ -530,10 +688,13 @@ Page({
         theme: this.data.theme,
         showTitle: false,
       }, this.data.diagramCanvasHeight),
-      resultReportCanvasHeight: getSafeReportHeight(EXPORT_WIDTH, model, this.data.resultReportCanvasHeight),
+      resultReportCanvasHeight: getSafeReportHeight(EXPORT_WIDTH, model, this.data.resultReportCanvasHeight, reportOptions),
       outputLabel: output && output.label,
       inputLabel: input && input.label,
-    }, () => this.renderDiagram())
+    }, () => {
+      this.persistWiringPreferences()
+      this.renderDiagram()
+    })
   },
 
   selectWiringRequirement(event) {
@@ -549,6 +710,7 @@ Page({
     this.invalidateWiringGeneration()
     this.invalidateDiagramRender()
     const model = getSafeWiringModel(this.data.outputId, this.data.inputId, selections, this.data.model)
+    const reportOptions = getReportOptions({ ...this.data, selectedId: '' })
     this._diagramNeedsRender = true
     this.setData({
       selections,
@@ -566,7 +728,36 @@ Page({
         theme: this.data.theme,
         showTitle: false,
       }, this.data.diagramCanvasHeight),
-      resultReportCanvasHeight: getSafeReportHeight(EXPORT_WIDTH, model, this.data.resultReportCanvasHeight),
+      resultReportCanvasHeight: getSafeReportHeight(EXPORT_WIDTH, model, this.data.resultReportCanvasHeight, reportOptions),
+    }, () => this.renderDiagram())
+  },
+
+  clearWiringRequirement(event) {
+    const requirementId = event && event.currentTarget && event.currentTarget.dataset
+      && event.currentTarget.dataset.requirementId
+    if (requirementId !== 'outputMode' || !this.data.selections.outputMode) return
+    const selections = { ...this.data.selections }
+    delete selections.outputMode
+    this.invalidateWiringGeneration()
+    this.invalidateDiagramRender()
+    const model = getSafeWiringModel(this.data.outputId, this.data.inputId, selections, this.data.model)
+    const reportOptions = getReportOptions({ ...this.data, selectedId: '' })
+    this._diagramNeedsRender = true
+    this.setData({
+      selections,
+      model,
+      wiringStatus: model.status,
+      supported: model.status === 'ready' && model.supported,
+      ...getModelDisplayInfo(model),
+      selectedId: '',
+      selectedConnection: null,
+      diagramError: '',
+      explanationExpanded: false,
+      diagramCanvasHeight: getSafeDiagramHeight(this.data.diagramCanvasWidth, model, {
+        ...reportOptions,
+        showTitle: false,
+      }, this.data.diagramCanvasHeight),
+      resultReportCanvasHeight: getSafeReportHeight(EXPORT_WIDTH, model, this.data.resultReportCanvasHeight, reportOptions),
     }, () => this.renderDiagram())
   },
 
@@ -576,7 +767,18 @@ Page({
     if (viewMode === this.data.viewMode) return
     this.invalidateWiringGeneration()
     this.invalidateDiagramRender()
-    this.setData({ viewMode, selectedId: '', selectedConnection: null, diagramError: '' }, () => this.renderDiagram())
+    const changes = { viewMode, selectedId: '', selectedConnection: null, diagramError: '' }
+    const reportOptions = getReportOptions({ ...this.data, ...changes })
+    changes.diagramCanvasHeight = getSafeDiagramHeight(this.data.diagramCanvasWidth, this.data.model, {
+      ...reportOptions,
+      showTitle: false,
+    }, this.data.diagramCanvasHeight)
+    changes.resultReportCanvasHeight = getSafeReportHeight(EXPORT_WIDTH, this.data.model,
+      this.data.resultReportCanvasHeight, reportOptions)
+    this.setData(changes, () => {
+      this.persistWiringPreferences()
+      this.renderDiagram()
+    })
   },
 
   selectConnectorFace(event) {
@@ -584,7 +786,18 @@ Page({
     if ((face !== 'mating' && face !== 'solder') || face === this.data.face) return
     this.invalidateWiringGeneration()
     this.invalidateDiagramRender()
-    this.setData({ face, selectedId: '', selectedConnection: null, diagramError: '' }, () => this.renderDiagram())
+    const changes = { face, selectedId: '', selectedConnection: null, diagramError: '' }
+    const reportOptions = getReportOptions({ ...this.data, ...changes })
+    changes.diagramCanvasHeight = getSafeDiagramHeight(this.data.diagramCanvasWidth, this.data.model, {
+      ...reportOptions,
+      showTitle: false,
+    }, this.data.diagramCanvasHeight)
+    changes.resultReportCanvasHeight = getSafeReportHeight(EXPORT_WIDTH, this.data.model,
+      this.data.resultReportCanvasHeight, reportOptions)
+    this.setData(changes, () => {
+      this.persistWiringPreferences()
+      this.renderDiagram()
+    })
   },
 
   onDiagramTap(event) {
@@ -640,6 +853,8 @@ Page({
         ...connection,
         mappingText: `${connection.fromLabel} → ${connection.toLabel}`,
       } : null,
+      resultReportCanvasHeight: getSafeReportHeight(EXPORT_WIDTH, model, this.data.resultReportCanvasHeight,
+        getReportOptions({ ...this.data, selectedId })),
     }, () => this.renderDiagram())
   },
 
@@ -658,6 +873,8 @@ Page({
     let text
     try {
       text = buildWiringText(model)
+      const preferenceNotice = getReportOptions(this.data).preferenceNotice
+      if (preferenceNotice) text = `${preferenceNotice}\n\n${text}`
     } catch (error) {
       text = ''
     }
@@ -700,7 +917,8 @@ Page({
 
     vibrate('medium')
     const width = EXPORT_WIDTH
-    const height = getReportHeight(width, model)
+    const reportOptions = getReportOptions(this.data)
+    const height = getReportHeight(width, model, reportOptions)
     const revision = this._wiringLifecycle.begin()
     this._reportPending = true
     this._reportLoading = true
@@ -715,7 +933,7 @@ Page({
       if (typeof wx.showLoading === 'function') wx.showLoading({ title: '正在生成图片', mask: true })
       try {
         const context = wx.createCanvasContext(EXPORT_CANVAS_ID, this)
-        drawWiringReport(context, model, width, height, { theme: this.data.theme })
+        drawWiringReport(context, model, width, height, reportOptions)
         context.draw(false, () => {
           if (!this._wiringLifecycle.isCurrent(revision)) return
           try {

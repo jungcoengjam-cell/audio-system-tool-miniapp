@@ -54,3 +54,33 @@
 .pag-nag-guide-nom-closed .pag-nag-guide-nom-icon{border-color:var(--tt)}.pag-nag-guide-nom-closed .pag-nag-guide-nom-icon:before{border-color:var(--tt)}.pag-nag-guide-nom-closed .pag-nag-guide-nom-icon:after{border-color:var(--tt)}
 .pag-nag-guide-nom-label{display:block;width:100%;color:var(--ts);font-size:28rpx;line-height:1.25;white-space:normal}.pag-nag-guide-nom-state{display:block;margin-top:4rpx;color:var(--tt);font-size:28rpx;line-height:1.2}
 
+.venue-mode-scope,.venue-example-note{margin:0 0 18rpx;padding:16rpx 18rpx;border:1rpx solid var(--td);border-radius:16rpx;background:var(--tv);color:var(--ts);font-size:28rpx;line-height:1.5}
+.venue-mode-scope-title{margin-bottom:4rpx;color:var(--tx);font-size:28rpx;font-weight:700}
+.venue-example-note{margin-bottom:12rpx;border-color:var(--theme-accent);background:var(--as)}
+.venue-help-card{margin-bottom:14rpx}
+.venue-help-content{padding:16rpx 20rpx 20rpx;color:var(--ts);font-size:28rpx;line-height:1.5}
+.venue-help-content .venue-mode-scope{margin:0;padding:0;border:0;background:transparent}
+.venue-help-content .venue-mode-scope-title{margin-bottom:4rpx}
+.venue-help-disclosure-row{min-height:104rpx}
+.grade-guidance{margin-top:10rpx;color:var(--ts);font-size:28rpx;line-height:1.45}
+.venue-measurement-guide{margin-top:16rpx;padding:16rpx;border:1rpx solid var(--td);border-radius:16rpx;background:var(--tv)}
+.venue-measurement-guide-title{color:var(--tx);font-size:28rpx;font-weight:700}
+.venue-measurement-room{margin-top:12rpx;padding:0 20rpx 14rpx}
+.venue-measurement-wall{display:flex;box-sizing:border-box;min-height:48rpx;align-items:center;justify-content:center;border-bottom:4rpx solid var(--ta);color:var(--ts);font-size:28rpx;font-weight:650;text-align:center}
+.venue-measurement-plane{position:relative;box-sizing:border-box;height:300rpx;margin:0 18%;border-right:1rpx solid var(--td);border-bottom:1rpx solid var(--td);border-left:1rpx solid var(--td);background:var(--tv)}
+.venue-measurement-seat-zone{position:absolute;top:30%;right:-5%;bottom:30%;left:-5%;display:flex;align-items:center;justify-content:center;flex-direction:column;border:2rpx solid var(--theme-accent);border-radius:12rpx;background:var(--as);color:var(--ta);font-size:28rpx;font-weight:650;text-align:center}
+.venue-measurement-seat-zone view{margin-top:7rpx;font-size:28rpx;font-weight:500}
+.venue-measurement-row{position:absolute;z-index:1;left:-42%;display:flex;box-sizing:border-box;width:184%;min-height:44rpx;align-items:center;justify-content:center;color:var(--ts);font-size:28rpx}
+.venue-measurement-row:before{position:absolute;z-index:0;right:0;left:0;border-top:1rpx dashed var(--ta);content:""}
+.venue-measurement-row-first{top:7%}.venue-measurement-row-last{bottom:7%}
+.venue-measurement-row-label{position:relative;z-index:1;display:inline-block;padding:2rpx 8rpx;background:var(--tv);color:var(--ts);line-height:1.35}
+.venue-measurement-caption{color:var(--ts);font-size:28rpx;line-height:1.45}
+.warning-detail{margin-top:9rpx;color:var(--tw);font-size:28rpx;line-height:1.45}
+.venue-candidate-summary{margin-top:20rpx;padding-top:16rpx;border-top:1rpx solid var(--td)}
+.venue-candidate-copy{margin-top:6rpx;color:var(--tx);font-size:28rpx;line-height:1.45}
+.pag-nag-return-button{display:flex;box-sizing:border-box;flex:1;min-width:0;min-height:44px;margin:0;padding:8rpx 12rpx;align-items:center;justify-content:center;border:1rpx solid var(--td);border-radius:14rpx;background:var(--tc);color:var(--ta);font-size:28rpx;line-height:1.25;white-space:normal}
+.pag-nag-return-button::after{border:0}
+.venue-natural-sound-warning{margin:16rpx 0 0;font-size:28rpx}
+.pag-nag-blocked-card{box-sizing:border-box;width:100%;margin-bottom:14rpx;padding:16rpx;border:1rpx solid var(--theme-warning);border-radius:16rpx;background:var(--tws)}
+.pag-nag-blocked-title{color:var(--tw);font-size:28rpx;line-height:1.45}
+.pag-nag-return-button{width:100%;margin-top:12rpx;border:0;background:var(--tp);color:#fff;font-weight:650}

@@ -115,8 +115,8 @@ function drawWallDiagram(context, payload) {
 
   drawText(context, `墙宽 ${input.wallWidthMeters} m`, wallX + (wallWidth / 2), wallY - 15,
     17, COLORS.secondary, 400, 'center')
-  drawText(context, `墙高 ${input.wallHeightMeters} m`, wallX + wallWidth + 12,
-    wallY + (wallHeight / 2) + 6, 17, COLORS.secondary, 400)
+  drawText(context, `墙高 ${input.wallHeightMeters} m`, 375,
+    1101, 17, COLORS.secondary, 400, 'center')
   drawText(context,
     `左右各 ${result.horizontalMarginMeters} m  ·  上 ${result.actualTopMarginMeters} m  ·  下 ${result.actualBottomMarginMeters} m`,
     375, 1127, 18, COLORS.secondary, 400, 'center')

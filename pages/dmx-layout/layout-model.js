@@ -77,6 +77,20 @@ return (Number(a?.groupIndex) || 0) - (Number(b?.groupIndex) || 0)
 || (Number(a?.fixtureIndex) || 0) - (Number(b?.fixtureIndex) || 0)
 || String(a?.addressText || '').localeCompare(String(b?.addressText || ''))
 }
+function interleaveBatchFixtures(fixtures) {
+const groups = []
+;fixtures?.forEach((fixture) => {
+const i = fixture.groupIndex
+if (!groups[i]) groups[i] = []
+groups[i].push(fixture)
+})
+const slots = []
+groups.forEach((items, groupIndex) => items.sort(fixtureSort).forEach((fixture, index) => slots.push({ fixture, groupIndex, index, count: items.length })))
+return slots.sort((a, b) => (
+(a.index + 1) * (b.count + 1) - (b.index + 1) * (a.count + 1)
+) || a.groupIndex - b.groupIndex || fixtureSort(a.fixture, b.fixture))
+.map(({ fixture }) => fixture)
+}
 function balancedBars(groups, rows) {
 const counts = Array.from({ length: rows }, () => groups.map(() => 0))
 groups.forEach((group, groupIndex) => {
@@ -99,7 +113,7 @@ counts.reduce((sum, row) => sum + row[groupIndex], 0) === Number(group.fixtureCo
 ))
 return valid ? counts : balancedBars(groups, rows)
 }
-function posFromBars(fixtures, barCounts, groups, definitions, rows, pairs) {
+function posFromBars(fixtures, barCounts, groups, definitions, rows, pairs, legacyOrder) {
 const fixturesByGroup = groups.map((group, groupIndex) => (
 fixtures.filter((fixture) => fixture.groupIndex === groupIndex)
 ))
@@ -111,9 +125,11 @@ bars[barIndex].push(...fixturesByGroup[groupIndex].slice(start, start + count))
 offsets[groupIndex] += count
 }))
 const positions = Object.create(null)
-bars.forEach((bar, barIndex) => bar.forEach((fixture, fixtureIndex) => {
+bars.forEach((bar, barIndex) => {
+bar = legacyOrder ? bar : interleaveBatchFixtures(bar)
+bar.forEach((fixture, fixtureIndex) => {
 const d = definitions[barIndex]
-const isSide = d.zone === 'side-left' || d.zone === 'side-right'
+const isSide = d.zone.startsWith('side-')
 const baseY = defY(d, rows, pairs)
 const sideRail = isSide ? sideRange(d.positionIndex, pairs) : null
 const sideY = sideRail
@@ -123,9 +139,10 @@ positions[posKey(fixture)] = {
 zone: d.zone,
 positionIndex: d.positionIndex,
 x: isSide ? (d.zone === 'side-left' ? 0 : 1) : (fixtureIndex + 1) / (bar.length + 1),
-y: clamp(isSide ? sideY : baseY, 0.03, 0.97),
+y: clamp(sideY, 0.03, 0.97),
 }
-}))
+})
+})
 return positions
 }
 function normPos(saved, rows, definitions, pairs) {
@@ -284,6 +301,7 @@ sideCanvasRange,
 posPoint,
 posKey,
 fixtureSort,
+interleaveBatchFixtures,
 balancedBars,
 normBars,
 posFromBars,

@@ -20,7 +20,7 @@ function resolveSavedLayout(saved = {}, fixtures = [], groups = []) {
     : recommendedSidePairCount
   const definitions = posDefs(rows, SCHEME_IDS[schemeIndex], pairs)
   const barCounts = normBars(saved.barCounts, groups, definitions.length)
-  const automaticPositions = posFromBars(fixtures, barCounts, groups, definitions, rows, pairs)
+  const automaticPositions = posFromBars(fixtures, barCounts, groups, definitions, rows, pairs, saved.positions && Object.keys(saved.positions).length)
   const preserve = Boolean(saved.preserveUnplaced)
   const positions = preserve
     ? restorePositions(fixtures, saved.positions, rows, definitions, pairs)

@@ -4,7 +4,6 @@ const {
   CONNECTOR_OPTIONS,
   STATUS_OPTIONS,
   applyScheduleChange,
-  buildMaterialSummary,
   buildScheduleText,
   emptySchedule,
   normalizeSchedule,
@@ -16,11 +15,7 @@ const {
   getProjects,
   saveProjectWiring,
 } = require('../../utils/records')
-const {
-  previewGeneratedImage,
-  saveGeneratedImage,
-  shareGeneratedImage,
-} = require('../../utils/report-image-actions')
+const { shareGeneratedImage } = require('../../utils/report-image-actions')
 
 const REPORT_CANVAS_ID = 'wiringReportCanvas'
 const CONNECTOR_PICKER_OPTIONS = [{ id: '', label: '待确认' }, ...CONNECTOR_OPTIONS]
@@ -41,6 +36,13 @@ const DRAFT_FIELDS = new Set([
   'purpose', 'fromDevice', 'fromPort', 'toDevice', 'toPort', 'buildType', 'cableType',
   'spec', 'connectorA', 'connectorB', 'lengthText', 'status', 'notes',
 ])
+const REQUIRED_ROUTE_FIELDS = [
+  { field: 'fromDevice', label: '来源设备', target: 'wiring-field-from-device' },
+  { field: 'fromPort', label: '来源端口', target: 'wiring-field-from-port' },
+  { field: 'toDevice', label: '去向设备', target: 'wiring-field-to-device' },
+  { field: 'toPort', label: '去向端口', target: 'wiring-field-to-port' },
+]
+const ROUTE_ENDPOINT_FIELDS = ['fromDevice', 'fromPort', 'toDevice', 'toPort']
 
 function optionIndex(options, id, fallback = 0) {
   const found = options.findIndex((option) => option.id === id)
@@ -79,6 +81,10 @@ function connectorPickerIndex(value) {
 function optionLabel(options, id, fallback = '待确认') {
   const option = options.find((item) => item.id === id)
   return option ? option.label : (id || fallback)
+}
+
+function sameRouteEndpoints(left, right) {
+  return ROUTE_ENDPOINT_FIELDS.every((field) => String(left && left[field] || '').trim() === String(right && right[field] || '').trim())
 }
 
 function uniqueValues(lines, fields, limit = 8) {
@@ -127,61 +133,6 @@ function decorateLine(line) {
   }
 }
 
-function makeMaterialGroups(summary) {
-  const rows = []
-  const addRows = (items, category) => items.forEach((item) => {
-    let countText
-    let subtitle = item.detail || ''
-    if (category === '成品线') {
-      countText = `${item.quantity} 条`
-      if (!item.unknownLengthCount && item.quantity > 1 && item.totalLengthText) {
-        subtitle = [subtitle, `合计 ${item.totalLengthText}`].filter(Boolean).join(' · ')
-      }
-    } else if (category === '散线') {
-      const knownMeters = Number(item.quantity) || 0
-      countText = knownMeters > 0 ? `${item.quantity} m` : '长度待确认'
-      subtitle = item.unknownLengthCount
-        ? `${item.unknownLengthCount} 条长度待确认`
-        : (item.detail === '接头另计' ? '接头另计' : '')
-    } else if (category === '散线端头') {
-      const unknownCount = Number.parseInt(String(item.totalLengthText || ''), 10)
-      countText = item.quantity === null || item.quantity === undefined
-        ? (unknownCount ? `${unknownCount} 个` : '待确认')
-        : `${item.quantity} 个`
-      subtitle = item.quantity === null || item.quantity === undefined ? '' : (item.detail || '')
-    } else if (item.quantity === null || item.quantity === undefined) countText = '待确认'
-    else countText = `${item.quantity} ${item.unit || '条'}`
-    rows.push({
-      key: item.key,
-      title: item.title || category,
-      subtitle,
-      count: countText,
-      category,
-    })
-  })
-  addRows(summary.finished || [], '成品线')
-  addRows(summary.bulk || [], '散线')
-  addRows(summary.connectors || [], '散线端头')
-
-  const labelsByCode = new Map()
-  ;(summary.labels || []).forEach((label) => {
-    if (!labelsByCode.has(label.code)) labelsByCode.set(label.code, {})
-    labelsByCode.get(label.code)[label.direction] = label
-  })
-  labelsByCode.forEach((labels, code) => {
-    const directions = [labels.to, labels.from].filter(Boolean)
-    if (!directions.length) return
-    rows.push({
-      key: `number:${code}`,
-      title: `${code} · 双端线号`,
-      subtitle: directions.map((label) => `${label.local} → ${label.remote}`).join('；'),
-      count: '2 端',
-      category: '线号',
-    })
-  })
-  return rows
-}
-
 function hasMissingProject(error) {
   return /不存在|已删除|缺少项目|项目编号/i.test(String(error || ''))
 }
@@ -205,11 +156,9 @@ Page({
     projectPickerName: '',
     projectCreating: false,
     lineCount: 0,
-    activeTab: 'lines',
     statusCounts: { pending: 0, connected: 0, checked: 0 },
     searchText: '',
     visibleLines: [],
-    materialGroups: [],
     buildOptions: BUILD_OPTIONS,
     cableOptions: CABLE_OPTIONS,
     specOptions: [],
@@ -239,6 +188,7 @@ Page({
     formSheetStyle: '',
     formKeyboardSpacerHeight: 0,
     formError: '',
+    formFieldErrors: {},
     saveError: '',
     saving: false,
     fromDeviceHistory: [],
@@ -254,6 +204,8 @@ Page({
     batchConnectorAIndex: 0,
     batchConnectorBIndex: 0,
     batchPreviewLines: [],
+    batchPossibleDuplicates: [],
+    batchDuplicateWarning: '',
     batchError: '',
     reportCanvasWidth: 720,
     reportCanvasHeight: 400,
@@ -262,6 +214,12 @@ Page({
     reportPageIndex: 0,
     reportImages: [],
     reportImagePath: '',
+    reportSavedPageIndices: [],
+    reportSaveAllLabel: '保存全部0张',
+    reportSaveRunning: false,
+    reportSaveInFlight: false,
+    reportSaveMessage: '',
+    reportSaveError: '',
   },
 
   onLoad(options = {}) {
@@ -276,6 +234,10 @@ Page({
     this._projectPickerRevision = 0
     this._reportSignature = ''
     this._reportPending = false
+    this._reportSaveJobRevision = 0
+    this._reportSaveJob = null
+    this._reportSaveInFlight = null
+    this._reportSavedPages = new Map()
     this._schedule = emptySchedule()
     this._draftBaseline = ''
     this._draftTouched = false
@@ -586,7 +548,6 @@ Page({
         canRetry: false,
         lineCount: 0,
         visibleLines: [],
-        materialGroups: [],
       })
       return false
     }
@@ -627,7 +588,6 @@ Page({
         canRetry: !missing,
         lineCount: 0,
         visibleLines: [],
-        materialGroups: [],
         statusCounts: { pending: 0, connected: 0, checked: 0 },
       })
       return false
@@ -639,9 +599,6 @@ Page({
     this._loadedSignature = signature
     this._schedule = schedule
     this._decoratedLines = schedule.lines.map(decorateLine)
-    const materialGroups = this.data.activeTab === 'materials'
-      ? makeMaterialGroups(buildMaterialSummary(schedule))
-      : []
     const statusCounts = schedule.lines.reduce((counts, line) => {
       if (Object.prototype.hasOwnProperty.call(counts, line.status)) counts[line.status] += 1
       return counts
@@ -654,7 +611,6 @@ Page({
       canRetry: false,
       lineCount: schedule.lines.length,
       visibleLines: this.filterLines(this.data.searchText),
-      materialGroups,
       statusCounts,
     })
     if (typeof wx !== 'undefined' && typeof wx.setNavigationBarTitle === 'function') wx.setNavigationBarTitle({ title: '通道与线缆' })
@@ -808,11 +764,9 @@ Page({
       loadError: '',
       canRetry: false,
       lineCount: 0,
-      activeTab: 'lines',
       statusCounts: { pending: 0, connected: 0, checked: 0 },
       searchText: '',
       visibleLines: [],
-      materialGroups: [],
       reportImages: [],
       reportImagePath: '',
       reportPageIndex: 0,
@@ -859,16 +813,6 @@ Page({
     if (this._searchTimer) clearTimeout(this._searchTimer)
     this._searchTimer = null
     this.setData({ searchText: '', visibleLines: this.filterLines('') })
-  },
-
-  selectTab(event) {
-    const tab = event.currentTarget.dataset.tab
-    if (!['lines', 'materials'].includes(tab) || tab === this.data.activeTab) return
-    this.invalidateExport(false)
-    const materialGroups = tab === 'materials'
-      ? makeMaterialGroups(buildMaterialSummary(this._schedule))
-      : []
-    this.setData({ activeTab: tab, materialGroups })
   },
 
   makeDefaultDraft() {
@@ -944,6 +888,7 @@ Page({
       customConnectorB,
       statusIndex: this._optionIndexes.status,
       formError: '',
+      formFieldErrors: {},
       saveError: '',
       saving: false,
       ...this.getHistoryData(normalizedDraft),
@@ -972,12 +917,15 @@ Page({
     if (field === 'spec') this._draftDefaultSpec = false
     this._draftTouched = true
     const draft = { ...this.data.draft, [field]: value }
+    const formFieldErrors = { ...this.data.formFieldErrors }
+    delete formFieldErrors[field]
     this.setData({
       draft,
       ...(field === 'fromDevice' || field === 'fromPort' || field === 'toDevice' || field === 'toPort'
         ? this.getHistoryData(draft)
         : {}),
       formError: '',
+      formFieldErrors,
       saveError: '',
       formScrollTarget: '',
     })
@@ -1009,7 +957,9 @@ Page({
     const value = history[index]
     this._draftTouched = true
     const draft = { ...this.data.draft, [field]: value }
-    this.setData({ draft, ...this.getHistoryData(draft), formError: '', saveError: '' })
+    const formFieldErrors = { ...this.data.formFieldErrors }
+    delete formFieldErrors[field]
+    this.setData({ draft, ...this.getHistoryData(draft), formError: '', formFieldErrors, saveError: '' })
   },
 
   onOptionChange(event) {
@@ -1100,14 +1050,30 @@ Page({
     this.resetFormKeyboardAvoidance()
     this._draftTouched = false
     this._draftBaseline = ''
-    this.setData({ editorVisible: false, draft: null, formError: '', saveError: '', saving: false })
+    this.setData({ editorVisible: false, draft: null, formError: '', formFieldErrors: {}, saveError: '', saving: false })
+  },
+
+  showMissingRouteFields(missingFields) {
+    const formFieldErrors = {}
+    missingFields.forEach(({ field, label }) => { formFieldErrors[field] = `请填写${label}` })
+    const firstMissing = missingFields[0]
+    if (!firstMissing) return
+    this.setData({
+      formError: `还缺少：${missingFields.map(({ label }) => label).join('、')}。`,
+      formFieldErrors,
+      formScrollTarget: '',
+    }, () => {
+      if (this._destroyed || this._hidden || !this.data.editorVisible) return
+      this.setData({ formScrollTop: 0, formScrollTarget: firstMissing.target })
+    })
   },
 
   saveLine() {
     const draft = this.data.draft
     if (!draft || this.data.saving) return
-    if (![draft.fromDevice, draft.fromPort, draft.toDevice, draft.toPort].every((value) => String(value || '').trim())) {
-      this.setData({ formError: '请填写来源和去向的设备名称、端口名称。', saveError: '', formScrollTarget: 'formScrollTarget' })
+    const missingFields = REQUIRED_ROUTE_FIELDS.filter(({ field }) => !String(draft[field] || '').trim())
+    if (missingFields.length) {
+      this.showMissingRouteFields(missingFields)
       return
     }
     const line = { ...draft }
@@ -1227,6 +1193,8 @@ Page({
       batchSpecOptions: getCableSpecOptions(batchDraft.cableType),
       batchSpecOptionViews: getCableSpecOptionViews(batchDraft.cableType),
       batchPreviewLines: [],
+      batchPossibleDuplicates: [],
+      batchDuplicateWarning: '',
       batchError: '',
       batchBuildIndex: optionIndex(BUILD_OPTIONS, batchDraft.buildType),
       batchCableIndex: optionIndex(CABLE_OPTIONS, batchDraft.cableType),
@@ -1245,6 +1213,8 @@ Page({
     this.setData({
       batchDraft: { ...this.data.batchDraft, [field]: String(event.detail.value || '') },
       batchPreviewLines: [],
+      batchPossibleDuplicates: [],
+      batchDuplicateWarning: '',
       batchError: '',
     })
   },
@@ -1268,6 +1238,8 @@ Page({
       batchSpecOptions: getCableSpecOptions(cableType),
       batchSpecOptionViews: getCableSpecOptionViews(cableType),
       batchPreviewLines: [],
+      batchPossibleDuplicates: [],
+      batchDuplicateWarning: '',
       batchError: '',
     })
   },
@@ -1280,6 +1252,8 @@ Page({
       batchBuildIndex: index,
       batchDraft: { ...this.data.batchDraft, buildType: BUILD_OPTIONS[index].id },
       batchPreviewLines: [],
+      batchPossibleDuplicates: [],
+      batchDuplicateWarning: '',
       batchError: '',
     })
   },
@@ -1300,6 +1274,8 @@ Page({
       [customField]: BATCH_CONNECTOR_OPTIONS[index].id === 'custom' ? customValue : '',
       batchDraft: { ...this.data.batchDraft, [field]: connectorValue },
       batchPreviewLines: [],
+      batchPossibleDuplicates: [],
+      batchDuplicateWarning: '',
       batchError: '',
     })
   },
@@ -1314,6 +1290,8 @@ Page({
       [customField]: value,
       batchDraft: { ...this.data.batchDraft, [field]: value },
       batchPreviewLines: [],
+      batchPossibleDuplicates: [],
+      batchDuplicateWarning: '',
       batchError: '',
     })
   },
@@ -1350,13 +1328,32 @@ Page({
     const result = applyScheduleChange(this._schedule, command)
     if (!result || result.ok !== true) {
       this._batchCommand = null
-      this.setData({ batchPreviewLines: [], batchError: result && result.error ? result.error : '预览失败，请检查批量线路资料。' })
+      this.setData({
+        batchPreviewLines: [],
+        batchPossibleDuplicates: [],
+        batchDuplicateWarning: '',
+        batchError: result && result.error ? result.error : '预览失败，请检查批量线路资料。',
+      })
       return
     }
     const ids = new Set(result.lineIds || [])
-    const preview = result.schedule.lines.filter((line) => ids.has(line.id)).map(decorateLine)
+    const preview = result.schedule.lines.filter((line) => ids.has(line.id)).map((line) => {
+      const existingCodes = this._schedule.lines.filter((existing) => sameRouteEndpoints(existing, line)).map((existing) => existing.code)
+      return {
+        ...decorateLine(line),
+        possibleDuplicateCodes: existingCodes.join('、'),
+      }
+    })
+    const batchPossibleDuplicates = preview.filter((line) => line.possibleDuplicateCodes).map((line) => ({
+      previewCode: line.code,
+      existingCodes: line.possibleDuplicateCodes.split('、'),
+      existingCodesText: line.possibleDuplicateCodes,
+    }))
+    const batchDuplicateWarning = batchPossibleDuplicates.length
+      ? `有 ${batchPossibleDuplicates.length} 条预览线路的两端与已有布线一致；线号仍会独立生成，可继续添加。`
+      : ''
     this._batchCommand = command
-    this.setData({ batchPreviewLines: preview, batchError: '' })
+    this.setData({ batchPreviewLines: preview, batchPossibleDuplicates, batchDuplicateWarning, batchError: '' })
   },
 
   requestCloseBatch() {
@@ -1380,7 +1377,15 @@ Page({
     this.resetFormKeyboardAvoidance()
     this._batchCommand = null
     this._batchDirty = false
-    this.setData({ batchVisible: false, batchDraft: null, batchPreviewLines: [], batchError: '', saving: false })
+    this.setData({
+      batchVisible: false,
+      batchDraft: null,
+      batchPreviewLines: [],
+      batchPossibleDuplicates: [],
+      batchDuplicateWarning: '',
+      batchError: '',
+      saving: false,
+    })
   },
 
   commitBatch() {
@@ -1391,12 +1396,6 @@ Page({
       this.acceptSavedSchedule(result)
       wx.showToast({ title: `已添加 ${count} 条线路`, icon: 'success' })
     })
-  },
-
-  generateMaterialList() {
-    if (!this.data.project) return
-    this.setData({ exportTypeIndex: optionIndex(EXPORT_TYPES, 'materials') })
-    this.generateExport('materials')
   },
 
   copyCurrentText() {
@@ -1424,17 +1423,31 @@ Page({
   },
 
   invalidateExport(clearImages) {
+    const wasRunning = Boolean(this._reportSaveJob)
+    this.cancelReportSaveJob()
     const wasPending = Boolean(this._reportPending)
     this._reportRevision = (this._reportRevision || 0) + 1
     this._reportPending = false
     if (wasPending) {
       if (typeof wx !== 'undefined' && typeof wx.hideLoading === 'function') wx.hideLoading()
     }
-    const changes = { reportPreviewVisible: false }
+    const changes = {
+      reportPreviewVisible: false,
+      reportSaveRunning: false,
+      reportSaveInFlight: Boolean(this._reportSaveInFlight),
+    }
+    if (!clearImages && (wasRunning || this._reportSaveInFlight)) {
+      changes.reportSaveMessage = this.getInactiveReportSaveMessage()
+    }
     if (clearImages) {
       this._reportSignature = ''
+      if (this._reportSavedPages) this._reportSavedPages.clear()
       changes.reportImages = []
       changes.reportImagePath = ''
+      changes.reportSavedPageIndices = []
+      changes.reportSaveMessage = ''
+      changes.reportSaveError = ''
+      changes.reportSaveAllLabel = '保存全部0张'
     }
     if (this.data && !this._destroyed) this.setData(changes)
   },
@@ -1452,6 +1465,7 @@ Page({
     const expectedScheduleRevision = this._schedule.revision
     const signature = `${expectedProjectId}:${expectedScheduleRevision}:${type}`
     if (signature === this._reportSignature && this.data.reportImages.length) {
+      this.syncReportSaveView()
       this.showReportPage(0)
       return
     }
@@ -1503,7 +1517,15 @@ Page({
         return
       }
       this._reportSignature = signature
-      this.setData({ reportImages: pageImages, reportPageIndex: 0 }, () => this.showReportPage(0))
+      this.setData({
+        reportImages: pageImages,
+        reportPageIndex: 0,
+        reportSaveMessage: '',
+        reportSaveError: '',
+      }, () => {
+        this.syncReportSaveView()
+        this.showReportPage(0)
+      })
     }
 
     const exportPage = (index) => {
@@ -1563,6 +1585,7 @@ Page({
       reportImagePath: item.path,
       reportPreviewVisible: true,
     })
+    this.syncReportSaveView()
   },
 
   previousReportPage() {
@@ -1576,15 +1599,208 @@ Page({
   },
 
   closeReportPreview() {
-    this.setData({ reportPreviewVisible: false })
+    const wasRunning = Boolean(this._reportSaveJob)
+    this.cancelReportSaveJob()
+    this.setData({
+      reportPreviewVisible: false,
+      reportSaveRunning: false,
+      reportSaveInFlight: Boolean(this._reportSaveInFlight),
+      ...(wasRunning || this._reportSaveInFlight
+        ? { reportSaveMessage: this.getInactiveReportSaveMessage() }
+        : {}),
+    })
   },
 
   previewReportImage() {
-    previewGeneratedImage(this.data.reportImagePath)
+    const urls = this.data.reportImages.map((image) => image.path).filter(Boolean)
+    if (!this.data.reportImagePath || !urls.length || typeof wx.previewImage !== 'function') return
+    wx.previewImage({ current: this.data.reportImagePath, urls })
   },
 
   saveReportImage() {
-    saveGeneratedImage(this.data.reportImagePath)
+    this.startReportSaveJob([this.data.reportPageIndex], 'single')
+  },
+
+  getReportSavedPageSet(signature = this._reportSignature) {
+    if (!signature) return new Set()
+    if (!this._reportSavedPages) this._reportSavedPages = new Map()
+    if (!this._reportSavedPages.has(signature)) this._reportSavedPages.set(signature, new Set())
+    return this._reportSavedPages.get(signature)
+  },
+
+  syncReportSaveView(extra = {}) {
+    if (!this.data || this._destroyed) return
+    const total = this.data.reportImages.length
+    const saved = this.getReportSavedPageSet()
+    const reportSavedPageIndices = [...saved].filter((index) => index >= 0 && index < total).sort((a, b) => a - b)
+    const remaining = Math.max(0, total - reportSavedPageIndices.length)
+    const reportSaveAllLabel = total > 0 && remaining === 0
+      ? `全部已保存${total}张`
+      : (reportSavedPageIndices.length ? `继续保存剩余${remaining}张` : `保存全部${total}张`)
+    const currentMessage = String(this.data.reportSaveMessage || '')
+    const staleActivityMessage = /^(准备保存|正在保存第|图片保存正在进行|当前图片保存请求仍在处理中|已停止后续保存；当前页请求无法取消|已停止后续请求)/.test(currentMessage)
+    const reportSaveMessage = !this._reportSaveJob && staleActivityMessage
+      ? this.getInactiveReportSaveMessage()
+      : currentMessage
+    this.setData({
+      reportSavedPageIndices,
+      reportSaveAllLabel,
+      reportSaveInFlight: Boolean(this._reportSaveInFlight),
+      reportSaveMessage,
+      ...extra,
+    })
+  },
+
+  getInactiveReportSaveMessage() {
+    if (this._reportSaveInFlight) {
+      return '已停止后续请求；当前图片保存无法取消，仍可能完成。完成后可继续。'
+    }
+    const total = this.data && Array.isArray(this.data.reportImages) ? this.data.reportImages.length : 0
+    const saved = this.getReportSavedPageSet().size
+    const remaining = Math.max(0, total - saved)
+    if (!remaining) return `已保存 ${saved} / ${total} 张。`
+    return `已停止后续请求；已保存 ${saved} / ${total} 张，可继续保存剩余 ${remaining} 张。`
+  },
+
+  isCurrentReportSaveJob(job) {
+    return Boolean(job && this._reportSaveJob === job && !job.cancelled && !this._destroyed && !this._hidden
+      && this._reportSignature === job.signature && this._reportRevision === job.reportRevision
+      && this.data.reportPreviewVisible && !this.data.editorVisible && !this.data.batchVisible)
+  },
+
+  cancelReportSaveJob() {
+    const job = this._reportSaveJob
+    if (!job) return
+    job.cancelled = true
+    this._reportSaveJob = null
+    this._reportSaveJobRevision = (this._reportSaveJobRevision || 0) + 1
+  },
+
+  saveReportImageFailureMessage(error) {
+    const message = String(error && (error.errMsg || error.message) || '')
+    if (/auth|authorize|permission|deny/i.test(message)) {
+      return '保存权限未开启。请在微信设置中允许保存到相册，再点“继续保存”重试。'
+    }
+    if (/cancel/i.test(message)) return '保存已取消；已完成的图片仍保留，可继续保存剩余页。'
+    return `保存失败${message ? `：${message}` : '，请重试'}；已完成的图片仍保留，可继续保存剩余页。`
+  },
+
+  startReportSaveJob(indices, mode) {
+    if (!this.data.reportPreviewVisible || !this.data.reportImages.length || !this._reportSignature) return
+    if (this._reportSaveJob || this._reportSaveInFlight) {
+      this.syncReportSaveView({
+        reportSaveMessage: this._reportSaveJob
+          ? (this._reportSaveInFlight ? '当前图片保存请求仍在处理中，完成后可继续。' : '图片保存正在进行。')
+          : this.getInactiveReportSaveMessage(),
+      })
+      return
+    }
+    if (typeof wx.saveImageToPhotosAlbum !== 'function') {
+      this.syncReportSaveView({ reportSaveError: '当前微信版本暂不支持保存图片。' })
+      return
+    }
+    const signature = this._reportSignature
+    const saved = this.getReportSavedPageSet(signature)
+    const uniqueIndices = [...new Set(indices)].filter((index) => Number.isInteger(index)
+      && index >= 0 && index < this.data.reportImages.length)
+    const queue = mode === 'single' ? uniqueIndices : uniqueIndices.filter((index) => !saved.has(index))
+    if (!queue.length) {
+      this.syncReportSaveView({
+        reportSaveMessage: mode === 'single' ? '当前页已保存。' : '当前报告所有图片都已保存。',
+        reportSaveError: '',
+      })
+      return
+    }
+    const job = {
+      id: ++this._reportSaveJobRevision,
+      signature,
+      savedSet: saved,
+      reportRevision: this._reportRevision,
+      queue,
+      position: 0,
+      mode,
+      cancelled: false,
+    }
+    this._reportSaveJob = job
+    this.syncReportSaveView({
+      reportSaveRunning: true,
+      reportSaveError: '',
+      reportSaveMessage: `准备保存 ${queue.length} 张图片…`,
+    })
+    this.runNextReportSavePage(job)
+  },
+
+  runNextReportSavePage(job) {
+    if (!this.isCurrentReportSaveJob(job)) return
+    if (job.position >= job.queue.length) {
+      const savedCount = this.getReportSavedPageSet(job.signature).size
+      this._reportSaveJob = null
+      this.syncReportSaveView({
+        reportSaveRunning: false,
+        reportSaveError: '',
+        reportSaveMessage: `已保存 ${savedCount} / ${this.data.reportImages.length} 张。`,
+      })
+      return
+    }
+    const index = job.queue[job.position]
+    const image = this.data.reportImages[index]
+    if (!image || !image.path) {
+      this._reportSaveJob = null
+      this.syncReportSaveView({
+        reportSaveRunning: false,
+        reportSaveError: `第 ${index + 1} 张没有可保存的图片路径；可继续重试。`,
+      })
+      return
+    }
+    const request = { job, index, done: false }
+    this._reportSaveInFlight = request
+    this.syncReportSaveView({ reportSaveInFlight: true, reportSaveMessage: `正在保存第 ${index + 1} / ${this.data.reportImages.length} 张…` })
+    const finish = (error) => {
+      if (request.done) return
+      request.done = true
+      if (this._reportSaveInFlight === request) this._reportSaveInFlight = null
+      if (!error && this._reportSignature === job.signature
+        && this.getReportSavedPageSet(job.signature) === job.savedSet) job.savedSet.add(index)
+      if (!this.isCurrentReportSaveJob(job)) return
+      if (error) {
+        this._reportSaveJob = null
+        this.syncReportSaveView({
+          reportSaveRunning: false,
+          reportSaveError: this.saveReportImageFailureMessage(error),
+          reportSaveMessage: `已保存 ${this.getReportSavedPageSet(job.signature).size} / ${this.data.reportImages.length} 张。`,
+        })
+        return
+      }
+      job.position += 1
+      this.syncReportSaveView({ reportSaveInFlight: false })
+      this.runNextReportSavePage(job)
+    }
+    try {
+      wx.saveImageToPhotosAlbum({
+        filePath: image.path,
+        success: () => finish(null),
+        fail: (error) => finish(error || { errMsg: '保存失败，请重试' }),
+      })
+    } catch (error) {
+      finish(error || { errMsg: '保存失败，请重试' })
+    }
+  },
+
+  saveAllReportImages() {
+    this.startReportSaveJob(this.data.reportImages.map((_, index) => index), 'all')
+  },
+
+  stopReportSaveJob() {
+    if (!this._reportSaveJob) return
+    this.cancelReportSaveJob()
+    const message = this._reportSaveInFlight
+      ? '已停止后续保存；当前页请求无法取消，可能仍会保存。完成后可继续。'
+      : '已停止保存，可继续保存剩余图片。'
+    this.syncReportSaveView({
+      reportSaveRunning: false,
+      reportSaveError: '',
+      reportSaveMessage: message,
+    })
   },
 
   shareReportImage() {

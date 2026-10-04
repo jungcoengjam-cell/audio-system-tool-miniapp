@@ -1,5 +1,6 @@
 const { vibrate } = require('./haptics')
 const { startMeasurement } = require('./performance')
+const { drawAndExportReport } = require('./report-canvas')
 const {
   previewGeneratedImage,
   saveGeneratedImage,
@@ -105,42 +106,29 @@ function createResultReportMethods(options = {}) {
         if (this.resultReportRevision !== revision) return
         if (typeof wx.showLoading === 'function') wx.showLoading({ title: '正在生成图片', mask: true })
         try {
-          const context = wx.createCanvasContext(REPORT_CANVAS_ID, this)
-          const finishDrawing = startMeasurement(`${performancePrefix}/结果图绘制`)
-          drawResultReport(context, payload, resultReportCanvasHeight)
-          finishDrawing({ height: resultReportCanvasHeight })
-          context.draw(false, () => {
-            if (this.resultReportRevision !== revision) return
-            const exportDimensions = getExportDimensions(resultReportCanvasHeight)
-            const finishExport = startMeasurement(`${performancePrefix}/结果图导出`, exportDimensions)
-            wx.canvasToTempFilePath({
-              canvasId: REPORT_CANVAS_ID,
-              width: REPORT_WIDTH,
-              height: resultReportCanvasHeight,
-              ...exportDimensions,
-              fileType: 'png',
-              quality: 1,
-              success: ({ tempFilePath }) => {
-                if (this.resultReportRevision !== revision) return
-                finishExport({ success: Boolean(tempFilePath) })
-                if (!tempFilePath) {
-                  this.finishResultReportGeneration(revision)
-                  wx.showToast({ title: '图片生成失败，请重试', icon: 'none' })
-                  return
-                }
-                this.resultReportSignature = signature
-                this.finishResultReportGeneration(revision, {
-                  resultReportImagePath: tempFilePath,
-                  resultReportPreviewVisible: true,
-                })
-              },
-              fail: () => {
-                if (this.resultReportRevision !== revision) return
-                finishExport({ success: false })
-                this.finishResultReportGeneration(revision)
-                wx.showToast({ title: '图片生成失败，请重试', icon: 'none' })
-              },
-            }, this)
+          drawAndExportReport(this, {
+            canvasId: REPORT_CANVAS_ID,
+            isCurrent: () => this.resultReportRevision === revision,
+            width: REPORT_WIDTH,
+            height: resultReportCanvasHeight,
+            draw: (context) => {
+              const finishDrawing = startMeasurement(`${performancePrefix}/结果图绘制`)
+              drawResultReport(context, payload, resultReportCanvasHeight)
+              finishDrawing({ height: resultReportCanvasHeight })
+            },
+            getExportOptions: () => getExportDimensions(resultReportCanvasHeight),
+            startExportMeasurement: (exportDimensions) => startMeasurement(`${performancePrefix}/结果图导出`, exportDimensions),
+            onSuccess: (tempFilePath) => {
+              this.resultReportSignature = signature
+              this.finishResultReportGeneration(revision, {
+                resultReportImagePath: tempFilePath,
+                resultReportPreviewVisible: true,
+              })
+            },
+            onFailure: () => {
+              this.finishResultReportGeneration(revision)
+              wx.showToast({ title: '图片生成失败，请重试', icon: 'none' })
+            },
           })
         } catch (error) {
           this.finishResultReportGeneration(revision)

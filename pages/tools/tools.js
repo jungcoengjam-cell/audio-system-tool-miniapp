@@ -4,7 +4,7 @@ const { vibrate } = require('../../utils/haptics')
 
 const MODULES = [
   { id: 'audioWiring', domain: 'audio', title: '接线助手', image: '/assets/home/module-audio-wiring-catalog.png', path: '/pages/audio-wiring/index' },
-  { id: 'projectWiring', domain: 'audio', title: '通道与线缆', visual: 'project-wiring', path: '/pages/project-wiring/index' },
+  { id: 'projectWiring', domain: 'audio', title: '通道与线缆', image: '/assets/home/module-project-wiring-catalog.png', path: '/pages/project-wiring/index' },
   { id: 'gainStructure', domain: 'audio', title: '增益结构', image: '/assets/home/module-gain-structure-catalog.png', path: '/pages/gain-structure/gain-structure' },
   { id: 'limiter', domain: 'audio', title: '限幅器', image: '/assets/home/module-limiter-catalog.png', path: '/pages/limiter/limiter' },
   { id: 'spl', domain: 'audio', title: '声压级', image: '/assets/home/module-spl-catalog.png', path: '/pages/spl/spl' },

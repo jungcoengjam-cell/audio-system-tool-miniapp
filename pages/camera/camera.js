@@ -106,10 +106,11 @@ const CAMERA_INPUT_FIELDS = {
 }
 
 function buildCameraOptions() {
-  return selectableCameras.map(({ model, category, sensor }, index) => ({
-    model,
-    category,
-    sensor,
+  return selectableCameras.map((camera, index) => ({
+    model: camera.model,
+    category: camera.category,
+    sensor: camera.sensor,
+    opticsLines: buildCameraOpticsLines(camera),
     index,
   }))
 }
@@ -118,6 +119,116 @@ function buildSelectedCamera(camera) {
   return camera
     ? { model: camera.model, category: camera.category, sensor: camera.sensor }
     : { model: '', category: '', sensor: '' }
+}
+
+function validAngle(value) {
+  return Number.isFinite(value) && value > 0 && value < 179
+}
+
+function validPositiveInput(value) {
+  if (value === undefined || value === null || (typeof value === 'string' && !value.trim())) return false
+  const number = Number(value)
+  return Number.isFinite(number) && number > 0
+}
+
+function formatManufacturerAngle(value) {
+  const angle = Number(value)
+  return validAngle(angle) ? `${formatNumber(angle)}°` : '未提供'
+}
+
+function buildOpticsLine(view) {
+  const horizontal = Number(view.hWide)
+  const vertical = Number(view.vWide)
+  const hasHorizontal = validAngle(horizontal)
+  const hasVertical = validAngle(vertical)
+  const integrity = hasHorizontal && hasVertical
+    ? '参数完整'
+    : hasHorizontal
+      ? '缺垂直角，仅水平预估'
+      : '角度不完整'
+  const endpointLabel = validAngle(Number(view.hTele)) ? '广角端' : '固定视角'
+  return `${view.label} · ${endpointLabel}：厂家水平 ${formatManufacturerAngle(horizontal)} / 垂直 ${formatManufacturerAngle(vertical)} · ${integrity}`
+}
+
+function buildCameraOpticsLines(camera) {
+  return camera.views.map((view) => buildOpticsLine(view))
+}
+
+function buildSelectedOpticsLines(camera, viewIndex) {
+  const view = camera?.views?.[viewIndex]
+  if (!view) return []
+  return [buildOpticsLine(view)]
+}
+
+function validateCameraInputs(state) {
+  const errors = {}
+  const positive = (key, label) => {
+    if (!validPositiveInput(state[key])) errors[key] = `${label}须为大于 0 的有效数值。`
+  }
+  const angle = (key, label) => {
+    const raw = state[key]
+    const value = typeof raw === 'string' && !raw.trim() ? NaN : Number(raw)
+    if (!validAngle(value)) errors[key] = `${label}须大于 0°且小于 179°。`
+  }
+
+  if (state.sourceModeIndex === 1) {
+    if (state.definitionModes[state.definitionModeIndex].value === 'sensor') {
+      positive('customSensorWidthText', '有效宽度')
+      positive('customSensorHeightText', '有效高度')
+      positive('customFocalLengthText', '实际焦距')
+      const width = Number(state.customSensorWidthText)
+      const height = Number(state.customSensorHeightText)
+      const focal = Number(state.customFocalLengthText)
+      if (!errors.customSensorWidthText && !errors.customFocalLengthText
+        && !validAngle(2 * Math.atan(width / (2 * focal)) * 180 / Math.PI)) {
+        errors.customSensorWidthText = '组合得到的水平角须大于 0°且小于 179°。'
+      }
+      if (!errors.customSensorHeightText && !errors.customFocalLengthText
+        && !validAngle(2 * Math.atan(height / (2 * focal)) * 180 / Math.PI)) {
+        errors.customSensorHeightText = '组合得到的垂直角须大于 0°且小于 179°。'
+      }
+    } else {
+      angle('customHorizontalFovText', '水平视场角')
+      angle('customVerticalFovText', '垂直视场角')
+    }
+  }
+
+  if (state.sceneModes[state.sceneModeIndex].value === 'ground') {
+    positive('groundWidthText', '区域宽度')
+    positive('groundDepthText', '区域纵深')
+    positive('subjectHeightText', '人物最高点')
+  } else {
+    positive('planeWidthText', '目标宽度')
+    positive('planeHeightText', '目标高度')
+    const rawBottom = state.planeBottomHeightText
+    const bottom = typeof rawBottom === 'string' && !rawBottom.trim() ? NaN : Number(rawBottom)
+    if (!Number.isFinite(bottom) || bottom < 0) errors.planeBottomHeightText = '底边离地须为大于或等于 0 的有效数值。'
+  }
+
+  if (state.heightModes[state.heightModeIndex].value === 'fixed') {
+    positive('fixedCameraHeightText', '镜头中心高度')
+  }
+  return errors
+}
+
+function clearAppliedInputValues(page, values) {
+  if (!values || !page._pendingInputValues) return
+  Object.keys(values).forEach((field) => {
+    if (page._pendingInputValues[field] === values[field]) delete page._pendingInputValues[field]
+  })
+}
+
+function clearCameraResultReport(page) {
+  const reportChanges = resetStaleResultReport(page, null)
+  if (!Object.keys(reportChanges).length) cancelResultReportGeneration(page)
+  page.resultReportSignature = ''
+  page.resultReportPendingSignature = ''
+  return {
+    ...reportChanges,
+    resultReportImagePath: '',
+    resultReportPreviewVisible: false,
+    isGeneratingResultReport: false,
+  }
 }
 
 const cameraOptions = buildCameraOptions()
@@ -204,12 +315,36 @@ function buildCalculationProcess(result) {
   }
 }
 
+function addCameraDisplayMetadata(result, { sceneMode, heightMode, opticsSourceLabel, isWide = false }) {
+  const ground = sceneMode === 'ground'
+  Object.assign(result, {
+    heightMode,
+    heightDisplayLabel: heightMode === 'fixed'
+      ? (result.horizontalOnly ? '已有镜头中心高度（参考）' : '已有镜头中心高度')
+      : (result.horizontalOnly ? '自动计算高度（水平参考）' : '自动计算镜头中心高度'),
+    heightBasisDisplay: heightMode === 'fixed'
+      ? '沿用已填写高度'
+      : ground ? '最高点 + 0.5 m，且不低于 1.5 m' : '与目标中心等高',
+    distanceStartLabel: '镜头中心',
+    distanceEndLabel: ground ? '拍摄区前沿' : '目标平面',
+    distanceReferenceText: ground ? '镜头距拍摄区前沿（水平）' : '镜头距目标平面（水平）',
+    resultNatureText: result.horizontalOnly
+      ? '仅为水平方向参考距离；垂直覆盖尚未校核。'
+      : '本模型估算的理论最小距离；未计遮挡。',
+    opticsIntegrityText: result.horizontalOnly
+      ? `${opticsSourceLabel}水平角 ${formatNumber(result.horizontalFov)}°；垂直角未提供`
+      : `${opticsSourceLabel}水平角 ${formatNumber(result.horizontalFov)}° / 垂直角 ${formatNumber(result.verticalFov)}°；参数完整`,
+    isWideEndpoint: isWide,
+  })
+}
+
 Page({
   data: {
     sourceModes: ['库内摄像机', '自定义摄像机'],
     sourceModeIndex: 0,
     cameraIndex: findCameraIndex(DEFAULT_MODEL),
     selectedCamera: buildSelectedCamera(selectableCameras[findCameraIndex(DEFAULT_MODEL)]),
+    selectedOpticsLines: buildSelectedOpticsLines(selectableCameras[findCameraIndex(DEFAULT_MODEL)], 0),
     cameraCount: selectableCameras.length,
     viewOptions: [],
     viewIndex: 0,
@@ -250,6 +385,7 @@ Page({
     fixedCameraHeightText: '2.3',
     result: null,
     calculationError: '',
+    inputErrors: {},
     previewExpanded: false,
     calculationExpanded: false,
     currentFavorite: false,
@@ -277,6 +413,7 @@ Page({
       sourceModeIndex,
       cameraIndex,
       selectedCamera: buildSelectedCamera(camera),
+      selectedOpticsLines: buildSelectedOpticsLines(camera, viewIndex),
       viewOptions: buildViewOptions(camera),
       viewIndex,
       selectedMountLabel: camera.views[viewIndex].mountLabel,
@@ -348,7 +485,7 @@ Page({
         ? { ...field, displayValue: '待输入' }
         : field)
     const displaySnapshot = snapshot && { ...snapshot, fields }
-    this.setData({ operationSnapshot: displaySnapshot, operationActive: Boolean(snapshot?.active) }, () => {
+    this.setData({ operationSnapshot: displaySnapshot, operationActive: Boolean(snapshot?.active), inputErrors: {} }, () => {
       if (!shouldCalculate || this._cameraUnloaded) return
       const current = this.getOperationSnapshot()
       if (!current?.ready || current.id !== snapshot.id || current.revision !== snapshot.revision) return
@@ -369,6 +506,7 @@ Page({
     this.setData({
       result: null,
       currentFavorite: false,
+      inputErrors: {},
       calculationError: reason === 'end' ? '' : '本次操作输入已变化，请重新确认后计算。',
       resultReportImagePath: '',
       resultReportPreviewVisible: false,
@@ -472,6 +610,7 @@ Page({
     this.commitCalculatedState({
       viewIndex,
       selectedMountLabel: selectableCameras[this.data.cameraIndex].views[viewIndex].mountLabel,
+      selectedOpticsLines: buildSelectedOpticsLines(selectableCameras[this.data.cameraIndex], viewIndex),
     })
   },
 
@@ -479,14 +618,35 @@ Page({
     const field = event.currentTarget.dataset.field
     const value = event.detail.value
     const snapshot = this.getOperationSnapshot()
-    this.setData({ [field]: value })
+    this._pendingInputValues = { ...(this._pendingInputValues || {}), [field]: value }
     if (snapshot?.active) {
+      this.setData({ [field]: value, inputErrors: {} })
       const operationField = CAMERA_INPUT_FIELDS[field]
       if (operationField) this.setOperationCandidate(operationField[0], Number(value), operationField[1])
       else invalidateOperation(this, 'camera-optics-changed')
       return
     }
-    if (snapshot) return
+    if (snapshot) {
+      this.setData({ [field]: value })
+      return
+    }
+    const state = { ...this.data, ...this._pendingInputValues }
+    const inputErrors = validateCameraInputs(state)
+    if (Object.keys(inputErrors).length) {
+      this.cancelPendingCalculation()
+      this._canvasCache = null
+      const resultReportChanges = clearCameraResultReport(this)
+      this.setData({
+        [field]: value,
+        inputErrors,
+        calculationError: '',
+        result: null,
+        currentFavorite: false,
+        ...resultReportChanges,
+      })
+      return
+    }
+    this.setData({ [field]: value, inputErrors: {}, calculationError: '' })
     this.scheduleCalculation()
   },
 
@@ -533,6 +693,7 @@ Page({
     if (this.getOperationSnapshot()?.active) invalidateOperation(this, 'camera-model-changed')
     this.commitCalculatedState({
       cameraIndex,
+      selectedOpticsLines: buildSelectedOpticsLines(camera, 0),
       viewOptions: buildViewOptions(camera),
       viewIndex: 0,
       selectedMountLabel: camera.views[0].mountLabel,
@@ -559,7 +720,7 @@ Page({
   },
 
   calculate(afterCommit) {
-    return this.commitCalculatedState({}, afterCommit)
+    return this.commitCalculatedState(this._pendingInputValues || {}, afterCommit)
   },
 
   commitStructuredCalculatedState(operation) {
@@ -587,7 +748,7 @@ Page({
       : calculateGroundAreaPlacement(fov, options)
     finishCoreCalculation({ success: Boolean(result), horizontalOnly: Boolean(fov?.horizontalOnly) })
     if (!result) {
-      this.setData({ result: null, calculationError: '请检查本次操作的视场角、区域尺寸、高度模式和构图余量。' })
+      this.setData({ result: null, inputErrors: {}, calculationError: '请检查本次操作的视场角、区域尺寸、高度模式和构图余量。' })
       return null
     }
 
@@ -602,11 +763,12 @@ Page({
       distanceMeaning: result.horizontalOnly ? '水平覆盖参考距离（非完整安装距离）' : '当前模型下理论最小距离',
       endpointExplanation: result.horizontalOnly ? '本次操作未确认垂直覆盖。' : '按本次明确确认的水平与垂直视场角计算。',
     })
+    addCameraDisplayMetadata(result, { sceneMode, heightMode: values.heightMode, opticsSourceLabel: '已确认参数' })
     const calculationProcess = buildCalculationProcess(result)
     Object.assign(result, { calculationRows: calculationProcess.rows,
       calculationConclusion: calculationProcess.conclusion, calculationVisual: calculationProcess.visual })
     this._canvasCache = null
-    this.setData({ result, calculationError: '' }, () => {
+    this.setData({ result, inputErrors: {}, calculationError: '' }, () => {
       if (!this.hasCurrentOperationResult(result)) return
       if (this._pageVisible) syncPageFavorite(this)
       this.drawPreview()
@@ -629,28 +791,48 @@ Page({
       return null
     }
     if (operation.structured) return this.commitStructuredCalculatedState(operation)
-    const state = { ...this.data, ...changes }
+    const appliedInputValues = { ...(this._pendingInputValues || {}) }
+    const calculatedChanges = { ...appliedInputValues, ...changes }
+    const state = { ...this.data, ...calculatedChanges }
     const selectedCamera = buildSelectedCamera(selectableCameras[state.cameraIndex])
+    const inputErrors = validateCameraInputs(state)
+    if (Object.keys(inputErrors).length) {
+      this._canvasCache = null
+      const resultReportChanges = clearCameraResultReport(this)
+      this.setData({
+        ...calculatedChanges,
+        selectedCamera,
+        result: null,
+        currentFavorite: false,
+        inputErrors,
+        calculationError: '',
+        ...resultReportChanges,
+      }, () => {
+        clearAppliedInputValues(this, appliedInputValues)
+        if (afterCommit) afterCommit()
+      })
+      return null
+    }
     const fov = this.getFovDefinition(state)
     const heightMode = state.heightModes[state.heightModeIndex].value
     const marginRatio = state.marginOptions[state.marginIndex] / 100
     const sceneMode = state.sceneModes[state.sceneModeIndex].value
     const groundOptions = {
-        widthMeters: Number(state.groundWidthText),
-        depthMeters: Number(state.groundDepthText),
-        subjectHeightMeters: Number(state.subjectHeightText),
-        heightMode,
-        cameraHeightMeters: Number(state.fixedCameraHeightText),
-        marginRatio,
-      }
+      widthMeters: Number(state.groundWidthText),
+      depthMeters: Number(state.groundDepthText),
+      subjectHeightMeters: Number(state.subjectHeightText),
+      heightMode,
+      cameraHeightMeters: Number(state.fixedCameraHeightText),
+      marginRatio,
+    }
     const planeOptions = {
-        widthMeters: Number(state.planeWidthText),
-        heightMeters: Number(state.planeHeightText),
-        bottomHeightMeters: Number(state.planeBottomHeightText),
-        heightMode,
-        cameraHeightMeters: Number(state.fixedCameraHeightText),
-        marginRatio,
-      }
+      widthMeters: Number(state.planeWidthText),
+      heightMeters: Number(state.planeHeightText),
+      bottomHeightMeters: Number(state.planeBottomHeightText),
+      heightMode,
+      cameraHeightMeters: Number(state.fixedCameraHeightText),
+      marginRatio,
+    }
     const finishCoreCalculation = startMeasurement('摄像机/核心几何计算', { sceneMode })
     const result = fov?.horizontalOnly
       ? calculateHorizontalOnlyPlacement(fov, {
@@ -664,17 +846,19 @@ Page({
 
     if (!result) {
       this._canvasCache = null
-      const resultReportChanges = resetStaleResultReport(this, null)
+      const resultReportChanges = clearCameraResultReport(this)
       const finishViewUpdate = startMeasurement('摄像机/setData视图更新', { success: false })
       this.setData({
-        ...changes,
+        ...calculatedChanges,
         selectedCamera,
         result: null,
+        inputErrors: {},
         ...resultReportChanges,
         calculationError: !fov
           ? '请选择说明书提供水平视场角的型号；自定义摄像机需填写两个角度，或填写有效传感器尺寸与焦距。'
           : '请检查区域尺寸、人物高度、底边高度和固定安装高度，所有必填尺寸均需有效。',
       }, () => {
+        clearAppliedInputValues(this, appliedInputValues)
         finishViewUpdate()
         finishCalculation({ success: false })
         if (afterCommit) afterCommit()
@@ -704,10 +888,12 @@ Page({
     result.aimValue = result.requiresInitialAim ? result.aimText : '云台取景'
     result.aimLabel = result.requiresInitialAim ? '固定安装初始俯仰角' : '现场调整水平与俯仰'
     result.heightSummary = `${result.horizontalOnly ? '参考' : '建议'}镜头中心高 ${result.cameraHeightMeters} m`
+    const opticsSourceLabel = isLibrary ? '厂家' : '当前参数'
     const isWide = isLibrary && Number(fov.view.hTele) > 0
     result.distanceMeaning = result.horizontalOnly
       ? '水平拍全目标宽度所需最低距离（非完整安装距离）'
       : '当前模型下理论最小距离'
+    addCameraDisplayMetadata(result, { sceneMode, heightMode, opticsSourceLabel, isWide })
     result.endpointExplanation = result.horizontalOnly
       ? '说明书缺少垂直视场角；当前只能确认水平方向能否拍全，无法确认目标上下边界是否入画。'
       : isWide
@@ -724,7 +910,8 @@ Page({
     )
 
     const finishViewUpdate = startMeasurement('摄像机/setData视图更新', { success: true })
-    this.setData({ ...changes, selectedCamera, result, calculationError: '', ...resultReportChanges }, () => {
+    this.setData({ ...calculatedChanges, selectedCamera, result, inputErrors: {}, calculationError: '', ...resultReportChanges }, () => {
+      clearAppliedInputValues(this, appliedInputValues)
       finishViewUpdate()
       if (this._pageVisible) syncPageFavorite(this)
       this.drawPreview()
@@ -890,6 +1077,28 @@ Page({
     ].join('\n')
   },
 
+  getInstallSummary(result = this.data.result) {
+    if (!result) return ''
+    const scene = result.sceneMode === 'ground'
+      ? `地面区 ${result.widthMeters}×${result.depthMeters} m，最高点距地 ${result.subjectHeightMeters} m`
+      : `垂直平面 ${result.widthMeters}×${result.heightMeters} m，底边距地 ${result.bottomHeightMeters} m`
+    const height = result.heightMode === 'fixed'
+      ? `已有镜头中心高 ${result.cameraHeightMeters} m（${result.heightBasisDisplay}）`
+      : `自动高度 ${result.cameraHeightMeters} m（${result.heightBasisDisplay}）`
+    const limitations = [
+      result.isWideEndpoint ? '全区域按广角端估算，长焦状态需另行复核' : '',
+      result.horizontalOnly ? '垂直未校核，需说明书或样机验证' : '',
+      '无遮挡几何估算，最终以样机画面复核',
+    ].filter(Boolean).join('；')
+    return [
+      `安装摘要：${result.displayModel}｜镜头 ${result.displayView} / ${result.endpointLabel}`,
+      scene,
+      `${result.distanceReferenceText}：${result.primaryDistanceMeters} m`,
+      `${height}；构图余量 ${result.marginPercent}%`,
+      `${result.opticsIntegrityText}；${limitations}`,
+    ].join('；')
+  },
+
   getRecordPayload(state = this.data, result = state.result) {
     if (arguments.length === 0 && !this.hasCurrentOperationResult(result)) return null
     const resultText = this.getResultText(state, result)
@@ -934,6 +1143,22 @@ Page({
     if (!resultText) return
     vibrate('medium')
     wx.setClipboardData({ data: resultText })
+  },
+  copyInstallSummary() {
+    if (this._cameraUnloaded) return
+    let result
+    if (this.getOperationSnapshot()) {
+      if (!this.hasCurrentOperationResult()) return
+      result = this.data.result
+    } else {
+      this.cancelPendingCalculation()
+      result = this.calculate()
+    }
+    if (!result || this._cameraUnloaded) return
+    const summary = this.getInstallSummary(result)
+    if (!summary) return
+    vibrate('medium')
+    wx.setClipboardData({ data: summary })
   },
   toggleCurrentFavorite() {
     if (!this.getOperationSnapshot() && this.hasCurrentOperationResult()) togglePageFavorite(this)

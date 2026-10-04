@@ -1,0 +1,225 @@
+{
+  "sourceHashes": {
+    "pages/records/project.js": "16091f59512e4a91e4115c04a87ecba1bfd6f8f0a041b887668cbe1236ba8a51",
+    "pages/led-screen/led-screen.js": "aaa965a089c7941084aab73c481faa265975344038ea7ca74c9ba42c0ac816f9",
+    "utils/result-report-controller.js": "13a780a4cec91abbb019f538456afaf8e920fd4f0b79560ba95f3852f1637792"
+  },
+  "scenarios": [
+    {
+      "kind": "project",
+      "outcome": "success",
+      "fault": "",
+      "sha256": "cf9a00bb29ef79d9eae27e22e5292c72713be30478c06b998fe7a63f83a7a0e3"
+    },
+    {
+      "kind": "project",
+      "outcome": "empty",
+      "fault": "",
+      "sha256": "da038c54f182459436675663bdd2b7903375af321fd008073c591f61b75ca01c"
+    },
+    {
+      "kind": "project",
+      "outcome": "fail",
+      "fault": "",
+      "sha256": "da038c54f182459436675663bdd2b7903375af321fd008073c591f61b75ca01c"
+    },
+    {
+      "kind": "project",
+      "outcome": "stale-draw",
+      "fault": "",
+      "sha256": "17adcb529c2fdbfdc49b95fd29262cf9509c6ab7d48db027335a6511fa3f3ef7"
+    },
+    {
+      "kind": "project",
+      "outcome": "stale-success",
+      "fault": "",
+      "sha256": "8c1eb3e47bafb3bc0561c844ed47843b5f75aecc927d8396664c0d83818d280b"
+    },
+    {
+      "kind": "project",
+      "outcome": "stale-fail",
+      "fault": "",
+      "sha256": "8c1eb3e47bafb3bc0561c844ed47843b5f75aecc927d8396664c0d83818d280b"
+    },
+    {
+      "kind": "project",
+      "outcome": "interleave-draw",
+      "fault": "",
+      "sha256": "a099060366e34374c4bbf000cf105c9f22ad87fd867895bdc1377114c13d0f8c"
+    },
+    {
+      "kind": "project",
+      "outcome": "interleave-success",
+      "fault": "",
+      "sha256": "ce22401d48865e5c2a16bbf68851d927bcc380aa7eb828822c24c1942e4797ab"
+    },
+    {
+      "kind": "project",
+      "outcome": "interleave-fail",
+      "fault": "",
+      "sha256": "ce22401d48865e5c2a16bbf68851d927bcc380aa7eb828822c24c1942e4797ab"
+    },
+    {
+      "kind": "project",
+      "outcome": "success",
+      "fault": "create-throws",
+      "sha256": "84f27490d275c0ec4185e1bf2b6265d7a1e4a6ec2b6f0037c47434328d707271"
+    },
+    {
+      "kind": "project",
+      "outcome": "success",
+      "fault": "draw-throws",
+      "sha256": "c58179017a1b45a5993343304b441bddebfa3f650c4af87f493d3815b73ef217"
+    },
+    {
+      "kind": "project",
+      "outcome": "success",
+      "fault": "export-throws",
+      "sha256": "aa9aba41850c6167b97de44c36451f984379404423048d85855165a686ecca2d"
+    },
+    {
+      "kind": "led",
+      "outcome": "success",
+      "fault": "",
+      "sha256": "9f6d72da074403d464eab0469038d2a74c1511840b9a539bb5b181efdbc0936a"
+    },
+    {
+      "kind": "led",
+      "outcome": "empty",
+      "fault": "",
+      "sha256": "e4cac3a9a54074d316bfed6c05741c9fcefd3947a71688d3d894b22a0d51c19e"
+    },
+    {
+      "kind": "led",
+      "outcome": "fail",
+      "fault": "",
+      "sha256": "e4cac3a9a54074d316bfed6c05741c9fcefd3947a71688d3d894b22a0d51c19e"
+    },
+    {
+      "kind": "led",
+      "outcome": "stale-draw",
+      "fault": "",
+      "sha256": "a2e95fbdcf70467e988180fae217a06978f04c06c7fe8217e7dabd73259b0d5f"
+    },
+    {
+      "kind": "led",
+      "outcome": "stale-success",
+      "fault": "",
+      "sha256": "b5b4af4cbcafb5d2facabf59e4445765059f71ad48f166980caaa9dece00a793"
+    },
+    {
+      "kind": "led",
+      "outcome": "stale-fail",
+      "fault": "",
+      "sha256": "b5b4af4cbcafb5d2facabf59e4445765059f71ad48f166980caaa9dece00a793"
+    },
+    {
+      "kind": "led",
+      "outcome": "interleave-draw",
+      "fault": "",
+      "sha256": "e0fe7a372b08a3d6df78a7586f11a04564b9dd32dc2da7ac80cd9301ba6c1335"
+    },
+    {
+      "kind": "led",
+      "outcome": "interleave-success",
+      "fault": "",
+      "sha256": "b51bb4b633995208bf38f3c1e68cd891603763216893b1bdc6ddf25700c54318"
+    },
+    {
+      "kind": "led",
+      "outcome": "interleave-fail",
+      "fault": "",
+      "sha256": "b51bb4b633995208bf38f3c1e68cd891603763216893b1bdc6ddf25700c54318"
+    },
+    {
+      "kind": "led",
+      "outcome": "success",
+      "fault": "create-throws",
+      "sha256": "c8537bc6c1e0c8ece3e5e87d11e0366c12c463bd69dc066697152f4a31d0457c"
+    },
+    {
+      "kind": "led",
+      "outcome": "success",
+      "fault": "draw-throws",
+      "sha256": "3291835c1a0c2793f63505ea636d39550aeb862679e66d42f5dcd0536df196c5"
+    },
+    {
+      "kind": "led",
+      "outcome": "success",
+      "fault": "export-throws",
+      "sha256": "7176d2f59ce76e9b8c3a8a61fb1d623688d8a2c2256ff84ac1dc270d6f36fa9c"
+    },
+    {
+      "kind": "result",
+      "outcome": "success",
+      "fault": "",
+      "sha256": "5c500c09365e623625cee22f53e44b5d64d4b27c64024a8f52d73f67a589219f"
+    },
+    {
+      "kind": "result",
+      "outcome": "empty",
+      "fault": "",
+      "sha256": "3d8b280c6aa6a3b5d31fdb2da94690f7dba3f31d30510bd4ce5fdd5027d4509a"
+    },
+    {
+      "kind": "result",
+      "outcome": "fail",
+      "fault": "",
+      "sha256": "3d8b280c6aa6a3b5d31fdb2da94690f7dba3f31d30510bd4ce5fdd5027d4509a"
+    },
+    {
+      "kind": "result",
+      "outcome": "stale-draw",
+      "fault": "",
+      "sha256": "aad854aefe9303eab4876ee24d3ad673aa5ae7e8417aba999fd4a136cf45b525"
+    },
+    {
+      "kind": "result",
+      "outcome": "stale-success",
+      "fault": "",
+      "sha256": "a0af0fba49be03adc01c82f833ed79affe4b8f4f613dc0b718bb75ea05a77c53"
+    },
+    {
+      "kind": "result",
+      "outcome": "stale-fail",
+      "fault": "",
+      "sha256": "a0af0fba49be03adc01c82f833ed79affe4b8f4f613dc0b718bb75ea05a77c53"
+    },
+    {
+      "kind": "result",
+      "outcome": "interleave-draw",
+      "fault": "",
+      "sha256": "2b26378e269c500634fc70730e5e3ea17bad1b87a04d82276a001af8b97f010d"
+    },
+    {
+      "kind": "result",
+      "outcome": "interleave-success",
+      "fault": "",
+      "sha256": "c9a8ec8c4b57fbfca5862279a22d57023614b5fad7a48af2862ee2318f7e5119"
+    },
+    {
+      "kind": "result",
+      "outcome": "interleave-fail",
+      "fault": "",
+      "sha256": "c9a8ec8c4b57fbfca5862279a22d57023614b5fad7a48af2862ee2318f7e5119"
+    },
+    {
+      "kind": "result",
+      "outcome": "success",
+      "fault": "create-throws",
+      "sha256": "ad7a7d75232de19a9b590861f13aaca0f1715cd7c77e5536e2576458091a6140"
+    },
+    {
+      "kind": "result",
+      "outcome": "success",
+      "fault": "draw-throws",
+      "sha256": "e4314a6865c90d193e615ab8dd5413d5a556b6389ffcd6fbfee64862e580c53d"
+    },
+    {
+      "kind": "result",
+      "outcome": "success",
+      "fault": "export-throws",
+      "sha256": "b3f66821bfcbbb64faeaea883d660869e7053a1f7ba229feb13d854f773701ba"
+    }
+  ]
+}

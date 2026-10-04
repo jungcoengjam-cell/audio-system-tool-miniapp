@@ -63,10 +63,17 @@ for (const testCase of cases) {
   assert(recording.circles.some((circle) => circle.radius === radius + 9), 'selected marker lacks +9 ring')
   assert(recording.circles.some((circle) => circle.radius === radius + 5), 'completed marker lacks +5 ring')
   const exported = makeSnapshot(testCase.width, testCase.height, testCase.widthMeters, testCase.depthMeters, testCase.frontAtBottom, testCase.theme, false, testCase.groupCount)
+  const exportLayout = renderer.getExportAddressLayout(exported)
+  exported.data = { ...exported.data, exportCanvasHeight: exportLayout.canvasHeight }
   const exportRecording = recordingContext()
   renderer.renderLayout(exportRecording.ctx, exported, { exportMode: true })
-  exportRecording.texts.forEach((text) => assert(text.left >= 0 && text.right <= testCase.width && text.top >= 0 && text.bottom <= testCase.height, `export text out of canvas: ${text.text}`))
-  assert.deepStrictEqual(new Set(exportRecording.texts.filter((text) => addressTexts.has(text.text)).map((text) => text.text)), addressTexts, 'export must include every address')
+  exportRecording.texts.forEach((text) => assert(text.left >= 0 && text.right <= testCase.width && text.top >= 0 && text.bottom <= exportLayout.canvasHeight, `export text out of canvas: ${text.text}`))
+  const exportedAddresses = new Set(exportRecording.texts.flatMap((text) => {
+    if (addressTexts.has(text.text)) return [text.text]
+    const match = text.text.match(/^\d+ (A\d{3})$/)
+    return match ? [match[1]] : []
+  }))
+  assert.deepStrictEqual(exportedAddresses, addressTexts, 'export must include every address exactly once')
 }
 
 console.log(`DMX layout overlap tests passed (${cases.length} cases)`)

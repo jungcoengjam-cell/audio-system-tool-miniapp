@@ -52,20 +52,22 @@ assert.deepStrictEqual(toolsDefinition.data.audioModules.map(({ id }) => id), [
 assert.strictEqual(toolsDefinition.data.audioModules[0].title, '接线助手')
 assert.strictEqual(toolsDefinition.data.audioModules[1].title, '通道与线缆')
 assert.strictEqual(toolsDefinition.data.audioModules[1].path, '/pages/project-wiring/index')
-assert.strictEqual(toolsDefinition.data.audioModules[1].image, undefined)
+const projectWiringImage = '/assets/home/module-project-wiring-catalog.png'
+assert.strictEqual(toolsDefinition.data.audioModules[1].image, projectWiringImage)
+const projectWiringImagePath = path.join(root, 'assets', 'home', 'module-project-wiring-catalog.png')
+assert(fs.existsSync(projectWiringImagePath), '通道与线缆入口专属图片文件缺失')
 
 const toolsWxml = fs.readFileSync(path.join(root, 'pages/tools/tools.wxml'), 'utf8')
 const toolsWxss = fs.readFileSync(path.join(root, 'pages/tools/tools.wxss'), 'utf8')
 assert(toolsWxml.includes('url="{{item.path}}"'))
-assert(toolsWxml.includes('wx:if="{{item.visual == \'project-wiring\'}}"'))
-assert(toolsWxml.includes('class="wiring-device wiring-device-source"'))
-assert(toolsWxml.includes('class="wiring-device wiring-device-destination"'))
-assert.strictEqual((toolsWxml.match(/class="wiring-list-row"/g) || []).length, 3)
+const audioModuleVisual = toolsWxml.match(/<navigator wx:for="{{audioModules}}"[\s\S]*?<view class="module-visual">([\s\S]*?)<\/view>/)
+assert(audioModuleVisual)
+assert.strictEqual(audioModuleVisual[1].trim(),
+  '<image class="module-image" src="{{item.image}}" mode="aspectFit" lazy-load aria-label="{{item.title}}配图" />')
+assert(!toolsWxml.includes('project-wiring-visual') && !toolsWxss.includes('.project-wiring-visual')
+  && !toolsWxss.includes('.wiring-device') && !toolsWxss.includes('.wiring-cable')
+  && !toolsWxss.includes('.wiring-list-mark'), '通道与线缆入口仍保留 CSS 图形分支')
 assert(toolsWxss.includes('.module-card{') && toolsWxss.includes('width:196rpx;height:234rpx'))
-assert(toolsWxss.includes('.project-wiring-visual{')
-  && toolsWxss.includes('.wiring-cable-one{')
-  && toolsWxss.includes('.wiring-device-destination{')
-  && toolsWxss.includes('@media (prefers-color-scheme: dark){.project-wiring-visual'))
 
 let workspace = null
 let lastWorkspaceOptions = null
@@ -203,10 +205,8 @@ global.wx = {
   hideLoading() { detailEffects.hideLoading = (detailEffects.hideLoading || 0) + 1 },
   navigateTo() { detailEffects.navigate += 1 },
   setClipboardData() { detailEffects.clipboard += 1 },
-  createCanvasContext: () => ({
-    draw(reserve, callback) { callback() },
-  }),
-  canvasToTempFilePath(options) { detailReportExport = options },
+  createCanvasContext: () => ({}),
+  canvasToTempFilePath() {},
 }
 try {
   const detailDefinition = loadPage('pages/records/project.js', {
@@ -214,6 +214,7 @@ try {
     '../../utils/performance': { printPerformanceSummary() {}, startMeasurement: () => () => null },
     '../../utils/haptics': { vibrate() {} },
     '../../utils/records': detailRecordsApi,
+    '../../utils/report-canvas': { drawAndExportReport: (page, options) => { detailReportExport = options } },
     '../../utils/report-image-actions': {
       previewGeneratedImage() { detailEffects.image += 1 },
       saveGeneratedImage() { detailEffects.image += 1 },
@@ -236,7 +237,8 @@ try {
   assert.strictEqual(detailPage.data.project.id, detailProject.id)
   detailPage.data.reportImagePath = '/tmp/previous-report.png'
   detailPage.generateProjectReportImage()
-  assert.ok(detailReportExport && typeof detailReportExport.success === 'function', 'native canvas export callback is registered')
+  assert.ok(detailReportExport && detailReportExport.isCurrent(), '报告生成回调初始有效')
+  const isCurrentReport = detailReportExport.isCurrent
   detailPage.data.reportPreviewVisible = true
   detailWorkspace = { ok: false, error: '本地读取失败', projects: [detailProject], records: [detailRecord], activeProject: detailProject }
   detailPage.onShow()
@@ -247,9 +249,7 @@ try {
   assert.strictEqual(detailPage.data.reportPreviewVisible, true, '读取失败保留预览状态')
   assert.strictEqual(detailPage.data.workspaceError, '本地读取失败')
   assert.strictEqual(detailPage.data.isGeneratingReport, false, '读取失败停止报告生成')
-  detailReportExport.success({ tempFilePath: '/tmp/stale-report.png' })
-  assert.strictEqual(detailPage.data.reportImagePath, '/tmp/previous-report.png',
-    'storage read failure must discard a stale native canvas export')
+  assert.strictEqual(isCurrentReport(), false, '读取失败使过期报告回调失效')
   assert.strictEqual(detailPage.reportPendingSignature, '', '读取失败清除待完成报告签名')
   assert.ok(detailEffects.hideLoading > 0, '读取失败关闭生成提示')
 

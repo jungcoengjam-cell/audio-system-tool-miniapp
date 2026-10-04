@@ -733,6 +733,10 @@ function buildReportLayout(width, model, options = {}) {
   const logicalWidth = width / scale
   const inset = 12
   const contentWidth = Math.max(120, logicalWidth - (inset * 2))
+  const viewMode = options.viewMode === 'connectors' ? 'connectors' : 'wiring'
+  const face = options.face === 'solder' ? 'solder' : 'mating'
+  const selectedId = typeof options.selectedId === 'string' ? options.selectedId : ''
+  const diagramOptions = { viewMode, face, selectedId, showTitle: false }
   const entries = []
   let y = 17
   const add = (value, size, color, weight = 400, x = inset, availableWidth = contentWidth, gap = 0) => {
@@ -743,6 +747,11 @@ function buildReportLayout(width, model, options = {}) {
 
   add('接线助手 · 接线方案', 16, 'text', 600, inset, contentWidth, 4)
   add(model && model.title || '接线方式不可识别', 14, 'secondary', 500, inset, contentWidth, 2)
+  if (typeof options.preferenceNotice === 'string' && options.preferenceNotice) {
+    add(options.preferenceNotice, 11, 'secondary', 500, inset, contentWidth, 2)
+  }
+  add(`当前视角：${viewMode === 'connectors' ? `接头视角 · ${face === 'solder' ? '焊接面' : '插接面'}` : '连线图'}`,
+    12, 'secondary', 500, inset, contentWidth, 2)
   if (model && model.status && model.status !== 'ready') {
     add(model.status === 'needs-choice' ? '需要选择接线条件' : '当前组合不支持', 12,
       model.status === 'needs-choice' ? 'secondary' : 'error', 600, inset, contentWidth, 3)
@@ -754,8 +763,8 @@ function buildReportLayout(width, model, options = {}) {
     12, 'text', 500, inset, contentWidth, 1))
   if (model && model.supported) add(`建议线材：${model.cableSummary}`, 12, 'secondary', 400, inset, contentWidth, 4)
 
-  const diagramHeight = getDiagramHeight(contentWidth, model, { viewMode: 'wiring', showTitle: false })
-  entries.push({ type: 'diagram', x: inset, y, width: contentWidth, height: diagramHeight })
+  const diagramHeight = getDiagramHeight(contentWidth, model, diagramOptions)
+  entries.push({ type: 'diagram', x: inset, y, width: contentWidth, height: diagramHeight, options: diagramOptions })
   y += diagramHeight + 9
 
   if (model && model.supported) {
@@ -800,7 +809,7 @@ function drawWiringReport(ctx, model, width, height, options = {}) {
   layout.entries.forEach((entry) => {
     if (entry.type === 'diagram') {
       drawWiringDiagram(ctx, model, entry.width, entry.height, {
-        viewMode: 'wiring', theme: options.theme, x: entry.x, y: entry.y, showTitle: false,
+        ...entry.options, theme: options.theme, x: entry.x, y: entry.y,
       })
       return
     }

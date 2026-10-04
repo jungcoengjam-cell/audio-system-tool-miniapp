@@ -3,7 +3,7 @@ const fs = require('fs')
 const Module = require('module')
 const path = require('path')
 const { buildScheduleReportPages, drawScheduleReport } = require('../pages/project-wiring/report')
-const { emptySchedule } = require('../utils/project-wiring')
+const { CONNECTOR_OPTIONS, emptySchedule, normalizeSchedule } = require('../utils/project-wiring')
 
 const root = path.resolve(__dirname, '..')
 
@@ -53,6 +53,10 @@ function getRows(pages, kind) {
   return pages.flatMap((page) => page.rows.filter((row) => row.kind === kind))
 }
 
+function getLineRows(pages) {
+  return pages.flatMap((page) => page.rows.filter((row) => row.kind === 'line' || row.kind === 'continuation'))
+}
+
 const empty = buildScheduleReportPages('空项目', emptySchedule())
 assert.deepStrictEqual(empty.pages, [])
 assert.ok(empty.text.includes('暂无线路'))
@@ -68,11 +72,24 @@ for (const count of [100, 200]) {
   assert.ok(report.pages.length > 1, `${count} 条线路应拆分多页`)
   report.pages.forEach((page) => {
     assert.strictEqual(page.width, 720)
-    assert.ok(page.height <= 1800)
-    page.rows.forEach((row) => assert.ok(row.y + row.height <= page.height - 88, '内容位于页脚之上'))
+    assert.ok(page.height <= 1500, '线路明细页高不超过1500逻辑像素')
+    page.rows.forEach((row) => assert.ok(row.y + row.height <= page.height - 112, '线路内容给页脚留足空间'))
+    page.rows.forEach((row, index) => {
+      const next = page.rows[index + 1]
+      if (next) assert.ok(row.y + row.height <= next.y, '同页线路卡片之间不重叠')
+      row.drawItems.forEach((item) => {
+        assert.ok(item.bounds.x <= item.x && item.x <= item.bounds.x + item.bounds.width,
+          `${item.fieldId} text anchor remains in its field bounds`)
+        assert.ok(item.bounds.width > 0 && item.bounds.x + item.bounds.width <= 664,
+          `${item.fieldId} remains within the left/right column or full-width field`)
+      })
+    })
   })
-  assert.ok(lineRows.some((row) => row.lines.join('').includes(`${count}. A${String(count).padStart(3, '0')}`)),
-    '末条线路编号与序号完整可见')
+  const lastLine = lineRows.find((row) => row.number === count)
+  assert.ok(lastLine && lastLine.code === `A${String(count).padStart(3, '0')}`,
+    '末条线路编号与序号完整保留')
+  assert.ok(lastLine.drawItems.some((item) => item.fieldId === 'code' && item.text === lastLine.code),
+    '线号以完整字段绘制')
   assert.ok(Object.isFrozen(report.pages[0]) && Object.isFrozen(report.pages[0].rows[0]), '报告布局为不可变对象')
 
   const labels = buildScheduleReportPages(`大型项目 ${count}`, schedule, 'labels')
@@ -83,6 +100,68 @@ for (const count of [100, 200]) {
   assert.ok([...copiesByCode.values()].every((copies) => copies === 2))
   assert.deepStrictEqual(new Set(labelRows.map((row) => row.side)), new Set(['源端标签', '目的端标签']))
 }
+
+const tokenSchedule = {
+  version: 1,
+  revision: 0,
+  nextNumber: 2,
+  lines: [makeLine(1, {
+    fromDevice: '通道一',
+    fromPort: '通道一input-1',
+    toDevice: '舞台返送',
+    toPort: 'out-a',
+    spec: 'RVPE2×0.5',
+  })],
+}
+const tokenReport = buildScheduleReportPages('短token布线', tokenSchedule, 'lines')
+const tokenRow = getRows(tokenReport.pages, 'line')[0]
+assert.strictEqual(tokenRow.fields.from.port, '通道一input-1')
+assert.strictEqual(tokenRow.fields.to.port, 'out-a')
+assert.strictEqual(tokenRow.fields.spec, 'RVPE2×0.5')
+assert.ok(tokenRow.drawItems.some((item) => item.fieldId === 'from.port.value' && item.text === '通道一input-1'),
+  '混合中文与ASCII端口保留input-1完整token')
+assert.ok(tokenRow.drawItems.some((item) => item.fieldId === 'to.port.value' && item.text === 'out-a'),
+  'ASCII端口保留out-a完整token')
+assert.ok(tokenRow.drawItems.some((item) => item.fieldId === 'spec.value' && item.text === 'RVPE2×0.5'),
+  '无空格型号保留RVPE2×0.5完整token')
+const uppercasePortRow = getRows(buildScheduleReportPages('大写端口', {
+  version: 1, revision: 0, nextNumber: 2,
+  lines: [makeLine(1, { fromPort: 'MAIN-INPUT-1' })],
+}, 'lines').pages, 'line')[0]
+assert.ok(uppercasePortRow.drawItems.some((item) => item.fieldId === 'from.port.value' && item.text === 'MAIN-INPUT-1'),
+  '列宽足够时完整保留大写 ASCII 端口 token')
+assert.ok(tokenRow.drawItems.filter((item) => /\.value$/.test(item.fieldId))
+  .filter((item) => ['purpose.value', 'from.device.value', 'from.port.value', 'from.connector.value',
+    'to.device.value', 'to.port.value', 'to.connector.value', 'cable.value', 'length.value',
+    'spec.value', 'notes.value'].includes(item.fieldId))
+  .every((item) => item.fontSize >= 28), '主要线路字段值至少28px')
+assert.ok(tokenRow.drawItems.filter((item) => /\.heading$/.test(item.fieldId))
+  .every((item) => item.fontSize >= 28), '起点和终点列标题至少28px')
+assert.strictEqual(tokenReport.pages[0].subtitleLines[0], '共 1 条 · 已核对 0 条 · 待核对 1 条')
+assert.strictEqual(tokenRow.fields.status, '待施工', '单条状态沿用现有状态标签')
+assert.ok(tokenReport.pages[0].nameFontSize >= 28, '项目名字号至少28px')
+assert.ok(tokenReport.pages[0].summaryFontSize >= 24, '汇总行字号至少24px')
+assert.ok(tokenRow.drawItems.find((item) => item.fieldId === 'status').fontSize >= 28,
+  '线路状态字号至少28px')
+const normalizedTokenLine = normalizeSchedule(tokenSchedule).lines[0]
+assert.strictEqual(tokenRow.fields.from.device, normalizedTokenLine.fromDevice)
+assert.strictEqual(tokenRow.fields.from.port, normalizedTokenLine.fromPort)
+assert.strictEqual(tokenRow.fields.to.device, normalizedTokenLine.toDevice)
+assert.strictEqual(tokenRow.fields.to.port, normalizedTokenLine.toPort)
+assert.strictEqual(tokenRow.fields.from.connector, CONNECTOR_OPTIONS.find((option) => option.id === normalizedTokenLine.connectorA).label,
+  '来源端连接头保留connectorA映射')
+assert.strictEqual(tokenRow.fields.to.connector, CONNECTOR_OPTIONS.find((option) => option.id === normalizedTokenLine.connectorB).label,
+  '去向端连接头保留connectorB映射')
+
+const longToken = 'OUT-'.repeat(20)
+const longTokenReport = buildScheduleReportPages('长无空格端口', {
+  version: 1, revision: 0, nextNumber: 2,
+  lines: [makeLine(1, { fromPort: longToken })],
+}, 'lines')
+const longTokenParts = getLineRows(longTokenReport.pages).flatMap((row) => row.drawItems
+  .filter((item) => item.fieldId === 'from.port.value').map((item) => item.text))
+assert.ok(longTokenParts.length > 1, '超长英文型号在列内按字符换行')
+assert.strictEqual(longTokenParts.join(''), longToken, '长无空格英文换行不丢字符或插入连字符')
 
 const materialSchedule = {
   version: 1,
@@ -133,7 +212,8 @@ assert.ok(!calls.some((call) => call[0] === 'measureText'), '绘制不依赖 mea
 assert.ok(!calls.some((call) => ['draw', 'strokeRect'].includes(call[0])))
 
 const maximumLegalLine = makeLine(1, {
-  purpose: '前后场线路用途'.repeat(15),
+  code: `A${'1'.repeat(31)}`,
+  purpose: `${'前后场线路用途'.repeat(14)}现场`,
   fromDevice: '调音台'.repeat(30),
   fromPort: '输出端口'.repeat(20),
   toDevice: '处理器'.repeat(30),
@@ -147,11 +227,40 @@ const maximumLegal = buildScheduleReportPages('复杂项目名称'.repeat(10), {
   version: 1, revision: 0, nextNumber: 2, lines: [maximumLegalLine],
 }, 'lines')
 assert.ok(maximumLegal.pages.length >= 1)
-maximumLegal.pages.forEach((page) => assert.ok(page.height <= 1800))
+maximumLegal.pages.forEach((page) => {
+  assert.ok(page.height <= 1500)
+  page.rows.forEach((row) => assert.ok(row.y + row.height <= page.height - 112,
+    '超长内容续页也为页脚留出空间'))
+})
+const maximumLegalRows = getLineRows(maximumLegal.pages)
+const normalizedMaximumLine = normalizeSchedule({
+  version: 1, revision: 0, nextNumber: 2, lines: [maximumLegalLine],
+}).lines[0]
+assert.strictEqual(maximumLegalRows[0].kind, 'line')
+assert.ok(maximumLegalRows.slice(1).every((row) => row.kind === 'continuation'),
+  '单条超高内容使用明确的续页卡片')
+assert.ok(maximumLegalRows.every((row, index) => row.partIndex === index && row.number === 1),
+  '超高线路续页保持相同的线路序号和连续片段顺序')
+assert.ok(maximumLegalRows.every((row) => row.fields.code === normalizedMaximumLine.code
+  && row.fields.purpose === normalizedMaximumLine.purpose
+  && row.fields.from.device === normalizedMaximumLine.fromDevice
+  && row.fields.from.port === normalizedMaximumLine.fromPort
+  && row.fields.to.device === normalizedMaximumLine.toDevice
+  && row.fields.to.port === normalizedMaximumLine.toPort),
+'续页保留规范化线路字段，不改起终点或线号')
+maximumLegalRows.forEach((row, index) => {
+  const codeLines = row.drawItems.filter((item) => item.fieldId === 'code').map((item) => item.text)
+  assert.strictEqual(codeLines.join(''), `${normalizedMaximumLine.code}${index ? '（续）' : ''}`,
+    '续页标题显示完整线号及续页标记')
+})
 const renderedMaximumText = maximumLegal.pages.flatMap((page) => page.rows)
   .flatMap((row) => row.lines).join('')
 assert.strictEqual((renderedMaximumText.match(/现场核对/g) || []).length, 60,
   '换行和最长允许备注在分页续页中均无丢失')
+const renderedMaximumNotes = maximumLegalRows.flatMap((row) => row.drawItems
+  .filter((item) => item.fieldId === 'notes.value').map((item) => item.text))
+assert.strictEqual((renderedMaximumNotes.join('').match(/现场核对/g) || []).length, 60,
+  '备注60行内容跨续页完整且顺序不变')
 
 const appConfig = JSON.parse(fs.readFileSync(path.join(root, 'app.json'), 'utf8'))
 assert.ok((appConfig.subPackages || []).some((item) => item.root === 'pages/project-wiring'

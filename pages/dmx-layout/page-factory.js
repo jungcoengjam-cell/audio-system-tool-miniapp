@@ -17,6 +17,7 @@ sideRange,
 posPoint,
 posKey,
 fixtureSort,
+interleaveBatchFixtures,
 balancedBars,
 nearestPlacement,
 posFromBars,
@@ -29,6 +30,7 @@ stageRect,
 const { SCHEME_IDS, resolveSavedLayout } = require('./layout-storage')
 const {
 renderLayout,
+getExportAddressLayout,
 getCanvasTheme,
 getMarkerTextColor,
 getFixtureRadius,
@@ -48,6 +50,42 @@ const ROW_OPTIONS = ['1 排', '2 排', '3 排', '4 排', '5 排', '6 排']
 const FRONT_OPTIONS = ['下方', '上方']
 const SCHEME_OPTIONS = ['仅顶光', '顶光 + 面光', '顶光 + 面光 + 侧光']
 const SIDE_PAIR_OPTIONS = ['1 对', '2 对', '3 对']
+const POSITION_SOURCES = new Set(['automatic', 'configured', 'manual', 'empty', 'unknown'])
+function normalizePositionSource(saved) {
+if (POSITION_SOURCES.has(saved?.positionSource)) return saved.positionSource
+return saved && Object.keys(saved).length ? 'unknown' : 'automatic'
+}
+function positionSourceHint(source, autoFilledCount = 0) {
+const labels = {
+automatic: '自动排布（建议位置，需现场核对）',
+configured: '灯位配置排布（建议位置，需现场核对）',
+manual: '手动布置（建议现场核对）',
+empty: '已清空',
+unknown: '历史记录未标注来源，建议现场核对',
+}
+const hint = `位置来源：${labels[source] || labels.unknown}`
+if (autoFilledCount <= 0) return hint
+return source === 'unknown'
+? `历史位置来源不明；${autoFilledCount} 台位置由系统补齐，建议现场核对`
+: `${hint}；旧记录中 ${autoFilledCount} 台位置由系统补齐，请现场核对`
+}
+function countAutoFilledPositions(saved, fixtures, resolvedPositions, source) {
+const savedCount = ['manual', 'unknown'].includes(source)
+? Math.max(0, Number(saved?.positionAutoFilledCount) || 0)
+: 0
+const savedPositions = saved?.positions
+if (!savedPositions || typeof savedPositions !== 'object' || Array.isArray(savedPositions)) return savedCount
+const filledCount = fixtures.reduce((count, fixture) => {
+const key = posKey(fixture)
+const position = savedPositions[key]
+const isRestorable = position && Number.isFinite(position.x) && Number.isFinite(position.y)
+return count + Number(Boolean(resolvedPositions[key]) && !isRestorable)
+}, 0)
+return Math.max(savedCount, filledCount)
+}
+function cloneJson(value) {
+return JSON.parse(JSON.stringify(value))
+}
 function getClientPoint(touch, rect = {}) {
 if (!touch) return null
 const x = Number.isFinite(touch.clientX) ? touch.clientX : Number.isFinite(touch.pageX) ? touch.pageX : Number(touch.x) + (Number(rect.left) || 0)
@@ -56,6 +94,26 @@ return Number.isFinite(x) && Number.isFinite(y) ? { x, y } : null
 }
 function progKey(fixture) {
 return `${fixture.groupIndex}:${fixture.fixtureIndex}:${fixture.addressText}`
+}
+function createRenderSnapshot(page) {
+return {
+data: page.data,
+fixtures: page._fixtures,
+positions: page._positions,
+definitions: page._positionDefinitions,
+checkedKeys: page._checkedKeys,
+selectedKey: page._selectedKey,
+selectedGroup: page._selGroup,
+dragPoint: page._dragPoint,
+palettePreview: page._paletteDragPreview,
+theme: getCanvasTheme(page._theme),
+stage: page.getDisplayStageRect(),
+viewScale: page._view.s,
+widthMeters: parsePositive(page.data.stageWidthText, 12),
+depthMeters: parsePositive(page.data.stageDepthText, 8),
+frontAtBottom: page.data.frontIndex === 0,
+progKey,
+}
 }
 function normalizeGroups(preferences = {}) {
 return (Array.isArray(preferences.groups) ? preferences.groups : []).map((group, index) => ({
@@ -95,6 +153,9 @@ addressLabelsVisible: true,
 scrollEnabled: true,
 viewZoomed: false,
 barConfigurationExpanded: false,
+positionSourceHint: '位置来源：自动排布',
+positionProgressText: '位置已布置 0 / 0，待布置 0',
+automaticLayoutUndoVisible: false,
 barRows: [],
 barConfigurationStatusText: '',
 barConfigurationValid: true,
@@ -123,13 +184,15 @@ layoutMode,
 isLandscape: layoutMode === 'landscape',
 canvasWidth: canvasPreset.width,
 canvasHeight: canvasPreset.height,
+exportCanvasWidth: canvasPreset.width,
+exportCanvasHeight: canvasPreset.height,
 canvasDisplayHeight: 450,
 isGeneratingImage: false,
 exportCanvasActive: false,
 layoutImagePath: '',
 previewVisible: false,
   },
-  onLoad() {
+  onLoad(options = {}) {
 this._pageAlive = true
 this._pageVisible = true
 this._pageReady = false
@@ -147,6 +210,13 @@ if (typeof wx.onThemeChange === 'function') wx.onThemeChange(this._themeChangeHa
 this._view = { s: 1, x: 0, y: 0 }
 this._pageScrollTop = 0
 this._tap = null
+this._skipSaveOnUnload = false
+this._automaticLayoutUndoSnapshot = null
+this._positionAutoFilledCount = 0
+this._expandBarConfigurationOnLandscapeReturn = false
+const openBarConfiguration = options.expandBarConfiguration === '1'
+this._scrollBarConfigurationOnReady = openBarConfiguration
+this._scrollTargetTimer = null
 this._preferences = readPreferences(DMX_PREFERENCE_KEY)
 this._drawTimer = null
 const groups = normalizeGroups(this._preferences)
@@ -181,6 +251,10 @@ this._sidePairManual = sidePairManual
 this._preserve = preserve
 this._positions = positions
 this._barCounts = barCounts
+this._positionSource = normalizePositionSource(saved)
+this._positionAutoFilledCount = countAutoFilledPositions(
+saved, result.fixtures, positions, this._positionSource,
+)
 const signaturePreferences = {
 ...this._preferences,
 allocationMode: this._preferences.allocationMode === 'manual' ? 'manual' : 'auto',
@@ -204,17 +278,26 @@ addressLabelModeText: addressLabelMode === 'all' ? '全部地址' : '智能地�
 barRows: createBarRows(this._barCounts, groups, definitions),
 barConfigurationStatusText: barStatus(this._barCounts, groups).text,
 barConfigurationValid: barStatus(this._barCounts, groups).valid,
+barConfigurationExpanded: openBarConfiguration,
+scrollIntoViewTarget: '',
+...this.getPositionSummaryData(),
 groupLegend: result.groups.map((group, index) => ({
 name: group.name,
 count: group.fixtureCount,
 color: GROUP_COLORS[index % GROUP_COLORS.length],
 })),
+}, () => {
+if (openBarConfiguration) this.scrollToBarConfiguration()
 })
 this.refreshFixturePalette()
 },
-  onReady() {
+onReady() {
 this._pageReady = true
 if (!this.data.hasPlan) return
+if (this._scrollBarConfigurationOnReady) {
+this._scrollBarConfigurationOnReady = false
+this.scrollToBarConfiguration()
+}
 this.measureCanvas(() => this.drawLayout())
 },
   onShow() {
@@ -224,7 +307,7 @@ this.setData({ scrollEnabled: true, paletteDragging: false })
 }
 this.syncSystemTheme()
 if (!this._awaitingLandscapeReturn) {
-if (this._pageReady && this.data.hasPlan) this.measureCanvas(() => this.drawLayout())
+if (this.data.hasPlan) this.measureCanvas(() => this.drawLayout())
 return
 }
 this._awaitingLandscapeReturn = false
@@ -238,14 +321,15 @@ const theme = wx.getSystemInfoSync()?.theme === 'dark' ? 'dark' : 'light'
   this.clearImage()
   if (this._pageVisible) this.measureCanvas(() => this.drawLayout())
   },
-  onResize() {
+onResize() {
   if (!this._pageAlive || !this._pageVisible || !this.data.hasPlan) return
   this.measureCanvas(() => this.drawLayout())
   },
   onHide() {
-this.commitCanvasDrag()
+if (!this._skipSaveOnUnload) this.commitCanvasDrag()
 this._pageVisible = false
 this._measureToken += 1
+clearTimeout(this._measureTimer)
 this._drawToken += 1
 clearTimeout(this._drawTimer)
 this._drawTimer = null
@@ -257,12 +341,14 @@ this._dragPoint = null
 this.clearTouch()
 },
   onUnload() {
-this.commitCanvasDrag()
+if (!this._skipSaveOnUnload) this.commitCanvasDrag()
 this._pageAlive = false
 this._pageVisible = false
 this._pageReady = false
 this._generationToken += 1
 this._measureToken += 1
+clearTimeout(this._measureTimer)
+clearTimeout(this._scrollTargetTimer)
 this._drawToken += 1
 if (this.data.isGeneratingImage && typeof wx.hideLoading === 'function') wx.hideLoading()
 if (this._themeChangeHandler && typeof wx.offThemeChange === 'function') wx.offThemeChange(this._themeChangeHandler)
@@ -270,7 +356,7 @@ clearTimeout(this._drawTimer)
 this._drawTimer = null
 this._paletteDragFixture = null
 this._dragPoint = null
-this.saveLayout()
+if (!this._skipSaveOnUnload) this.saveLayout()
 },
 readProgress() {
 try {
@@ -292,6 +378,29 @@ keys: [...this._checkedKeys],
 wx.showToast({ title: '进度保存失败，请重试', icon: 'none' })
 }
 },
+getPositionSummaryData() {
+const fixtures = this._fixtures || []
+const positions = this._positions || {}
+const placedCount = fixtures.reduce(
+(count, fixture) => count + Number(Boolean(positions[posKey(fixture)])),
+0,
+)
+const totalCount = fixtures.length
+return {
+positionSourceHint: positionSourceHint(this._positionSource || 'unknown', this._positionAutoFilledCount),
+positionProgressText: `位置已布置 ${placedCount} / ${totalCount}，待布置 ${totalCount - placedCount}`,
+}
+},
+setPositionSource(source, autoFilledCount) {
+this._positionSource = POSITION_SOURCES.has(source) ? source : 'unknown'
+const preservedCount = this._positionSource === 'manual' ? this._positionAutoFilledCount : 0
+this._positionAutoFilledCount = Math.max(0, Number(autoFilledCount ?? preservedCount) || 0)
+},
+invalidateAutomaticLayoutUndo() {
+if (!this._automaticLayoutUndoSnapshot && !this.data.automaticLayoutUndoVisible) return
+this._automaticLayoutUndoSnapshot = null
+this.setData({ automaticLayoutUndoVisible: false })
+},
 saveLayout() {
 if (!this.data.hasPlan || !this._positions) return false
 return writePreferences(LAYOUT_KEY, {
@@ -306,6 +415,8 @@ addressLabelMode: this.data.addressLabelMode,
 barCounts: this._barCounts,
 preserveUnplaced: this._preserve,
 positions: this._positions,
+positionSource: this._positionSource || 'unknown',
+positionAutoFilledCount: this._positionAutoFilledCount || 0,
 })
 },
   reloadSavedLayout() {
@@ -327,9 +438,15 @@ this._sidePairManual = sidePairManual
 this._preserve = preserve
 this._positions = positions
 this._barCounts = barCounts
+this._positionSource = normalizePositionSource(saved)
+this._positionAutoFilledCount = countAutoFilledPositions(
+saved, this._fixtures, positions, this._positionSource,
+)
 this._checkedKeys = this.readProgress()
 const status = barStatus(this._barCounts, this._groups)
-this.setData({
+const expandBarConfiguration = Boolean(this._expandBarConfigurationOnLandscapeReturn)
+this._expandBarConfigurationOnLandscapeReturn = false
+const changes = {
 stageWidthText: String(saved.stageWidthText || this.data.stageWidthText || '12'),
 stageDepthText: String(saved.stageDepthText || this.data.stageDepthText || '8'),
 rowIndex: rows - 1,
@@ -345,7 +462,13 @@ previewVisible: false,
 barRows: createBarRows(this._barCounts, this._groups, definitions),
 barConfigurationStatusText: status.text,
 barConfigurationValid: status.valid,
+...this.getPositionSummaryData(),
+}
+if (expandBarConfiguration) changes.barConfigurationExpanded = true
+this.setData({
+...changes,
 }, () => {
+if (expandBarConfiguration) this.scrollToBarConfiguration()
 this.refreshFixturePalette()
 this.measureCanvas(() => this.drawLayout())
 })
@@ -354,8 +477,55 @@ openLandscapeLayout() {
 if (this.data.isLandscape) return
 this.saveLayout()
 this._awaitingLandscapeReturn = true
+this._expandBarConfigurationOnLandscapeReturn = false
 vibrate('light')
 wx.navigateTo({ url: '/pages/dmx-layout-landscape/dmx-layout-landscape' })
+},
+openPortraitConfiguration() {
+if (!this.data.isLandscape) {
+this.refreshBarConfiguration({ barConfigurationExpanded: true }, () => this.scrollToBarConfiguration())
+return
+}
+this.saveLayout()
+this._skipSaveOnUnload = true
+const pages = typeof getCurrentPages === 'function' ? getCurrentPages() : []
+const previous = pages.length > 1 ? pages[pages.length - 2] : null
+const previousPortrait = previous?.route === 'pages/dmx-layout/dmx-layout' ? previous : null
+const url = '/pages/dmx-layout/dmx-layout?expandBarConfiguration=1'
+const restoreLandscapeAfterNavigationFailure = () => {
+if (!this._pageAlive) return
+this._skipSaveOnUnload = false
+this._pageVisible = true
+if (previousPortrait) {
+previousPortrait._expandBarConfigurationOnLandscapeReturn = false
+}
+this.setData({ scrollEnabled: true, paletteDragging: false }, () => {
+this.measureCanvas(() => this.drawLayout())
+})
+}
+if (previousPortrait) {
+previousPortrait._awaitingLandscapeReturn = true
+previousPortrait._expandBarConfigurationOnLandscapeReturn = true
+wx.navigateBack({ delta: 1, fail: () => {
+previousPortrait._expandBarConfigurationOnLandscapeReturn = false
+wx.redirectTo({ url, fail: restoreLandscapeAfterNavigationFailure })
+} })
+return
+}
+wx.redirectTo({ url, fail: restoreLandscapeAfterNavigationFailure })
+},
+scrollToBarConfiguration() {
+if (!this._pageAlive || !this._pageVisible || !this.data.barConfigurationExpanded) return
+clearTimeout(this._scrollTargetTimer)
+this.setData({ scrollIntoViewTarget: '' }, () => {
+if (!this._pageAlive || !this._pageVisible || !this.data.barConfigurationExpanded) return
+this.setData({ scrollIntoViewTarget: 'dmxBarConfigurationPanel' }, () => {
+this._scrollTargetTimer = setTimeout(() => {
+this._scrollTargetTimer = null
+if (this._pageAlive) this.setData({ scrollIntoViewTarget: '' })
+}, 350)
+})
+})
 },
   queueDraw() {
 if (!this._pageAlive || !this._pageVisible || this._drawTimer) return
@@ -376,36 +546,41 @@ this.drawLayout()
 if (!this._pageAlive || !this._pageVisible) return
 const token = (this._measureToken || 0) + 1
 this._measureToken = token
+clearTimeout(this._measureTimer)
+let drew = false
 const active = () => this._pageAlive && this._pageVisible && this._measureToken === token
+const later = (attempt) => { if (this.data.isLandscape && attempt < 3) this._measureTimer = setTimeout(() => retry(attempt + 1), [60, 160, 380][attempt]) }
+const retry = (attempt) => {
+if (!active()) return
 const finish = (rect) => {
 if (!active()) return
-const width = Number(rect?.width) || 350
-const logicalWidth = Number(this.data.canvasWidth) || CANVAS_WIDTH
-const logicalHeight = Number(this.data.canvasHeight) || CANVAS_HEIGHT
-const height = Number(rect?.height) || width * (logicalHeight / logicalWidth)
+const measuredWidth = Number(rect?.width), measuredHeight = Number(rect?.height)
+if (this.data.isLandscape && (!(measuredWidth > 0) || !(measuredHeight > 0))) {
+later(attempt)
+return
+}
+const width = measuredWidth > 0 ? measuredWidth : 350
+const logicalWidth = this.data.canvasWidth || CANVAS_WIDTH, logicalHeight = this.data.canvasHeight || CANVAS_HEIGHT
+const height = measuredHeight > 0 ? measuredHeight : width * (logicalHeight / logicalWidth)
+const previous = this._canvasRect
+const changed = !previous || Math.abs(previous.width - width) > 2 || Math.abs(previous.height - height) > 2
 const commit = () => {
 if (!active()) return
-this._canvasRect = {
-left: Number(rect?.left) || 0,
-top: Number(rect?.top) || 0,
-width,
-height,
+this._canvasRect = { left: rect?.left || 0, top: rect?.top || 0, width, height }
+this._canvasScaleX = width / logicalWidth; this._canvasScaleY = height / logicalHeight
+if (callback && (changed || !drew)) { drew = true; callback() }
 }
-this._canvasScaleX = width / logicalWidth
-this._canvasScaleY = height / logicalHeight
-if (callback) callback()
-}
-if (Math.abs(Number(this.data.canvasDisplayHeight) - height) > 0.5) {
-this.setData({ canvasDisplayHeight: Number(height.toFixed(2)) }, commit)
+if (!this.data.isLandscape && changed && Math.abs(Number(this.data.canvasDisplayHeight) - height) > 0.5) {
+this.setData({ canvasDisplayHeight: height }, commit)
 } else {
 commit()
 }
+later(attempt)
 }
-if (typeof wx.createSelectorQuery !== 'function') {
-finish({ left: 0, top: 0, width: 350 })
-return
+if (typeof wx.createSelectorQuery === 'function') wx.createSelectorQuery().select('#dmxLayoutCanvasShell').boundingClientRect((rect) => finish(rect)).exec()
+else finish(this.data.isLandscape ? null : { left: 0, top: 0, width: 350 })
 }
-wx.createSelectorQuery().select('#dmxLayoutCanvasShell').boundingClientRect((rect) => finish(rect)).exec()
+retry(0)
 },
 onPageScroll(event) {
 const scrollTop = Number(event?.detail?.scrollTop)
@@ -445,24 +620,8 @@ if (!options.exportMode && (viewScale !== 1 || viewPanX || viewPanY)) {
 ctx.scale(viewScale, viewScale)
 ctx.translate(viewPanX / (displayScaleX * viewScale), viewPanY / (displayScaleY * viewScale))
 }
-const snapshot = {
-data: this.data,
-fixtures: this._fixtures,
-positions: this._positions,
-definitions: this._positionDefinitions,
-checkedKeys: this._checkedKeys,
-selectedKey: this._selectedKey,
-selectedGroup: this._selGroup,
-dragPoint: this._dragPoint,
-palettePreview: this._paletteDragPreview,
-theme: getCanvasTheme(this._theme),
-stage: this.getDisplayStageRect(),
-viewScale,
-widthMeters: parsePositive(this.data.stageWidthText, 12),
-depthMeters: parsePositive(this.data.stageDepthText, 8),
-frontAtBottom: this.data.frontIndex === 0,
-progKey,
-}
+const snapshot = createRenderSnapshot(this)
+snapshot.viewScale = viewScale
 renderLayout(ctx, snapshot, options)
 ctx.restore()
 ctx.draw(false, () => {
@@ -473,6 +632,7 @@ if (callback) callback()
 onStageInput(event) {
 const key = event.currentTarget.dataset.key
 if (!['stageWidthText', 'stageDepthText'].includes(key)) return
+if (String(this.data[key]) !== String(event.detail.value)) this.invalidateAutomaticLayoutUndo()
 this.setData({ [key]: event.detail.value })
 },
 onStageBlur(event) {
@@ -480,6 +640,7 @@ const key = event.currentTarget.dataset.key
 const fallback = key === 'stageWidthText' ? '12' : '8'
 const value = String(parsePositive(event.detail.value, Number(fallback)))
 const changes = { [key]: value }
+if (String(this.data[key]) !== value) this.invalidateAutomaticLayoutUndo()
 if (key === 'stageDepthText' && !this._sidePairManual) {
 changes.sidePairIndex = recommendSidePairCount(Number(value)) - 1
 }
@@ -499,7 +660,7 @@ this.data.sidePairIndex + 1,
 this._positionDefinitions = definitions
 if (rebalance) {
 this._barCounts = balancedBars(this._groups, definitions.length)
-this.applyBarConfiguration()
+this.applyBarConfiguration('automatic')
 return
 }
 this._positions = restorePositions(
@@ -514,12 +675,14 @@ this.syncBarConfigurationFromPositions()
 onSchemeChange(event) {
 const schemeIndex = Number(event.detail.value)
 if (!SCHEME_IDS[schemeIndex] || schemeIndex === this.data.schemeIndex) return
+this.invalidateAutomaticLayoutUndo()
 vibrate('light')
 this.setData({ schemeIndex }, () => this.rebuildPositionDefinitions(true))
 },
 onSidePairChange(event) {
 const sidePairIndex = Number(event.detail.value)
 if (![0, 1, 2].includes(sidePairIndex) || sidePairIndex === this.data.sidePairIndex) return
+this.invalidateAutomaticLayoutUndo()
 this._sidePairManual = true
 vibrate('light')
 this.setData({ sidePairIndex }, () => this.rebuildPositionDefinitions(true))
@@ -527,6 +690,7 @@ this.setData({ sidePairIndex }, () => this.rebuildPositionDefinitions(true))
 onRowChange(event) {
 const rowIndex = Number(event.detail.value)
 if (!Number.isInteger(rowIndex) || rowIndex === this.data.rowIndex) return
+this.invalidateAutomaticLayoutUndo()
 this.setData({ rowIndex }, () => {
 this.rebuildPositionDefinitions(true)
 })
@@ -534,6 +698,7 @@ this.rebuildPositionDefinitions(true)
 onFrontChange(event) {
 const frontIndex = Number(event.detail.value)
 if (![0, 1].includes(frontIndex) || frontIndex === this.data.frontIndex) return
+this.invalidateAutomaticLayoutUndo()
 vibrate('light')
 this.setData({ frontIndex }, () => {
 this.clearImage()
@@ -542,18 +707,89 @@ this.drawLayout()
 })
 },
 applyAutomaticLayout() {
+const placedCount = this._fixtures.reduce(
+(count, fixture) => count + Number(Boolean(this._positions[posKey(fixture)])),
+0,
+)
+const shouldConfirm = placedCount > 0
+&& ['manual', 'configured', 'unknown'].includes(this._positionSource)
+const apply = () => {
+this._automaticLayoutUndoSnapshot = {
+positions: cloneJson(this._positions || {}),
+barCounts: cloneJson(this._barCounts || []),
+preserve: Boolean(this._preserve),
+positionSource: this._positionSource || 'unknown',
+positionAutoFilledCount: this._positionAutoFilledCount || 0,
+}
+this.setData({ automaticLayoutUndoVisible: true })
 this._barCounts = balancedBars(this._groups, this._positionDefinitions.length)
+this.setPositionSource('automatic')
 this.refreshBarConfiguration()
-this.applyBarConfiguration()
+this.applyBarConfiguration('automatic', { preserveAutomaticLayoutUndo: true })
+}
+if (!shouldConfirm) {
+apply()
+return
+}
+wx.showModal({
+title: '自动排布会覆盖现有位置',
+content: `当前已有 ${placedCount} 台灯具布置完成，继续后将按默认灯位方案重新排布。`,
+confirmText: '覆盖排布',
+cancelText: '取消',
+success: ({ confirm }) => {
+if (confirm && this._pageAlive && this._pageVisible) apply()
 },
-refreshBarConfiguration(extra = {}) {
+})
+},
+undoAutomaticLayout() {
+const snapshot = this._automaticLayoutUndoSnapshot
+if (!snapshot) return
+const selectedKey = this._selectedKey || ''
+this._positions = cloneJson(snapshot.positions)
+this._barCounts = cloneJson(snapshot.barCounts)
+this._preserve = snapshot.preserve
+this.setPositionSource(snapshot.positionSource, snapshot.positionAutoFilledCount)
+const selectedFixture = this._fixtures.find((item) => (
+posKey(item) === selectedKey && this._positions[selectedKey]
+))
+this._selectedKey = selectedFixture ? selectedKey : ''
+this._selGroup = selectedFixture ? selectedFixture.groupIndex : undefined
+this._automaticLayoutUndoSnapshot = null
+const status = barStatus(this._barCounts, this._groups)
+this.refreshBarConfiguration({
+automaticLayoutUndoVisible: false,
+selectedFixture: selectedFixture ? {
+groupName: selectedFixture.groupName,
+fixtureIndex: selectedFixture.fixtureIndex,
+addressText: selectedFixture.addressText,
+rangeText: selectedFixture.rangeText,
+channelCount: selectedFixture.channelCount,
+completed: this._checkedKeys.has(progKey(selectedFixture)),
+progressKey: progKey(selectedFixture),
+} : null,
+searchResultText: '',
+addressLabelModeText: !this.data.addressLabelsVisible
+? '显示地址'
+: this.data.addressLabelMode === 'all' ? '全部地址' : '智能地址',
+layoutImagePath: '',
+previewVisible: false,
+barConfigurationStatusText: status.text,
+barConfigurationValid: status.valid,
+...this.getPositionSummaryData(),
+})
+this.refreshFixturePalette(this.data.paletteGroupIndex, () => {
+this.saveLayout()
+this.measureCanvas(() => this.drawLayout())
+})
+},
+refreshBarConfiguration(extra = {}, callback) {
 const status = barStatus(this._barCounts, this._groups)
 this.setData({
 ...extra,
 barRows: createBarRows(this._barCounts, this._groups, this._positionDefinitions),
 barConfigurationStatusText: status.text,
 barConfigurationValid: status.valid,
-})
+}, callback)
 },
 refreshFixturePalette(preferredGroupIndex = this.data.paletteGroupIndex, callback) {
 if (!this._fixtures || !this._positions) {
@@ -586,6 +822,7 @@ addressText: fixture.addressText,
 })),
 unplacedFixtureCount: remainingByGroup.reduce((sum, fixtures) => sum + fixtures.length, 0),
 paletteMoreText: remaining.length > 80 ? `另有 ${remaining.length - 80} 台，放置前面的灯具后继续显示` : '',
+...this.getPositionSummaryData(),
 }, callback)
 },
 syncBarConfigurationFromPositions() {
@@ -614,7 +851,18 @@ return this._fixtures?.filter((f) => f.groupIndex === groupIndex && !this._posit
 },
 refreshBatchPreview() {
 const fs = this.getUnplacedFixtures(), max = fs.length - 1, start = Math.max(0, Math.min(max, Number(this.data.batchStartIndex) || 0)), end = Math.max(start, Math.min(max, Number(this.data.batchEndIndex) || 0)), d = this._positionDefinitions?.[this.data.batchPositionIndex], label = d?.label || '目标灯位', count = fs.length && end >= start ? end - start + 1 : 0
-this.setData({ batchStartIndex: start, batchEndIndex: end, batchPreviewText: count ? `共${count}台，将沿${label}均匀排列` : '请选择有效的地址范围' })
+const existing = d ? this.getBatchTargetFixtures(d) : []
+const existingCount = existing.length
+const selectedGroupIndex = fs[start]?.groupIndex
+const interleavesGroups = existing.some((fixture) => fixture.groupIndex !== selectedGroupIndex)
+const batchPreviewText = !count
+? '请选择有效的地址范围'
+: interleavesGroups
+? `本组${count}台将沿${label}与已有${existingCount}台交错重排`
+: existingCount
+? `本组${count}台将沿${label}与已有${existingCount}台重新等距排布`
+: `本组${count}台将沿${label}均匀排列`
+this.setData({ batchStartIndex: start, batchEndIndex: end, batchPreviewText })
 },
 openBatchPlacement() {
 const fs = this.getUnplacedFixtures()
@@ -639,14 +887,14 @@ applyBatchPlacement() {
 const fs = this.getUnplacedFixtures(), start = Number(this.data.batchStartIndex), end = Number(this.data.batchEndIndex), d = this._positionDefinitions?.[this.data.batchPositionIndex]
 if (!fs.length || !d) return wx.showToast({ title: '没有可批量上杆的灯具或目标灯位', icon: 'none' })
 if (!Number.isInteger(start) || !Number.isInteger(end) || start < 0 || end < start || end >= fs.length) return wx.showToast({ title: '请选择有效的连续地址范围', icon: 'none' })
-const ordered = this.getBatchTargetFixtures(d).concat(fs.slice(start, end + 1)).sort(fixtureSort)
+const ordered = interleaveBatchFixtures(this.getBatchTargetFixtures(d).concat(fs.slice(start, end + 1)))
 if (this.data.batchDirectionIndex === 1) ordered.reverse()
 const side = d.zone.startsWith('side-'), rail = side ? sideRange(d.positionIndex, this.data.sidePairIndex + 1) : null
 ordered.forEach((f, i) => { const n = (i + 1) / (ordered.length + 1); this._positions[posKey(f)] = { zone: d.zone, positionIndex: d.positionIndex, x: side ? (d.zone === 'side-left' ? 0 : 1) : n, y: side ? clamp(rail.start + n * (rail.end - rail.start), .03, .97) : d.zone === 'front' ? 1 : defY(d, this.data.rowIndex + 1, this.data.sidePairIndex + 1) } })
 this._finishBatchEdit()
 },
-_finishBatchEdit() {
-this._preserve = true; this._selectedKey = ''; this._selGroup = undefined; this.syncBarConfigurationFromPositions(); this.refreshFixturePalette(); vibrate('medium')
+_finishBatchEdit(source = 'manual') {
+this.invalidateAutomaticLayoutUndo(); this._preserve = true; this.setPositionSource(source); this._selectedKey = ''; this._selGroup = undefined; this.syncBarConfigurationFromPositions(); this.refreshFixturePalette(); vibrate('medium')
 this.setData({ batchVisible: false, selectedFixture: null, searchResultText: '' }, () => { this.clearImage(); this.saveLayout(); this.drawLayout() })
 },
 clearBatchPosition() {
@@ -655,7 +903,9 @@ if (!d) return wx.showToast({ title: '请选择目标灯位', icon: 'none' })
 if (!targets.length) return wx.showToast({ title: '当前灯位没有已布置灯具', icon: 'none' })
 wx.showModal({ title: '清空当前灯位', content: `将移除${d.label}上的${targets.length}台灯具，其他灯位不变。`, confirmText: '清空', confirmColor: '#d70015', success: ({ confirm }) => {
 if (!confirm) return
-targets.forEach((f) => { delete this._positions[posKey(f)] }); this._finishBatchEdit()
+targets.forEach((f) => { delete this._positions[posKey(f)] })
+const hasPositions = this._fixtures.some((fixture) => this._positions[posKey(fixture)])
+this._finishBatchEdit(hasPositions ? 'manual' : 'empty')
 } })
 },
 clearLayout() {
@@ -666,8 +916,10 @@ confirmText: '清空',
 confirmColor: '#ff3b30',
 success: ({ confirm }) => {
 if (!confirm) return
+this.invalidateAutomaticLayoutUndo()
 this._positions = Object.create(null)
 this._preserve = true
+this.setPositionSource('empty')
 this._selectedKey = ''
 this._selGroup = undefined
 this.syncBarConfigurationFromPositions()
@@ -732,9 +984,12 @@ this._tap=null;this._dragKey='';this._dragMoved=false;this._start=null
 },
   commitCanvasDrag() {
 if (!this._dragKey || !this._dragMoved) return false
+this.invalidateAutomaticLayoutUndo()
 this.flushDraw()
 vibrate('light')
+this.setPositionSource('manual')
 this.syncBarConfigurationFromPositions()
+this.setData(this.getPositionSummaryData())
 this.clearImage()
 this.saveLayout()
 return true
@@ -824,8 +1079,10 @@ wx.showToast({ title: '请拖到灯位区域', icon: 'none' })
 this.drawLayout()
 return
 }
+this.invalidateAutomaticLayoutUndo()
 this._positions[key] = placement.position
 this._preserve = true
+this.setPositionSource('manual')
 this.syncBarConfigurationFromPositions()
 vibrate('medium')
 this.clearImage()
@@ -850,6 +1107,7 @@ onBarCountInput(event) {
 const barIndex = Number(event.currentTarget.dataset.barIndex)
 const groupIndex = Number(event.currentTarget.dataset.groupIndex)
 if (!this._barCounts[barIndex] || !this._groups[groupIndex]) return
+this.invalidateAutomaticLayoutUndo()
 const count = Math.max(0, Math.floor(Number(event.detail.value) || 0))
 this._barCounts[barIndex][groupIndex] = count
 const status = barStatus(this._barCounts, this._groups)
@@ -860,11 +1118,14 @@ barConfigurationValid: status.valid,
 })
 },
 balanceBarConfiguration() {
+this.invalidateAutomaticLayoutUndo()
 this._barCounts = balancedBars(this._groups, this._positionDefinitions.length)
 vibrate('light')
 this.refreshBarConfiguration()
 },
-applyBarConfiguration() {
+applyBarConfiguration(source = 'configured', options = {}) {
+if (typeof source !== 'string' || !['automatic', 'configured'].includes(source)) source = 'configured'
+if (!options || typeof options !== 'object') options = {}
 const status = barStatus(this._barCounts, this._groups)
 if (!status.valid) {
 wx.showToast({ title: '请完整分配每组灯具数量', icon: 'none' })
@@ -882,8 +1143,10 @@ if (Object.keys(positions).length !== this._fixtures.length) {
 wx.showToast({ title: '灯具分配不完整，请检查', icon: 'none' })
 return
 }
+if (!options.preserveAutomaticLayoutUndo) this.invalidateAutomaticLayoutUndo()
 this._positions = positions
 this._preserve = false
+this.setPositionSource(source)
 this._selectedKey = ''
 this._selGroup = undefined
 this.refreshFixturePalette()
@@ -1125,9 +1388,11 @@ if (this.data.isGeneratingImage || typeof wx.canvasToTempFilePath !== 'function'
 const token = this._generationToken + 1
 this._generationToken = token
 const isGenerationActive = () => this._pageAlive && this._generationToken === token
+const exportLayout = getExportAddressLayout(createRenderSnapshot(this))
+const exportCanvasHeight = exportLayout.canvasHeight
 vibrate('medium')
 if (typeof wx.showLoading === 'function') wx.showLoading({ title: '正在生成', mask: true })
-this.setData({ isGeneratingImage: true, exportCanvasActive: true }, () => {
+this.setData({ isGeneratingImage: true, exportCanvasActive: true, exportCanvasHeight }, () => {
 if (!isGenerationActive()) return
  const drawExportCanvas = () => this.drawLayout({ exportMode: true }, () => {
 if (!isGenerationActive()) return
@@ -1136,9 +1401,9 @@ canvasId: EXPORT_CANVAS_ID,
 x: 0,
 y: 0,
 width: this.data.canvasWidth,
-height: this.data.canvasHeight,
-destWidth: this.data.canvasWidth * 2,
-destHeight: this.data.canvasHeight * 2,
+height: this.data.exportCanvasHeight,
+destWidth: exportLayout.destWidth,
+destHeight: exportLayout.destHeight,
 fileType: 'png',
 quality: 1,
 success: ({ tempFilePath }) => {
@@ -1159,7 +1424,6 @@ wx.showToast({ title: '生成失败，请重试', icon: 'none' })
 },
 }, this)
 })
- // 等待导出 Canvas 完成显示，避免 setData 后立即绘制导致截屏内容不完整。
  if (typeof wx.nextTick === 'function') wx.nextTick(() => {
 if (isGenerationActive()) drawExportCanvas()
 })

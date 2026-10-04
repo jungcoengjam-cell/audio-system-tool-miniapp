@@ -37,6 +37,13 @@
       "pages": [
         "index"
       ]
+    },
+    {
+      "root": "pages/control-protocol",
+      "pages": [
+        "index",
+        "detail"
+      ]
     }
   ],
   "window": {

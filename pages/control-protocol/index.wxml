@@ -1,0 +1,47 @@
+<scroll-view class="protocol-page" scroll-y enhanced show-scrollbar="{{false}}">
+  <view class="protocol-content">
+    <view class="page-heading">
+      <view class="page-title">控制协议</view>
+    </view>
+
+    <scroll-view class="category-scroll" scroll-x enhanced show-scrollbar="{{false}}">
+      <view class="category-row">
+        <view wx:for="{{categories}}" wx:key="key" class="category-chip {{item.selected ? 'category-chip-active' : ''}}" data-key="{{item.key}}" bindtap="onCategoryTap">{{item.label}}</view>
+      </view>
+    </scroll-view>
+
+    <view class="search-card">
+      <view class="search-icon" aria-hidden="true">⌕</view>
+      <input class="search-input" value="{{keyword}}" placeholder="控制卡名称、品牌或型号" confirm-type="search" bindinput="onSearchInput" />
+      <view wx:if="{{keyword}}" class="search-clear" bindtap="clearSearch" aria-label="清除搜索">×</view>
+    </view>
+
+    <view class="section-heading">
+      <view class="section-title">控制卡图库</view>
+      <view class="result-count">{{items.length}} 项</view>
+    </view>
+
+    <scroll-view wx:if="{{items.length}}" class="gallery-scroll" scroll-x enhanced show-scrollbar="{{false}}">
+      <view class="gallery-track">
+        <view wx:for="{{items}}" wx:key="groupId" class="gallery-card" data-group-id="{{item.group.id}}" bindtap="openDevice">
+          <view class="gallery-photo">
+            <image wx:if="{{item.photo}}" class="gallery-image" src="{{item.photo.path}}" mode="aspectFit" lazy-load />
+            <view wx:else class="gallery-photo-missing"><view class="missing-icon">▧</view><view>控制卡实拍待补</view></view>
+          </view>
+          <view class="gallery-card-copy">
+            <view class="gallery-title">{{item.group.title}}</view>
+          </view>
+          <view class="gallery-arrow">›</view>
+        </view>
+      </view>
+    </scroll-view>
+
+    <view wx:if="{{isEmpty}}" class="empty-card">
+      <view class="empty-mark" aria-hidden="true">⌕</view>
+      <view class="empty-title">{{keyword ? '没有找到匹配控制卡' : '控制卡图库正在整理'}}</view>
+      <view class="empty-copy">首批控制卡实拍与型号资料整理后会显示在这里。</view>
+      <button wx:if="{{keyword || categoryKey != 'all'}}" class="clear-filters-button" bindtap="clearFilters">清除筛选</button>
+    </view>
+
+  </view>
+</scroll-view>

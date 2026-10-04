@@ -1,0 +1,109 @@
+<scroll-view class="protocol-page" scroll-y enhanced show-scrollbar="{{false}}">
+  <view class="protocol-content">
+    <view wx:if="{{invalidGroup}}" class="invalid-card">
+      <view class="invalid-mark">⌕</view>
+      <view class="invalid-title">控制卡资料不可用</view>
+      <view class="invalid-copy">{{statusMessage}}</view>
+      <button class="return-button" bindtap="returnToGallery">返回控制卡图库</button>
+    </view>
+
+    <view wx:if="{{group}}" class="page-heading">
+      <view class="page-title">{{group.title}}</view>
+    </view>
+
+    <view wx:if="{{developmentManual}}" class="development-manual-card">
+      <view class="manual-transport-tabs">
+        <button wx:for="{{manualTransportTabs}}" wx:for-item="tab" wx:key="id"
+          class="manual-transport-tab {{tab.sourceIndex == manualTransportIndex ? 'manual-transport-tab-active' : ''}}"
+          data-index="{{tab.sourceIndex}}" bindtap="selectManualTransport">{{tab.label}}</button>
+      </view>
+      <view wx:if="{{manualTransport}}" class="manual-transport">
+        <view class="manual-connection-params">{{manualTransport.parameters}}</view>
+
+        <view wx:if="{{manualTransport.id == 'udp'}}" class="manual-mac-input-card">
+          <view class="manual-mac-label">现场控制器 MAC 地址</view>
+          <view class="manual-mac-row">
+            <input class="manual-mac-input" value="{{deviceMacInput}}" maxlength="12" placeholder="输入12位十六进制字符" confirm-type="done" bindinput="onDeviceMacInput" />
+            <button class="manual-mac-clear" bindtap="clearDeviceMac">清空</button>
+          </view>
+          <view class="manual-meta">读取现场标签，输入无分隔的12位十六进制字符。</view>
+          <view class="manual-meta">{{deviceMacValid ? '当前替换值：' + deviceMacFormatted : '请填写当前控制卡的有效 MAC，才能复制 UDP 指令'}}</view>
+        </view>
+
+        <view class="manual-section-title">常用操作</view>
+        <view wx:for="{{commonManualCommands}}" wx:for-item="command" wx:for-index="commandIndex" wx:key="id" class="manual-command manual-command-featured">
+          <view class="manual-command-head"><view class="manual-command-label">{{command.label}}</view><button class="manual-copy-button" data-command-id="{{command.id}}" disabled="{{!command.copyEnabled}}" bindtap="copyManualCommand">复制</button></view>
+          <view class="manual-command-frame">{{command.displayFrame}}</view>
+        </view>
+
+        <view class="manual-section-title loop-title">选择回路（{{selectedLoopLabel}}）</view>
+        <picker class="loop-picker" mode="selector" range="{{loopOptions}}" value="{{selectedLoopIndex}}" bindchange="selectManualLoop">
+          <view class="loop-picker-value">{{selectedLoopLabel}}<text class="loop-picker-arrow">更换⌄</text></view>
+        </picker>
+        <view wx:for="{{selectedLoopCommands}}" wx:for-item="command" wx:for-index="commandIndex" wx:key="id" class="manual-command manual-command-featured">
+          <view class="manual-command-head"><view class="manual-command-label">{{command.label}}</view><button class="manual-copy-button" data-command-id="{{command.id}}" disabled="{{!command.copyEnabled}}" bindtap="copyManualCommand">复制</button></view>
+          <view class="manual-command-frame">{{command.displayFrame}}</view>
+        </view>
+
+        <button class="manual-section-toggle" bindtap="toggleManualWrites">{{showManualWrites ? '收起' : '展开'}}其余控制请求（{{manualWriteCommands.length}}）</button>
+        <view wx:if="{{showManualWrites}}" class="manual-command-list">
+          <view wx:for="{{manualWriteCommands}}" wx:for-item="command" wx:for-index="commandIndex" wx:key="id" class="manual-command manual-command-featured">
+            <view class="manual-command-head"><view class="manual-command-label">{{command.label}}</view><button class="manual-copy-button" data-command-id="{{command.id}}" disabled="{{!command.copyEnabled}}" bindtap="copyManualCommand">复制</button></view>
+            <view class="manual-command-frame">{{command.displayFrame}}</view>
+          </view>
+        </view>
+
+        <!-- Keep the visible loop number when switching TCP/RTU to compare the same circuit. -->
+      </view>
+    </view>
+
+    <view wx:if="{{group && !developmentManual}}" class="safety-note">
+      <view class="safety-mark">!</view>
+      <view class="safety-copy">请核对控制卡外观和标签；型号不一致或无法辨认时勿套用协议。不要打开或拆卸带电设备。</view>
+    </view>
+
+    <view wx:if="{{photos.length}}" class="appearance-photos">
+      <view class="appearance-photo-track">
+        <view wx:for="{{photos}}" wx:key="id" class="appearance-photo-card">
+          <image class="appearance-photo" src="{{item.path}}" mode="widthFix" data-path="{{item.path}}" bindtap="previewPhoto" />
+          <view class="photo-zoom-hint">点图放大</view>
+        </view>
+      </view>
+    </view>
+    <view wx:elif="{{group}}" class="photo-missing-card">
+      <view class="photo-missing-mark">▧</view>
+      <view class="photo-missing-title">已审核实拍待补</view>
+      <view class="photo-missing-copy">当前没有可公开展示的设备实拍，协议也不会自动开放。</view>
+    </view>
+
+    <view wx:if="{{group.sampleStatusLabel && !developmentManual}}" class="draft-material-card">
+      <view class="draft-material-title">关联机柜与资料状态</view>
+      <view class="draft-material-copy">{{group.visiblePanelLabel}}</view>
+      <view class="draft-material-copy">参考原件：《{{group.manualReferenceTitle}}》；{{group.manualMappingNote}}</view>
+      <view class="draft-material-copy">说明书版本：{{group.manualDocumentVersion}}（{{group.manualVersionNote}}）</view>
+      <view class="draft-material-copy">{{group.transportClue}}</view>
+      <view class="draft-material-warning">用户确认这台 itC KZX 柜内 SmartPLC-F300 样本所用协议已验证且准确；正式目录尚未收录。F300 品牌与固件/协议版本、柜内控制卡照片公开授权、具名复核及正式映射记录仍待完成。</view>
+    </view>
+
+    <view wx:if="{{group && !protocol && !developmentManual}}" class="resolution-card">
+      <view class="resolution-mark">!</view>
+      <view class="resolution-title">暂不能确定适用协议</view>
+      <view class="resolution-copy">{{statusMessage}}</view>
+      <view class="resolution-hint">同一外观可能对应不同控制卡；资料不足时请联系维护人员。</view>
+    </view>
+
+    <view wx:if="{{protocol}}" class="protocol-card">
+      <view class="protocol-card-title">{{protocol.title}}</view>
+      <view class="protocol-meta">控制卡 {{protocol.controllerBrand}} · {{protocol.controllerModel}} · {{protocol.controllerVersion}}</view>
+      <view class="protocol-row"><text class="protocol-label">协议版本</text><text>{{protocol.protocolVersion}}</text></view>
+      <view class="protocol-row"><text class="protocol-label">连接参数</text><text>{{protocol.transportSummary}}</text></view>
+      <view wx:for="{{protocol.commands}}" wx:key="id" class="command-row">
+        <view class="command-head"><view class="command-label">{{item.label}}</view><button class="command-copy-button" data-command-id="{{item.id}}" bindtap="copyProtocolCommand">复制</button></view>
+        <view class="command-value">{{item.value}}</view>
+      </view>
+      <view class="protocol-meta">来源：{{protocol.displaySourceTitle}}</view>
+      <view class="protocol-meta">复核：{{protocol.displayReviewerName}} · 最近更新：{{protocol.updatedAt}}</view>
+      <button class="copy-button" bindtap="copyProtocol">复制摘要</button>
+    </view>
+  </view>
+</scroll-view>

@@ -1,6 +1,6 @@
 const { printPerformanceSummary, startMeasurement } = require('../../utils/performance')
 const finishLedScreenModuleLoad = startMeasurement('LED大屏/脚本加载')
-const { calculateLedScreenPlan, LED_UNIT_SPECS } = require('../../utils/led-screen')
+const { calculateLedScreenPlan, LED_UNIT_SPECS, PREFERRED_RATIO_ERROR } = require('../../utils/led-screen')
 const { findValueIndex, readPreferences, writePreferences } = require('../../utils/preferences')
 const { vibrate } = require('../../utils/haptics')
 const {
@@ -11,6 +11,7 @@ const {
   isOperationResultCurrent,
 } = require('../../utils/operation-inputs')
 const { addPageToActiveProject, syncPageFavorite, togglePageFavorite } = require('../../utils/result-record-actions')
+const { drawAndExportReport } = require('../../utils/report-canvas')
 const {
   previewGeneratedImage,
   saveGeneratedImage,
@@ -27,6 +28,8 @@ const getUnitSpec = (key) => LED_UNIT_SPECS[key] || null
 
 const PREFERENCE_KEY = 'audioTool.ledScreen.preferences'
 const INPUT_CALCULATION_DELAY = 160
+const DIAGRAM_STAGE_WIDTH_RPX = 628
+const DIAGRAM_STAGE_HEIGHT_RPX = 420
 const LED_OPERATION_FIELDS = {
   wallWidthMeters: { label: '墙体宽度', unit: 'm', dataKey: 'wallWidthText' },
   wallHeightMeters: { label: '墙体高度', unit: 'm', dataKey: 'wallHeightText' },
@@ -89,30 +92,88 @@ function operationUiState(page, values) {
   }
 }
 
+function finiteInputNumber(value) {
+  if (value === null || value === undefined) return null
+  if (typeof value === 'string' && value.trim() === '') return null
+  const number = Number(value)
+  return Number.isFinite(number) ? number : null
+}
+
+function pageInputFeedback(state, calculationError = '') {
+  const fieldErrors = {}
+  let inputSuggestion = ''
+  const mark = (fields, message, suggestion = '') => {
+    fields.forEach((field) => { fieldErrors[field] = message })
+    if (!inputSuggestion && suggestion) inputSuggestion = suggestion
+  }
+  if (!calculationError) return { fieldErrors, inputSuggestion }
+
+  if (calculationError.includes('墙体宽度和高度')) {
+    const wallWidth = finiteInputNumber(state.wallWidthText ?? state.wallWidthMeters)
+    const wallHeight = finiteInputNumber(state.wallHeightText ?? state.wallHeightMeters)
+    if (!(wallWidth > 0)) mark(['wallWidthText'], '请输入大于 0 的墙体宽度。')
+    if (!(wallHeight > 0)) mark(['wallHeightText'], '请输入大于 0 的墙体高度。')
+  } else if (calculationError.includes('上方预留')) mark(['topReserveText'], '请填写有效的上方预留。')
+  else if (calculationError.includes('下方预留')) mark(['bottomReserveText'], '请填写有效的下方预留。')
+  else if (calculationError.includes('四周包边')) mark(['frameWidthText'], '请填写有效的每边包边。')
+  else if (calculationError.includes('上下预留空间不能')) {
+    const topReserve = finiteInputNumber(state.topReserveText ?? state.topReserveMeters)
+    const bottomReserve = finiteInputNumber(state.bottomReserveText ?? state.bottomReserveMeters)
+    if (topReserve < 0) mark(['topReserveText'], '预留不能小于 0。')
+    if (bottomReserve < 0) mark(['bottomReserveText'], '预留不能小于 0。')
+  } else if (calculationError.includes('包边尺寸不能')) mark(['frameWidthText'], '包边不能小于 0。')
+  else if (calculationError.includes('左右包边尺寸之和')) {
+    mark(['wallWidthText'], '需容纳左右包边。')
+    mark(['frameWidthText'], '请调小每边包边。', '请调小每边包边，或增大墙宽。')
+  } else if (calculationError.includes('上下预留与包边尺寸之和')) {
+    mark(['wallHeightText'], '需容纳预留和两侧包边。')
+    mark(['topReserveText', 'bottomReserveText'], '请调低预留。')
+    mark(['frameWidthText'], '请调小每边包边。', '请调小预留或包边，或增大墙高。')
+  } else if (calculationError.includes('最近观看距离')) mark(['viewingDistanceText'], '请输入大于 0 的观看距离。')
+  else if (calculationError.includes('画面比例')) mark(['aspectRatioIndex'], '请选择画面比例。')
+  else if (calculationError.includes('模组或箱体规格')) mark(['unitIndex'], '请选择拼装单元。')
+  else if (calculationError.includes('点间距规格')) mark(['pitchIndex'], '请选择点间距。')
+  else if (calculationError.startsWith('当前可用墙面放不下一块')) {
+    mark(
+      ['wallWidthText', 'wallHeightText'],
+      '当前尺寸放不下一个拼装单元。',
+      '请检查墙体尺寸、上下预留和包边。',
+    )
+  } else if (calculationError.includes('超出可可靠计算范围')) {
+    mark(['wallWidthText', 'wallHeightText'], '请检查墙体尺寸是否填写正确。', '请检查墙体尺寸是否填写正确。')
+  }
+
+  return { fieldErrors, inputSuggestion }
+}
+
 function calculateStructuredResult(values) {
   const unit = getUnitSpec(values.unitKey)
   if (!unit || Number(values.unitWidthMm) !== unit.widthMm || Number(values.unitHeightMm) !== unit.heightMm) {
     return { result: null, inputError: '请确认拼装单元的具体宽度和高度。' }
   }
-  const frameWidthCm = Number(values.frameWidthCm)
+  const frameWidthCm = finiteInputNumber(values.frameWidthCm)
   const calculation = calculateLedScreenPlan({
     wallWidthMeters: values.wallWidthMeters,
     wallHeightMeters: values.wallHeightMeters,
     topReserveMeters: values.topReserveMeters,
     bottomReserveMeters: values.bottomReserveMeters,
-    frameWidthMeters: Number.isFinite(frameWidthCm) ? frameWidthCm / 100 : NaN,
+    frameWidthMeters: frameWidthCm === null ? NaN : frameWidthCm / 100,
     viewingDistanceMeters: values.viewingDistanceMeters,
     aspectRatioKey: values.aspectRatioKey,
     unitKey: values.unitKey,
     pixelPitch: values.pixelPitch,
   })
+  const validation = pageInputFeedback(values, calculation.error)
   return calculation.error
-    ? { result: null, inputError: calculation.error }
-    : { result: decorateResult(calculation, { wallWidthText: values.wallWidthMeters, wallHeightText: values.wallHeightMeters }), inputError: '' }
+    ? { result: null, inputError: calculation.error, ...validation }
+    : {
+      result: decorateResult(calculation, { wallWidthText: values.wallWidthMeters, wallHeightText: values.wallHeightMeters }),
+      inputError: '', fieldErrors: {}, inputSuggestion: '',
+    }
 }
 
 function getUnitKey(state) {
-  return state.unitOptions[state.unitIndex].key
+  return state.unitOptions?.[state.unitIndex]?.key
 }
 
 function decorateResult(result, state) {
@@ -127,12 +188,38 @@ function decorateResult(result, state) {
   const screenTop = result.frameWidthMeters / result.installedHeightMeters * 100
   const screenWidth = result.screenWidthMeters / result.installedWidthMeters * 100
   const screenHeight = result.screenHeightMeters / result.installedHeightMeters * 100
-  const diagramHeightRpx = 630 * wallHeight / wallWidth
+  const ratioWidthPercent = wallWidth / wallHeight
+  const diagramFitWidthPercent = Math.min(
+    100,
+    DIAGRAM_STAGE_HEIGHT_RPX * ratioWidthPercent / DIAGRAM_STAGE_WIDTH_RPX * 100,
+  )
+  const diagramWidthRpx = DIAGRAM_STAGE_WIDTH_RPX * diagramFitWidthPercent / 100
+  const diagramBoxHeightRpx = diagramWidthRpx / ratioWidthPercent
+  const legacyDiagramHeightRpx = 630 * wallHeight / wallWidth
+  const exactActualRatio = result.columns * getUnitSpec(result.unitKey).widthMm
+    / (result.rows * getUnitSpec(result.unitKey).heightMm)
+  const ratioDeviation = Math.abs(exactActualRatio - result.targetAspectRatio) / result.targetAspectRatio
+  const ratioDeviationPercent = ratioDeviation * 100
+  const ratioFallback = ratioDeviation > PREFERRED_RATIO_ERROR + 1e-9
+  const actualRatioText = `${Number(exactActualRatio.toFixed(2))}:1`
+  const ratioDeviationText = `${ratioDeviationPercent.toFixed(1)}%`
   const unitTypeLabel = result.unitType === 'module' ? '模组' : '箱体'
   return {
     ...result,
     layoutText: `横向${unitTypeLabel} ${result.columns} × 纵向${unitTypeLabel} ${result.rows}，总共 ${result.totalUnits} 块`,
-    diagramHeightRpx: Math.round(diagramHeightRpx),
+    ratioFallback,
+    ratioDeviationPercent,
+    ratioDeviationText,
+    actualRatioText,
+    ratioSummaryText: `目标 ${result.targetAspectRatioKey} · 实际 ${actualRatioText}（偏差 ${ratioDeviationText}）`,
+    ratioFallbackText: ratioFallback ? '整数拼装偏差超过 5%，无法满足目标比例，当前为最接近方案。' : '',
+    integerLayoutNote: ratioDeviation > 1e-9
+      ? '完整单元拼装会产生比例偏差，内容按实际比例适配。'
+      : '屏体按完整单元拼装，内容按实际比例显示。',
+    diagramHeightRpx: Math.round(Math.min(DIAGRAM_STAGE_HEIGHT_RPX, legacyDiagramHeightRpx)),
+    diagramFitStyle: `width:${diagramFitWidthPercent.toFixed(6)}%`,
+    wallDiagramStyle: `padding-top:${(wallHeight / wallWidth * 100).toFixed(6)}%`,
+    diagramLabelsBelow: diagramWidthRpx < 260 || diagramBoxHeightRpx < 100,
     frameStyle: [
       `left:${frameLeft.toFixed(3)}%`,
       `top:${frameTop.toFixed(3)}%`,
@@ -150,23 +237,22 @@ function decorateResult(result, state) {
 }
 
 function calculatePageResult(state) {
-  const frameWidthCm = Number(state.frameWidthText)
+  const frameWidthCm = finiteInputNumber(state.frameWidthText)
   const calculation = calculateLedScreenPlan({
     wallWidthMeters: state.wallWidthText,
     wallHeightMeters: state.wallHeightText,
     topReserveMeters: state.topReserveText,
     bottomReserveMeters: state.bottomReserveText,
-    frameWidthMeters: String(state.frameWidthText).trim() && Number.isFinite(frameWidthCm)
-      ? frameWidthCm / 100
-      : NaN,
+    frameWidthMeters: frameWidthCm === null ? NaN : frameWidthCm / 100,
     viewingDistanceMeters: state.viewingDistanceText,
-    aspectRatioKey: state.aspectRatioOptions[state.aspectRatioIndex].key,
+    aspectRatioKey: state.aspectRatioOptions?.[state.aspectRatioIndex]?.key ?? null,
     unitKey: getUnitKey(state),
-    pixelPitch: state.pitchOptions[state.pitchIndex].value,
+    pixelPitch: state.pitchOptions?.[state.pitchIndex]?.value,
   })
+  const validation = pageInputFeedback(state, calculation.error)
   return calculation.error
-    ? { result: null, inputError: calculation.error }
-    : { result: decorateResult(calculation, state), inputError: '' }
+    ? { result: null, inputError: calculation.error, ...validation }
+    : { result: decorateResult(calculation, state), inputError: '', fieldErrors: {}, inputSuggestion: '' }
 }
 
 function buildPreferences(state) {
@@ -177,9 +263,9 @@ function buildPreferences(state) {
     bottomReserveText: state.bottomReserveText,
     frameWidthText: state.frameWidthText,
     viewingDistanceText: state.viewingDistanceText,
-    aspectRatio: state.aspectRatioOptions[state.aspectRatioIndex].key,
-    unitKey: getUnitKey(state),
-    pitch: state.pitchOptions[state.pitchIndex].value,
+    aspectRatio: state.aspectRatioOptions?.[state.aspectRatioIndex]?.key || '',
+    unitKey: getUnitKey(state) || '',
+    pitch: state.pitchOptions?.[state.pitchIndex]?.value ?? '',
   }
 }
 
@@ -219,6 +305,9 @@ Page({
     result: null,
     currentFavorite: false,
     inputError: '',
+    inputSuggestion: '',
+    fieldErrors: {},
+    inputPending: false,
     reportCanvasWidth: REPORT_WIDTH,
     reportCanvasHeight: REPORT_HEIGHT,
     reportImagePath: '',
@@ -333,6 +422,9 @@ Page({
       result: null,
       currentFavorite: false,
       inputError: reason === 'end' ? '' : '本次操作输入已变化，请重新确认后计算。',
+      inputSuggestion: '',
+      fieldErrors: {},
+      inputPending: false,
       reportImagePath: '',
       reportPreviewVisible: false,
       isGeneratingReport: false,
@@ -406,16 +498,26 @@ Page({
   onFieldInput(event) {
     const field = event.currentTarget.dataset.field
     const value = event.detail.value
+    if (!field || this.data[field] === value) return
     if (this.getOperationSnapshot()) {
       const operationKey = Object.entries(LED_OPERATION_FIELDS).find(([, descriptor]) => descriptor.dataKey === field)?.[0]
-      this.setData({ [field]: value })
+      this.setData({ [field]: value, fieldErrors: {}, inputSuggestion: '', inputPending: false })
       if (operationKey) this.setOperationCandidate(operationKey, value, LED_OPERATION_FIELDS[operationKey].unit)
       return
     }
-    const reportInvalidated = this.data[field] !== value && this.invalidateReportGeneration()
+    this.invalidateReportGeneration()
+    this._ledOperationResultGuard = null
     this.setData({
       [field]: value,
-      ...(reportInvalidated ? { reportImagePath: '', reportPreviewVisible: false, isGeneratingReport: false } : {}),
+      result: null,
+      currentFavorite: false,
+      inputError: '',
+      inputSuggestion: '',
+      fieldErrors: {},
+      inputPending: true,
+      reportImagePath: '',
+      reportPreviewVisible: false,
+      isGeneratingReport: false,
     })
     this.scheduleInputCalculation()
   },
@@ -424,12 +526,13 @@ Page({
 
   onAspectRatioChange(event) {
     const aspectRatioIndex = Number(event.detail.value)
+    if (!Number.isInteger(aspectRatioIndex) || aspectRatioIndex < -1 || aspectRatioIndex >= this.data.aspectRatioOptions.length) return
     if (aspectRatioIndex === this.data.aspectRatioIndex) return
     vibrate('light')
     if (this.getOperationSnapshot()) {
       const aspectRatioKey = this.data.aspectRatioOptions[aspectRatioIndex]?.key
       this.setData({ aspectRatioIndex })
-      if (aspectRatioKey) this.setOperationCandidate('aspectRatioKey', aspectRatioKey, 'ratio')
+      this.setOperationCandidate('aspectRatioKey', aspectRatioKey, 'ratio')
       return
     }
     this.commitCalculatedState({ aspectRatioIndex }, this.invalidateReportGeneration())
@@ -437,16 +540,16 @@ Page({
 
   onUnitChange(event) {
     const unitIndex = Number(event.detail.value)
+    if (!Number.isInteger(unitIndex) || unitIndex < -1 || unitIndex >= this.data.unitOptions.length) return
     if (unitIndex === this.data.unitIndex) return
     vibrate('light')
     if (this.getOperationSnapshot()) {
       const unit = this.data.unitOptions[unitIndex]
       const spec = getUnitSpec(unit?.key)
-      if (!spec) return
       this.setData({ unitIndex })
-      this.setOperationCandidate('unitKey', spec.key, 'key')
-      this.setOperationCandidate('unitWidthMm', spec.widthMm, 'mm')
-      this.setOperationCandidate('unitHeightMm', spec.heightMm, 'mm')
+      this.setOperationCandidate('unitKey', spec?.key, 'key')
+      this.setOperationCandidate('unitWidthMm', spec?.widthMm, 'mm')
+      this.setOperationCandidate('unitHeightMm', spec?.heightMm, 'mm')
       return
     }
     this.commitCalculatedState({ unitIndex }, this.invalidateReportGeneration())
@@ -454,12 +557,13 @@ Page({
 
   onPitchChange(event) {
     const pitchIndex = Number(event.detail.value)
+    if (!Number.isInteger(pitchIndex) || pitchIndex < -1 || pitchIndex >= this.data.pitchOptions.length) return
     if (pitchIndex === this.data.pitchIndex) return
     vibrate('light')
     if (this.getOperationSnapshot()) {
       const pixelPitch = this.data.pitchOptions[pitchIndex]?.value
       this.setData({ pitchIndex })
-      if (pixelPitch !== undefined) this.setOperationCandidate('pixelPitch', pixelPitch, 'pitch')
+      this.setOperationCandidate('pixelPitch', pixelPitch, 'pitch')
       return
     }
     this.commitCalculatedState({ pitchIndex }, this.invalidateReportGeneration())
@@ -474,20 +578,26 @@ Page({
     this.cancelInputCalculation()
     if (operation.structured) {
       if (operation.blocked) {
-        this.setData({ result: null, currentFavorite: false, inputError: '请确认本次操作所需的所有输入。' })
+        this.setData({
+          result: null, currentFavorite: false, inputError: '请确认本次操作所需的所有输入。',
+          inputSuggestion: '', fieldErrors: {}, inputPending: false,
+        })
         return null
       }
       if (!operation.guard()) return null
       const calculated = calculateStructuredResult(operation.state)
       if (!operation.guard() || this._ledUnloaded) return null
       if (!calculated.result) {
-        this.setData({ result: null, currentFavorite: false, inputError: calculated.inputError })
+        this.setData({
+          result: null, currentFavorite: false, inputError: calculated.inputError,
+          inputSuggestion: calculated.inputSuggestion || '', fieldErrors: calculated.fieldErrors || {}, inputPending: false,
+        })
         return null
       }
       const guard = operation.commit(calculated.result)
       if (!guard) return null
       this._ledOperationResultGuard = guard
-      this.setData({ ...calculated, currentFavorite: false }, () => {
+      this.setData({ ...calculated, currentFavorite: false, inputPending: false }, () => {
         if (!this.hasCurrentOperationResult(calculated.result)) return
         if (this._pageVisible) syncPageFavorite(this)
       })
@@ -506,6 +616,7 @@ Page({
       ...changes,
       ...calculated,
       ...(!calculated.result ? { currentFavorite: false } : {}),
+      inputPending: false,
       ...(reportInvalidated ? { reportImagePath: '', reportPreviewVisible: false, isGeneratingReport: false } : {}),
     }, () => {
       finishViewUpdate()
@@ -528,13 +639,13 @@ Page({
   },
 
   cancelInputCalculation() {
-    if (!this.inputCalculationTimer) return
+    if (this.inputCalculationTimer === null || this.inputCalculationTimer === undefined) return
     clearTimeout(this.inputCalculationTimer)
     this.inputCalculationTimer = null
   },
 
   flushInputCalculation() {
-    if (!this.inputCalculationTimer) return
+    if (this.inputCalculationTimer === null || this.inputCalculationTimer === undefined) return
     this.cancelInputCalculation()
     this.commitCalculatedState()
   },
@@ -592,42 +703,29 @@ Page({
     if (typeof wx.showLoading === 'function') wx.showLoading({ title: '正在生成图片', mask: true })
 
     try {
-    const context = wx.createCanvasContext(REPORT_CANVAS_ID, this)
-      const finishReportDrawing = startMeasurement('LED大屏/长图绘制')
-      drawLedScreenReport(context, payload)
-      finishReportDrawing()
-      context.draw(false, () => {
-        if (!isCurrent()) return
-        const finishReportExport = startMeasurement('LED大屏/长图导出')
-        wx.canvasToTempFilePath({
-          canvasId: REPORT_CANVAS_ID,
-          width: REPORT_WIDTH,
-          height: REPORT_HEIGHT,
-          destWidth: REPORT_WIDTH * 2,
-          destHeight: REPORT_HEIGHT * 2,
-          fileType: 'png',
-          quality: 1,
-          success: ({ tempFilePath }) => {
-            if (!isCurrent()) return
-            finishReportExport({ success: Boolean(tempFilePath) })
-            if (!tempFilePath) {
-              this.finishReportGeneration(revision)
-              wx.showToast({ title: '图片生成失败，请重试', icon: 'none' })
-              return
-            }
-            this.reportSignature = signature
-            this.finishReportGeneration(revision, {
-              reportImagePath: tempFilePath,
-              reportPreviewVisible: true,
-            })
-          },
-          fail: () => {
-            if (!isCurrent()) return
-            finishReportExport({ success: false })
-            this.finishReportGeneration(revision)
-            wx.showToast({ title: '图片生成失败，请重试', icon: 'none' })
-          },
-        }, this)
+      drawAndExportReport(this, {
+        canvasId: REPORT_CANVAS_ID,
+        isCurrent,
+        width: REPORT_WIDTH,
+        height: REPORT_HEIGHT,
+        draw: (context) => {
+          const finishReportDrawing = startMeasurement('LED大屏/长图绘制')
+          drawLedScreenReport(context, payload)
+          finishReportDrawing()
+        },
+        getExportOptions: () => ({ destWidth: REPORT_WIDTH * 2, destHeight: REPORT_HEIGHT * 2 }),
+        startExportMeasurement: () => startMeasurement('LED大屏/长图导出'),
+        onSuccess: (tempFilePath) => {
+          this.reportSignature = signature
+          this.finishReportGeneration(revision, {
+            reportImagePath: tempFilePath,
+            reportPreviewVisible: true,
+          })
+        },
+        onFailure: () => {
+          this.finishReportGeneration(revision)
+          wx.showToast({ title: '图片生成失败，请重试', icon: 'none' })
+        },
       })
     } catch (error) {
       if (!isCurrent()) return
@@ -676,7 +774,12 @@ Page({
     if (!result) return ''
     return [
       'LED 大屏尺寸预估',
+      `现场墙面：${state.wallWidthText} × ${state.wallHeightText} m`,
+      `上/下最低预留：${state.topReserveText} / ${state.bottomReserveText} m`,
       `目标画面比例：${result.targetAspectRatioKey}`,
+      `实际比例：${result.actualRatioText || result.ratioText}（偏差 ${result.ratioDeviationText || '—'}）`,
+      result.integerLayoutNote,
+      ...(result.ratioFallbackText ? [`比例提示：${result.ratioFallbackText}`] : []),
       `实际屏体：${result.dimensionText}`,
       `四周包边：${result.frameWidthText}`,
       `含包边安装外尺寸：${result.installedDimensionText}`,

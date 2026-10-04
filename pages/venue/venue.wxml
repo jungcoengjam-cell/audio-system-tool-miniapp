@@ -1,5 +1,5 @@
 <view class="page-root">
-<scroll-view class="page-scroll" scroll-y>
+<scroll-view class="page-scroll" scroll-y scroll-into-view="{{scrollTargetId}}" scroll-with-animation="true">
   <view class="page-content">
     <view class="page-header">
       <view class="page-title">会议室扩声预估</view>
@@ -15,6 +15,38 @@
         data-index="{{index}}"
         bindtap="onSceneModeTap"
       >{{item.label}}</view>
+    </view>
+
+    <view wx:if="{{showDefaultExample}}" class="venue-example-note">演示参数，请按实际场地填写。</view>
+
+    <view class="result-accordion-card venue-help-card">
+      <view class="result-disclosure-row venue-help-disclosure-row" bindtap="toggleVenueInputHelp">
+        <view class="result-disclosure-title">填写说明</view>
+        <text class="result-disclosure-state">{{showVenueInputHelp ? '收起 ↑' : '查看 ↓'}}</text>
+      </view>
+      <view wx:if="{{showVenueInputHelp}}" class="result-accordion-content venue-help-content">
+        <view wx:if="{{sceneModeIndex == 0}}" class="venue-mode-scope">
+          <view class="venue-mode-scope-title">适用范围 · 报告 / 培训型</view>
+          <view>平顶、单层、规则矩形会议室；面积 ≤ 300 m²，当前主扩方向纵深 ≤ 20 m，层高需高于 0.3 m 且不超过 6 m。</view>
+        </view>
+        <view wx:else class="venue-mode-scope">
+          <view class="venue-mode-scope-title">适用范围 · 围桌讨论型</view>
+          <view>规则矩形会议室；面积 ≤ 300 m²、层高 2.3～6 m、4～40 人。可选平顶吸顶、顶面不可安装、开放式或挑高顶。</view>
+        </view>
+        <view class="grade-guidance">按任务书或设计指标选择；最大声压级是系统能力目标，不是日常使用音量；未明确时与方案工程师确认。</view>
+        <view wx:if="{{sceneModeIndex == 0}}" class="venue-measurement-guide">
+          <view class="venue-measurement-guide-title">报告型测量口径 · 不按比例</view>
+          <view class="venue-measurement-room">
+            <view class="venue-measurement-wall">主扩安装面（纵向起点）</view>
+            <view class="venue-measurement-plane">
+              <view class="venue-measurement-row venue-measurement-row-first"><text class="venue-measurement-row-label">首排 · {{firstListeningDistanceText}} m</text></view>
+              <view class="venue-measurement-seat-zone">居中坐席区<view>↔ 听音宽度 {{listeningWidthText}} m</view></view>
+              <view class="venue-measurement-row venue-measurement-row-last"><text class="venue-measurement-row-label">末排 · {{lastListeningDistanceText}} m</text></view>
+            </view>
+          </view>
+          <view class="venue-measurement-caption">首排、末排距离沿房间纵向水平量取；听音宽度沿横向量取，不是斜向三维声程。</view>
+        </view>
+      </view>
     </view>
 
     <view class="card venue-input-card">
@@ -130,7 +162,6 @@
             <view class="pag-nag-mode-option {{discussionPagNagSpeakerMode == 'single' ? 'pag-nag-mode-option-active' : ''}}" data-mode="single" aria-role="button" aria-label="同一只音箱" bindtap="onDiscussionPagNagSpeakerModeChange">同一只音箱</view>
             <view class="pag-nag-mode-option {{discussionPagNagSpeakerMode == 'multiple' ? 'pag-nag-mode-option-active' : ''}}" data-mode="multiple" aria-role="button" aria-label="多音箱取点" bindtap="onDiscussionPagNagSpeakerModeChange">多音箱取点</view>
           </view>
-          <view class="discussion-pag-nag-description">{{pagNagGuideKey == 'nom' ? '按现场状态，填写同时开放并送声的话筒支数。' : '先选测量项，再量图中两点间的空间直线距离，计入高度差。'}}</view>
           <view class="pag-nag-guide-tabs">
             <view class="pag-nag-guide-tab {{pagNagGuideKey == 'ds' ? 'pag-nag-guide-tab-active' : ''}}" data-key="ds" aria-role="button" aria-label="选择 Ds 嘴到话筒" bindtap="onPagNagGuideSelect"><text>嘴到话筒</text><text class="pag-nag-guide-code">Ds · {{discussionPagNagDsText || '待填'}}</text></view>
             <view class="pag-nag-guide-tab {{pagNagGuideKey == 'd0' ? 'pag-nag-guide-tab-active' : ''}}" data-key="d0" aria-role="button" aria-label="选择 D0 发言人到最远听众" bindtap="onPagNagGuideSelect"><text>最远听众</text><text class="pag-nag-guide-code">D0 · {{discussionPagNagD0Text || '待填'}}</text></view>
@@ -139,6 +170,13 @@
             <view class="pag-nag-guide-tab {{pagNagGuideKey == 'd2' ? 'pag-nag-guide-tab-active' : ''}}" data-key="d2" aria-role="button" aria-label="{{discussionPagNagSpeakerMode == 'multiple' ? '选择距最远听众最近且播放该话筒信号的音箱 B，测量 D2' : '选择 D2 音箱到最远听众'}}" bindtap="onPagNagGuideSelect"><text>{{discussionPagNagSpeakerMode == 'multiple' ? 'B 到最远' : '音箱到最远'}}</text><text class="pag-nag-guide-code">D2 · {{discussionPagNagD2Text || '待填'}}</text></view>
             <view class="pag-nag-guide-tab {{pagNagGuideKey == 'nom' ? 'pag-nag-guide-tab-active' : ''}}" data-key="nom" aria-role="button" aria-label="选择 NOM 同时开放并送声的话筒数" bindtap="onPagNagGuideSelect"><text>开放话筒</text><text class="pag-nag-guide-code">NOM · {{discussionPagNagNomText || '待填'}}</text></view>
           </view>
+          <view class="result-accordion-card venue-help-card">
+            <view class="result-disclosure-row venue-help-disclosure-row" bindtap="togglePagNagGuideHelp">
+              <view class="result-disclosure-title">测量说明</view>
+              <text class="result-disclosure-state">{{showPagNagGuideHelp ? '收起 ↑' : '查看 ↓'}}</text>
+            </view>
+            <view wx:if="{{showPagNagGuideHelp}}" class="result-accordion-content venue-help-content">
+              <view class="discussion-pag-nag-description">{{pagNagGuideKey == 'nom' ? '按现场状态，填写同时开放并送声的话筒支数。' : '先选测量项，再量图中两点间的空间直线距离，计入高度差。'}}</view>
           <view wx:if="{{pagNagGuideKey != 'nom'}}" class="pag-nag-guide-scene">
             <view class="pag-nag-guide-scale">测量示意 · 不按比例</view>
             <view class="pag-nag-guide-plot">
@@ -167,15 +205,17 @@
             <view class="pag-nag-guide-nom-mic pag-nag-guide-nom-closed"><text class="pag-nag-guide-nom-icon"></text><text class="pag-nag-guide-nom-label">关闭或未送声</text><text class="pag-nag-guide-nom-state">不计</text></view>
             </view>
           </view>
-          <view class="pag-nag-guide-input">
-            <view wx:if="{{pagNagGuideKey == 'ds'}}" class="discussion-compact-field"><view class="field-label">Ds · 嘴到话筒</view><view class="input-wrap"><input class="number-input" type="digit" value="{{discussionPagNagDsText}}" placeholder="填写" data-field="discussionPagNagDsText" bindinput="onInput" /><view class="input-unit">m</view></view></view>
-            <view wx:if="{{pagNagGuideKey == 'd0'}}" class="discussion-compact-field"><view class="field-label">D0 · 发言人到最远听众</view><view class="input-wrap"><input class="number-input" type="digit" value="{{discussionPagNagD0Text}}" placeholder="填写" data-field="discussionPagNagD0Text" bindinput="onInput" /><view class="input-unit">m</view></view></view>
-            <view wx:if="{{pagNagGuideKey == 'dn'}}" class="discussion-compact-field"><view class="field-label">Dn · 发言人到最近听众</view><view class="input-wrap"><input class="number-input" type="digit" value="{{discussionPagNagDnText}}" placeholder="填写" data-field="discussionPagNagDnText" bindinput="onInput" /><view class="input-unit">m</view></view></view>
-            <view wx:if="{{pagNagGuideKey == 'd1'}}" class="discussion-compact-field"><view class="field-label">{{discussionPagNagSpeakerMode == 'multiple' ? 'D1 · 话筒 → 音箱 A' : 'D1 · 话筒到实际送声音箱'}}</view><view class="input-wrap"><input class="number-input" type="digit" value="{{discussionPagNagD1Text}}" placeholder="填写" data-field="discussionPagNagD1Text" bindinput="onInput" /><view class="input-unit">m</view></view></view>
-            <view wx:if="{{pagNagGuideKey == 'd2'}}" class="discussion-compact-field"><view class="field-label">{{discussionPagNagSpeakerMode == 'multiple' ? 'D2 · 音箱 B → 最远听众' : 'D2 · 音箱到同一最远听众'}}</view><view class="input-wrap"><input class="number-input" type="digit" value="{{discussionPagNagD2Text}}" placeholder="填写" data-field="discussionPagNagD2Text" bindinput="onInput" /><view class="input-unit">m</view></view></view>
-            <view wx:if="{{pagNagGuideKey == 'nom'}}" class="discussion-compact-field"><view class="field-label">NOM · 同时开放并送声的话筒数</view><view class="input-wrap"><input class="number-input" type="number" value="{{discussionPagNagNomText}}" placeholder="填写" data-field="discussionPagNagNomText" bindinput="onInput" /><view class="input-unit">支</view></view></view>
-          </view>
           <view wx:if="{{pagNagGuideKey == 'nom'}}" class="pag-nag-guide-note">统计同时开放并参与本链路的话筒，即使暂时无人讲话；不是参会人数或总安装数。</view>
+            </view>
+          </view>
+          <view id="pag-nag-input" class="pag-nag-guide-input">
+            <view wx:if="{{pagNagGuideKey == 'ds'}}" class="discussion-compact-field"><view class="field-label">Ds · 嘴到话筒</view><view class="input-wrap"><input class="number-input" type="digit" value="{{discussionPagNagDsText}}" placeholder="填写" data-field="discussionPagNagDsText" focus="{{pagNagInputFocused}}" bindinput="onInput" bindblur="onPagNagInputBlur" /><view class="input-unit">m</view></view></view>
+            <view wx:if="{{pagNagGuideKey == 'd0'}}" class="discussion-compact-field"><view class="field-label">D0 · 发言人到最远听众</view><view class="input-wrap"><input class="number-input" type="digit" value="{{discussionPagNagD0Text}}" placeholder="填写" data-field="discussionPagNagD0Text" focus="{{pagNagInputFocused}}" bindinput="onInput" bindblur="onPagNagInputBlur" /><view class="input-unit">m</view></view></view>
+            <view wx:if="{{pagNagGuideKey == 'dn'}}" class="discussion-compact-field"><view class="field-label">Dn · 发言人到最近听众</view><view class="input-wrap"><input class="number-input" type="digit" value="{{discussionPagNagDnText}}" placeholder="填写" data-field="discussionPagNagDnText" focus="{{pagNagInputFocused}}" bindinput="onInput" bindblur="onPagNagInputBlur" /><view class="input-unit">m</view></view></view>
+            <view wx:if="{{pagNagGuideKey == 'd1'}}" class="discussion-compact-field"><view class="field-label">{{discussionPagNagSpeakerMode == 'multiple' ? 'D1 · 话筒 → 音箱 A' : 'D1 · 话筒到实际送声音箱'}}</view><view class="input-wrap"><input class="number-input" type="digit" value="{{discussionPagNagD1Text}}" placeholder="填写" data-field="discussionPagNagD1Text" focus="{{pagNagInputFocused}}" bindinput="onInput" bindblur="onPagNagInputBlur" /><view class="input-unit">m</view></view></view>
+            <view wx:if="{{pagNagGuideKey == 'd2'}}" class="discussion-compact-field"><view class="field-label">{{discussionPagNagSpeakerMode == 'multiple' ? 'D2 · 音箱 B → 最远听众' : 'D2 · 音箱到同一最远听众'}}</view><view class="input-wrap"><input class="number-input" type="digit" value="{{discussionPagNagD2Text}}" placeholder="填写" data-field="discussionPagNagD2Text" focus="{{pagNagInputFocused}}" bindinput="onInput" bindblur="onPagNagInputBlur" /><view class="input-unit">m</view></view></view>
+            <view wx:if="{{pagNagGuideKey == 'nom'}}" class="discussion-compact-field"><view class="field-label">NOM · 同时开放并送声的话筒数</view><view class="input-wrap"><input class="number-input" type="number" value="{{discussionPagNagNomText}}" placeholder="填写" data-field="discussionPagNagNomText" focus="{{pagNagInputFocused}}" bindinput="onInput" bindblur="onPagNagInputBlur" /><view class="input-unit">支</view></view></view>
+          </view>
           <view wx:if="{{discussionPagNagError}}" class="discussion-warning discussion-pag-nag-error">{{discussionPagNagError}}</view>
         </view>
       </block>
@@ -184,6 +224,7 @@
     <view wx:if="{{inputError}}" class="warning-card">
       <view class="warning-title">无法预估</view>
       <view class="warning-text">{{inputError}}</view>
+      <view wx:if="{{inputErrorDetail}}" class="warning-detail">{{inputErrorDetail}}</view>
     </view>
 
     <block wx:if="{{result && result.kind == 'report'}}">
@@ -217,8 +258,14 @@
             <view class="metric-label">标准最大声压级目标</view>
           </view>
         </view>
-        <view wx:if="{{result.reviewWarnings && result.reviewWarnings.length}}" class="discussion-review-warnings">
-          <view wx:for="{{result.reviewWarnings}}" wx:key="*this" class="discussion-warning discussion-review-warning">复核：{{item}}</view>
+        <block wx:for="{{result.reviewWarnings}}" wx:key="*this">
+          <view wx:if="{{item != '标称角仅作几何筛选；频段指向性与最大声压测试口径尚待核验。'}}" class="discussion-warning discussion-review-warning">复核：{{item}}</view>
+        </block>
+        <view class="venue-candidate-summary">
+          <block wx:if="{{result.speakerRecommendation.packages && result.speakerRecommendation.packages.length}}">
+            <view class="venue-candidate-copy">待复核候选：{{result.speakerRecommendation.packages[0].main.model}} × {{result.speakerRecommendation.packages[0].main.count}}<text wx:if="{{result.speakerRecommendation.packages[0].fill}}">；补声 {{result.speakerRecommendation.packages[0].fill.model}} × {{result.speakerRecommendation.packages[0].fill.count}}</text></view>
+          </block>
+          <view wx:else class="venue-candidate-copy">暂无自动候选，需人工选型</view>
         </view>
       </view>
 
@@ -227,7 +274,7 @@
         <include src="../../templates/result-record-actions.wxml" />
       </view>
       <view class="result-accordion-card {{showVenueDetails ? 'result-accordion-card-active' : ''}}">
-        <view class="result-disclosure-row {{showVenueDetails ? 'result-disclosure-row-active' : ''}}" bindtap="toggleVenueDetails">
+        <view id="venue-details-anchor" class="result-disclosure-row {{showVenueDetails ? 'result-disclosure-row-active' : ''}}" bindtap="toggleVenueDetails">
           <view><view class="result-disclosure-title">选型与计算依据</view></view>
           <text class="result-disclosure-state">{{showVenueDetails ? '收起 ↑' : '查看 ↓'}}</text>
         </view>
@@ -290,11 +337,17 @@
           </view>
 
           <view class="evidence-summary-footnote">以上用于前期能力与覆盖筛选；最终指向、电平、延时和相位以现场测量为准。</view>
+          <block wx:for="{{result.reviewWarnings}}" wx:key="*this">
+            <view wx:if="{{item == '标称角仅作几何筛选；频段指向性与最大声压测试口径尚待核验。'}}" class="evidence-summary-row">
+              <view class="evidence-summary-label">指向与测试口径</view>
+              <view class="evidence-summary-note">{{item}}</view>
+            </view>
+          </block>
         </view>
       </view>
 
       <view class="result-accordion-card {{showVenuePlan ? 'result-accordion-card-active' : ''}}">
-        <view class="result-disclosure-row {{showVenuePlan ? 'result-disclosure-row-active' : ''}}" bindtap="toggleVenuePlan">
+        <view id="venue-plan-anchor" class="result-disclosure-row {{showVenuePlan ? 'result-disclosure-row-active' : ''}}" bindtap="toggleVenuePlan">
           <view><view class="result-disclosure-title">布局与组合声场</view></view>
           <text class="result-disclosure-state">{{showVenuePlan ? '收起 ↑' : '查看 ↓'}}</text>
         </view>
@@ -360,9 +413,10 @@
            <view class="metric"><view class="metric-value">约 {{result.recommendedCoverageDeg}}°</view><view class="metric-label">标称角几何参考</view></view>
           <view class="metric"><view class="metric-value">{{result.maximumNearestDistanceMeters}} m</view><view class="metric-label">最不利最近声程</view></view>
         </view>
-        <view wx:if="{{result.reviewWarnings && result.reviewWarnings.length}}" class="discussion-review-warnings">
-          <view wx:for="{{result.reviewWarnings}}" wx:key="*this" class="discussion-warning discussion-review-warning">复核：{{item}}</view>
-        </view>
+        <view wx:if="{{discussionNaturalSoundWarning}}" class="discussion-warning venue-natural-sound-warning">可先评估自然声是否够用。</view>
+        <block wx:for="{{result.reviewWarnings}}" wx:key="*this">
+          <view wx:if="{{item != '图中为标称角几何范围；有效覆盖和声学均匀度尚待产品指向性与现场核验。'}}" class="discussion-warning discussion-review-warning">复核：{{item}}</view>
+        </block>
         <view wx:if="{{result.pagNagReview}}" class="discussion-pag-nag-result">
           <view class="evidence-summary-label">传声增益检查</view>
           <view class="evidence-summary-value">潜在增益 PAG {{discussionPagNagDisplay.pagText}}</view>
@@ -374,6 +428,10 @@
 
 
       <view class="utility-action-row">
+        <view wx:if="{{pagNagOutputBlocked}}" class="pag-nag-blocked-card">
+          <view class="pag-nag-blocked-title">暂不可生成结果：{{discussionPagNagError}}</view>
+          <button class="pag-nag-return-button" disabled="{{operationActive}}" bindtap="onPagNagReturnToInput">返回填写</button>
+        </view>
         <view class="result-output-actions"><button class="result-image-button" disabled="{{isGeneratingResultReport || pagNagOutputBlocked}}" bindtap="generateResultReportImage">{{isGeneratingResultReport ? '正在生成…' : '生成结果图片'}}</button><button class="copy-result-button" disabled="{{pagNagOutputBlocked}}" bindtap="copyResult">复制文字</button></view>
         <view class="result-record-actions">
           <button class="result-record-button {{currentFavorite ? 'result-record-button-active' : ''}}" disabled="{{pagNagOutputBlocked}}" bindtap="toggleCurrentFavorite">{{currentFavorite ? '★ 已收藏' : '☆ 收藏常用'}}</button>
@@ -381,7 +439,7 @@
         </view>
       </view>
       <view class="result-accordion-card {{showVenueDetails ? 'result-accordion-card-active' : ''}}">
-        <view class="result-disclosure-row {{showVenueDetails ? 'result-disclosure-row-active' : ''}}" bindtap="toggleVenueDetails">
+        <view id="venue-details-anchor" class="result-disclosure-row {{showVenueDetails ? 'result-disclosure-row-active' : ''}}" bindtap="toggleVenueDetails">
           <view><view class="result-disclosure-title">安装与路由依据</view></view>
           <text class="result-disclosure-state">{{showVenueDetails ? '收起 ↑' : '查看 ↓'}}</text>
         </view>
@@ -412,11 +470,21 @@
           </view>
 
           <view class="evidence-summary-footnote">最终电平、EQ、AEC 和反馈稳定度以现场调试为准。</view>
+          <view wx:if="{{discussionNaturalSoundWarning}}" class="evidence-summary-row">
+            <view class="evidence-summary-label">自然声评估</view>
+            <view class="evidence-summary-note">{{discussionNaturalSoundWarning}}</view>
+          </view>
+          <block wx:for="{{result.reviewWarnings}}" wx:key="*this">
+            <view wx:if="{{item == '图中为标称角几何范围；有效覆盖和声学均匀度尚待产品指向性与现场核验。'}}" class="evidence-summary-row">
+              <view class="evidence-summary-label">标称角与现场核验</view>
+              <view class="evidence-summary-note">{{item}}</view>
+            </view>
+          </block>
         </view>
       </view>
 
       <view class="result-accordion-card {{showVenuePlan ? 'result-accordion-card-active' : ''}}">
-        <view class="result-disclosure-row {{showVenuePlan ? 'result-disclosure-row-active' : ''}}" bindtap="toggleVenuePlan">
+        <view id="venue-plan-anchor" class="result-disclosure-row {{showVenuePlan ? 'result-disclosure-row-active' : ''}}" bindtap="toggleVenuePlan">
           <view><view class="result-disclosure-title">围桌覆盖示意</view></view>
           <text class="result-disclosure-state">{{showVenuePlan ? '收起 ↑' : '查看 ↓'}}</text>
         </view>

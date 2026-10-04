@@ -1,4 +1,5 @@
 const assert = require('assert/strict')
+const fs = require('fs')
 const Module = require('module')
 const path = require('path')
 const projectWiring = require('../utils/project-wiring')
@@ -263,6 +264,51 @@ function testCompactHistoryPickerBehavior() {
   assert.deepEqual(page.data.fromPortHistory, ['OUT 1', 'IN 1'], 'changing the source device should refresh matching port history')
 }
 
+function testEndpointHistoryPickerTemplateBindings() {
+  const template = fs.readFileSync(path.join(__dirname, '../pages/project-wiring/index.wxml'), 'utf8').replace(/\r\n/g, '\n')
+  const endpoints = [
+    ['fromDevice', 'from-device', '来源', '设备', '输入设备名称', 100],
+    ['fromPort', 'from-port', '来源', '端口', '输入端口名称', 80],
+    ['toDevice', 'to-device', '去向', '设备', '输入设备名称', 100],
+    ['toPort', 'to-port', '去向', '端口', '输入端口名称', 80],
+  ]
+  endpoints.forEach(([field, fieldId, endpoint, label, placeholder, maxlength]) => {
+    const fieldStart = template.indexOf(`id="wiring-field-${fieldId}"`)
+    const headingStart = template.indexOf('<view class="wiring-editor-field-heading">', fieldStart)
+    const headingEnd = template.indexOf('</view>\n                  <input', headingStart)
+    assert(fieldStart >= 0 && headingStart > fieldStart && headingEnd > headingStart,
+      `${field} history picker remains in its label row`)
+    const heading = template.slice(headingStart, headingEnd)
+    ;[
+      `<view class="wiring-field-label">${label}</view>`,
+      `wx:if="{{${field}History.length}}"`,
+      `range="{{${field}History}}"`,
+      'value="0"',
+      `data-field="${field}"`,
+      'bindchange="chooseHistoryValue"',
+      `aria-label="选择已有${endpoint}${label}"`,
+      '<view class="wiring-history-picker-trigger">选用</view>',
+    ].forEach((binding) => assert(heading.includes(binding), `${field} template retains ${binding}`))
+
+    const inputStart = template.indexOf(`<input id="wiring-editor-${fieldId}"`, headingEnd)
+    const inputEnd = template.indexOf('/>', inputStart)
+    assert(inputStart > headingEnd && inputEnd > inputStart, `${field} input follows its history row`)
+    const inputMarkup = template.slice(inputStart, inputEnd)
+    ;[
+      `data-focus-id="wiring-editor-${fieldId}"`,
+      `maxlength="${maxlength}"`,
+      `value="{{draft.${field}}}"`,
+      `data-field="${field}"`,
+      'adjust-position="{{false}}"',
+      'bindfocus="onFormInputFocus"',
+      'bindblur="onFormInputBlur"',
+      'bindkeyboardheightchange="onFormKeyboardHeightChange"',
+      'bindinput="onDraftInput"',
+      `placeholder="${placeholder}"`,
+    ].forEach((binding) => assert(inputMarkup.includes(binding), `${field} input retains ${binding}`))
+  })
+}
+
 function completeOneExport(runtime, pathName) {
   const draw = runtime.drawCallbacks.shift()
   assert(draw, 'expected pending canvas draw callback')
@@ -284,6 +330,39 @@ function completeAllExports(runtime, prefix) {
       exportOptions.success({ tempFilePath: `${prefix}-${pageNumber}.png` })
       pageNumber += 1
     }
+  }
+}
+
+function setThreePageReport(runtime) {
+  runtime.buildReports = (_projectName, _schedule, type) => {
+    runtime.reportTypes.push(type)
+    return {
+      type,
+      title: type,
+      pages: [1, 2, 3].map((number) => ({ title: `${type}-${number}`, width: 720, height: 520, rows: [] })),
+    }
+  }
+  runtime.report.buildScheduleReportPages = runtime.buildReports
+}
+
+function completeReportWithPaths(runtime, paths) {
+  let exportIndex = 0
+  while (runtime.drawCallbacks.length || runtime.canvasExports.length) {
+    if (runtime.drawCallbacks.length) runtime.drawCallbacks.shift()()
+    if (runtime.canvasExports.length) {
+      const exportOptions = runtime.canvasExports.shift()
+      exportOptions.success({ tempFilePath: paths[exportIndex] || `page-${exportIndex + 1}.png` })
+      exportIndex += 1
+    }
+  }
+  assert.equal(exportIndex, paths.length, 'the report should finish all requested pages')
+}
+
+function useDeferredPhotoSave(runtime) {
+  runtime.photoSaveRequests = []
+  runtime.wx.saveImageToPhotosAlbum = (options) => {
+    runtime.saves.push(options)
+    runtime.photoSaveRequests.push(options)
   }
 }
 
@@ -513,7 +592,13 @@ function testAddSearchAndSaveFailure() {
   page.openNewLine()
   page.saveLine()
   assert.equal(runtime.saveCalls.length, 0, 'missing endpoints must be validated before storage')
-  assert.match(page.data.formError, /设备名称、端口名称/)
+  assert.match(page.data.formError, /来源设备、来源端口、去向设备、去向端口/)
+  assert.deepEqual(page.data.formFieldErrors, {
+    fromDevice: '请填写来源设备',
+    fromPort: '请填写来源端口',
+    toDevice: '请填写去向设备',
+    toPort: '请填写去向端口',
+  })
   ;['fromDevice', 'fromPort', 'toDevice', 'toPort'].forEach((field, index) => {
     input(page, field, ['调音台', 'MAIN L', '功放', 'INPUT 1'][index])
   })
@@ -543,6 +628,75 @@ function testAddSearchAndSaveFailure() {
   page.saveLine()
   assert.equal(page.data.editorVisible, false)
   assert.equal(runtime.schedule.lines[0].notes, '保留这段修改')
+}
+
+function testRequiredEndpointErrorsAndHistoryClear() {
+  const fields = [
+    ['fromDevice', '来源设备', 'wiring-field-from-device'],
+    ['fromPort', '来源端口', 'wiring-field-from-port'],
+    ['toDevice', '去向设备', 'wiring-field-to-device'],
+    ['toPort', '去向端口', 'wiring-field-to-port'],
+  ]
+  fields.forEach(([missingField, label, target]) => {
+    const runtime = createRuntime()
+    const page = installPage(runtime)
+    page.openNewLine()
+    fields.filter(([field]) => field !== missingField).forEach(([field], index) => {
+      input(page, field, `${field}-${index}`)
+    })
+    input(page, missingField, '   ')
+    page.saveLine()
+    assert.equal(page.data.formFieldErrors[missingField], `请填写${label}`)
+    assert.equal(page.data.formScrollTarget, target, `${missingField} should scroll to its stable wrapper`)
+    assert.equal(runtime.saveCalls.length, 0, 'validation must not write partial lines')
+    const mutationsBeforeRepeat = page.mutationCount
+    page.saveLine()
+    assert.equal(page.mutationCount, mutationsBeforeRepeat + 2, 'repeated validation must retrigger scrolling to the same field')
+    assert.equal(page.data.formScrollTarget, target)
+    input(page, missingField, '已填写')
+    assert.equal(page.data.formFieldErrors[missingField], undefined, 'typing into a missing field should clear its error')
+  })
+
+  const runtime = createRuntime()
+  const page = installPage(runtime)
+  addFirstLine(page)
+  page.openNewLine()
+  ;[['fromDevice', '新设备'], ['fromPort', 'OUT 2'], ['toDevice', '功放']]
+    .forEach(([field, value]) => input(page, field, value))
+  page.saveLine()
+  assert.equal(page.data.formFieldErrors.toPort, '请填写去向端口')
+  chooseHistory(page, 'toPort', '0')
+  assert.equal(page.data.draft.toPort, 'INPUT 1')
+  assert.equal(page.data.formFieldErrors.toPort, undefined, 'selecting a valid history entry must clear that field error')
+}
+
+function testBatchDuplicateEndpointWarning() {
+  const runtime = createRuntime()
+  const page = installPage(runtime)
+  page.openNewLine()
+  ;[['fromDevice', '调音台'], ['fromPort', 'OUT-1'], ['toDevice', '功放'], ['toPort', 'IN-1']]
+    .forEach(([field, value]) => input(page, field, value))
+  page.saveLine()
+  page.openBatch()
+  input(page, 'count', '1', 'onBatchInput')
+  input(page, 'fromPrefix', 'OUT-', 'onBatchInput')
+  input(page, 'toPrefix', 'IN-', 'onBatchInput')
+  page.refreshBatchPreview()
+  assert.equal(page.data.batchPossibleDuplicates.length, 1)
+  assert.deepEqual(page.data.batchPossibleDuplicates[0].existingCodes, ['A001'])
+  assert.match(page.data.batchDuplicateWarning, /两端与已有布线一致.*可继续添加/)
+  assert.equal(page.data.batchPreviewLines[0].possibleDuplicateCodes, 'A001')
+  page.commitBatch()
+  assert.equal(runtime.schedule.lines.length, 2, 'potential duplicates remain allowed by the existing save rules')
+
+  page.openBatch()
+  input(page, 'count', '1', 'onBatchInput')
+  input(page, 'fromPrefix', 'AUX-', 'onBatchInput')
+  page.refreshBatchPreview()
+  assert.equal(page.data.batchDuplicateWarning, '')
+  input(page, 'fromPrefix', 'OUT-', 'onBatchInput')
+  assert.equal(page.data.batchPreviewLines.length, 0)
+  assert.deepEqual(page.data.batchPossibleDuplicates, [], 'changing a batch field must clear stale duplicate warnings')
 }
 
 function testCustomConnectorAndCableDefaults() {
@@ -639,9 +793,6 @@ function testSpecPresetsAndPreservation() {
   assert.equal(page.data.visibleLines[0].spec, speakerSpecs[0], 'the line list should retain the complete specification')
   assert(projectWiring.buildScheduleText(runtime.project.name, runtime.schedule).includes(speakerSpecs[0]),
     'the copied schedule text should retain the complete specification')
-  page.selectTab({ currentTarget: { dataset: { tab: 'materials' } } })
-  assert(page.data.materialGroups.some((row) => row.title.includes(speakerSpecs[0])),
-    'the material list should group by the complete specification')
   const lineReport = reportBuilder.buildScheduleReportPages(runtime.project.name, runtime.schedule, 'lines')
   assert(lineReport.pages.flatMap((reportPage) => reportPage.rows)
     .some((row) => row.textLines.some((line) => line.includes(speakerSpecs[0]))),
@@ -772,6 +923,34 @@ function testBatchDuplicateDeleteAndStableNumbers() {
   assert(runtime.schedule.lines.some((line) => line.code === 'A005'), 'deleted codes must not be reused')
 }
 
+function testCopyCurrentTextUsesUnfilteredSchedule() {
+  const runtime = createRuntime()
+  const page = installPage(runtime)
+  addFirstLine(page)
+  page.openNewLine()
+  ;[['purpose', '返送线路'], ['fromDevice', 'DSP'], ['fromPort', 'OUT 2'],
+    ['toDevice', '舞台音箱'], ['toPort', 'IN 2']].forEach(([field, value]) => input(page, field, value))
+  page.saveLine()
+  assert.equal(page._schedule.lines.length, 2)
+
+  page.applySearch({ detail: { value: 'A001' } })
+  assert.deepEqual(page.data.visibleLines.map((line) => line.code), ['A001'], 'search should show only the matching line')
+  page.selectExportType({ detail: { value: '1' } })
+  assert.equal(page.data.exportTypeIndex, 1, 'the material report remains selectable from the export picker')
+  assert.deepEqual(runtime.reportTypes, [], 'search and selecting a report type should not generate a report')
+  page.copyCurrentText()
+
+  const copiedText = runtime.clipboard.at(-1).data
+  assert.equal(copiedText, projectWiring.buildScheduleText(runtime.project.name, page._schedule),
+    'copy should use the same full-project text builder regardless of search/export selection')
+  assert.match(copiedText, /A001/)
+  assert.match(copiedText, /A002/, 'the copied text includes the line hidden by search')
+  assert.match(copiedText, /材料汇总：/)
+  const template = fs.readFileSync(path.join(__dirname, '../pages/project-wiring/index.wxml'), 'utf8')
+  assert.match(template, /class="wiring-export-button wiring-copy-all-button" bindtap="copyCurrentText">复制全部布线文字<\/button>/,
+    'the full-text copy action is reachable from the main page')
+}
+
 function testPagedExportActionsAndLateCallbacks() {
   const runtime = createRuntime()
   const page = installPage(runtime)
@@ -784,13 +963,19 @@ function testPagedExportActionsAndLateCallbacks() {
   assert.equal(page.data.reportImagePath, 'lines-1.png')
   page.nextReportPage()
   assert.equal(page.data.reportImagePath, 'lines-2.png')
+  page.previewReportImage()
+  assert.deepEqual(runtime.previews.at(-1), {
+    current: 'lines-2.png',
+    urls: ['lines-1.png', 'lines-2.png'],
+  }, 'image preview should include every page of the current report')
   page.saveReportImage()
   page.shareReportImage()
   assert.equal(runtime.saves.at(-1).filePath, 'lines-2.png')
   assert.equal(runtime.shares.at(-1).path, 'lines-2.png')
   page.closeReportPreview()
 
-  page.generateMaterialList()
+  page.selectExportType({ detail: { value: '1' } })
+  page.generateExport({ type: 'tap' })
   assert.equal(runtime.reportTypes.at(-1), 'materials', 'material action should export the material layout')
   const pendingExport = runtime.canvasExports.at(-1) || null
   if (runtime.drawCallbacks.length) runtime.drawCallbacks.shift()()
@@ -812,6 +997,196 @@ function testPagedExportActionsAndLateCallbacks() {
   lateDraw()
   assert.equal(page.mutationCount, mutationsBeforeUnloadCallback, 'late draw callbacks after unload must not write page state')
   assert(runtime.loadingHidden > 0, 'cancelled exports should clear the loading mask')
+}
+
+function generateThreePageReport(page, runtime, paths) {
+  setThreePageReport(runtime)
+  page.generateExport('lines')
+  completeReportWithPaths(runtime, paths)
+  assert.equal(page.data.reportImages.length, 3)
+}
+
+function testSaveAllSerialFailureAndResume() {
+  const runtime = createRuntime()
+  const page = installPage(runtime)
+  addFirstLine(page)
+  generateThreePageReport(page, runtime, ['page-1.png', 'page-2.png', 'page-3.png'])
+  useDeferredPhotoSave(runtime)
+
+  page.saveAllReportImages()
+  assert.deepEqual(runtime.photoSaveRequests.map((request) => request.filePath), ['page-1.png'])
+  runtime.photoSaveRequests[0].success()
+  assert.deepEqual(runtime.photoSaveRequests.map((request) => request.filePath), ['page-1.png', 'page-2.png'],
+    'the save job must await page one before sending page two')
+  runtime.photoSaveRequests[1].fail({ errMsg: 'saveImageToPhotosAlbum:fail disk full' })
+  assert.deepEqual(runtime.photoSaveRequests.map((request) => request.filePath), ['page-1.png', 'page-2.png'],
+    'a page failure must stop the queue before page three')
+  assert.deepEqual(page.data.reportSavedPageIndices, [0], 'only the successful first page should be retained')
+  assert.match(page.data.reportSaveError, /保存失败/)
+
+  page.saveAllReportImages()
+  assert.equal(runtime.photoSaveRequests.at(-1).filePath, 'page-2.png', 'resume should skip the previously successful page')
+  runtime.photoSaveRequests[2].success()
+  assert.equal(runtime.photoSaveRequests.at(-1).filePath, 'page-3.png')
+  runtime.photoSaveRequests[3].success()
+  assert.deepEqual(runtime.photoSaveRequests.map((request) => request.filePath), [
+    'page-1.png', 'page-2.png', 'page-2.png', 'page-3.png',
+  ])
+  assert.deepEqual(page.data.reportSavedPageIndices, [0, 1, 2])
+  assert.equal(page.data.reportSaveAllLabel, '全部已保存3张')
+  assert.equal(page.data.reportSaveRunning, false)
+}
+
+function testSaveJobsTrackPageIndicesNotPaths() {
+  const runtime = createRuntime()
+  const page = installPage(runtime)
+  addFirstLine(page)
+  generateThreePageReport(page, runtime, ['same-mock.png', 'same-mock.png', 'same-mock.png'])
+  useDeferredPhotoSave(runtime)
+  page.saveAllReportImages()
+  runtime.photoSaveRequests[0].success()
+  runtime.photoSaveRequests[1].success()
+  runtime.photoSaveRequests[2].success()
+  assert.equal(runtime.photoSaveRequests.length, 3, 'identical mock paths still represent three report pages')
+  assert.deepEqual(page.data.reportSavedPageIndices, [0, 1, 2])
+
+  const cachedSignature = page._reportSignature
+  page.closeReportPreview()
+  page.generateExport('lines')
+  assert.equal(page._reportSignature, cachedSignature)
+  assert.deepEqual(page.data.reportSavedPageIndices, [0, 1, 2], 'reopening the same report should retain saved page indices')
+  page.saveAllReportImages()
+  assert.equal(runtime.photoSaveRequests.length, 3, 'an already saved cached report should not be saved again')
+}
+
+function testSingleSaveSharesJobAndPermissionHandling() {
+  const runtime = createRuntime()
+  const page = installPage(runtime)
+  addFirstLine(page)
+  generateThreePageReport(page, runtime, ['page-1.png', 'page-2.png', 'page-3.png'])
+  useDeferredPhotoSave(runtime)
+  page.nextReportPage()
+  page.saveReportImage()
+  assert.deepEqual(runtime.photoSaveRequests.map((request) => request.filePath), ['page-2.png'])
+  runtime.photoSaveRequests[0].success()
+  assert.deepEqual(page.data.reportSavedPageIndices, [1], 'single-page save should update the same saved-index set')
+  page.saveAllReportImages()
+  assert.deepEqual(runtime.photoSaveRequests.slice(1).map((request) => request.filePath), ['page-1.png'])
+  runtime.photoSaveRequests[1].success()
+  assert.equal(runtime.photoSaveRequests.at(-1).filePath, 'page-3.png')
+  runtime.photoSaveRequests[2].success()
+  assert.deepEqual(page.data.reportSavedPageIndices, [0, 1, 2])
+
+  const permissionRuntime = createRuntime()
+  const permissionPage = installPage(permissionRuntime)
+  addFirstLine(permissionPage)
+  generateThreePageReport(permissionPage, permissionRuntime, ['permission-1.png', 'permission-2.png', 'permission-3.png'])
+  useDeferredPhotoSave(permissionRuntime)
+  let openSettingCalls = 0
+  permissionRuntime.wx.openSetting = () => { openSettingCalls += 1 }
+  permissionPage.saveAllReportImages()
+  permissionRuntime.photoSaveRequests[0].fail({ errMsg: 'saveImageToPhotosAlbum:fail auth deny' })
+  assert.match(permissionPage.data.reportSaveError, /微信设置/)
+  assert.equal(openSettingCalls, 0, 'permission recovery must require the user to visit settings')
+  permissionPage.saveAllReportImages()
+  assert.equal(permissionRuntime.photoSaveRequests.at(-1).filePath, 'permission-1.png', 'failed permission pages remain retryable')
+  permissionRuntime.photoSaveRequests.at(-1).fail({ errMsg: 'saveImageToPhotosAlbum:fail cancel' })
+  assert.match(permissionPage.data.reportSaveError, /已取消/)
+  assert.deepEqual(permissionPage.data.reportSavedPageIndices, [])
+}
+
+function testSaveJobGuardsAndLateCallbacks() {
+  ;['stop', 'hide', 'close', 'unload'].forEach((action) => {
+    const runtime = createRuntime()
+    const page = installPage(runtime)
+    addFirstLine(page)
+    generateThreePageReport(page, runtime, [`${action}-1.png`, `${action}-2.png`, `${action}-3.png`])
+    useDeferredPhotoSave(runtime)
+    page.saveAllReportImages()
+    assert.equal(runtime.photoSaveRequests.length, 1)
+    page.saveReportImage()
+    page.saveAllReportImages()
+    assert.equal(runtime.photoSaveRequests.length, 1, 'double taps and single/all requests must share one in-flight guard')
+    if (action === 'stop') page.stopReportSaveJob()
+    if (action === 'hide') page.onHide()
+    if (action === 'close') page.closeReportPreview()
+    if (action === 'unload') page.onUnload()
+    const mutationsBeforeLateResult = page.mutationCount
+    runtime.photoSaveRequests[0].success()
+    assert.equal(page.mutationCount, mutationsBeforeLateResult, `${action} should invalidate state updates from late saves`)
+    assert.equal(runtime.photoSaveRequests.length, 1, `${action} should prevent late callbacks from starting more pages`)
+    assert.equal(page._reportSaveInFlight, null, 'terminal callbacks should release the private in-flight lock')
+  })
+
+  const noApiRuntime = createRuntime()
+  const noApiPage = installPage(noApiRuntime)
+  addFirstLine(noApiPage)
+  generateThreePageReport(noApiPage, noApiRuntime, ['no-api-1.png', 'no-api-2.png', 'no-api-3.png'])
+  delete noApiRuntime.wx.saveImageToPhotosAlbum
+  noApiPage.saveAllReportImages()
+  assert.match(noApiPage.data.reportSaveError, /不支持保存图片/)
+  assert.equal(noApiPage.data.reportSaveRunning, false)
+
+  const emptyFailureRuntime = createRuntime()
+  const emptyFailurePage = installPage(emptyFailureRuntime)
+  addFirstLine(emptyFailurePage)
+  generateThreePageReport(emptyFailurePage, emptyFailureRuntime, ['fail-1.png', 'fail-2.png', 'fail-3.png'])
+  useDeferredPhotoSave(emptyFailureRuntime)
+  emptyFailurePage.saveAllReportImages()
+  emptyFailureRuntime.photoSaveRequests[0].fail()
+  assert.equal(emptyFailureRuntime.photoSaveRequests.length, 1, 'an empty failure callback must stop the queue')
+  assert.deepEqual(emptyFailurePage.data.reportSavedPageIndices, [], 'an empty failure callback must not count as success')
+  assert.match(emptyFailurePage.data.reportSaveError, /保存失败/)
+}
+
+function testLateSaveIdentityAndClosedPreviewResume() {
+  const runtime = createRuntime()
+  const page = installPage(runtime)
+  addFirstLine(page)
+  generateThreePageReport(page, runtime, ['old-1.png', 'old-2.png', 'old-3.png'])
+  useDeferredPhotoSave(runtime)
+  const originalSignature = page._reportSignature
+  page.saveAllReportImages()
+  const staleRequest = runtime.photoSaveRequests[0]
+  page.invalidateExport(true)
+  generateThreePageReport(page, runtime, ['new-1.png', 'new-2.png', 'new-3.png'])
+  assert.equal(page._reportSignature, originalSignature, 'the regenerated report deliberately has the same logical signature')
+  const mutationsBeforeOldCallback = page.mutationCount
+  staleRequest.success()
+  assert.equal(page.mutationCount, mutationsBeforeOldCallback, 'an old generation callback must not mutate the regenerated report')
+  assert.deepEqual(page.data.reportSavedPageIndices, [], 'old success must not mark a page in the new generation')
+  assert.deepEqual([...page._reportSavedPages.get(originalSignature)], [], 'saved indices must remain bound to the exact Map Set generation')
+  page.saveReportImage()
+  assert.equal(runtime.photoSaveRequests.at(-1).filePath, 'new-1.png', 'a released stale callback must allow a new single-page save')
+  runtime.photoSaveRequests.at(-1).success()
+
+  const closeRuntime = createRuntime()
+  const closePage = installPage(closeRuntime)
+  addFirstLine(closePage)
+  generateThreePageReport(closePage, closeRuntime, ['cached-1.png', 'cached-2.png', 'cached-3.png'])
+  useDeferredPhotoSave(closeRuntime)
+  closePage.saveAllReportImages()
+  const closeRequest = closeRuntime.photoSaveRequests[0]
+  closePage.closeReportPreview()
+  assert.match(closePage.data.reportSaveMessage, /已停止后续请求/)
+  closePage.generateExport('lines')
+  assert.equal(closePage.data.reportPreviewVisible, true, 'the same cached report should reopen')
+  assert.match(closePage.data.reportSaveMessage, /已停止后续请求/, 'a reopened report with a pending request must explain that later pages were stopped')
+  assert.doesNotMatch(closePage.data.reportSaveMessage, /正在保存第/)
+  closePage.saveReportImage()
+  assert.equal(closeRuntime.photoSaveRequests.length, 1, 'an old in-flight request still prevents overlap')
+  assert.match(closePage.data.reportSaveMessage, /已停止后续请求/, 'a blocked action must keep the stopped-queue status clear')
+  const mutationsBeforeCachedLateSuccess = closePage.mutationCount
+  closeRequest.success()
+  assert.equal(closePage.mutationCount, mutationsBeforeCachedLateSuccess, 'a late success after close/reopen must not write page state')
+  assert.deepEqual(closePage.data.reportSavedPageIndices, [], 'late UI updates remain suppressed after reopen')
+  closePage.generateExport('lines')
+  assert.deepEqual(closePage.data.reportSavedPageIndices, [0], 'reopening the cache after the old request succeeds should sync its private saved index')
+  assert.match(closePage.data.reportSaveMessage, /已保存 1 \/ 3 张/)
+  assert.doesNotMatch(closePage.data.reportSaveMessage, /正在保存第|仍可能完成/)
+  closePage.saveReportImage()
+  assert.equal(closeRuntime.photoSaveRequests.length, 2, 'single-page action should become usable after the stale callback releases the lock')
+  assert.equal(closeRuntime.photoSaveRequests[1].filePath, 'cached-1.png')
 }
 
 function testExportTypeWithTapEvent() {
@@ -848,9 +1223,10 @@ function testExportTypeWithTapEvent() {
   assert.equal(runtime.reportTypes.at(-1), 'materials', 'a valid explicit override should remain supported')
   completeAllExports(runtime, 'explicit-override')
 
-  page.generateMaterialList()
-  assert.equal(runtime.reportTypes.at(-1), 'materials', 'material shortcut must retain its materials type')
-  completeAllExports(runtime, 'material-shortcut')
+  page.selectExportType({ detail: { value: '1' } })
+  page.generateExport({ type: 'tap' })
+  assert.equal(runtime.reportTypes.at(-1), 'materials', 'the selected material report remains reachable through the export picker')
+  completeAllExports(runtime, 'material-picker')
 }
 
 try {
@@ -861,13 +1237,22 @@ try {
   testProjectPickerCancelsLateExport()
   testLateLoadFromPreviousProjectIsIgnored()
   testCompactHistoryPickerBehavior()
+  testEndpointHistoryPickerTemplateBindings()
   testAddSearchAndSaveFailure()
+  testRequiredEndpointErrorsAndHistoryClear()
   testCustomConnectorAndCableDefaults()
   testSpecPresetsAndPreservation()
+  testCopyCurrentTextUsesUnfilteredSchedule()
   testBatchDuplicateDeleteAndStableNumbers()
+  testBatchDuplicateEndpointWarning()
   testPagedExportActionsAndLateCallbacks()
+  testSaveAllSerialFailureAndResume()
+  testSaveJobsTrackPageIndicesNotPaths()
+  testSingleSaveSharesJobAndPermissionHandling()
+  testSaveJobGuardsAndLateCallbacks()
+  testLateSaveIdentityAndClosedPreviewResume()
   testExportTypeWithTapEvent()
-  console.log('project wiring page tests passed (entry routing, fixed project ownership, compact history picker, picker cancellation, dirty-form guard, project creation/failures, stale exports, add/edit/search, batch, save retention and delete/copy numbering)')
+  console.log('project wiring page tests passed (entry routing, fixed project ownership, history picker template and behavior, picker cancellation, dirty-form guard, project creation/failures, stale exports, add/edit/search, batch, save retention and delete/copy numbering)')
 } finally {
   if (oldPage === undefined) delete global.Page
   else global.Page = oldPage
