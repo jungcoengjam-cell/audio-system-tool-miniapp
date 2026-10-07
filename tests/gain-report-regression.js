@@ -292,36 +292,58 @@ assert.match(wxss, /\.action-button\.action-button\{[^}]*width:44px;[^}]*height:
   'each action button must retain a 44px square touch target')
 assert.match(wxml, /class="choice-grid choice-grid-targets"[\s\S]*?wx:for="\{\{targetPeaks\}\}"/,
   'the three target options must remain bound to the canonical target list')
-assert.match(wxss, /\.choice-grid-targets\{display:flex;[^}]*gap:7rpx/,
-  'target option cards must use explicit native-compatible flex spacing')
-assert.match(wxss, /\.choice-grid-targets \.choice-card\{[^}]*width:0;min-width:0;flex:1 1 0/,
-  'target options must have equal shrink-safe cell widths')
+assert.match(wxss, /\.choice-grid-targets\{display:flex;[^}]*flex-direction:column;[^}]*gap:8px/,
+  'target option cards must use full-width native-compatible rows')
+assert.match(wxss, /\.choice-grid-targets \.choice-card\{[^}]*width:100%;[^}]*min-height:64px/,
+  'target rows must retain full-width 64px touch targets')
 assert.match(wxss, /\.choice-grid-targets \.choice-label,\.choice-grid-targets \.choice-description\{[^}]*white-space:normal;[^}]*overflow-wrap:anywhere/,
-  'target labels and descriptions must wrap inside their own touch cells')
+  'target labels and descriptions must wrap inside their own touch rows')
+assert.match(wxml, /class="target-radio" aria-hidden="true"/,
+  'target rows must show a radio-like selection indicator')
 assert.doesNotMatch(wxss, /\.result-facts\{flex-direction:column/,
   'secondary result facts should remain side by side at short heights when they fit')
-assert.match(wxss, /\.result-pane\{flex:0 0 320px/,
+assert.match(wxss, /\.result-pane\{position:relative;[^}]*flex:0 0 320px/,
   'the result pane must use a bounded normal-height profile')
+assert.match(wxss, /\.result-heading\{[^}]*flex:0 0 20px;[^}]*min-height:20px/,
+  'the result status line must stay compact enough to preserve the hero and detail space')
+assert.match(wxss, /\.result-primary\{[^}]*flex:0 0 130px/,
+  'the normal-height hero must keep its deliberate readout space')
 assert.match(wxss, /@media\(max-height:680px\)\{[\s\S]*?\.result-pane\{flex-basis:300px/,
   'the result pane must use the compact 300px profile on short screens')
-assert.match(wxss, /@media\(max-height:460px\)\{[\s\S]*?\.result-pane\{flex-basis:280px/,
+assert.match(wxss, /@media\(max-height:460px\)\{[\s\S]*?\.result-pane\{flex-basis:220px/,
   'the result pane must preserve input space at very short heights')
-assert.match(wxss, /\.input-pane\{height:0;min-height:0;flex:1 1 0/,
+assert.match(wxss, /@media\(max-height:460px\)\{[\s\S]*?\.result-primary\{flex-basis:72px/,
+  'the short-screen hero must keep enough height clear of the result facts')
+assert.match(wxss, /\.input-pane\{[^}]*height:0;[^}]*min-height:0;[^}]*flex:1 1 0/,
   'the input pane must fill remaining space and shrink safely')
-assert.match(wxss, /\.editor-scroll\{height:0;min-height:40px;flex:1 1 0/,
+assert.match(wxss, /\.editor-scroll\{[^}]*height:0;[^}]*min-height:40px;[^}]*flex:1 1 0/,
   'editor content must scroll inside the available input pane')
-assert.match(wxss, /\.result-details-scroll\{[^}]*height:auto;[^}]*flex:0 1 auto/,
-  'valid result details must size to content and shrink into scrolling only when needed')
+assert.match(wxss, /\.result-details-scroll\{[^}]*height:0;[^}]*min-height:0;[^}]*flex:1 1 0/,
+  'valid result details must use their available space and scroll when needed')
 assert.doesNotMatch(wxss, /\.result-details-scroll\{[^}]*height:150px/,
   'valid result details must not keep a fixed 150px viewport')
-assert.match(wxss, /\.result-primary\{[^}]*align-items:center;[^}]*padding:0 52px/,
-  'primary result must center within safe space beside the action rail')
-assert.match(wxss, /\.result-heading\{[^}]*padding-right:0/,
-  'the heading must not reserve a second full-width action rail')
-assert.match(wxss, /\.result-fact-value\{[^}]*font-size:16px/,
+assert.match(wxss, /\.result-primary\{[^}]*align-items:center;[^}]*padding:0 54px 0 6px/,
+  'primary result must align with the facts while keeping clear of the action rail')
+assert.match(wxss, /\.result-heading\{[^}]*padding-right:52px/,
+  'the heading must reserve a safe gutter beside the vertical action rail')
+assert.match(wxss, /\.result-fact-value\{[^}]*font-size:18px/,
   'secondary values must remain readable')
-assert.match(wxss, /\.editor-group\{min-height:0\}/,
+assert.match(wxss, /\.result-fact-value\{font-size:16px\}/,
+  'short-screen primary metric values must stay at least 16px')
+assert.match(wxss, /\.editor-group\{[^}]*min-height:0;/,
   'input groups must not force a full-viewport minimum height')
+assert.match(wxml, /\{\{result\.fullPowerInputVoltage\}\} V/,
+  'the full-power input voltage must remain visible in the result facts')
+assert.match(wxml, /\{\{result\.fullPowerInputDbu\}\} dBu/,
+  'the full-power input dBu value must remain visible in the result facts')
+assert.match(wxml, /class="calibration-standard">0 dBFS = \+18\.4 dBu/,
+  'the calibration reference must sit beside the DSP target heading')
+assert.doesNotMatch(wxml, /目标峰值保留相应的数字输出余量/,
+  'the calibration section must not add a redundant helper line below the target rows')
+assert.match(wxml, /class="amplifier-summary"[^>]*\{\{selectedAmplifier\.model\}\}/,
+  'the selected amplifier model must be visible beside the input heading')
+assert.match(wxss, /\.amplifier-summary\{[^}]*overflow:hidden;[^}]*text-overflow:ellipsis/,
+  'the compact amplifier summary must truncate without replacing the full field value')
 const detailScrollStart = wxml.indexOf('<scroll-view class="result-details-scroll"')
 const detailContentStart = wxml.indexOf('<view class="result-details-content">', detailScrollStart)
 const resultFactsStart = wxml.indexOf('<view class="result-facts">', detailContentStart)
@@ -335,6 +357,8 @@ assert.match(wxml, /class="result-heading"[\s\S]*?class="reset-error"[^>]*role="
   'storage/reset failure alerts must remain visible before the primary result and details')
 assert(wxml.indexOf('class="reset-error"') < detailScrollStart,
   'reset storage errors must stay outside the details scroller')
+assert.match(wxss, /\.reset-error\{[^}]*padding-right:52px/,
+  'reset storage errors must stay clear of the vertical action rail')
 assert.doesNotMatch(wxml, /class="editor-caption"/,
   'the redundant device-manual caption must be removed')
 assert.match(wxss, /\.action-button\.action-button\[disabled\]\{[^}]*opacity:1/,

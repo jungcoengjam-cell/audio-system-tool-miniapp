@@ -29,11 +29,13 @@
           <view class="result-facts">
             <view class="result-fact">
               <text class="result-fact-label">DSP 目标峰值</text>
-              <text class="result-fact-value">{{result.targetPeakDbfs}} dBFS · {{result.targetDspOutputDbu}} dBu</text>
+              <text class="result-fact-value">{{result.targetPeakDbfs}} dBFS</text>
+              <text class="result-fact-subvalue">{{result.targetDspOutputDbu}} dBu</text>
             </view>
             <view class="result-fact">
               <text class="result-fact-label">功放额定输入点</text>
-              <text class="result-fact-value">{{result.fullPowerInputDbu}} dBu</text>
+              <text class="result-fact-value">{{result.fullPowerInputVoltage}} V</text>
+              <text class="result-fact-subvalue">{{result.fullPowerInputDbu}} dBu</text>
             </view>
           </view>
         <view class="placement-warning amplifier-setting">功放输入控制保持 0 dB。{{result.placementWarning}}</view>
@@ -63,6 +65,7 @@
   <view class="input-pane">
     <view class="editor-heading">
       <text class="editor-title">输入设置</text>
+      <text wx:if="{{selectedAmplifier}}" class="amplifier-summary" aria-label="当前功放型号 {{selectedAmplifier.model}}">{{selectedAmplifier.model}}</text>
     </view>
     <view class="group-tabs" role="tablist">
       <button wx:for="{{groupTabs}}" wx:key="key" class="group-tab {{activeGroup === item.key ? 'group-tab-active' : ''}}" role="tab" aria-selected="{{activeGroup === item.key}}" data-group="{{item.key}}" bindtap="onGroupTap">{{item.label}}</button>
@@ -121,14 +124,19 @@
 
       <view wx:else class="editor-group">
         <view class="field-row">
-          <text class="field-label">DSP 目标峰值</text>
+          <view class="target-heading">
+            <text class="field-label">DSP 目标峰值</text>
+            <text class="calibration-standard">0 dBFS = +18.4 dBu</text>
+          </view>
           <view class="choice-grid choice-grid-targets">
             <button wx:for="{{targetPeaks}}" wx:key="value" class="choice-card {{index === targetPeakIndex ? 'choice-card-active' : ''}}" aria-pressed="{{index === targetPeakIndex}}" data-index="{{index}}" bindtap="onTargetPeakTap">
-              <text class="choice-label">{{item.label}}</text>
-              <text class="choice-description">{{item.description}}</text>
+              <view class="target-radio" aria-hidden="true"></view>
+              <view class="target-copy">
+                <text class="choice-label">{{item.label}}</text>
+                <text class="choice-description">{{item.description}}</text>
+              </view>
             </button>
           </view>
-          <text class="field-help">标定基准：0 dBFS = +18.4 dBu。目标峰值保留相应的数字输出余量。</text>
         </view>
       </view>
     </scroll-view>
