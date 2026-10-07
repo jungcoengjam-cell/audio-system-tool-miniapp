@@ -302,11 +302,11 @@ assert.match(wxml, /class="target-radio" aria-hidden="true"/,
   'target rows must show a radio-like selection indicator')
 assert.doesNotMatch(wxss, /\.result-facts\{flex-direction:column/,
   'secondary result facts should remain side by side at short heights when they fit')
-assert.match(wxss, /\.result-pane\{position:relative;[^}]*flex:0 0 320px/,
+assert.match(wxss, /\.result-pane\{position:relative;[^}]*flex:0 0 340px/,
   'the result pane must use a bounded normal-height profile')
 assert.match(wxss, /\.result-heading\{[^}]*flex:0 0 20px;[^}]*min-height:20px/,
   'the result status line must stay compact enough to preserve the hero and detail space')
-assert.match(wxss, /\.result-primary\{[^}]*flex:0 0 130px/,
+assert.match(wxss, /\.result-primary\{[^}]*flex:0 0 136px/,
   'the normal-height hero must keep its deliberate readout space')
 assert.match(wxss, /@media\(max-height:680px\)\{[\s\S]*?\.result-pane\{flex-basis:300px/,
   'the result pane must use the compact 300px profile on short screens')

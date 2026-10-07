@@ -87,10 +87,12 @@
         <view class="field-row field-row-stages">
           <text class="field-label">{{stageTypeLabel}}</text>
           <view wx:if="{{stageOptions.length}}" class="choice-grid">
-            <button wx:for="{{stageOptions}}" wx:key="value" class="choice-card {{index === stageIndex ? 'choice-card-active' : ''}}" aria-pressed="{{index === stageIndex}}" data-index="{{index}}" bindtap="onStageTap">
-              <text class="choice-label">{{item.label}}</text>
-              <text class="choice-description">{{item.description}}</text>
-            </button>
+            <view wx:for="{{stageOptions}}" wx:key="value" class="stage-choice-cell {{stageOptions.length === 1 ? 'stage-choice-cell-full' : ''}}">
+              <button class="choice-card stage-choice-card {{index === stageIndex ? 'choice-card-active' : ''}}" aria-pressed="{{index === stageIndex}}" data-index="{{index}}" bindtap="onStageTap">
+                <text class="choice-label">{{item.label}}</text>
+                <text class="choice-description">{{item.description}}</text>
+              </button>
+            </view>
           </view>
           <text wx:else class="field-help">选择功放型号后显示说明书确认的输入级档位。</text>
         </view>
