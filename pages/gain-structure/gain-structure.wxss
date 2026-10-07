@@ -159,3 +159,25 @@
   .action-button.action-button[aria-pressed="true"] .icon-bookmark-active{background-color:#9bd4ff}
   .action-button.action-button:active{border-color:#c5e7ff;background:#294a66;opacity:1}
 }
+
+/* Gain share preview shell: match the limiter preview while keeping its report states intact. */
+.sheet-mask.share-preview-mask{padding:32rpx 20rpx calc(16rpx + env(safe-area-inset-bottom));background:rgba(18,20,27,.55)}
+.share-panel.share-panel{--theme-surface:var(--tv);--theme-text:var(--tx);--theme-text-secondary:var(--ts);--theme-text-tertiary:var(--tt);--theme-control:var(--tc);--theme-divider:var(--td);--theme-surface-muted:var(--tmm);--theme-warning:var(--tw);--theme-primary-fill:var(--tp);--theme-accent-text:var(--ta);box-sizing:border-box;display:flex;width:100%;height:auto;max-height:90vh;min-height:160rpx;padding:22rpx 22rpx calc(18rpx + env(safe-area-inset-bottom));flex-direction:column;overflow:hidden;border:1rpx solid var(--theme-divider);border-radius:28rpx;background:var(--theme-surface);box-shadow:none;color:var(--theme-text)}
+.share-panel.share-panel .sheet-header{min-height:48rpx;margin-bottom:14rpx}
+.share-panel.share-panel .sheet-title{color:var(--theme-text);font-size:20px;font-weight:700;line-height:1.4}
+.share-panel.share-panel .sheet-subtitle{margin-top:4rpx;color:var(--theme-text-secondary);font-size:14px;line-height:1.45}
+.share-panel.share-panel .sheet-close.sheet-close{box-sizing:border-box;display:flex;flex:0 0 44px;width:44px;min-width:44px;max-width:44px;height:44px;min-height:44px;max-height:44px;margin:0;padding:0;align-items:center;justify-content:center;border:0;border-radius:50%;background:var(--theme-control);color:var(--theme-text-secondary);font-size:35rpx;line-height:1}
+.share-panel.share-panel .sheet-close.sheet-close::after{border:0}
+.share-panel.share-panel .share-image-scroll{box-sizing:border-box;width:100%;height:auto;min-height:100rpx;max-height:60vh;flex:1;margin:0;border:0;border-radius:0;background:transparent;text-align:center}
+.share-panel.share-panel .share-image{display:block;width:100%;height:auto;border-radius:12rpx}
+.share-panel.share-panel .share-state{display:flex;min-height:180rpx;flex:0 1 auto;flex-direction:column;align-items:center;justify-content:center;gap:18rpx;color:var(--theme-text-secondary);font-size:16px;line-height:1.45;text-align:center}
+.share-panel.share-panel .loading-dot{width:28rpx;height:28rpx;border:4rpx solid var(--theme-divider);border-top-color:#007aff;border-radius:50%;animation:gain-spin .8s linear infinite}
+.share-panel.share-panel .share-error{color:var(--theme-warning)}
+.share-panel.share-panel .share-actions{display:flex;box-sizing:border-box;flex:none;margin-top:12rpx;padding-top:0;align-items:stretch;gap:10rpx}
+.share-panel.share-panel .share-actions .share-action.share-action{box-sizing:border-box;display:flex;flex:1 1 0;width:0;max-width:100%;min-width:0;height:auto;min-height:48px;margin:0;padding:8rpx 12rpx;align-items:center;justify-content:center;border:0;border-radius:15rpx;background:var(--theme-control);color:var(--theme-text);font-size:16px;font-weight:600;line-height:1.45;text-align:center;white-space:normal;overflow-wrap:anywhere}
+.share-panel.share-panel .share-actions .share-action.share-action::after{border:0}
+.share-panel.share-panel .share-actions .share-action-primary.share-action-primary{background:var(--theme-primary-fill);color:#fff}
+.share-panel.share-panel .share-actions .share-action.share-action[disabled]{background:var(--theme-surface-muted);color:var(--theme-text-tertiary);opacity:1}
+.share-panel.share-panel .share-retry.share-retry{box-sizing:border-box;display:flex;flex:0 1 auto;width:auto;max-width:100%;min-width:44px;height:auto;min-height:48px;margin:0;padding:8rpx 16rpx;align-items:center;justify-content:center;border:0;border-radius:12rpx;background:var(--theme-control);color:var(--theme-accent-text);font-size:16px;line-height:1.45;text-align:center;white-space:normal;overflow-wrap:anywhere}
+.share-panel.share-panel .share-retry.share-retry::after{border:0}
+@media (prefers-color-scheme: dark){.share-panel.share-panel .loading-dot{border-top-color:#0a84ff}}

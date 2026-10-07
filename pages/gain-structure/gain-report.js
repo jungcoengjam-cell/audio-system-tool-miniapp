@@ -20,7 +20,6 @@ const COLORS = {
 
 const LEFT = 44
 const CONTENT_WIDTH = REPORT_WIDTH - (LEFT * 2)
-const GAP = 14
 
 function textValue(value) {
   return value == null ? '' : String(value)
@@ -108,27 +107,24 @@ function addTextLines(commands, lines, x, top, lineHeight, size, color,
 }
 
 function addSectionTitle(commands, context, title, y) {
-  const lines = wrapText(context, title, CONTENT_WIDTH, 24, 650)
-  return y + addTextLines(commands, lines, LEFT, y, 32, 24, COLORS.text, 650) + 10
+  const lines = wrapText(context, title, CONTENT_WIDTH, 32, 650)
+  return y + addTextLines(commands, lines, REPORT_WIDTH / 2, y, 40,
+    32, COLORS.text, 650, 'center') + 10
 }
 
-function addKeyValueRow(commands, context, label, value, y, options = {}) {
-  const labelWidth = options.labelWidth || 220
-  const labelSize = options.labelSize || 24
-  const valueSize = options.valueSize || 30
-  const labelLineHeight = options.labelLineHeight || 32
-  const valueLineHeight = options.valueLineHeight || 40
-  const columnGap = options.columnGap || 14
-  const labelLines = wrapText(context, label, labelWidth, labelSize, 500)
-  const valueLines = wrapText(context, value || '—',
-    CONTENT_WIDTH - labelWidth - columnGap, valueSize, 500)
-  const rowHeight = Math.max(labelLines.length * labelLineHeight,
-    valueLines.length * valueLineHeight)
-  addTextLines(commands, labelLines, LEFT, y, labelLineHeight,
-    labelSize, COLORS.secondary, 500)
-  addTextLines(commands, valueLines, LEFT + labelWidth + columnGap, y,
-    valueLineHeight, valueSize, COLORS.text, 500)
-  return rowHeight + (options.bottomGap == null ? 12 : options.bottomGap)
+function addKeyValueRow(commands, context, label, value, y) {
+  const innerWidth = CONTENT_WIDTH - 48
+  const labelLines = wrapText(context, label, innerWidth, 26, 650)
+  const valueLines = wrapText(context, value || '\u2014', innerWidth, 26, 500)
+  const labelLineHeight = 34
+  const valueLineHeight = 36
+  const groupPadding = 14
+  let textY = y + groupPadding
+  textY += addTextLines(commands, labelLines, REPORT_WIDTH / 2, textY,
+    labelLineHeight, 26, COLORS.secondary, 650, 'center') + 4
+  textY += addTextLines(commands, valueLines, REPORT_WIDTH / 2, textY,
+    valueLineHeight, 26, COLORS.text, 500, 'center')
+  return textY - y + groupPadding
 }
 
 function addRoundedCard(commands, x, y, width, height, fill, stroke) {
@@ -208,16 +204,22 @@ function buildReportModel(payload, measureContext) {
   const commands = []
   let y = 32
   const badge = textValue(payload.moduleLabel) || '系统增益结构'
-  const badgeLines = wrapText(measureContext, badge, CONTENT_WIDTH - 32, 18, 650)
-  const badgeHeight = Math.max(38, 16 + badgeLines.length * 24)
-  addRoundedCard(commands, LEFT, y, Math.min(CONTENT_WIDTH, 210), badgeHeight,
+  const badgeWidth = Math.min(CONTENT_WIDTH, 260)
+  const badgeX = (REPORT_WIDTH - badgeWidth) / 2
+  const badgeInnerWidth = badgeWidth - 32
+  const badgeLines = wrapText(measureContext, badge, badgeInnerWidth, 24, 650)
+  const badgeLineHeight = 32
+  const badgeTextHeight = badgeLines.length * badgeLineHeight
+  const badgeHeight = Math.max(52, badgeTextHeight + 20)
+  addRoundedCard(commands, badgeX, y, badgeWidth, badgeHeight,
     COLORS.tile, COLORS.tileBorder)
-  y += 7
-  y += addTextLines(commands, badgeLines, LEFT + 16, y, 24, 18,
-    COLORS.accent, 650) + 28
+  const badgeTextTop = y + ((badgeHeight - badgeTextHeight) / 2)
+  addTextLines(commands, badgeLines, REPORT_WIDTH / 2, badgeTextTop,
+    badgeLineHeight, 24, COLORS.accent, 650, 'center')
+  y += badgeHeight + 22
 
   const heroTop = y
-  const heroPadding = 24
+  const heroPadding = 26
   const heroLabelLines = wrapText(measureContext, fields.adjustment.label,
     CONTENT_WIDTH - (heroPadding * 2), 23, 650)
   const heroValueLines = wrapText(measureContext, fields.adjustment.displayValue,
@@ -225,8 +227,8 @@ function buildReportModel(payload, measureContext) {
   const heroText = []
   let heroY = heroTop + heroPadding
   heroY += addTextLines(heroText, heroLabelLines, REPORT_WIDTH / 2, heroY,
-    31, 23, fields.adjustment.isDriveShortfall ? COLORS.warningText : COLORS.accent,
-    650, 'center') + 8
+    32, 23, fields.adjustment.isDriveShortfall ? COLORS.warningText : COLORS.accent,
+    650, 'center') + 12
   heroY += addTextLines(heroText, heroValueLines, REPORT_WIDTH / 2, heroY,
     84, 72, COLORS.text, 720, 'center')
   const heroHeight = Math.ceil(heroY - heroTop + heroPadding)
@@ -244,31 +246,30 @@ function buildReportModel(payload, measureContext) {
   ]
   const metricModels = metrics.map((metric, index) => {
     const x = LEFT + (index * (metricWidth + metricGap))
-    const innerWidth = metricWidth - 32
+    const innerWidth = metricWidth - 36
     const labelLines = wrapText(measureContext, metric.label, innerWidth, 24, 600)
-    const valueLines = wrapText(measureContext, metric.value || '—', innerWidth, 30, 650)
-    const height = Math.max(142, 22 + (labelLines.length * 32) + 10 + (valueLines.length * 40) + 22)
-    const cardCommands = []
-    let metricY = y + 18
-    metricY += addTextLines(cardCommands, labelLines, x + 16, metricY,
-      32, 24, COLORS.secondary, 600)
-    metricY += 10
-    addTextLines(cardCommands, valueLines, x + 16, metricY,
-      40, 30, COLORS.text, 650)
-    return { x, height, cardCommands }
+    const valueLines = wrapText(measureContext, metric.value || '\u2014', innerWidth, 30, 650)
+    const contentHeight = (labelLines.length * 32) + 10 + (valueLines.length * 40)
+    return { x, labelLines, valueLines, contentHeight }
   })
-  const metricsHeight = Math.max(...metricModels.map((metric) => metric.height))
+  const metricsHeight = Math.max(144,
+    ...metricModels.map((metric) => metric.contentHeight + 44))
   metricModels.forEach((metric) => {
     addRoundedCard(commands, metric.x, y, metricWidth, metricsHeight,
       COLORS.tile, COLORS.tileBorder)
-    commands.push(...metric.cardCommands)
+    let metricY = y + ((metricsHeight - metric.contentHeight) / 2)
+    const center = metric.x + (metricWidth / 2)
+    metricY += addTextLines(commands, metric.labelLines, center, metricY,
+      32, 24, COLORS.secondary, 600, 'center') + 10
+    addTextLines(commands, metric.valueLines, center, metricY,
+      40, 30, COLORS.text, 650, 'center')
   })
   y += metricsHeight + 26
 
   y = addSectionTitle(commands, measureContext, '衰减执行位置与设备设置', y)
   const placementTop = y
   const placementCommands = []
-  let placementY = placementTop + 20
+  let placementY = placementTop
   placementY += addKeyValueRow(placementCommands, measureContext,
     '衰减执行位置', fields.execution, placementY)
   placementY += addKeyValueRow(placementCommands, measureContext,
@@ -276,45 +277,29 @@ function buildReportModel(payload, measureContext) {
   placementY += addKeyValueRow(placementCommands, measureContext,
     'DSP 最终输出增益', fields.dspOutput, placementY)
   placementY += addKeyValueRow(placementCommands, measureContext,
-    '功放输入电平控制', fields.amplifierKnob, placementY, { bottomGap: 8 })
-  const placementHeight = Math.ceil(placementY - placementTop + 16)
+    '功放输入电平控制', fields.amplifierKnob, placementY)
+  const placementHeight = Math.ceil(placementY - placementTop)
   addRoundedCard(commands, LEFT, placementTop, CONTENT_WIDTH, placementHeight,
     COLORS.card, COLORS.line)
   commands.push(...placementCommands)
   y = placementTop + placementHeight + 12
 
   if (fields.placementWarning) {
+    y += 12
+    const warningPadding = 20
     const warningLines = wrapText(measureContext, fields.placementWarning,
-      CONTENT_WIDTH - 36, 24, 600)
-    const warningHeight = Math.max(72, 20 + (warningLines.length * 34) + 16)
+      CONTENT_WIDTH - (warningPadding * 2), 24, 600)
+    const warningLineHeight = 34
+    const warningTextHeight = warningLines.length * warningLineHeight
+    const warningHeight = warningTextHeight + (warningPadding * 2)
     addRoundedCard(commands, LEFT, y, CONTENT_WIDTH, warningHeight,
       COLORS.warning, '#f0d4ad')
-    addTextLines(commands, warningLines, LEFT + 18, y + 12,
-      34, 24, COLORS.warningText, 600)
+    const warningTextTop = y + ((warningHeight - warningTextHeight) / 2)
+    addTextLines(commands, warningLines, REPORT_WIDTH / 2, warningTextTop,
+      warningLineHeight, 24, COLORS.warningText, 600, 'center')
     y += warningHeight + 20
   } else {
-    y += 8
-  }
-
-  const traceabilityRows = [
-    `生成时间：${textValue(payload.generatedAt)}`,
-    `小程序版本：${textValue(payload.appVersion)} · 产品资料日期：${textValue(payload.productDataDate)}`,
-  ].filter((row) => !row.endsWith('：'))
-  if (traceabilityRows.length) {
-    const footerTop = y + 2
-    commands.push({
-      type: 'line', x: LEFT, y: footerTop, width: CONTENT_WIDTH,
-      color: COLORS.line, lineWidth: 1,
-    })
-    let footerY = footerTop + 14
-    traceabilityRows.forEach((row) => {
-      const footerLines = wrapText(measureContext, row, CONTENT_WIDTH, 18, 400)
-      footerY += addTextLines(commands, footerLines, LEFT, footerY,
-        26, 18, COLORS.tertiary, 400) + 2
-    })
-    y = footerY + 8
-  } else {
-    y += 18
+    y = placementTop + placementHeight + 20
   }
   return { commands, height: Math.ceil(y) }
 }

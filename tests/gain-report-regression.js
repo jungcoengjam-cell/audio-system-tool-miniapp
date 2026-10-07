@@ -54,7 +54,12 @@ function makeMeasureContext() {
   const context = {
     font: '400 16px sans-serif',
     align: 'left',
+    fillStyle: '',
     drawnText: [],
+    cardRects: [],
+    strokedLines: [],
+    pathPoints: [],
+    pathHasCurve: false,
     measureText(value) {
       const size = Number(/(\d+(?:\.\d+)?)px/.exec(this.font)?.[1] || 16)
       const width = [...String(value)].reduce((total, character) => {
@@ -63,32 +68,48 @@ function makeMeasureContext() {
       }, 0)
       return { width }
     },
-    setFillStyle() {},
+    setFillStyle(value) { this.fillStyle = value },
     setStrokeStyle() {},
     setLineWidth() {},
     setTextAlign(value) { this.align = value },
-    beginPath() {},
-    moveTo() {},
-    lineTo() {},
-    quadraticCurveTo() {},
+    beginPath() { this.pathPoints = []; this.pathHasCurve = false },
+    moveTo(x, y) { this.pathPoints.push({ x, y }) },
+    lineTo(x, y) { this.pathPoints.push({ x, y }) },
+    quadraticCurveTo(controlX, controlY, x, y) {
+      this.pathHasCurve = true
+      this.pathPoints.push({ x: controlX, y: controlY }, { x, y })
+    },
     closePath() {},
-    stroke() {},
-    fill() {},
+    stroke() {
+      if (!this.pathHasCurve && this.pathPoints.length === 2) {
+        this.strokedLines.push(this.pathPoints.map((point) => ({ ...point })))
+      }
+    },
+    fill() {
+      if (!this.pathPoints.length) return
+      const xs = this.pathPoints.map((point) => point.x)
+      const ys = this.pathPoints.map((point) => point.y)
+      const x = Math.min(...xs)
+      const y = Math.min(...ys)
+      this.cardRects.push({
+        x, y,
+        width: Math.max(...xs) - x,
+        height: Math.max(...ys) - y,
+        fill: this.fillStyle,
+      })
+    },
     fillRect() {},
     fillText(value, x, y) {
       this.drawnText.push({
-        text: String(value),
-        x,
-        y,
-        align: this.align,
+        text: String(value), x, y, align: this.align,
         width: this.measureText(value).width,
         size: Number(/(\d+(?:\.\d+)?)px/.exec(this.font)?.[1] || 16),
+        weight: Number(/^(\d+)\s/.exec(this.font)?.[1] || 400),
       })
     },
   }
   return context
 }
-
 function renderPageReport(page) {
   assert.strictEqual(page.data.hasValidResult, true, 'fixture must produce a valid result')
   const record = page.getRecordPayload()
@@ -118,14 +139,126 @@ function renderPageReport(page) {
     text: context.drawnText.map((item) => item.text).join(''),
     drawnLines: context.drawnText.map((item) => item.text),
     drawnItems: context.drawnText.map((item) => ({ ...item })),
+    cardRects: context.cardRects.map((rect) => ({ ...rect })),
+    strokedLines: context.strokedLines.map((line) => line.map((point) => ({ ...point }))),
   }
 }
 
-function assertIncludesIgnoringWhitespace(text, value, label) {
-  const normalize = (source) => String(source).replace(/\s/g, '')
-  assert(normalize(text).includes(normalize(value)), `${label} must be visible in report text`)
+function getItemBounds(item) {
+  const left = item.align === 'center' ? item.x - (item.width / 2)
+    : item.align === 'right' ? item.x - item.width : item.x
+  return { left, right: left + item.width, top: item.y - item.size }
 }
 
+function itemsWithinCard(report, card) {
+  return report.drawnItems.filter((item) => {
+    const bounds = getItemBounds(item)
+    return bounds.top >= card.y - 1 && bounds.top < card.y + card.height
+      && bounds.left >= card.x - 1 && bounds.right <= card.x + card.width + 1
+  })
+}
+
+function assertTextInsideCard(item, card, lineHeight, horizontalPadding, label) {
+  const bounds = getItemBounds(item)
+  assert.strictEqual(item.align, 'center', label + ' must be center aligned')
+  assert(Math.abs(item.x - (card.x + (card.width / 2))) < 0.01, label + ' must use its own card center')
+  assert(bounds.left >= card.x + horizontalPadding - 1, label + ' must fit the left card padding')
+  assert(bounds.right <= card.x + card.width - horizontalPadding + 1, label + ' must fit the right card padding')
+  assert(bounds.top >= card.y - 1 && bounds.top + lineHeight <= card.y + card.height + 1, label + ' line box must fit the card')
+}
+
+function findReportCard(report, predicate, label) {
+  const card = report.cardRects.find(predicate)
+  assert(card, label + ' card must be drawn')
+  return card
+}
+
+function assertGainReportLayout(report) {
+  const badge = findReportCard(report, (card) => card.width === 260 && card.fill === '#eef6ff', 'module badge')
+  const badgeItems = itemsWithinCard(report, badge)
+  assert(badgeItems.length > 0, 'module badge must include its title')
+  badgeItems.forEach((item) => assertTextInsideCard(item, badge, 32, 16, 'module title'))
+  const badgeFirstTop = Math.min(...badgeItems.map((item) => getItemBounds(item).top))
+  const badgeLastBottom = Math.max(...badgeItems.map((item) => getItemBounds(item).top + 32))
+  assert(Math.abs((badgeFirstTop - badge.y) - (badge.y + badge.height - badgeLastBottom)) <= 1, 'module title block must be vertically centered')
+
+  const metricCards = report.cardRects.filter((card) => card.width === 325 && card.fill === '#eef6ff').sort((a, b) => a.x - b.x)
+  assert.strictEqual(metricCards.length, 2, 'both metric cards must remain distinct')
+  const metricCenters = metricCards.map((card) => card.x + (card.width / 2))
+  assert(Math.abs(metricCenters[0] - 206.5) < 0.01 && Math.abs(metricCenters[1] - 543.5) < 0.01, 'metric cards must keep separate centers')
+  assert(metricCards[0].height === metricCards[1].height, 'metric cards must share one measured height')
+  metricCards.forEach((card, index) => {
+    const items = itemsWithinCard(report, card)
+    assert(items.length > 0, 'metric ' + (index + 1) + ' must include its label and value')
+    items.forEach((item) => assertTextInsideCard(item, card, item.size === 24 ? 32 : 40, 18, 'metric text'))
+    const firstTop = Math.min(...items.map((item) => getItemBounds(item).top))
+    const lastBottom = Math.max(...items.map((item) => getItemBounds(item).top + (item.size === 24 ? 32 : 40)))
+    assert(Math.abs((firstTop - card.y) - (card.y + card.height - lastBottom)) <= 1, 'metric content must be vertically centered')
+  })
+
+  const wideCards = report.cardRects.filter((card) => card.width === 662).sort((a, b) => a.y - b.y)
+  assert(wideCards.length >= 2, 'hero and execution cards must be present')
+  const heroItems = itemsWithinCard(report, wideCards[0])
+  assert(heroItems.length > 0, 'hero card must include its adjustment')
+  heroItems.forEach((item) => assertTextInsideCard(item, wideCards[0], item.size === 23 ? 32 : 84, 26, 'hero text'))
+
+  const execution = findReportCard(report, (card) => card.width === 662 && card.fill === '#ffffff', 'execution')
+  const executionItems = itemsWithinCard(report, execution)
+  assert(executionItems.length >= 8, 'execution card must retain four label/value groups')
+  executionItems.forEach((item) => {
+    assert.strictEqual(item.size, 26, 'execution headings must be at least as large as values')
+    assert(item.weight === 650 || item.weight === 500, 'execution label/value weight hierarchy must remain clear')
+    assertTextInsideCard(item, execution, item.weight === 650 ? 34 : 36, 24, 'execution text')
+  })
+  const executionLabels = executionItems.filter((item) => item.weight === 650)
+  const executionValues = executionItems.filter((item) => item.weight === 500)
+  assert.strictEqual(executionLabels.length, 4, 'execution card must show four centered subheadings')
+  assert(executionValues.length >= 4, 'each execution heading must have visible content')
+  const firstExecutionTop = getItemBounds(executionItems[0]).top
+  const lastExecutionItem = executionItems[executionItems.length - 1]
+  const lastExecutionBottom = getItemBounds(lastExecutionItem).top + 36
+  assert(Math.abs(firstExecutionTop - execution.y - 14) <= 1 && Math.abs(execution.y + execution.height - lastExecutionBottom - 14) <= 1, 'execution groups must keep balanced vertical padding')
+
+  const sectionTitles = report.drawnItems.filter((item) => item.size === 32)
+  assert(sectionTitles.length > 0, 'execution section title must remain visible')
+  sectionTitles.forEach((item) => {
+    const bounds = getItemBounds(item)
+    assert.strictEqual(item.align, 'center', 'section title must be centered')
+    assert(Math.abs(item.x - 375) < 0.01 && bounds.left >= 43 && bounds.right <= 707, 'section title must fit the content bounds')
+  })
+
+  const warning = report.cardRects.find((card) => card.width === 662 && card.fill === '#fff4e5' && card.y > execution.y + execution.height)
+  if (warning) {
+    const warningItems = itemsWithinCard(report, warning)
+    assert(warningItems.length > 0, 'warning card must include its message')
+    warningItems.forEach((item) => assertTextInsideCard(item, warning, 34, 20, 'warning text'))
+    const firstTop = Math.min(...warningItems.map((item) => getItemBounds(item).top))
+    const lastBottom = Math.max(...warningItems.map((item) => getItemBounds(item).top + 34))
+    assert(Math.abs(firstTop - warning.y - 20) <= 1 && Math.abs(warning.y + warning.height - lastBottom - 20) <= 1, 'warning text must have balanced vertical padding')
+  }
+  const lastCardBottom = Math.max(...report.cardRects.map((card) => card.y + card.height))
+  assert.strictEqual(report.height - lastCardBottom, 20, 'canvas must end 20px after its last actual card')
+  assert(!report.strokedLines.some(([start, end]) => Math.abs(start.x - 44) < 0.01 && Math.abs(end.x - 706) < 0.01 && Math.abs(start.y - end.y) < 0.01), 'traceability footer divider must be absent')
+}
+
+function replacePayloadField(payload, label, value) {
+  let replaced = false
+  const lines = payload.lines.map((line) => {
+    const colon = line.indexOf('\uff1a')
+    if (colon >= 0 && line.slice(0, colon) === label) {
+      replaced = true
+      return line.slice(0, colon + 1) + value
+    }
+    return line
+  })
+  assert(replaced, 'long-layout fixture must replace a canonical execution field')
+  return { ...payload, lines }
+}
+
+function assertIncludesIgnoringWhitespace(text, value, label) {
+  const normalize = (input) => String(input).replace(/\s/g, '')
+  assert(normalize(text).includes(normalize(value)), label + ' must be visible in report text')
+}
 const attenuation = renderPageReport(makePage({
   amplifierModel: 'TC-X2200B',
   stageValue: 1,
@@ -133,6 +266,7 @@ const attenuation = renderPageReport(makePage({
   loadImpedance: null,
   targetPeakDbfs: -6,
 }))
+assertGainReportLayout(attenuation)
 for (const expected of [
   '系统对齐衰减',
   '10.19 dB',
@@ -147,14 +281,17 @@ for (const expected of [
   '0 dB 衰减',
   '本次衰减只在 DSP 最终输出执行，功放输入电平控制不要重复衰减。',
 ]) assertIncludesIgnoringWhitespace(attenuation.text, expected, expected)
-for (const [label, value] of [
-  ['generatedAt', attenuation.payload.generatedAt],
-  ['appVersion', attenuation.payload.appVersion],
-  ['productDataDate', attenuation.payload.productDataDate],
-]) assertIncludesIgnoringWhitespace(attenuation.text, value, `${label} traceability value`)
-for (const label of ['生成时间：', '小程序版本：', '产品资料日期：']) {
-  assertIncludesIgnoringWhitespace(attenuation.text, label, `${label} traceability label`)
+for (const key of ['generatedAt', 'appVersion', 'productDataDate']) {
+  assert(attenuation.payload[key], 'canonical ' + key + ' metadata must remain in the payload')
+  assert(!attenuation.text.includes(String(attenuation.payload[key])), 'share image must omit ' + key + ' while retaining source metadata')
 }
+const expandedMetadataPayload = { ...attenuation.payload, generatedAt: 'generated metadata '.repeat(100), appVersion: 'version metadata '.repeat(100), productDataDate: 'product data metadata '.repeat(100) }
+const expandedMetadataHeight = calculateResultReportHeight(expandedMetadataPayload, makeMeasureContext())
+assert.strictEqual(expandedMetadataHeight, attenuation.height, 'traceability metadata must not reserve image height')
+const expandedMetadataContext = makeMeasureContext()
+drawResultReport(expandedMetadataContext, expandedMetadataPayload, expandedMetadataHeight)
+assert.deepStrictEqual(expandedMetadataContext.drawnText, attenuation.drawnItems, 'traceability metadata must not change visible commands')
+assert.deepStrictEqual(expandedMetadataContext.cardRects, attenuation.cardRects, 'traceability metadata must not change card geometry')
 assert(attenuation.payload.summary.includes('10.19'), 'canonical record summary must remain unchanged')
 assert(attenuation.payload.title, 'canonical payload title must remain in the payload')
 assert(attenuation.payload.trustLabel && attenuation.payload.trustDescription,
@@ -219,6 +356,7 @@ const drive = renderPageReport(makePage({
   loadImpedance: 8,
   targetPeakDbfs: -3,
 }))
+assertGainReportLayout(drive)
 for (const expected of [
   '驱动差额',
   '1.17 dB',
@@ -233,6 +371,34 @@ assert(!drive.text.includes('建议系统衰减'),
   'drive-shortfall report must remain distinct from an attenuation recommendation')
 assert(drive.drawnLines.some((line) => line.includes('16.57 dBu')),
   'numeric value and dBu unit must stay together when the rated input wraps')
+
+const placementLabels = [
+  '\u8870\u51cf\u6267\u884c\u4f4d\u7f6e',
+  'DSP \u8f93\u5165\u8868\u76ee\u6807',
+  'DSP \u6700\u7ec8\u8f93\u51fa\u589e\u76ca',
+  '\u529f\u653e\u8f93\u5165\u7535\u5e73\u63a7\u5236',
+]
+let longLayoutPayload = { ...attenuation.payload, moduleLabel: '\u589e\u76ca\u7ed3\u6784'.repeat(8) }
+placementLabels.forEach((label, index) => {
+  const suffix = index === 1 ? ' -6 dBFS = 12.4 dBu' : ' 1.23 dB'
+  const value = '\u8d85\u957f\u6267\u884c\u4f4d\u7f6e\u5185\u5bb9'.repeat(12) + suffix
+  longLayoutPayload = replacePayloadField(longLayoutPayload, label, value)
+})
+const warningLineIndex = longLayoutPayload.lines.findIndex((line) => line.includes('DSP') && line.includes('\u8870\u51cf'))
+assert(warningLineIndex >= 0, 'long-layout fixture must retain its warning message')
+longLayoutPayload.lines[warningLineIndex] = 'DSP \u8870\u51cf \u529f\u653e ' + '\u8d85\u957f\u8b66\u544a\u5e03\u5c40'.repeat(36)
+const longReportContext = makeMeasureContext()
+const longReportHeight = calculateResultReportHeight(longLayoutPayload, longReportContext)
+assert(longReportHeight > 0 && longReportHeight < 4096, 'long wrapped layout must remain bounded')
+drawResultReport(longReportContext, longLayoutPayload, longReportHeight)
+const longLayoutReport = { ...attenuation, height: longReportHeight, drawnItems: longReportContext.drawnText.map((item) => ({ ...item })), drawnLines: longReportContext.drawnText.map((item) => item.text), cardRects: longReportContext.cardRects.map((rect) => ({ ...rect })), strokedLines: longReportContext.strokedLines.map((line) => line.map((point) => ({ ...point }))) }
+assertGainReportLayout(longLayoutReport)
+const longBadge = findReportCard(longLayoutReport, (card) => card.width === 260 && card.fill === '#eef6ff', 'wrapped module badge')
+assert(itemsWithinCard(longLayoutReport, longBadge).length > 1, 'module title must wrap inside its badge')
+const longExecution = findReportCard(longLayoutReport, (card) => card.width === 662 && card.fill === '#ffffff', 'long execution')
+const longWarning = longLayoutReport.cardRects.find((card) => card.width === 662 && card.fill === '#fff4e5' && card.y > longExecution.y + longExecution.height)
+assert(longWarning && itemsWithinCard(longLayoutReport, longWarning).length > 1, 'long warning text must wrap inside its card')
+assert(longReportContext.drawnText.some((item) => /-6\s+dBFS/.test(item.text)) && longReportContext.drawnText.some((item) => /12\.4\s+dBu/.test(item.text)), 'wrapped execution values must keep numbers joined to units')
 
 const direct = makePage({
   amplifierModel: 'KT-P21000',
@@ -250,6 +416,7 @@ assert.strictEqual(direct.data.result.alignmentMode, 'direct', 'edge fixture mus
 const zeroEdge = renderPageReport(direct)
 assertIncludesIgnoringWhitespace(zeroEdge.text, '系统对齐衰减', 'canonical zero adjustment label')
 assertIncludesIgnoringWhitespace(zeroEdge.text, '0 dB', 'zero adjustment value')
+assertGainReportLayout(zeroEdge)
 
 const sharePage = makePage({
   amplifierModel: 'TC-X2200B',
