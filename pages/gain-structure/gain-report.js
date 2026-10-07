@@ -185,10 +185,6 @@ function buildReportModel(payload, measureContext) {
 
   const lines = payload.lines.map((line) => textValue(line))
   const fields = {
-    amplifier: findField(lines, '功放'),
-    stage: findField(lines, '输入级档位'),
-    conditions: findField(lines, '工作条件'),
-    calibration: findField(lines, 'DSP 标定'),
     target: findField(lines, '目标峰值'),
     ratedInput: findField(lines, '功放额定输出输入点'),
     adjustment: getAdjustment(lines.find((line) => /驱动差额|驱动不足|系统对齐衰减/.test(line)) || ''),
@@ -293,29 +289,12 @@ function buildReportModel(payload, measureContext) {
     const warningHeight = Math.max(72, 20 + (warningLines.length * 34) + 16)
     addRoundedCard(commands, LEFT, y, CONTENT_WIDTH, warningHeight,
       COLORS.warning, '#f0d4ad')
-    y += 12
-    y += addTextLines(commands, warningLines, LEFT + 18, y,
-      34, 24, COLORS.warningText, 600) + 18
+    addTextLines(commands, warningLines, LEFT + 18, y + 12,
+      34, 24, COLORS.warningText, 600)
+    y += warningHeight + 20
+  } else {
+    y += 8
   }
-
-  y += 8
-  y = addSectionTitle(commands, measureContext, '设备、模式与校准条件', y)
-  const conditionTop = y
-  const conditionCommands = []
-  let conditionY = conditionTop + 20
-  conditionY += addKeyValueRow(conditionCommands, measureContext,
-    '功放型号', fields.amplifier, conditionY)
-  conditionY += addKeyValueRow(conditionCommands, measureContext,
-    '输入级位置', fields.stage, conditionY)
-  conditionY += addKeyValueRow(conditionCommands, measureContext,
-    '工作模式与负载', fields.conditions, conditionY)
-  conditionY += addKeyValueRow(conditionCommands, measureContext,
-    'DSP 校准基准', fields.calibration, conditionY, { bottomGap: 8 })
-  const conditionHeight = Math.ceil(conditionY - conditionTop + 16)
-  addRoundedCard(commands, LEFT, conditionTop, CONTENT_WIDTH, conditionHeight,
-    COLORS.card, COLORS.line)
-  commands.push(...conditionCommands)
-  y = conditionTop + conditionHeight + 24
 
   const traceabilityRows = [
     `生成时间：${textValue(payload.generatedAt)}`,

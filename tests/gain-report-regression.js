@@ -117,6 +117,7 @@ function renderPageReport(page) {
     height,
     text: context.drawnText.map((item) => item.text).join(''),
     drawnLines: context.drawnText.map((item) => item.text),
+    drawnItems: context.drawnText.map((item) => ({ ...item })),
   }
 }
 
@@ -178,9 +179,36 @@ for (const line of omittedVisualLines) {
 }
 assert(!attenuation.text.replace(/\s/g, '').includes(attenuation.payload.summary.replace(/\s/g, '')),
   'the card should not repeat the summary when its numbers are already in the hero and metrics')
-assert(attenuation.drawnLines.findIndex((line) => line.includes('衰减执行位置'))
-  < attenuation.drawnLines.findIndex((line) => line.includes('功放型号')),
-'execution guidance must precede the retained condition card')
+assert(!attenuation.text.includes('设备、模式与校准条件'),
+  'the share report must omit the condition section heading')
+const conditionSourceLabels = ['功放', '输入级档位', '工作条件', 'DSP 标定']
+for (const label of conditionSourceLabels) {
+  const sourceLine = attenuation.payload.lines.find((line) => line.startsWith(`${label}：`))
+  assert(sourceLine, `the canonical payload must retain ${label}`)
+  assert(attenuation.record.resultText.includes(sourceLine),
+    `the canonical record must retain ${label}`)
+}
+for (const label of ['功放型号', '输入级位置', '工作模式与负载', 'DSP 校准基准']) {
+  assert(!attenuation.drawnLines.some((line) => line.includes(label)),
+    `the share report must omit the ${label} condition row`)
+}
+const expandedConditionsPayload = {
+  ...attenuation.payload,
+  lines: attenuation.payload.lines.map((line) => {
+    const label = line.slice(0, line.indexOf('：'))
+    return conditionSourceLabels.includes(label)
+      ? `${label}：${'长条件信息用于高度回归'.repeat(80)}`
+      : line
+  }),
+}
+const expandedConditionsHeight = calculateResultReportHeight(
+  expandedConditionsPayload, makeMeasureContext())
+assert.strictEqual(expandedConditionsHeight, attenuation.height,
+  'omitted condition text must not reserve report height')
+const expandedConditionsContext = makeMeasureContext()
+drawResultReport(expandedConditionsContext, expandedConditionsPayload, expandedConditionsHeight)
+assert.deepStrictEqual(expandedConditionsContext.drawnText, attenuation.drawnItems,
+  'omitted condition text must not change the report drawing')
 assert(!attenuation.text.includes('系统无需增加衰减'),
   'attenuation report must not imply zero attenuation when a nonzero canonical value exists')
 
@@ -292,6 +320,22 @@ assert.match(wxss, /\.action-button\.action-button\{[^}]*width:44px;[^}]*height:
   'each action button must retain a 44px square touch target')
 assert.match(wxml, /class="choice-grid choice-grid-targets"[\s\S]*?wx:for="\{\{targetPeaks\}\}"/,
   'the three target options must remain bound to the canonical target list')
+assert.match(wxml, /class="choice-grid choice-grid-modes"[\s\S]*?<view wx:for="\{\{modes\}\}" wx:key="value" class="mode-choice-cell[\s\S]*?<button class="choice-card mode-choice-card[^"]*" aria-pressed="\{\{index === modeIndex\}\}" data-index="\{\{index\}\}" bindtap="onModeTap"/,
+  'mode choices must preserve their native button bindings inside wrapper cells')
+assert.match(wxss, /\.choice-grid-modes\{display:flex;[^}]*flex-wrap:wrap/,
+  'mode options must wrap in the native renderer')
+assert.match(wxss, /\.choice-grid-modes \.mode-choice-cell\{[^}]*flex:0 0 50%;[^}]*padding:0 4px 8px/,
+  'mode option cells must keep bounded half-width columns and spacing')
+assert.match(wxss, /\.choice-grid-modes \.mode-choice-card\.mode-choice-card\{[^}]*width:100%;[^}]*max-width:100%;[^}]*min-width:0;[^}]*min-height:56px/,
+  'mode buttons must fill their wrapped cells with native-safe dimensions')
+assert.match(wxss, /\.choice-grid-modes \.mode-choice-card \.choice-label\{[^}]*white-space:normal;[^}]*overflow-wrap:anywhere/,
+  'mode labels must wrap safely within their own buttons')
+assert.match(wxml, /<picker class="field-picker-load"[^>]*range="\{\{loadOptions\}\}"/,
+  'load impedance must remain the native picker backed by current options')
+assert.match(wxss, /\.field-picker-load\{[^}]*width:100%;[^}]*min-width:0/,
+  'the native load picker must fill its bounded row')
+assert.match(wxss, /\.field-value-load\{[^}]*min-width:0;[^}]*flex:1 1 0;[^}]*white-space:normal;[^}]*overflow-wrap:anywhere/,
+  'the selected load value must wrap before the fixed picker arrow')
 assert.match(wxss, /\.choice-grid-targets\{display:flex;[^}]*flex-direction:column;[^}]*gap:8px/,
   'target option cards must use full-width native-compatible rows')
 assert.match(wxss, /\.choice-grid-targets \.choice-card\{[^}]*width:100%;[^}]*min-height:64px/,

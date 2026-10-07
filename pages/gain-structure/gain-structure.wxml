@@ -106,16 +106,18 @@
           <view class="field-row">
             <text class="field-label">功放模式</text>
             <view class="choice-grid choice-grid-modes">
-              <button wx:for="{{modes}}" wx:key="value" class="choice-card {{index === modeIndex ? 'choice-card-active' : ''}}" aria-pressed="{{index === modeIndex}}" data-index="{{index}}" bindtap="onModeTap">
-                <text class="choice-label">{{item.label}}</text>
-              </button>
+              <view wx:for="{{modes}}" wx:key="value" class="mode-choice-cell {{modes.length === 1 ? 'mode-choice-cell-full' : ''}}">
+                <button class="choice-card mode-choice-card {{index === modeIndex ? 'choice-card-active' : ''}}" aria-pressed="{{index === modeIndex}}" data-index="{{index}}" bindtap="onModeTap">
+                  <text class="choice-label">{{item.label}}</text>
+                </button>
+              </view>
             </view>
           </view>
-          <view class="field-row">
+          <view class="field-row field-row-load">
             <text class="field-label">通道负载阻抗</text>
-            <picker range="{{loadOptions}}" range-key="label" value="{{loadIndex < 0 ? 0 : loadIndex}}" bindchange="onLoadChange">
+            <picker class="field-picker-load" range="{{loadOptions}}" range-key="label" value="{{loadIndex < 0 ? 0 : loadIndex}}" bindchange="onLoadChange">
               <view class="field-control {{loadIndex === 0 ? 'field-control-pending' : ''}}">
-                <text class="field-value">{{loadOptions[loadIndex < 0 ? 0 : loadIndex].label}}</text>
+                <text class="field-value field-value-load">{{loadOptions[loadIndex < 0 ? 0 : loadIndex].label}}</text>
                 <text class="field-arrow">⌄</text>
               </view>
             </picker>
