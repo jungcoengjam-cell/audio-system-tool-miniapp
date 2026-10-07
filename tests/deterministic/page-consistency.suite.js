@@ -116,6 +116,12 @@ module.exports = function register({ test, assert, finiteTree, close }) {
             wiring: 'parallel', mode: 'stereo', sensitivityVoltage: 1, highPassFrequency: 80,
           })
         }
+        if (name === 'gain-structure') {
+          context.storage.set('audioTool.gainStructure.preferences', {
+            amplifierModel: 'TC-X2200B', stageValue: 1, mode: 'stereo',
+            loadImpedance: null, targetPeakDbfs: -6,
+          })
+        }
         page.onLoad()
         finiteTree(page.data, name + '.data')
         assert(page.data.result, name + ' should calculate its valid default input')
@@ -145,6 +151,26 @@ module.exports = function register({ test, assert, finiteTree, close }) {
       } finally { context.restore() }
     }, { classification: 'implementation bug', basis: 'Each real calculator page should keep its calculation, copied text, and record text consistent.' })
   }
+
+  test('gain structure starts blank and reset clears only its saved draft', () => {
+    const context = bootPage('../../pages/gain-structure/gain-structure')
+    try {
+      const page = context.page
+      page.onLoad()
+      assert.strictEqual(page.data.calculationState, 'empty')
+      assert.strictEqual(page.data.result, null)
+      assert.strictEqual(page.data.hasValidResult, false)
+      assert.strictEqual(page.data.selectedAmplifier, null)
+      assert.strictEqual(page.clearDraft(), true)
+      assert.strictEqual(page.data.calculationState, 'empty')
+      assert.strictEqual(page.data.result, null)
+      assert.strictEqual(page.data.hasSavedDraft, false)
+      assert.strictEqual(context.storage.has('audioTool.gainStructure.preferences'), false)
+      page.onLoad()
+      assert.strictEqual(page.data.calculationState, 'empty', 'a relaunch after reset must stay blank')
+      assert.strictEqual(page.data.result, null)
+    } finally { context.restore() }
+  }, { classification: 'implementation bug', basis: 'A fresh or reset gain page should not silently restore a calculation without a saved draft.' })
 
   test('calculator mode changes recalculate from current fields without leaking the other mode', () => {
     const context = bootPage('../../pages/cable/cable')

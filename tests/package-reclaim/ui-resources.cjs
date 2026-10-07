@@ -39,6 +39,60 @@ for (const [relativePath, expectedHash] of Object.entries(baseline.expandedWxmlS
     'pages/dmx-layout-landscape/dmx-layout-landscape.wxml'
   ])
   let hashInput = normalizeLineEndings(expanded)
+  if (relativePath === 'pages/gain-structure/gain-structure.wxml') {
+    const overlay = read('pages/gain-structure/gain-overlays.wxml')
+    const controller = read('pages/gain-structure/gain-structure.js')
+    const styles = read('pages/gain-structure/gain-structure.wxss')
+    assert(source.indexOf('class="result-pane"') < source.indexOf('class="input-pane"'),
+      'gain output must precede its independent input pane')
+    assert(source.includes('<page-container') && source.includes('onPageContainerBeforeLeave')
+      && source.includes('onPageContainerAfterLeave') && source.includes('class="sheet-mask {{'),
+    'gain overlays must support native back lifecycle and a fallback mask')
+    assert(source.includes('<include src="./gain-overlays.wxml" />'),
+      'gain page must use its local overlay contract')
+    assert(source.includes('class="result-report-canvas-offscreen"')
+      && source.includes('canvas-id="resultReportCanvas"'),
+    'gain page must keep its local report canvas')
+    assert((source.match(/bindtap="requestReset"|bindtap="openSharePreview"|bindtap="toggleCurrentFavorite"|bindtap="openProjectSheet"/g) || []).length === 4,
+      'gain result rail must expose reset, share, favorite, and project actions')
+    assert(source.includes('disabled="{{!canReset}}"')
+      && source.includes('disabled="{{!hasValidResult}}"'),
+    'gain actions must expose their explicit disabled states')
+    assert(source.includes('class="placement-warning"')
+      && source.includes('result.placementWarning')
+      && source.includes('class="amplifier-setting"'),
+    'gain result must show output placement and fixed amplifier setting')
+    assert(source.includes("result.alignmentMode === 'insufficientDrive'")
+      && source.includes('result.primaryValue'),
+    'gain result must distinguish insufficient drive in its primary output')
+    assert(source.includes("activeGroup === 'load'") && source.includes('wx:if="{{showPowerContext}}"'),
+      'gain load controls must be conditional on voltage-gain models')
+    assert((source.match(/<view wx:if="\{\{loadReminderActive\}\}"/g) || []).length === 2,
+      'gain load reminder must remain visible in both result and input context')
+    assert(overlay.includes('bindtap="shareResultReportImage"')
+      && overlay.includes('bindtap="saveResultReportImage"')
+      && overlay.includes('bindtap="retryResultReport"')
+      && overlay.includes('isCheckingResultReportCache'),
+    'gain local preview must include send/save, loading, retry, and error handling')
+    assert(!overlay.includes('result-report-preview.wxml')
+      && !source.includes('../..\/templates\/result-report-preview.wxml'),
+    'gain must not duplicate the shared preview overlay')
+    assert(overlay.includes('bindtap="saveProjectConfiguration"')
+      && overlay.includes('bindtap="createProjectFromForm"')
+      && overlay.includes('class="project-target-name"')
+      && overlay.includes('bindinput="onProjectSearch"')
+      && !/configName|configurationNote/i.test(overlay),
+    'gain project sheet must select/search/create and save the existing payload only')
+    assert(controller.includes('addRecordToProject(frozen.payload, target.id)')
+      && !controller.includes('addRecordToProject(frozen.payload, target.id,'),
+    'gain project writes must preserve the two-argument records API')
+    assert(styles.includes('.result-pane{position:relative;')
+      && styles.includes('.editor-scroll{')
+      && styles.includes('.action-button.action-button{box-sizing:border-box;display:flex;width:44px;min-width:44px;max-width:44px;')
+      && styles.includes('.category-chip{display:flex;box-sizing:border-box;min-width:44px;'),
+    'gain result, scrolling input, and selector actions must retain compact accessible sizing')
+    continue
+  }
   if (dmxLayoutPages.has(relativePath)) {
     const newStart = '<view wx:if="{{batchVisible}}" class="batch-sheet-overlay"><view class="batch-sheet-backdrop" bindtap="closeBatchPlacement"></view><scroll-view class="batch-sheet" scroll-y="{{isLandscape}}" enhanced show-scrollbar="{{false}}" catchtap="stopTap"><view class="batch-sheet-content">'
     const oldStart = '<view wx:if="{{batchVisible}}" class="batch-sheet-overlay" bindtap="closeBatchPlacement" catchtouchmove="preventTouchMove"><view class="batch-sheet" catchtap="stopTap">'
@@ -75,7 +129,6 @@ for (const [relativePath, expectedHash] of Object.entries(baseline.expandedWxmlS
   }
   const projectSaveButtonCounts = new Map([
     ['pages/cable/cable.wxml', 1],
-    ['pages/gain-structure/gain-structure.wxml', 1],
     ['pages/spl/spl.wxml', 1],
     ['pages/venue/venue.wxml', 2],
   ])

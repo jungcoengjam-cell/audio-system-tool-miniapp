@@ -1,0 +1,182 @@
+{
+  "date": "2026-10-07",
+  "baselineCommit": "78c55495e94ae442616afbb63dd6839fa3b9f293",
+  "sourceHashes": {
+    "pages/gain-structure/gain-structure.js": "60d495bdaffe6096937925d4f348ec90310d5a91e26d8815c9c87e6806844dc8",
+    "pages/gain-structure/gain-structure.wxml": "175d3ca802a1e66188a6ff718b379aa7e5dfd03e034adf81acdc711b65c24781",
+    "pages/gain-structure/gain-structure.wxss": "a72867392b8cdf19471fc85a3b2192e7c4cca638a6c53c36c8cfbe49fc21d305",
+    "pages/gain-structure/gain-overlays.wxml": "f0109f0db42af8ec138f93141b2a1a832bafa321a28b789dba2f48847d916db7"
+  },
+  "visual": {
+    "source": "Actual WXML/WXSS/controller through Chromium bridge; supplemental geometry, not native or physical device",
+    "physicalDevice": false,
+    "cases": 108,
+    "failures": [],
+    "viewports": [
+      "320x480",
+      "375x667",
+      "390x753"
+    ],
+    "themes": [
+      "light",
+      "dark"
+    ],
+    "screenshots": [
+      "390x753-light-valid-amplifier.png",
+      "320x480-dark-valid-dbu.png",
+      "375x667-light-project-selected.png",
+      "320x480-light-reset-failed.png"
+    ]
+  },
+  "compilerAndRelatedRegression": [
+    {
+      "id": "wcc",
+      "exitCode": 0
+    },
+    {
+      "id": "wcsc",
+      "exitCode": 0
+    },
+    {
+      "id": "page-lifecycle-regression.js",
+      "exitCode": 0
+    },
+    {
+      "id": "report-lifecycle-regression.js",
+      "exitCode": 0
+    },
+    {
+      "id": "report-drawing-regression.js",
+      "exitCode": 0
+    },
+    {
+      "id": "project-wiring-storage-test.js",
+      "exitCode": 0
+    },
+    {
+      "id": "project-wiring-page-test.js",
+      "exitCode": 0
+    },
+    {
+      "id": "project-wiring-report-test.js",
+      "exitCode": 0
+    },
+    {
+      "id": "release-check.js",
+      "exitCode": 1
+    }
+  ],
+  "isolatedReleaseChecks": [
+    {
+      "id": "checkSyntax",
+      "passed": true
+    },
+    {
+      "id": "checkReleasePackageGates",
+      "passed": false
+    },
+    {
+      "id": "checkCatalogSelector",
+      "passed": true
+    },
+    {
+      "id": "checkDmxAddressLazyChannelGuide",
+      "passed": true
+    },
+    {
+      "id": "checkSharedResultReportPreviewTemplate",
+      "passed": true
+    },
+    {
+      "id": "checkProjectReportPlan",
+      "passed": true
+    },
+    {
+      "id": "checkLedScreenPlan",
+      "passed": true
+    },
+    {
+      "id": "checkData",
+      "passed": false
+    },
+    {
+      "id": "checkProductLibraryLazyLoading",
+      "passed": true
+    },
+    {
+      "id": "checkBaselines",
+      "passed": true
+    },
+    {
+      "id": "checkPageControllers",
+      "passed": true
+    },
+    {
+      "id": "checkHapticFeedback",
+      "passed": true
+    },
+    {
+      "id": "checkReportImageActions",
+      "passed": true
+    },
+    {
+      "id": "checkPerformanceMeasurements",
+      "passed": true
+    },
+    {
+      "id": "checkAudioPagePerformanceCoverage",
+      "passed": true
+    },
+    {
+      "id": "checkProductLibraryPerformanceCoverage",
+      "passed": true
+    },
+    {
+      "id": "checkLedScreenPerformanceCoverage",
+      "passed": true
+    },
+    {
+      "id": "checkProjectDetailPerformanceCoverage",
+      "passed": true
+    }
+  ],
+  "existingAudits": {
+    "passed": 50,
+    "total": 50
+  },
+  "focusedGainTests": {
+    "passed": 6,
+    "total": 6,
+    "command": "node tests/gain-structure-refactor-2026-10-07/run.cjs"
+  },
+  "deterministic": {
+    "passed": 87,
+    "total": 87,
+    "legacyReleaseCheckPassed": false
+  },
+  "reportCanvasEquivalence": {
+    "passed": 36,
+    "total": 36
+  },
+  "release": {
+    "passed": false,
+    "thresholdsChanged": false,
+    "cleanCandidateBlockers": [
+      "Existing draft control-protocol resources",
+      "Existing image/audio media 677497 bytes exceeds 338 KiB"
+    ],
+    "localWorkingPackageKiB": 2809.3,
+    "localPackageLimitKiB": 2650,
+    "preTaskWorkingPackageKiB": 2754.5
+  },
+  "native": {
+    "officialDevelopmentPreviewCreated": true,
+    "releasePublished": false,
+    "runtimeAutomationPassed": false,
+    "blocker": "Developer tool stayed on welcome screen; page inspection timed out",
+    "physicalDeviceTested": false
+  },
+  "githubCI": {
+    "workflowCount": 0
+  }
+}

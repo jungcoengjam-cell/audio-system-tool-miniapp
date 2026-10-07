@@ -1,0 +1,92 @@
+<view wx:if="{{selectorVisible}}" class="sheet-panel selector-panel" catchtap="stopTap">
+  <view class="sheet-header">
+    <view><text class="sheet-title">选择功放型号</text><text class="sheet-subtitle">按说明书确认输入级和额定功率数据</text></view>
+    <button class="sheet-close" aria-label="关闭" bindtap="closeAmplifierSelector">×</button>
+  </view>
+  <input class="selector-search" value="{{selectorKeyword}}" placeholder="输入型号关键词" confirm-type="search" bindinput="onSelectorInput" />
+  <scroll-view class="category-scroll" scroll-x enhanced show-scrollbar="{{false}}">
+    <view class="category-list">
+      <button wx:for="{{amplifierCategories}}" wx:key="label" class="category-chip {{index === selectorCategoryIndex ? 'category-chip-active' : ''}}" data-index="{{index}}" bindtap="onSelectorCategoryTap">{{item.label}}</button>
+    </view>
+  </scroll-view>
+  <text class="selector-count">匹配 {{selectorTotalCount}} 个型号</text>
+  <scroll-view class="selector-list" scroll-y enhanced show-scrollbar="{{false}}" bindscrolltolower="appendSelectorItems">
+    <view wx:for="{{selectorItems}}" wx:key="model" class="selector-row" data-index="{{item.index}}" bindtap="selectAmplifier">
+      <view class="selector-row-copy"><text class="selector-model">{{item.model}}</text><text class="selector-meta">{{item.category}}</text></view>
+      <view class="selector-row-actions">
+        <button class="selector-detail" data-model="{{item.model}}" catchtap="openAmplifierDetail">资料</button>
+        <text class="selector-row-arrow">›</text>
+      </view>
+    </view>
+    <view wx:if="{{selectorItems.length === 0}}" class="selector-empty">没有匹配型号，请换一个关键词或分类。</view>
+  </scroll-view>
+</view>
+
+<view wx:if="{{shareSheetVisible}}" class="sheet-panel share-panel" catchtap="stopTap">
+  <view class="sheet-header">
+    <view><text class="sheet-title">结果图片预览</text><text class="sheet-subtitle">预览、发送与保存使用同一张图片</text></view>
+    <button class="sheet-close" aria-label="取消并关闭" bindtap="closeSharePreview">×</button>
+  </view>
+  <view wx:if="{{isGeneratingResultReport || isCheckingResultReportCache}}" class="share-state" role="status"><view class="loading-dot"></view><text>{{isCheckingResultReportCache ? '正在检查图片缓存…' : '正在生成结果图片…'}}</text></view>
+  <block wx:elif="{{resultReportImagePath}}">
+    <scroll-view class="share-image-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+      <image class="share-image" src="{{resultReportImagePath}}" mode="widthFix" aria-label="增益结构结果图片" bindtap="previewResultReportImage"></image>
+    </scroll-view>
+    <view class="share-actions">
+      <button class="share-action share-action-primary" disabled="{{isGeneratingResultReport || isCheckingResultReportCache}}" bindtap="shareResultReportImage">发送给微信好友</button>
+      <button class="share-action" disabled="{{isGeneratingResultReport || isCheckingResultReportCache}}" bindtap="saveResultReportImage">保存到手机</button>
+    </view>
+  </block>
+  <view wx:else class="share-state share-error" role="alert">
+    <text>{{resultReportError || '图片暂未生成，请重试。'}}</text>
+    <button class="share-retry" disabled="{{isGeneratingResultReport || isCheckingResultReportCache}}" bindtap="retryResultReport">重新生成</button>
+  </view>
+</view>
+
+<view wx:if="{{projectSheetVisible}}" class="sheet-panel project-panel {{projectKeyboardActive ? 'project-keyboard-open' : ''}}" style="{{projectKeyboardPanelStyle}}" catchtap="stopTap">
+  <view class="sheet-header">
+    <view><text class="sheet-title">{{projectStep === 'create' ? '新建项目' : projectStep === 'success' ? '保存完成' : '保存到项目'}}</text><text class="sheet-subtitle">保存当前增益结构结果</text></view>
+    <button class="sheet-close" aria-label="关闭" disabled="{{isSavingProject}}" bindtap="closeProjectSheet">×</button>
+  </view>
+
+  <scroll-view wx:if="{{projectStep === 'select'}}" class="project-sheet-body" scroll-y enhanced show-scrollbar="{{false}}">
+    <input class="selector-search" data-project-field="projectSearch" data-project-episode="{{projectKeyboardEpisode}}" adjust-position="{{false}}" value="{{projectSearch}}" placeholder="搜索项目" confirm-type="search" bindfocus="onProjectInputFocus" bindblur="onProjectInputBlur" bindkeyboardheightchange="onProjectKeyboardHeightChange" bindinput="onProjectSearch" />
+    <view wx:if="{{projectLoadState === 'loading'}}" class="project-state">正在读取项目…</view>
+    <view wx:elif="{{projectLoadState === 'error'}}" class="project-state project-state-error"><text>{{projectError}}</text><button class="share-retry" bindtap="refreshProjects">重试</button></view>
+    <view wx:elif="{{projectItems.length === 0 && projectSearch}}" class="project-state">没有匹配项目。</view>
+    <view wx:elif="{{projectItems.length === 0}}" class="project-state">还没有项目，可新建项目保存当前结果。</view>
+    <view wx:if="{{projectSaveError}}" class="form-error" role="alert">{{projectSaveError}}</view>
+    <view wx:if="{{projectItems.length}}" class="project-list">
+      <button wx:for="{{projectItems}}" wx:key="id" class="project-row {{projectTargetId === item.id ? 'project-row-selected' : ''}}" data-id="{{item.id}}" aria-pressed="{{projectTargetId === item.id}}" bindtap="chooseProject">
+        <text>{{item.name}}</text><text class="field-arrow">›</text>
+      </button>
+    </view>
+  </scroll-view>
+
+  <scroll-view wx:elif="{{projectStep === 'create'}}" class="project-sheet-body project-create-body" scroll-y enhanced show-scrollbar="{{false}}">
+    <text class="field-label">项目名称（最多 30 个字符）</text>
+    <input class="selector-search project-name-input" data-project-field="newProjectName" data-project-episode="{{projectKeyboardEpisode}}" adjust-position="{{false}}" maxlength="30" value="{{newProjectName}}" placeholder="请输入项目名称" confirm-type="done" bindfocus="onProjectInputFocus" bindblur="onProjectInputBlur" bindkeyboardheightchange="onProjectKeyboardHeightChange" bindinput="onNewProjectNameInput" />
+    <text wx:if="{{projectNameError}}" class="form-error" role="alert">{{projectNameError}}</text>
+  </scroll-view>
+
+  <view wx:elif="{{projectStep === 'success'}}" class="project-sheet-body project-success">
+    <text class="success-title">已保存到项目</text>
+    <text class="success-project">{{savedProjectName}}</text>
+  </view>
+
+  <view wx:if="{{projectStep === 'select'}}" class="project-target-summary" role="status">
+    <text class="project-target-label">保存目标</text>
+    <text class="project-target-name">{{projectTargetName || '请选择项目'}}</text>
+  </view>
+  <view wx:if="{{projectStep === 'select'}}" class="project-footer">
+    <button class="share-action" disabled="{{isSavingProject || projectLoadState !== 'ready'}}" bindtap="beginNewProject">新建项目</button>
+    <button class="share-action share-action-primary" disabled="{{isSavingProject || !projectTargetId || projectLoadState !== 'ready'}}" bindtap="saveProjectConfiguration">{{isSavingProject ? '正在保存…' : '保存到项目'}}</button>
+  </view>
+  <view wx:elif="{{projectStep === 'create'}}" class="project-footer">
+    <button class="share-action" disabled="{{isSavingProject}}" bindtap="backToProjectList">返回</button>
+    <button class="share-action share-action-primary" disabled="{{isSavingProject}}" bindtap="createProjectFromForm">创建项目</button>
+  </view>
+  <view wx:else class="project-footer">
+    <button class="share-action share-action-primary" bindtap="continueAfterProjectSave">完成</button>
+  </view>
+</view>

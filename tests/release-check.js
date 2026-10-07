@@ -501,7 +501,10 @@ function checkReleasePackageGates() {
     const source = fs.readFileSync(path.join(root, file), 'utf8')
     const darkStart = Math.min(...[source.indexOf('@media (prefers-color-scheme: dark)'), source.indexOf('@media (prefers-color-scheme:dark)')].filter((index) => index >= 0))
     const darkCss = darkStart >= 0 ? source.slice(darkStart) : ''
-    assert(source.startsWith('@import "../../styles/theme-page-shared.wxss"') && (source.match(/@import "\.\.\/\.\.\/styles\/theme-page-shared\.wxss"/g) || []).length === 1 && (file === 'pages/knowledge/detail.wxss' || darkCss.includes('var(--theme-text)') || darkCss.includes('var(--tx)')),
+    const hasDarkThemeToken = file === 'pages/gain-structure/gain-structure.wxss'
+      ? darkCss.includes('var(--theme-control)') && darkCss.includes('var(--theme-success)')
+      : darkCss.includes('var(--theme-text)') || darkCss.includes('var(--tx)')
+    assert(source.startsWith('@import "../../styles/theme-page-shared.wxss"') && (source.match(/@import "\.\.\/\.\.\/styles\/theme-page-shared\.wxss"/g) || []).length === 1 && (file === 'pages/knowledge/detail.wxss' || hasDarkThemeToken),
       `${file} 未接入第二批深色主题规则`)
     if (file === 'pages/knowledge/detail.wxss') {
       assert(/\.article-lead\{[^}]*color:var\(--ts\)[^}]*font-size:30rpx/.test(source) && /\.article-section\{[^}]*border-top:1rpx solid var\(--td\)/.test(source),
@@ -513,7 +516,7 @@ function checkReleasePackageGates() {
     'pages/spl/spl.wxss': ['.settings-card .speaker-field .equipment-value', '.selector-model'],
     'pages/cable/cable.wxss': ['.mode-tab.mode-tab-active .mode-label', '.cable-spec'],
     'pages/camera/camera.wxss': ['.selector-model.selector-model'],
-    'pages/gain-structure/gain-structure.wxss': ['.selector-model.selector-model'],
+    'pages/gain-structure/gain-structure.wxss': ['.result-card', '.status-chip', '.sheet-panel', '.project-row-selected'],
     'pages/led-screen/led-screen.wxss': [],
     'pages/products/library.wxss': [],
     'pages/products/detail.wxss': [],
@@ -573,7 +576,7 @@ function checkReleasePackageGates() {
     'pages/venue/venue.wxss': '.page-root, .page-scroll',
     'pages/camera/camera.wxss': '.page-root, .page-scroll',
     'pages/led-screen/led-screen.wxss': '.page-root, .page-scroll',
-    'pages/gain-structure/gain-structure.wxss': '.page-root, .page-scroll',
+    'pages/gain-structure/gain-structure.wxss': '.page-root',
     'pages/products/library.wxss': '.page-scroll',
     'pages/products/detail.wxss': '.page-scroll',
     'pages/records/project.wxss': '.project-page-root, .project-scroll',
@@ -852,7 +855,7 @@ function checkSharedResultReportPreviewTemplate() {
     && template.includes('bindtap="shareResultReportImage"')
     && template.includes('bindtap="saveResultReportImage"'),
   '共享结果图片模板缺少 Canvas、分享或保存入口')
-  ;['camera', 'cable', 'gain-structure', 'spl'].forEach((page) => {
+  ;['camera', 'cable', 'spl'].forEach((page) => {
     const source = fs.readFileSync(path.join(root, `pages/${page}/${page}.wxml`), 'utf8')
     assert.strictEqual(
       (source.match(/<include\s+src="\.\.\/\.\.\/templates\/result-report-preview\.wxml"\s*\/>/g) || []).length,
@@ -860,6 +863,14 @@ function checkSharedResultReportPreviewTemplate() {
       `${page} 页面未唯一引用共享结果图片模板`,
     )
   })
+  const gainWxml = fs.readFileSync(path.join(root, 'pages/gain-structure/gain-structure.wxml'), 'utf8')
+  const gainOverlay = fs.readFileSync(path.join(root, 'pages/gain-structure/gain-overlays.wxml'), 'utf8')
+  assert(!gainWxml.includes('../..\/templates\/result-report-preview.wxml')
+    && gainWxml.includes('<include src="./gain-overlays.wxml" />')
+    && gainOverlay.includes('bindtap="shareResultReportImage"')
+    && gainOverlay.includes('bindtap="saveResultReportImage"')
+    && gainWxml.includes('canvas-id="resultReportCanvas"'),
+  '增益架构本地结果图片模板缺少 Canvas、发送或保存入口')
   const limiter = expandWxmlIncludes('pages/limiter/limiter.wxml')
   const limiterShareActions = /<view class="share-actions">([\s\S]*?)<\/view>/.exec(limiter)
   assert(limiter.includes('canvas-id="resultReportCanvas"')
@@ -2342,6 +2353,10 @@ function checkPageControllers() {
   const gainWxml = expandWxmlIncludes('pages/gain-structure/gain-structure.wxml')
   assert(gainWxml.includes('0 dBFS = +18.4 dBu'), '增益结构页面未显示当前 DSP 校准值')
   assert(!gainWxml.includes('功放输入旋钮'), '增益结构页面仍使用不适用于屏幕或软件控制的旧称呼')
+  storage.set('audioTool.gainStructure.preferences', {
+    amplifierModel: 'TC-X2200B', stageValue: 1, mode: 'stereo',
+    loadImpedance: null, targetPeakDbfs: -6,
+  })
   const gainSetData = gainPage.setData
   const writesBeforeGainLoad = storageWriteCount
   let gainInitializationSetDataCount = 0
@@ -2378,7 +2393,7 @@ function checkPageControllers() {
   assert(clipboard.includes('不要重复衰减'))
   assert(clipboard.includes('相同衰减不代表相同功放功率'))
   assert(clipboard.includes('设置限幅保护'))
-  assert(gainWxml.includes('bindtap="generateResultReportImage"')
+  assert(gainWxml.includes('bindtap="openSharePreview"')
     && gainWxml.includes('canvas-id="resultReportCanvas"'),
   '增益架构页面缺少结果图片生成入口或离屏 Canvas')
   assert(gainWxml.includes('bindtap="shareResultReportImage"')
@@ -2405,27 +2420,31 @@ function checkPageControllers() {
     exportedGainCanvas = options
     options.success({ tempFilePath: 'temp://gain-result.png' })
   }
+  wx.getFileSystemManager = () => ({ access: ({ success }) => success() })
   wx.showLoading = () => {}
   wx.hideLoading = () => {}
-  gainPage.generateResultReportImage()
+  gainPage.openSharePreview()
   assert.strictEqual(gainPage.data.resultReportImagePath, 'temp://gain-result.png')
   assert.strictEqual(gainPage.data.resultReportPreviewVisible, true)
   assert(exportedGainCanvas.destWidth <= 1500 && exportedGainCanvas.destHeight <= 4096,
     '增益架构结果图导出尺寸超过安全上限')
-  gainPage.closeResultReportPreview()
-  gainPage.generateResultReportImage()
+  gainPage.closeSharePreview()
+  gainPage.openSharePreview()
   assert.strictEqual(gainReportExportCount, 1, '相同增益架构结果没有复用已生成图片')
   gainPage.onTargetPeakTap({ currentTarget: { dataset: { index: 0 } } })
   assert.strictEqual(gainPage.data.resultReportImagePath, '', '增益架构参数变化后仍沿用旧结果图片')
   gainPage.onTargetPeakTap({ currentTarget: { dataset: { index: 1 } } })
   delete wx.createCanvasContext
   delete wx.canvasToTempFilePath
+  delete wx.getFileSystemManager
   delete wx.showLoading
   delete wx.hideLoading
+  assert.strictEqual(gainPage.getRecordPayload(), null,
+    '增益架构输入变化后不能在未计算时生成记录 payload')
+  gainPage.calculate()
   const gainPayload = gainPage.getRecordPayload()
   assert.strictEqual(gainPayload.module, 'gainStructure')
   assert.strictEqual(gainPage.data.result.executionMode, 'dsp')
-  gainPage.calculate()
   const writesBeforeRepeatedGainCalculation = storageWriteCount
   gainPage.calculate()
   assert.strictEqual(storageWriteCount, writesBeforeRepeatedGainCalculation, '相同增益结构状态仍重复写入偏好')
@@ -2441,15 +2460,20 @@ function checkPageControllers() {
   const noDefaultIndex = amplifiers.findIndex((item) => item.model === 'TC-2350B')
   gainPage.selectAmplifier({ currentTarget: { dataset: { index: noDefaultIndex } } })
   assert.strictEqual(gainPage.data.stageIndex, -1)
-  assert.strictEqual(gainPage.data.result.valid, false)
+  assert.strictEqual(gainPage.data.result, null)
+  assert.strictEqual(gainPage.data.calculationState, 'stale')
   gainPage.onStageTap({ currentTarget: { dataset: { index: 0 } } })
+  assert.strictEqual(gainPage.data.result, null)
+  gainPage.calculate()
   assert.strictEqual(gainPage.data.result.valid, true)
 
   const voltageGainIndex = amplifiers.findIndex((item) => item.model === 'TC-22000')
   gainPage.selectAmplifier({ currentTarget: { dataset: { index: voltageGainIndex } } })
   gainPage.onStageTap({ currentTarget: { dataset: { index: 0 } } })
-  assert.strictEqual(gainPage.data.result.valid, false)
+  assert.strictEqual(gainPage.data.result, null)
   gainPage.onLoadChange({ detail: { value: '1' } })
+  assert.strictEqual(gainPage.data.result, null)
+  gainPage.calculate()
   assert.strictEqual(gainPage.data.result.valid, true)
   assert.strictEqual(gainPage.data.result.calculationBasis, 'ratedPowerAndVoltageGain')
 
@@ -3388,10 +3412,9 @@ function checkPageControllers() {
     ['pages/dmx-address/dmx-address.wxss', '.dmx-layout-entry-button', 'background:var(--theme-control)', ['background:#f5f9ff']],
     ['pages/dmx-address/dmx-address.wxss', '.dmx-layout-entry-title', 'color:var(--theme-text)', ['color:#1d1d1f']],
     ['pages/dmx-address/dmx-address.wxss', '.dmx-layout-entry-button-pressed', 'background:var(--theme-accent-soft)', ['background:#e8f3ff']],
-    ['pages/gain-structure/gain-structure.wxss', '.choice-card', 'background:var(--theme-control)', ['background:var(--theme-surface)']],
+    ['pages/gain-structure/gain-structure.wxss', '.choice-card', 'background:var(--theme-surface)', []],
     ['pages/gain-structure/gain-structure.wxss', '.choice-description', 'color:var(--theme-text-secondary)', ['color:#86868d']],
-    ['pages/gain-structure/gain-structure.wxss', 'page .result-settings', 'background:var(--theme-control)', ['background:#f5f5f7']],
-    ['pages/gain-structure/gain-structure.wxss', 'page .result-execution-note', 'background:var(--theme-control)', ['background:#effaf7']],
+    ['pages/gain-structure/gain-structure.wxss', '.project-target-name', 'color:var(--theme-text)', []],
     ['pages/camera/camera.wxss', '.segment-item', 'color:var(--theme-text-secondary)', ['color:#6e6e73']],
     ['pages/camera/camera.wxss', '.equipment-model', 'color:var(--theme-text)', ['color:#1d1d1f']],
     ['pages/led-screen/led-screen.wxss', '.report-preview-title', 'color:var(--theme-text)', ['color:#1d1d1f']],
@@ -3417,7 +3440,7 @@ function checkPageControllers() {
     ['pages/spl/spl.wxss', '.result-label', 'color:var(--theme-text-secondary)', ['color:#6e6e73']],
     ['pages/spl/spl.wxss', '.reference-scale', 'background:var(--theme-control)', ['background:#ffffff']],
     ['pages/spl/spl.wxss', '.distance-tag', 'background:var(--theme-control)', ['background:#ffffff']],
-    ['pages/gain-structure/gain-structure.wxss', 'page .status-chip-ready.status-chip-ready', 'background:var(--theme-control)', ['background:#effaf7']],
+    ['pages/gain-structure/gain-structure.wxss', '.status-chip', 'color:var(--theme-success)', ['color:#087f70']],
     ['pages/records/project.wxss', '.comparison-clear', 'color:var(--theme-accent-text)', ['color:#007aff']],
     ['pages/dmx-address/dmx-address.wxss', '.fixture-category-chip-active .fixture-category-count', 'color:#fff', ['color:rgba(255,255,255,.72)']],
     ['pages/venue/venue.wxss', '.plan-title', 'color:var(--theme-text)', ['color:#173d7a']],
@@ -3668,8 +3691,9 @@ function checkPageControllers() {
     'DMX 逐台分组仍直接使用 inline background/border，dark cascade 无法覆盖')
   const gainWxssForTheme = fs.readFileSync(path.join(root, 'pages/gain-structure/gain-structure.wxss'), 'utf8')
   assertDarkNoBrightTail(gainWxssForTheme, [
-    { selector: '.result-settings', forbidden: ['background:#f5f5f7', 'background:#fff'] },
-    { selector: '.result-execution-note', forbidden: ['background:#effaf7', 'background:#fff'] },
+    { selector: '.result-card', forbidden: ['rgba(240,248,255,.92)'] },
+    { selector: '.status-chip', forbidden: ['color:#087f70'] },
+    { selector: '.project-row-selected', forbidden: ['background:var(--theme-accent-soft)'] },
   ], '增益结构深色亮色尾部检查')
   assertDarkNoBrightTail(fs.readFileSync(path.join(root, 'pages/records/project.wxss'), 'utf8'), [
     { selector: '.comparison-head-row', forbidden: ['background:#edf4ff', 'color:#fff'] },

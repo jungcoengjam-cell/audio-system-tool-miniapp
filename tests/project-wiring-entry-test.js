@@ -189,6 +189,7 @@ const detailRecord = {
 const detailRecordsApi = {
   MODULES: { limiter: { label: '限幅器', trustLabel: '产品参数计算', trustDescription: '', theme: 'cyan' } },
   getWorkspaceSnapshot(options) { detailSnapshotOptions.push(options); return detailWorkspace },
+  getProjectRecordView: require('../utils/records').getProjectRecordView,
   getStorageHealth: () => ({ warning: false, text: '本地保存', percent: 1 }),
   prepareProjectModule() { detailEffects.prepare += 1; return '/pages/limiter/limiter' },
   removeRecordFromProject() { detailEffects.remove += 1; return true },
