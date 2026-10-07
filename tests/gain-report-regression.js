@@ -95,7 +95,8 @@ function renderPageReport(page) {
   assert(record && record.resultText, 'live controller must produce a canonical record')
   const payload = buildResultReportPayload(record)
   payload.resultNature = getCanonicalResultNature(record.resultText)
-  assert(payload.resultNature, 'canonical result nature must survive generic line cleanup')
+  assert(payload.resultNature, 'canonical result nature remains available in the report payload')
+  assert(record.resultText.split(/\r?\n/).some((line) => line.startsWith('结果性质：')), 'canonical record keeps its result-nature line')
   const context = makeMeasureContext()
   const height = calculateResultReportHeight(payload, context)
   assert(height > 0 && height < 4096, `report canvas height must be bounded, got ${height}`)
@@ -144,14 +145,7 @@ for (const expected of [
   '功放输入电平控制',
   '0 dB 衰减',
   '本次衰减只在 DSP 最终输出执行，功放输入电平控制不要重复衰减。',
-  '结果边界',
-  '后续步骤',
-  '现场响度',
-  '现场复核',
 ]) assertIncludesIgnoringWhitespace(attenuation.text, expected, expected)
-assertIncludesIgnoringWhitespace(attenuation.text, attenuation.payload.trustLabel, 'source trust label')
-assertIncludesIgnoringWhitespace(attenuation.text, attenuation.payload.trustDescription, 'source trust description')
-assertIncludesIgnoringWhitespace(attenuation.text, attenuation.payload.resultNature, 'canonical result nature')
 for (const [label, value] of [
   ['generatedAt', attenuation.payload.generatedAt],
   ['appVersion', attenuation.payload.appVersion],
@@ -161,11 +155,32 @@ for (const label of ['生成时间：', '小程序版本：', '产品资料日�
   assertIncludesIgnoringWhitespace(attenuation.text, label, `${label} traceability label`)
 }
 assert(attenuation.payload.summary.includes('10.19'), 'canonical record summary must remain unchanged')
+assert(attenuation.payload.title, 'canonical payload title must remain in the payload')
+assert(attenuation.payload.trustLabel && attenuation.payload.trustDescription,
+  'canonical trust metadata must remain in the payload')
+assert(attenuation.record.resultText.includes('结果性质：'),
+  'canonical result-nature text must remain in the record')
+const omittedVisualLines = attenuation.payload.lines.filter((line) => (
+  /^(结果性质：|结果边界：|后续步骤：|现场响度：|现场复核：)/.test(line)
+))
+assert(omittedVisualLines.length >= 4, 'canonical record must retain the omitted visual sections')
+const normalizeReportText = (value) => String(value).replace(/\s/g, '')
+assert(!attenuation.drawnLines.some((line) => normalizeReportText(line).includes(
+  normalizeReportText(attenuation.payload.title))), 'report must omit the redundant payload title')
+for (const value of [attenuation.payload.trustLabel, attenuation.payload.trustDescription]) {
+  assert(!normalizeReportText(attenuation.text).includes(normalizeReportText(value)),
+    'report must omit the trust paragraph while preserving source payload metadata')
+}
+for (const line of omittedVisualLines) {
+  assert(attenuation.record.resultText.includes(line), 'omitted report content remains canonical record text')
+  assert(!normalizeReportText(attenuation.text).includes(normalizeReportText(line)),
+    'report must omit result-nature, boundary, and field follow-up blocks')
+}
 assert(!attenuation.text.replace(/\s/g, '').includes(attenuation.payload.summary.replace(/\s/g, '')),
   'the card should not repeat the summary when its numbers are already in the hero and metrics')
 assert(attenuation.drawnLines.findIndex((line) => line.includes('衰减执行位置'))
-  < attenuation.drawnLines.findIndex((line) => line.includes('结果性质与计算依据')),
-'execution guidance must precede the source/trust block')
+  < attenuation.drawnLines.findIndex((line) => line.includes('功放型号')),
+'execution guidance must precede the retained condition card')
 assert(!attenuation.text.includes('系统无需增加衰减'),
   'attenuation report must not imply zero attenuation when a nonzero canonical value exists')
 
@@ -208,6 +223,52 @@ const zeroEdge = renderPageReport(direct)
 assertIncludesIgnoringWhitespace(zeroEdge.text, '系统对齐衰减', 'canonical zero adjustment label')
 assertIncludesIgnoringWhitespace(zeroEdge.text, '0 dB', 'zero adjustment value')
 
+const sharePage = makePage({
+  amplifierModel: 'TC-X2200B',
+  stageValue: 1,
+  mode: 'stereo',
+  loadImpedance: null,
+  targetPeakDbfs: -6,
+})
+const shareCanvasContext = makeMeasureContext()
+shareCanvasContext.draw = (_reserve, callback) => {
+  if (typeof callback === 'function') callback()
+}
+const originalCreateCanvasContext = global.wx.createCanvasContext
+const originalCanvasToTempFilePath = global.wx.canvasToTempFilePath
+let canvasContextCalls = 0
+let exportedOptions
+global.wx.createCanvasContext = () => {
+  canvasContextCalls += 1
+  return shareCanvasContext
+}
+global.wx.canvasToTempFilePath = (options) => {
+  exportedOptions = options
+  options.success({ tempFilePath: 'mock://gain-result.png' })
+}
+try {
+  assert.doesNotThrow(() => sharePage.openSharePreview(),
+    'actual share-preview flow must build and render the canonical payload')
+  assert.strictEqual(sharePage.data.shareSheetVisible, true)
+  assert.strictEqual(sharePage.data.isGeneratingResultReport, false)
+  assert.strictEqual(sharePage.data.resultReportPreviewVisible, true)
+  assert.strictEqual(sharePage.data.resultReportImagePath, 'mock://gain-result.png')
+  assert.strictEqual(canvasContextCalls, 2,
+    'controller must measure and draw the actual report through canvas contexts')
+  assert(exportedOptions && exportedOptions.width === 750 && exportedOptions.height > 0,
+    'controller must export the dynamically measured poster dimensions')
+  const generatedReportText = shareCanvasContext.drawnText.map((item) => item.text).join('')
+  for (const expected of ['10.19 dB', '-6 dBFS = 12.4 dBu', '1 V = 2.21 dBu']) {
+    assertIncludesIgnoringWhitespace(generatedReportText, expected,
+      `actual share-preview export must draw ${expected}`)
+  }
+} finally {
+  if (originalCreateCanvasContext === undefined) delete global.wx.createCanvasContext
+  else global.wx.createCanvasContext = originalCreateCanvasContext
+  if (originalCanvasToTempFilePath === undefined) delete global.wx.canvasToTempFilePath
+  else global.wx.canvasToTempFilePath = originalCanvasToTempFilePath
+}
+
 assert.throws(() => calculateResultReportHeight({
   ...attenuation.payload,
   lines: attenuation.payload.lines.filter((line) => !line.startsWith('系统对齐衰减：')),
@@ -239,6 +300,20 @@ assert.match(wxss, /\.choice-grid-targets \.choice-label,\.choice-grid-targets \
   'target labels and descriptions must wrap inside their own touch cells')
 assert.doesNotMatch(wxss, /\.result-facts\{flex-direction:column/,
   'secondary result facts should remain side by side at short heights when they fit')
+assert.match(wxss, /\.result-pane\{flex:0 0 320px/,
+  'the result pane must use a bounded normal-height profile')
+assert.match(wxss, /@media\(max-height:680px\)\{[\s\S]*?\.result-pane\{flex-basis:300px/,
+  'the result pane must use the compact 300px profile on short screens')
+assert.match(wxss, /@media\(max-height:460px\)\{[\s\S]*?\.result-pane\{flex-basis:280px/,
+  'the result pane must preserve input space at very short heights')
+assert.match(wxss, /\.input-pane\{height:0;min-height:0;flex:1 1 0/,
+  'the input pane must fill remaining space and shrink safely')
+assert.match(wxss, /\.editor-scroll\{height:0;min-height:40px;flex:1 1 0/,
+  'editor content must scroll inside the available input pane')
+assert.match(wxss, /\.result-details-scroll\{[^}]*height:auto;[^}]*flex:0 1 auto/,
+  'valid result details must size to content and shrink into scrolling only when needed')
+assert.doesNotMatch(wxss, /\.result-details-scroll\{[^}]*height:150px/,
+  'valid result details must not keep a fixed 150px viewport')
 assert.match(wxss, /\.result-primary\{[^}]*align-items:center;[^}]*padding:0 52px/,
   'primary result must center within safe space beside the action rail')
 assert.match(wxss, /\.result-heading\{[^}]*padding-right:0/,
@@ -247,12 +322,27 @@ assert.match(wxss, /\.result-fact-value\{[^}]*font-size:16px/,
   'secondary values must remain readable')
 assert.match(wxss, /\.editor-group\{min-height:0\}/,
   'input groups must not force a full-viewport minimum height')
-assert.match(wxml, /<scroll-view class="result-details-scroll"[^>]*scroll-y[\s\S]*?<\/scroll-view>\s*<view class="[^"]*\bplacement-warning\b[^"]*"/,
-  'metrics may scroll independently while the persistent placement warning stays outside the scroller')
+const detailScrollStart = wxml.indexOf('<scroll-view class="result-details-scroll"')
+const detailContentStart = wxml.indexOf('<view class="result-details-content">', detailScrollStart)
+const resultFactsStart = wxml.indexOf('<view class="result-facts">', detailContentStart)
+const placementWarningStart = wxml.indexOf('class="placement-warning amplifier-setting"', resultFactsStart)
+const detailScrollEnd = wxml.indexOf('</scroll-view>', detailScrollStart)
+assert(detailScrollStart >= 0 && detailContentStart > detailScrollStart
+  && resultFactsStart > detailContentStart && placementWarningStart > resultFactsStart
+  && detailScrollEnd > placementWarningStart,
+'facts and persistent placement warning must stay together in the content-sized details group')
 assert.match(wxml, /class="result-heading"[\s\S]*?class="reset-error"[^>]*role="alert"[\s\S]*?class="result-primary"/,
   'storage/reset failure alerts must remain visible before the primary result and details')
-assert.match(wxss, /\.input-pane\{flex:0 0 calc\(236px \+ env\(safe-area-inset-bottom\)\)/,
-  'the editor pane must keep an independently sized compact profile')
+assert(wxml.indexOf('class="reset-error"') < detailScrollStart,
+  'reset storage errors must stay outside the details scroller')
+assert.doesNotMatch(wxml, /class="editor-caption"/,
+  'the redundant device-manual caption must be removed')
+assert.match(wxss, /\.action-button\.action-button\[disabled\]\{[^}]*opacity:1/,
+  'dark disabled actions must retain a visible border instead of fading away')
+assert.match(wxss, /\.action-button\.action-button\[aria-pressed="true"\]/,
+  'the selected favorite action must have a persistent pressed state')
+assert.match(wxss, /\.action-button\.action-button:active\{[^}]*background:#294a66/,
+  'the pressed interaction state must remain distinguishable from favorite selection')
 assert.doesNotMatch(wxss, /\.page-root\{height:auto;overflow-y:auto\}/,
   'short screens must not become whole-page scrolling layouts')
 assert.match(pageSource, /onTargetPeakTap\(event\)[\s\S]*?setSelectionAndCalculate\('targetPeakIndex', index\)/,

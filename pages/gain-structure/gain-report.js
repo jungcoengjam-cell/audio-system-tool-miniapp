@@ -199,13 +199,6 @@ function buildReportModel(payload, measureContext) {
     placementWarning: lines.find((line) => (
       line.includes('DSP') && line.includes('衰减') && line.includes('功放')
     )) || '',
-    boundary: findField(lines, '结果边界'),
-    fieldSteps: findField(lines, '后续步骤'),
-    fieldLoudness: findField(lines, '现场响度'),
-    fieldCheck: findField(lines, '现场复核'),
-    trustLabel: textValue(payload.trustLabel),
-    trustDescription: textValue(payload.trustDescription),
-    resultNature: textValue(payload.resultNature),
   }
   const numericAdjustment = /-?\d+(?:\.\d+)?\s*dB\b/i.test(fields.adjustment.displayValue)
   const numericTarget = /-?\d+(?:\.\d+)?\s*dBFS\b/i.test(fields.target)
@@ -226,9 +219,6 @@ function buildReportModel(payload, measureContext) {
   y += 7
   y += addTextLines(commands, badgeLines, LEFT + 16, y, 24, 18,
     COLORS.accent, 650) + 28
-
-  const titleLines = wrapText(measureContext, payload.title || '增益结构结果', CONTENT_WIDTH, 34, 700)
-  y += addTextLines(commands, titleLines, LEFT, y, 44, 34, COLORS.text, 700) + 10
 
   const heroTop = y
   const heroPadding = 24
@@ -326,66 +316,6 @@ function buildReportModel(payload, measureContext) {
     COLORS.card, COLORS.line)
   commands.push(...conditionCommands)
   y = conditionTop + conditionHeight + 24
-
-  if (fields.trustLabel || fields.trustDescription || fields.resultNature) {
-    y = addSectionTitle(commands, measureContext, '结果性质与计算依据', y)
-    const trustCommands = []
-    let trustY = y + 18
-    if (fields.resultNature) {
-      trustY += addKeyValueRow(trustCommands, measureContext,
-        '本次结果性质', fields.resultNature, trustY,
-        { labelWidth: 170, bottomGap: 10 })
-    }
-    if (fields.trustLabel) {
-      trustY += addKeyValueRow(trustCommands, measureContext,
-        '计算依据', fields.trustLabel, trustY,
-        { labelWidth: 170, labelSize: 24, valueSize: 26,
-          labelLineHeight: 32, valueLineHeight: 36, bottomGap: 10 })
-    }
-    if (fields.trustDescription) {
-      const trustLabelLines = wrapText(measureContext, '依据说明', 170, 24, 600)
-      const trustDescriptionLines = wrapText(measureContext, fields.trustDescription,
-        CONTENT_WIDTH - 170 - 32, 24, 450)
-      const trustRowHeight = Math.max(trustLabelLines.length * 32,
-        trustDescriptionLines.length * 34)
-      addTextLines(trustCommands, trustLabelLines, LEFT + 18, trustY,
-        32, 24, COLORS.secondary, 600)
-      addTextLines(trustCommands, trustDescriptionLines, LEFT + 18 + 170 + 14,
-        trustY, 34, 24, COLORS.text, 450)
-      trustY += trustRowHeight
-    }
-    const trustHeight = Math.ceil(trustY - y + 18)
-    addRoundedCard(commands, LEFT, y, CONTENT_WIDTH, trustHeight,
-      COLORS.tile, COLORS.tileBorder)
-    commands.push(...trustCommands)
-    y += trustHeight + 22
-  }
-
-  const boundaryItems = [
-    { label: '结果边界', value: fields.boundary },
-    { label: '后续步骤', value: fields.fieldSteps },
-    { label: '现场响度', value: fields.fieldLoudness },
-    { label: '现场复核', value: fields.fieldCheck },
-  ].filter((item) => item.value)
-  if (boundaryItems.length) {
-    y = addSectionTitle(commands, measureContext, '使用边界与现场核验', y)
-    const boundaryCommands = []
-    let boundaryY = y + 18
-    boundaryItems.forEach((item, index) => {
-      const labelLines = wrapText(measureContext, item.label, CONTENT_WIDTH - 36, 22, 650)
-      boundaryY += addTextLines(boundaryCommands, labelLines, LEFT + 18,
-        boundaryY, 30, 22, COLORS.text, 650) + 4
-      const linesForItem = wrapText(measureContext, item.value, CONTENT_WIDTH - 36, 24, 400)
-      boundaryY += addTextLines(boundaryCommands, linesForItem, LEFT + 18,
-        boundaryY, 34, 24, COLORS.secondary, 400)
-      if (index < boundaryItems.length - 1) boundaryY += 12
-    })
-    const boundaryHeight = Math.ceil(boundaryY - y + 18)
-    addRoundedCard(commands, LEFT, y, CONTENT_WIDTH, boundaryHeight,
-      COLORS.card, COLORS.line)
-    commands.push(...boundaryCommands)
-    y += boundaryHeight + 22
-  }
 
   const traceabilityRows = [
     `生成时间：${textValue(payload.generatedAt)}`,

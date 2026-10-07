@@ -25,6 +25,7 @@
         </view>
 
         <scroll-view class="result-details-scroll" scroll-y enhanced show-scrollbar="{{false}}" aria-label="结果参数">
+          <view class="result-details-content">
           <view class="result-facts">
             <view class="result-fact">
               <text class="result-fact-label">DSP 目标峰值</text>
@@ -35,11 +36,12 @@
               <text class="result-fact-value">{{result.fullPowerInputDbu}} dBu</text>
             </view>
           </view>
-        </scroll-view>
         <view class="placement-warning amplifier-setting">功放输入控制保持 0 dB。{{result.placementWarning}}</view>
         <view wx:if="{{loadReminderActive}}" class="load-reminder" role="status">
           请确认当前工作模式并选择有效负载阻抗；输入完整后结果会自动更新。
         </view>
+        </view>
+        </scroll-view>
       </block>
 
       <view wx:elif="{{calculationState === 'invalid' || calculationState === 'incomplete'}}" class="result-message result-message-warning">
@@ -61,7 +63,6 @@
   <view class="input-pane">
     <view class="editor-heading">
       <text class="editor-title">输入设置</text>
-      <text class="editor-caption">按设备说明书核对现场档位</text>
     </view>
     <view class="group-tabs" role="tablist">
       <button wx:for="{{groupTabs}}" wx:key="key" class="group-tab {{activeGroup === item.key ? 'group-tab-active' : ''}}" role="tab" aria-selected="{{activeGroup === item.key}}" data-group="{{item.key}}" bindtap="onGroupTap">{{item.label}}</button>
