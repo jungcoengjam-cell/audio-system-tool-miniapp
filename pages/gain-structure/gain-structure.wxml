@@ -41,10 +41,6 @@
         <text class="result-message-title">{{result ? '请核对输入级档位' : '参数尚未齐全'}}</text>
         <text class="result-message-copy">{{outputHint}}</text>
       </view>
-      <view wx:elif="{{calculationState === 'stale'}}" class="result-message">
-        <text class="result-message-title">输入已改变</text>
-        <text class="result-message-copy">{{outputHint}}</text>
-      </view>
       <view wx:else class="result-message">
         <text class="result-message-title">等待输入</text>
         <text class="result-message-copy">{{outputHint}}</text>
@@ -53,7 +49,7 @@
       <view wx:if="{{resetError}}" class="reset-error" role="alert">{{resetError}}</view>
 
       <view wx:if="{{loadReminderActive}}" class="load-reminder" role="status">
-          请确认当前工作模式并选择负载阻抗，再计算。
+          请确认当前工作模式并选择有效负载阻抗；输入完整后结果会自动更新。
       </view>
     </view>
   </view>
@@ -95,7 +91,7 @@
       <view wx:elif="{{activeGroup === 'load'}}" class="editor-group">
         <block wx:if="{{showPowerContext}}">
           <view wx:if="{{loadReminderActive}}" class="load-reminder load-reminder-editor" role="status">
-            请确认当前工作模式并选择负载阻抗，再计算。
+            请确认当前工作模式并选择有效负载阻抗；输入完整后结果会自动更新。
           </view>
           <view class="field-row">
             <text class="field-label">功放模式</text>
@@ -132,9 +128,6 @@
       </view>
     </scroll-view>
 
-    <view class="calculate-bar">
-      <button class="calculate-button" disabled="{{!canCalculate}}" bindtap="calculate">{{calculationState === 'stale' ? '重新计算' : '计算增益结构'}}</button>
-    </view>
   </view>
 
   <page-container show="{{pageContainerSupported && (selectorVisible || shareSheetVisible || projectSheetVisible)}}" position="bottom" overlay="true" z-index="100" round="{{false}}" close-on-slide-down="{{false}}" overlay-style="background-color: rgba(18, 20, 27, .55);" custom-style="background-color: transparent; padding: 0;" bind:beforeleave="onPageContainerBeforeLeave" bind:afterleave="onPageContainerAfterLeave" bind:clickoverlay="onPageContainerClickOverlay">

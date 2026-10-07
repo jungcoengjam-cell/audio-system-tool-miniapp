@@ -239,25 +239,49 @@ function buildPreferences(state) {
   }
 }
 
-function buildCalculationView(result, hasInputs, stale = false) {
-  if (stale) {
-    return {
-      calculationState: 'stale',
-      hasValidResult: false,
-      outputStatus: '结果需要重新计算',
-      outputHint: '输入已改变，重新计算后再使用结果操作。',
-      canCalculate: hasInputs,
-      canReset: hasInputs,
-      currentFavorite: false,
+function getInputReadiness(state) {
+  const amplifier = amplifiers[state.amplifierIndex]
+  const inputStage = amplifier ? amplifierInputStages[amplifier.model] : null
+  if (!amplifier || !inputStage) {
+    return { complete: false, hint: '请选择功放型号和输入级档位；完整后结果会自动更新。' }
+  }
+  if (!validIndex(state.stageOptions || [], state.stageIndex)) {
+    return { complete: false, hint: '请先核对并选择输入级档位；完整后结果会自动更新。' }
+  }
+  if (!validIndex(state.modes || [], state.modeIndex)) {
+    return { complete: false, hint: '请选择有效的功放工作模式。' }
+  }
+  if (!validIndex(state.targetPeaks || [], state.targetPeakIndex)) {
+    return { complete: false, hint: '请选择有效的 DSP 目标峰值。' }
+  }
+  if (inputStage.controlType === 'voltageGain') {
+    const loadOption = state.loadOptions?.[state.loadIndex]
+    if (!validIndex(state.loadOptions || [], state.loadIndex)
+      || state.loadIndex === 0 || !Number.isFinite(loadOption?.value)) {
+      return {
+        complete: false,
+        hint: '请确认当前工作模式并选择有效负载阻抗；完整后结果会自动更新。',
+      }
     }
   }
+  return { complete: true, hint: '' }
+}
+
+function derivePageResult(state, hasInputs) {
+  if (!hasInputs) return { result: null, hint: '' }
+  const readiness = getInputReadiness(state)
+  return readiness.complete
+    ? { result: calculatePageResult(state), hint: '' }
+    : { result: null, hint: readiness.hint }
+}
+
+function buildCalculationView(result, hasInputs, incompleteHint = '') {
   if (!hasInputs && !result) {
     return {
       calculationState: 'empty',
       hasValidResult: false,
       outputStatus: '等待输入',
       outputHint: '选择功放型号开始设置。',
-      canCalculate: false,
       canReset: false,
       currentFavorite: false,
     }
@@ -268,7 +292,6 @@ function buildCalculationView(result, hasInputs, stale = false) {
       hasValidResult: true,
       outputStatus: result.statusLabel,
       outputHint: '',
-      canCalculate: true,
       canReset: hasInputs,
       currentFavorite: false,
     }
@@ -277,10 +300,25 @@ function buildCalculationView(result, hasInputs, stale = false) {
     calculationState: result ? 'invalid' : 'incomplete',
     hasValidResult: false,
     outputStatus: result ? '请检查现场档位' : '参数尚未齐全',
-    outputHint: result?.warning || '请补全功放型号和输入级档位后计算。',
-    canCalculate: hasInputs,
+    outputHint: result?.warning || incompleteHint || '请补全输入参数；完整后结果会自动更新。',
     canReset: hasInputs,
     currentFavorite: false,
+  }
+}
+
+function invalidateReportForInputChange(page) {
+  page.resultReportRevision = (page.resultReportRevision || 0) + 1
+  page.resultReportPendingSignature = ''
+  page.resultReportSignature = ''
+  page._reportCacheCheckRevision = 0
+  if (page.data?.isGeneratingResultReport && typeof wx.hideLoading === 'function') {
+    wx.hideLoading()
+  }
+  return {
+    resultReportImagePath: '',
+    resultReportPreviewVisible: false,
+    isGeneratingResultReport: false,
+    isCheckingResultReportCache: false,
   }
 }
 
@@ -330,7 +368,6 @@ Page({
     hasValidResult: false,
     hasDraftInputs: false,
     hasSavedDraft: false,
-    canCalculate: false,
     canReset: false,
     outputStatus: '等待输入',
     outputHint: '选择功放型号开始设置。',
@@ -400,7 +437,8 @@ Page({
       targetPeakIndex,
       pageContainerSupported,
     }
-    const result = hasSavedDraft ? calculatePageResult(pageState) : null
+    const { result, hint } = derivePageResult(pageState, hasSavedDraft)
+    const inputRevision = this._inputRevision
     const finishViewUpdate = startMeasurement('增益架构/setData视图更新', { source: 'onLoad' })
     this.setData({
       ...amplifierState,
@@ -410,11 +448,15 @@ Page({
       hasSavedDraft,
       hasDraftInputs: hasSavedDraft,
       loadReminderActive: Boolean(amplifierState.showPowerContext && amplifierState.loadIndex === 0),
-      ...buildCalculationView(result, hasSavedDraft),
+      ...buildCalculationView(result, hasSavedDraft, hint),
     }, () => {
       finishViewUpdate({ source: 'onLoad', hasSavedDraft })
+      if (this._isUnloaded || this._inputRevision !== inputRevision) {
+        finishInitialization({ valid: false, hasSavedDraft, superseded: true })
+        return
+      }
       if (this._pageVisible && !this._favoriteSyncedSinceLoad) {
-        this.syncFavorite('onLoad')
+        if (result?.valid) this.syncFavorite('onLoad')
         this._favoriteSyncedSinceLoad = true
       }
       finishInitialization({ valid: Boolean(result?.valid), hasSavedDraft })
@@ -423,7 +465,7 @@ Page({
 
   onShow() {
     this._pageVisible = true
-    if (this.data.result) {
+    if (this.data.hasValidResult && this.data.result?.valid) {
       this.syncFavorite('onShow')
       this._favoriteSyncedSinceLoad = true
     }
@@ -627,7 +669,6 @@ Page({
       selectorItems: [],
       selectorTotalCount: 0,
     }, 'amplifier', {
-      stale: true,
       loadReminderActive: amplifierState.showPowerContext,
     })
     return true
@@ -654,7 +695,6 @@ Page({
       || this.data[key] === index) return false
     vibrate('light')
     this.commitCalculatedState({ [key]: index }, key, {
-      stale: true,
       loadReminderActive: key === 'loadIndex' ? false : this.data.loadReminderActive,
     })
     return true
@@ -679,7 +719,7 @@ Page({
       modeIndex,
       loadOptions: buildLoadOptions(amplifier, this.data.modes[modeIndex].value),
       loadIndex: 0,
-    }, 'mode', { stale: true, loadReminderActive: true })
+    }, 'mode', { loadReminderActive: true })
     return true
   },
 
@@ -689,37 +729,46 @@ Page({
   },
 
   calculate() {
-    return this.commitCalculatedState({}, 'calculate', { stale: false })
+    return this.commitCalculatedState({}, 'calculate')
   },
 
   commitCalculatedState(changes = {}, source = 'interaction', options = {}) {
     const finishCalculation = startMeasurement('增益架构/计算到结果更新', { source })
     const pageState = { ...this.data, ...changes }
-    const hasInputChange = Object.keys(changes).some((key) => this.data[key] !== changes[key])
+    const semanticKeys = ['amplifierIndex', 'stageIndex', 'modeIndex', 'loadIndex', 'targetPeakIndex']
+    const hasInputChange = semanticKeys.some((key) => this.data[key] !== pageState[key])
     if (hasInputChange) this._inputRevision = (this._inputRevision || 0) + 1
+    const inputRevision = this._inputRevision || 0
     if (hasInputChange) this.clearPageContainerOverlay()
     const hasDraftInputs = Boolean(this.data.hasDraftInputs || hasInputChange)
-    const stale = Boolean(options.stale)
-    let result = null
-    if (!stale && hasDraftInputs) {
+    let result = this.data.result
+    let hint = this.data.outputHint
+    const shouldDerive = hasInputChange || source === 'calculate'
+    if (shouldDerive) {
       const finishCoreCalculation = startMeasurement('增益架构/核心计算', { source })
-      result = calculatePageResult(pageState)
-      finishCoreCalculation({ valid: result.valid })
+      const derived = derivePageResult(pageState, hasDraftInputs)
+      result = derived.result
+      hint = derived.hint
+      finishCoreCalculation({ valid: Boolean(result?.valid), complete: Boolean(result) })
     }
     const preferences = Number.isInteger(pageState.amplifierIndex)
       && pageState.amplifierIndex >= 0 && amplifiers[pageState.amplifierIndex]
       ? buildPreferences(pageState)
       : null
-    const resultReportChanges = resetStaleResultReport(
-      this,
-      result?.valid ? this.getRecordPayload(pageState, result) : null,
-    )
+    const resultReportChanges = hasInputChange
+      ? invalidateReportForInputChange(this)
+      : resetStaleResultReport(
+        this,
+        result?.valid ? this.getRecordPayload(pageState, result) : null,
+      )
     const shouldCloseProject = hasInputChange && this.data.projectSheetVisible
     if (shouldCloseProject) {
       this._projectRequestId = (this._projectRequestId || 0) + 1
+      this._projectSavePending = false
+      this._projectSnapshotForSave = null
       this.resetProjectKeyboardState({ hideKeyboard: true, updateView: false })
     }
-    const view = buildCalculationView(result, hasDraftInputs, stale)
+    const view = buildCalculationView(result, hasDraftInputs, hint)
     const loadReminderActive = options.loadReminderActive === undefined
       ? this.data.loadReminderActive
       : Boolean(options.loadReminderActive)
@@ -739,14 +788,17 @@ Page({
       } : {}),
       ...(shouldCloseProject ? { projectSheetVisible: false, isSavingProject: false } : {}),
     }, () => {
+      if (this._isUnloaded || this._inputRevision !== inputRevision) {
+        finishCalculation({ valid: Boolean(result?.valid), superseded: true })
+        return
+      }
       const finishPreferenceWrite = startMeasurement('增益架构/写入偏好')
       const preferencesChanged = preferences
         ? writePreferences(PREFERENCE_KEY, preferences)
         : false
       finishPreferenceWrite({ changed: preferencesChanged })
       if (result?.valid) this.syncFavorite('calculation')
-      else this.setData({ currentFavorite: false })
-      finishCalculation({ valid: Boolean(result?.valid), stale, preferencesChanged })
+      finishCalculation({ valid: Boolean(result?.valid), preferencesChanged })
     })
     return result
   },
@@ -858,7 +910,12 @@ Page({
   retryResultReport() {
     if (!this.data.shareSheetVisible || this.data.isGeneratingResultReport
       || this.data.isCheckingResultReportCache) return false
-    this.setData({ resultReportError: '' }, () => this.generateResultReportImage())
+    const inputRevision = this._inputRevision || 0
+    this.setData({ resultReportError: '' }, () => {
+      if (this._isUnloaded || !this.data.shareSheetVisible
+        || this._inputRevision !== inputRevision) return
+      this.generateResultReportImage()
+    })
     return true
   },
 
@@ -874,10 +931,13 @@ Page({
     if (this.data.resultReportImagePath && this.resultReportSignature === signature) {
       const path = this.data.resultReportImagePath
       const revision = (this.resultReportRevision || 0) + 1
+      const inputRevision = this._inputRevision || 0
       this.resultReportRevision = revision
       this._reportCacheCheckRevision = revision
       this.setData({ isCheckingResultReportCache: true, resultReportPreviewVisible: false, resultReportError: '' }, () => {
+        if (this._isUnloaded || this._inputRevision !== inputRevision) return
         const isCurrent = () => !this._isUnloaded && this.data.shareSheetVisible
+          && this._inputRevision === inputRevision
           && this._reportCacheCheckRevision === revision
           && this.resultReportRevision === revision
           && this.getResultReportSignature() === signature
@@ -896,6 +956,7 @@ Page({
             resultReportPreviewVisible: false,
           }, () => {
             if (!this._isUnloaded && this.data.shareSheetVisible
+              && this._inputRevision === inputRevision
               && this.resultReportRevision === revision
               && this.getResultReportSignature() === signature) this.generateResultReportImage()
           })
@@ -915,6 +976,7 @@ Page({
     }
     const resultReportCanvasHeight = calculateResultReportHeight(payload)
     const revision = (this.resultReportRevision || 0) + 1
+    const inputRevision = this._inputRevision || 0
     this.resultReportRevision = revision
     this._reportCacheCheckRevision = 0
     this.resultReportPendingSignature = signature
@@ -926,7 +988,9 @@ Page({
       isCheckingResultReportCache: false,
       resultReportError: '',
     }, () => {
+      if (this._isUnloaded || this._inputRevision !== inputRevision) return
       const isCurrent = () => !this._isUnloaded
+        && this._inputRevision === inputRevision
         && this.resultReportRevision === revision
         && this.resultReportPendingSignature === signature
         && this.getResultReportSignature() === signature

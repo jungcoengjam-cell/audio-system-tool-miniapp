@@ -1,0 +1,234 @@
+{
+  "date": "2026-10-07",
+  "baselineCommit": "41e7d4512c7a46572c06a4042e0f302d86659591",
+  "sourceHashes": {
+    "pages/gain-structure/gain-structure.js": "9b2f1056403dedcdd4c84e646c58e15745b9d4de12601dc08cfc52fa393f5d86",
+    "pages/gain-structure/gain-structure.wxml": "71e42800be23c5d3a45fcf83fc5536979510a7440470a5da6e41b30b2f52002a",
+    "pages/gain-structure/gain-structure.wxss": "2db89c903862897441b20d178c6d6ab6e0069667e2f021092722315888e0e99c",
+    "pages/gain-structure/gain-overlays.wxml": "f0109f0db42af8ec138f93141b2a1a832bafa321a28b789dba2f48847d916db7"
+  },
+  "behavior": {
+    "automaticInputs": [
+      "amplifier",
+      "stage",
+      "mode",
+      "load",
+      "target"
+    ],
+    "manualCalculateButton": false,
+    "coreNumericalLogicChanged": false,
+    "deviceDataChanged": false,
+    "storageSchemaChanged": false
+  },
+  "browser": {
+    "source": "Actual WXML/WXSS/controller through Chromium bridge; supplemental geometry, not native or physical device",
+    "physicalDevice": false,
+    "cases": 210,
+    "failures": [],
+    "viewports": [
+      "320x400",
+      "320x480",
+      "353x600",
+      "375x667",
+      "390x753"
+    ],
+    "themes": [
+      "light",
+      "dark"
+    ],
+    "interiorResultAndCalibrationBoundaryAssertions": true,
+    "screenshots": [
+      "353x600-light-valid-calibration.png",
+      "320x400-light-auto-target.png",
+      "320x400-dark-reset-failed.png",
+      "375x667-light-project-keyboard.png"
+    ]
+  },
+  "shortScreen": {
+    "cases": 12,
+    "failures": [],
+    "resultMinimumPx": 215,
+    "headingMinimumPx": 44,
+    "primaryMinimumPx": 60,
+    "editorMinimumPx": 40,
+    "measuredEditorPx": 109.33
+  },
+  "focusedGainTests": {
+    "passed": 9,
+    "total": 9,
+    "fixtureGuard": "Only CRLF to LF normalization; immutable SHA-256 8f288e565d3d419bd17c933cb57ee1e58fa776c5624b77bca94b16e6a285d756"
+  },
+  "compilerAndRelatedTests": [
+    {
+      "id": "wcc",
+      "exitCode": 0
+    },
+    {
+      "id": "wcsc",
+      "exitCode": 0
+    },
+    {
+      "id": "page-lifecycle-regression.js",
+      "exitCode": 0
+    },
+    {
+      "id": "report-lifecycle-regression.js",
+      "exitCode": 0
+    },
+    {
+      "id": "report-drawing-regression.js",
+      "exitCode": 0
+    },
+    {
+      "id": "project-wiring-storage-test.js",
+      "exitCode": 0
+    },
+    {
+      "id": "project-wiring-page-test.js",
+      "exitCode": 0
+    },
+    {
+      "id": "project-wiring-report-test.js",
+      "exitCode": 0
+    },
+    {
+      "id": "release-check.js",
+      "exitCode": 1
+    }
+  ],
+  "independentExistingReleaseFunctions": [
+    {
+      "id": "checkSyntax",
+      "passed": true
+    },
+    {
+      "id": "checkReleasePackageGates",
+      "passed": false
+    },
+    {
+      "id": "checkCatalogSelector",
+      "passed": true
+    },
+    {
+      "id": "checkDmxAddressLazyChannelGuide",
+      "passed": true
+    },
+    {
+      "id": "checkSharedResultReportPreviewTemplate",
+      "passed": true
+    },
+    {
+      "id": "checkProjectReportPlan",
+      "passed": true
+    },
+    {
+      "id": "checkLedScreenPlan",
+      "passed": true
+    },
+    {
+      "id": "checkData",
+      "passed": false
+    },
+    {
+      "id": "checkProductLibraryLazyLoading",
+      "passed": true
+    },
+    {
+      "id": "checkBaselines",
+      "passed": true
+    },
+    {
+      "id": "checkPageControllers",
+      "passed": true
+    },
+    {
+      "id": "checkHapticFeedback",
+      "passed": true
+    },
+    {
+      "id": "checkReportImageActions",
+      "passed": true
+    },
+    {
+      "id": "checkPerformanceMeasurements",
+      "passed": true
+    },
+    {
+      "id": "checkAudioPagePerformanceCoverage",
+      "passed": true
+    },
+    {
+      "id": "checkProductLibraryPerformanceCoverage",
+      "passed": true
+    },
+    {
+      "id": "checkLedScreenPerformanceCoverage",
+      "passed": true
+    },
+    {
+      "id": "checkProjectDetailPerformanceCoverage",
+      "passed": true
+    }
+  ],
+  "existingAudits": {
+    "passed": 50,
+    "total": 50
+  },
+  "deterministic": {
+    "passed": 87,
+    "total": 87,
+    "wrapperPassed": false
+  },
+  "reportCanvasEquivalence": {
+    "passed": 36,
+    "total": 36
+  },
+  "release": {
+    "passed": false,
+    "thresholdsChanged": false,
+    "cleanCandidateBlockers": [
+      "Existing draft control-protocol resources",
+      "Existing image/audio media 677497 bytes exceeds 338 KiB"
+    ],
+    "workingPackageKiB": 2812,
+    "workingPackageLimitKiB": 2650
+  },
+  "phoneFeedback": {
+    "suppliedJPEGRead": false,
+    "materializationHTTPStatus": 403,
+    "phoneCalibrationOverlapRootCauseConfirmed": false,
+    "phoneCalibrationOverlapResolved": false,
+    "independentBrowserShortScreenCollisionFixed": true
+  },
+  "native": {
+    "runtimeAutomationPassed": false,
+    "physicalDeviceTested": false,
+    "newPreviewCallbackConfirmed": false,
+    "newQRCodeFileProduced": true,
+    "previewLibraryFileId": "libfile_9be169e3342081919f6e521ac2d26aa2",
+    "previewScanConfirmed": false,
+    "originalThreadDeliveryConfirmed": false,
+    "releasePublished": false
+  },
+  "githubCI": {
+    "workflowCount": 0
+  },
+  "sourceHashDefinitions": {
+    "sourceHashes": "Raw browser workspace bytes at verification time",
+    "gitNormalizedSourceHashes": "Exact Git index bytes for the forthcoming commit; line-ending normalization only"
+  },
+  "gitNormalizedSourceHashes": {
+    "pages/gain-structure/gain-structure.js": "9b2f1056403dedcdd4c84e646c58e15745b9d4de12601dc08cfc52fa393f5d86",
+    "pages/gain-structure/gain-structure.wxml": "71e42800be23c5d3a45fcf83fc5536979510a7440470a5da6e41b30b2f52002a",
+    "pages/gain-structure/gain-structure.wxss": "6f442f6c6c6bba69b6b1f405371b0856c512d5861849fb0af9bf1591bee1090e",
+    "pages/gain-structure/gain-overlays.wxml": "f0109f0db42af8ec138f93141b2a1a832bafa321a28b789dba2f48847d916db7"
+  },
+  "gitLineEndingDifferences": [
+    {
+      "file": "pages/gain-structure/gain-structure.wxss",
+      "workspaceBytes": 20845,
+      "gitBytes": 20844,
+      "semanticDifference": false
+    }
+  ]
+}

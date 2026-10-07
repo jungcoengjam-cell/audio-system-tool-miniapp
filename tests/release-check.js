@@ -2353,6 +2353,14 @@ function checkPageControllers() {
   const gainWxml = expandWxmlIncludes('pages/gain-structure/gain-structure.wxml')
   assert(gainWxml.includes('0 dBFS = +18.4 dBu'), '增益结构页面未显示当前 DSP 校准值')
   assert(!gainWxml.includes('功放输入旋钮'), '增益结构页面仍使用不适用于屏幕或软件控制的旧称呼')
+  assert(!gainWxml.includes('bindtap="calculate"')
+    && !gainWxml.includes('calculate-button')
+    && !gainWxml.includes('重新计算')
+    && !gainWxml.includes('再计算'),
+  '增益结构有效输入应自动更新，页面不能保留手动计算入口')
+  assert(gainWxml.includes('calculationState === \'incomplete\'')
+    && gainWxml.includes('输入完整后结果会自动更新'),
+  '增益结构缺失依赖时应持续提示并清除旧结果')
   storage.set('audioTool.gainStructure.preferences', {
     amplifierModel: 'TC-X2200B', stageValue: 1, mode: 'stereo',
     loadImpedance: null, targetPeakDbfs: -6,
@@ -2433,14 +2441,18 @@ function checkPageControllers() {
   assert.strictEqual(gainReportExportCount, 1, '相同增益架构结果没有复用已生成图片')
   gainPage.onTargetPeakTap({ currentTarget: { dataset: { index: 0 } } })
   assert.strictEqual(gainPage.data.resultReportImagePath, '', '增益架构参数变化后仍沿用旧结果图片')
+  assert.strictEqual(gainPage.data.result.valid, true,
+    '增益架构参数变化后应立即导出当前计算结果')
+  assert.strictEqual(gainPage.getRecordPayload().preferences.targetPeakDbfs, -3,
+    '自动推导后的记录 payload 应使用新的目标峰值')
   gainPage.onTargetPeakTap({ currentTarget: { dataset: { index: 1 } } })
   delete wx.createCanvasContext
   delete wx.canvasToTempFilePath
   delete wx.getFileSystemManager
   delete wx.showLoading
   delete wx.hideLoading
-  assert.strictEqual(gainPage.getRecordPayload(), null,
-    '增益架构输入变化后不能在未计算时生成记录 payload')
+  assert.strictEqual(gainPage.getRecordPayload().module, 'gainStructure',
+    '完整输入的自动推导结果应立即生成记录 payload')
   gainPage.calculate()
   const gainPayload = gainPage.getRecordPayload()
   assert.strictEqual(gainPayload.module, 'gainStructure')
@@ -2461,10 +2473,8 @@ function checkPageControllers() {
   gainPage.selectAmplifier({ currentTarget: { dataset: { index: noDefaultIndex } } })
   assert.strictEqual(gainPage.data.stageIndex, -1)
   assert.strictEqual(gainPage.data.result, null)
-  assert.strictEqual(gainPage.data.calculationState, 'stale')
+  assert.strictEqual(gainPage.data.calculationState, 'incomplete')
   gainPage.onStageTap({ currentTarget: { dataset: { index: 0 } } })
-  assert.strictEqual(gainPage.data.result, null)
-  gainPage.calculate()
   assert.strictEqual(gainPage.data.result.valid, true)
 
   const voltageGainIndex = amplifiers.findIndex((item) => item.model === 'TC-22000')
@@ -2472,8 +2482,6 @@ function checkPageControllers() {
   gainPage.onStageTap({ currentTarget: { dataset: { index: 0 } } })
   assert.strictEqual(gainPage.data.result, null)
   gainPage.onLoadChange({ detail: { value: '1' } })
-  assert.strictEqual(gainPage.data.result, null)
-  gainPage.calculate()
   assert.strictEqual(gainPage.data.result.valid, true)
   assert.strictEqual(gainPage.data.result.calculationBasis, 'ratedPowerAndVoltageGain')
 

@@ -10,11 +10,14 @@ const records = require('../../utils/records')
 
 const root = path.resolve(__dirname, '../..')
 const baselinePath = path.join(__dirname, 'initial-gain-page.cjs')
-const expectedBaselineHash = '8f288e565d3d419bd17c933cb57ee1e58fa776c5624b77bca94b16e6a285d756'
+// The fixture has identical content across checkouts but different byte hashes:
+// observed LF bytes hash to 8f288e..., while CRLF bytes hash to ca3644....
+// Normalize CRLF only so the immutable-content check is stable across checkout line endings.
+const expectedCanonicalBaselineHash = '8f288e565d3d419bd17c933cb57ee1e58fa776c5624b77bca94b16e6a285d756'
 const baselineSource = fs.readFileSync(baselinePath, 'utf8')
 assert.strictEqual(
-  crypto.createHash('sha256').update(baselineSource).digest('hex'),
-  expectedBaselineHash,
+  crypto.createHash('sha256').update(baselineSource.replace(/\r\n/g, '\n')).digest('hex'),
+  expectedCanonicalBaselineHash,
   'the immutable pre-refactor gain page fixture changed',
 )
 
@@ -199,6 +202,7 @@ function makeWx(options = {}) {
   recordStorageKeys.forEach((key) => storage.set(key, key.endsWith('.v1') ? [] : ''))
   if (options.preferences) storage.set(preferencesKey, { ...options.preferences })
   const copied = []
+  let preferenceWrites = 0
   const sharePaths = []
   const savePaths = []
   const previewPaths = []
@@ -211,6 +215,7 @@ function makeWx(options = {}) {
     },
     setStorageSync(key, value) {
       if (options.failWrites?.has(key)) throw new Error('write failed')
+      if (key === preferencesKey) preferenceWrites += 1
       storage.set(key, value)
     },
     removeStorageSync(key) {
@@ -250,7 +255,7 @@ function makeWx(options = {}) {
     saveImageToPhotosAlbum: ({ filePath }) => savePaths.push(filePath),
     previewImage: ({ current }) => previewPaths.push(current),
   }
-  return { wx, storage, copied, sharePaths, savePaths, previewPaths, exports, accessRequests }
+  return { wx, storage, copied, sharePaths, savePaths, previewPaths, exports, accessRequests, get preferenceWrites() { return preferenceWrites } }
 }
 
 function bootPage(options = {}, recordOverrides) {
@@ -360,15 +365,21 @@ test('fresh start, saved-draft restore, reset, and relaunch preserve saved recor
   } finally { relaunched.restore() }
 })
 
-test('model and mode changes hide old output, retain the load reminder, and omit load for sensitivity models', () => {
+test('semantic edits derive immediately, clear incomplete output, and omit load for sensitivity models', () => {
   const context = bootPage({ preferences: restoredValidPreferences })
   try {
     const { page } = context
+    assert.strictEqual(page.data.result.valid, true)
+    const initialRevision = page._inputRevision
     const voltageIndex = amplifiers.findIndex((item) => item.model === 'TC-22000')
     assert(page.selectAmplifier({ currentTarget: { dataset: { index: voltageIndex } } }))
     assert.strictEqual(page.data.showPowerContext, true)
     assert(page.data.groupTabs.some((item) => item.key === 'load'))
-    assert.strictEqual(page.data.calculationState, 'stale')
+    assert.strictEqual(page.data.calculationState, 'incomplete')
+    assert.strictEqual(page.data.result, null,
+      'selecting a new model must immediately discard the previous result')
+    assert.strictEqual(page.data.hasValidResult, false)
+    assert.strictEqual(page.data.currentFavorite, false)
     assert(page.onStageTap({ currentTarget: { dataset: { index: 0 } } }),
       'the voltage-gain model requires an explicit stage selection')
     assert.strictEqual(page.data.hasValidResult, false)
@@ -378,14 +389,15 @@ test('model and mode changes hide old output, retain the load reminder, and omit
     assert.strictEqual(page.data.loadIndex, 0)
     assert.strictEqual(page.data.loadReminderActive, true)
     assert.strictEqual(page.data.hasValidResult, false)
-    const missingLoad = page.calculate()
-    assert.strictEqual(missingLoad.valid, false)
-    assert.strictEqual(page.data.loadReminderActive, true)
     assert(page.onLoadChange({ detail: { value: 2 } }))
     assert.strictEqual(page.data.loadReminderActive, false)
-    assert.strictEqual(page.data.calculationState, 'stale')
-    const recalculated = page.calculate()
-    assert.strictEqual(recalculated.valid, true)
+    assert.strictEqual(page.data.calculationState, 'valid')
+    assert.strictEqual(page.data.result.valid, true,
+      'a complete voltage-gain selection should calculate on the load change')
+    assert.strictEqual(page.data.hasValidResult, true)
+    assert(page._inputRevision > initialRevision)
+    assert.strictEqual(page.calculate().valid, true,
+      'the compatibility calculate method should still derive the current result')
 
     page.onGroupTap({ currentTarget: { dataset: { group: 'load' } } })
     const sensitiveIndex = amplifiers.findIndex((item) => item.model === 'TC-X2200B')
@@ -395,8 +407,97 @@ test('model and mode changes hide old output, retain the load reminder, and omit
     assert.strictEqual(page.data.loadOptions.length, 0)
     assert.strictEqual(page.data.loadIndex, -1)
     assert(!page.data.groupTabs.some((item) => item.key === 'load'))
-    assert.strictEqual(page.data.calculationState, 'stale')
-    assert.strictEqual(page.calculate().valid, true)
+    assert.strictEqual(page.data.calculationState, 'valid')
+    assert.strictEqual(page.data.result.valid, true,
+      'a sensitivity model must calculate without requiring a load selection')
+    assert.strictEqual(page.data.hasValidResult, true)
+  } finally { context.restore() }
+})
+
+test('restored completeness, invalid core warnings, and non-input UI events never expose stale output', () => {
+  const incomplete = bootPage({ preferences: {
+    amplifierModel: 'TC-22000',
+    mode: 'stereo',
+    loadImpedance: null,
+    targetPeakDbfs: -6,
+  } })
+  try {
+    const { page } = incomplete
+    assert.strictEqual(page.data.hasSavedDraft, true)
+    assert.strictEqual(page.data.stageIndex, -1)
+    assert.strictEqual(page.data.result, null)
+    assert.strictEqual(page.data.calculationState, 'incomplete')
+    assert.strictEqual(page.data.hasValidResult, false)
+    assert.strictEqual(page.data.loadReminderActive, true)
+    assert.strictEqual(page.getRecordPayload(), null)
+    assert(page.onStageTap({ currentTarget: { dataset: { index: 0 } } }))
+    assert.strictEqual(page.data.result, null,
+      'a valid stage with an unselected voltage-gain load must remain incomplete')
+    assert(page.data.outputHint.includes('负载阻抗'))
+    assert(page.onLoadChange({ detail: { value: 1 } }))
+    assert.strictEqual(page.data.result.valid, true,
+      'restored missing dependencies should resolve through the same automatic path')
+    assert.strictEqual(page.data.loadReminderActive, false)
+
+    const revision = page._inputRevision
+    const writes = incomplete.preferenceWrites
+    page.onGroupTap({ currentTarget: { dataset: { group: 'calibration' } } })
+    page.openAmplifierSelector()
+    page.closeAmplifierSelector()
+    page.onHide()
+    page.onShow()
+    assert.strictEqual(page._inputRevision, revision,
+      'group, selector, hide, and show events must not recalculate semantic input')
+    assert.strictEqual(incomplete.preferenceWrites, writes,
+      'presentation-only events must not rewrite the input draft')
+  } finally { incomplete.restore() }
+
+  const invalid = bootPage({ preferences: restoredValidPreferences })
+  try {
+    const { page } = invalid
+    page.data.targetPeaks[page.data.targetPeakIndex].value = 1
+    const coreWarning = page.calculate()
+    assert.strictEqual(coreWarning.valid, false)
+    assert.strictEqual(page.data.calculationState, 'invalid')
+    assert.strictEqual(page.data.result.warning, coreWarning.warning)
+    assert.strictEqual(page.data.hasValidResult, false)
+    assert.strictEqual(page.getRecordPayload(), null,
+      'a core validation warning must hide the prior numeric result and actions')
+  } finally { invalid.restore() }
+})
+
+test('out-of-order setData callbacks cannot restore old preferences or favorite state', () => {
+  const context = bootPage({ preferences: restoredValidPreferences })
+  try {
+    const { page } = context
+    const originalSetData = page.setData
+    const callbacks = []
+    page.setData = function queueCallbacks(changes, callback) {
+      Object.assign(this.data, changes)
+      if (callback) callbacks.push(callback)
+    }
+    const startingWrites = context.preferenceWrites
+    const startingRevision = page._inputRevision
+    assert(page.onTargetPeakTap({ currentTarget: { dataset: { index: 0 } } }))
+    const olderCallback = callbacks[0]
+    assert(page.onTargetPeakTap({ currentTarget: { dataset: { index: 2 } } }))
+    const newerCallback = callbacks[1]
+    assert.strictEqual(callbacks.length, 2)
+    assert.strictEqual(context.preferenceWrites, startingWrites,
+      'preferences should wait for the current view commit callback')
+    assert(page._inputRevision > startingRevision)
+
+    newerCallback.call(page)
+    assert.strictEqual(context.storage.get(preferencesKey).targetPeakDbfs, -9,
+      'the latest callback should persist the latest selected target')
+    const writesAfterLatest = context.preferenceWrites
+    olderCallback.call(page)
+    assert.strictEqual(context.storage.get(preferencesKey).targetPeakDbfs, -9,
+      'a delayed callback must not restore an older preference value')
+    assert.strictEqual(context.preferenceWrites, writesAfterLatest,
+      'a stale callback must not write preferences or synchronize an old favorite')
+    assert.strictEqual(page.getRecordLookupPayload().preferences.targetPeakDbfs, -9)
+    page.setData = originalSetData
   } finally { context.restore() }
 })
 
@@ -497,10 +598,48 @@ test('report generation, file cache validation, cancellation, and actions use on
   } finally { context.restore() }
 })
 
+test('semantic edits invalidate in-flight report cache and export callbacks', () => {
+  const context = bootPage({ preferences: restoredValidPreferences })
+  try {
+    const { page, exports, accessRequests } = context
+    page.openSharePreview()
+    const firstExport = exports.shift()
+    firstExport.success({ tempFilePath: 'temp://current-before-edit.png' })
+    assert.strictEqual(page.data.resultReportImagePath, 'temp://current-before-edit.png')
+    page.closeSharePreview()
+
+    page.openSharePreview()
+    const pendingAccess = accessRequests.shift()
+    assert(pendingAccess, 'the saved image should use asynchronous file-liveness validation')
+    assert.strictEqual(page.onTargetPeakTap({ currentTarget: { dataset: { index: 0 } } }), true)
+    assert.strictEqual(page.data.shareSheetVisible, false)
+    assert.strictEqual(page.data.resultReportImagePath, '')
+    pendingAccess.success()
+    assert.strictEqual(page.data.resultReportPreviewVisible, false,
+      'a cache callback from the previous input revision must not revive the old preview')
+    assert.strictEqual(page.data.resultReportImagePath, '')
+
+    page.openSharePreview()
+    const pendingExport = exports.shift()
+    assert(pendingExport, 'the edited result should start a fresh image export')
+    assert.strictEqual(page.onTargetPeakTap({ currentTarget: { dataset: { index: 2 } } }), true)
+    pendingExport.success({ tempFilePath: 'temp://stale-after-edit.png' })
+    assert.strictEqual(page.data.resultReportImagePath, '',
+      'an export callback from an older input revision must not store its image')
+    assert.strictEqual(page.data.resultReportPreviewVisible, false)
+    assert.strictEqual(page.data.hasValidResult, true,
+      'each target edit should still have its own immediately derived result')
+  } finally { context.restore() }
+})
+
 test('project selection, create, frozen save, deletion/rename recheck, write errors, and keyboard episodes', () => {
   const addCalls = []
   const recordsOverride = {
     ...records,
+    getWorkspaceSnapshot(...args) {
+      if (recordsOverride.beforeSnapshot) return recordsOverride.beforeSnapshot(...args)
+      return records.getWorkspaceSnapshot(...args)
+    },
     addRecordToProject(...args) {
       addCalls.push(args)
       if (recordsOverride.failAdd) return null
@@ -533,8 +672,36 @@ test('project selection, create, frozen save, deletion/rename recheck, write err
     assert.strictEqual(page.saveProjectConfiguration(), false)
     assert.strictEqual(addCalls.length, addCountBeforeChange,
       'a project sheet opened for an older result must not write either payload')
-    assert.strictEqual(page.calculate().valid, true,
-      'a recalculation should be required before opening a fresh project sheet')
+    assert.strictEqual(page.data.result.valid, true,
+      'the edited result should already be current when the sheet closes')
+
+    const interruptedProject = records.createProject('读取期间输入变化')
+    page.openProjectSheet()
+    page.chooseProject({ currentTarget: { dataset: { id: interruptedProject.id } } })
+    const addCountBeforeInterruptedRead = addCalls.length
+    recordsOverride.beforeSnapshot = (...args) => {
+      recordsOverride.beforeSnapshot = null
+      const nextTarget = page.data.targetPeakIndex === 2 ? 0 : 2
+      page.onTargetPeakTap({ currentTarget: { dataset: { index: nextTarget } } })
+      return records.getWorkspaceSnapshot(...args)
+    }
+    assert.strictEqual(page.saveProjectConfiguration(), false,
+      'an edit during the project recheck must cancel the frozen save')
+    assert.strictEqual(addCalls.length, addCountBeforeInterruptedRead,
+      'a superseded project payload must never reach records storage')
+    assert.strictEqual(page._projectSavePending, false,
+      'input edits must release the interrupted save lock')
+    assert.strictEqual(page._projectSnapshotForSave, null,
+      'input edits must discard the old frozen payload')
+    assert.strictEqual(page.data.projectSheetVisible, false)
+    assert.strictEqual(page.data.result.valid, true)
+    assert.strictEqual(page.openProjectSheet(), true,
+      'a fresh sheet should open immediately after the interrupted save is invalidated')
+    page.chooseProject({ currentTarget: { dataset: { id: interruptedProject.id } } })
+    assert.strictEqual(page.saveProjectConfiguration(), true,
+      'the fresh current snapshot should save normally')
+    assert.strictEqual(addCalls.length, addCountBeforeInterruptedRead + 1)
+    page.closeProjectSheet()
 
     const searchProjectA = records.createProject('Alpha Target')
     const searchProjectB = records.createProject('Beta Target')

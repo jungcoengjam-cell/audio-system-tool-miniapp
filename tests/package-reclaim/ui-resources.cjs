@@ -53,6 +53,11 @@ for (const [relativePath, expectedHash] of Object.entries(baseline.expandedWxmlS
     assert(source.includes('class="result-report-canvas-offscreen"')
       && source.includes('canvas-id="resultReportCanvas"'),
     'gain page must keep its local report canvas')
+    assert(!source.includes('bindtap="calculate"')
+      && !source.includes('calculate-button')
+      && !source.includes('重新计算')
+      && !source.includes('再计算'),
+    'gain page must update complete inputs automatically without a manual calculate CTA')
     assert((source.match(/bindtap="requestReset"|bindtap="openSharePreview"|bindtap="toggleCurrentFavorite"|bindtap="openProjectSheet"/g) || []).length === 4,
       'gain result rail must expose reset, share, favorite, and project actions')
     assert(source.includes('disabled="{{!canReset}}"')
@@ -62,6 +67,9 @@ for (const [relativePath, expectedHash] of Object.entries(baseline.expandedWxmlS
       && source.includes('result.placementWarning')
       && source.includes('class="amplifier-setting"'),
     'gain result must show output placement and fixed amplifier setting')
+    assert(source.includes('calculationState === \'incomplete\'')
+      && source.includes('输入完整后结果会自动更新'),
+    'gain page must clear stale results and explain when dependencies are incomplete')
     assert(source.includes("result.alignmentMode === 'insufficientDrive'")
       && source.includes('result.primaryValue'),
     'gain result must distinguish insufficient drive in its primary output')
@@ -86,6 +94,10 @@ for (const [relativePath, expectedHash] of Object.entries(baseline.expandedWxmlS
     assert(controller.includes('addRecordToProject(frozen.payload, target.id)')
       && !controller.includes('addRecordToProject(frozen.payload, target.id,'),
     'gain project writes must preserve the two-argument records API')
+    assert(controller.includes('function getInputReadiness(state)')
+      && controller.includes('derivePageResult(pageState, hasDraftInputs)')
+      && controller.includes('this._inputRevision === inputRevision'),
+    'gain controller must derive complete inputs and reject callbacks from an older input revision')
     assert(styles.includes('.result-pane{position:relative;')
       && styles.includes('.editor-scroll{')
       && styles.includes('.action-button.action-button{box-sizing:border-box;display:flex;width:44px;min-width:44px;max-width:44px;')
