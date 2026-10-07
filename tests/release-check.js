@@ -6199,6 +6199,7 @@ const auditRegressionScripts = [
   'limiter-project-metadata-test.js',
   'limiter-refactor-2026-10-06/limiter-page-state-test.js',
   'report-lifecycle-regression.js',
+  'gain-report-regression.js',
   'dmx-lifecycle-regression.js',
   'dmx-first-use-experience-test.js',
   'dmx-search-lifecycle-regression.js',

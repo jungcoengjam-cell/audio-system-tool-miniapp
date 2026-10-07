@@ -12,6 +12,7 @@
         <view wx:if="{{hasValidResult}}" class="status-chip status-chip-{{result.statusTone}}">{{result.statusLabel}}</view>
         <view wx:else class="output-status">{{outputStatus}}</view>
       </view>
+      <view wx:if="{{resetError}}" class="reset-error" role="alert">{{resetError}}</view>
 
       <block wx:if="{{hasValidResult}}">
         <view wx:if="{{result.alignmentMode === 'insufficientDrive'}}" class="result-primary">
@@ -23,18 +24,22 @@
           <view class="result-value"><text wx:if="{{result.alignmentMode === 'attenuate'}}">−</text>{{result.primaryValue}}<text class="result-unit"> dB</text></view>
         </view>
 
-        <view class="result-facts">
-          <view class="result-fact">
-            <text class="result-fact-label">DSP 目标峰值</text>
-            <text class="result-fact-value">{{result.targetPeakDbfs}} dBFS · {{result.targetDspOutputDbu}} dBu</text>
+        <scroll-view class="result-details-scroll" scroll-y enhanced show-scrollbar="{{false}}" aria-label="结果参数">
+          <view class="result-facts">
+            <view class="result-fact">
+              <text class="result-fact-label">DSP 目标峰值</text>
+              <text class="result-fact-value">{{result.targetPeakDbfs}} dBFS · {{result.targetDspOutputDbu}} dBu</text>
+            </view>
+            <view class="result-fact">
+              <text class="result-fact-label">功放额定输入点</text>
+              <text class="result-fact-value">{{result.fullPowerInputDbu}} dBu</text>
+            </view>
           </view>
-          <view class="result-fact">
-            <text class="result-fact-label">功放额定输入点</text>
-            <text class="result-fact-value">{{result.fullPowerInputDbu}} dBu</text>
-          </view>
+        </scroll-view>
+        <view class="placement-warning amplifier-setting">功放输入控制保持 0 dB。{{result.placementWarning}}</view>
+        <view wx:if="{{loadReminderActive}}" class="load-reminder" role="status">
+          请确认当前工作模式并选择有效负载阻抗；输入完整后结果会自动更新。
         </view>
-        <view class="amplifier-setting">功放输入控制保持 0 dB</view>
-        <view class="placement-warning">{{result.placementWarning}}</view>
       </block>
 
       <view wx:elif="{{calculationState === 'invalid' || calculationState === 'incomplete'}}" class="result-message result-message-warning">
@@ -45,12 +50,11 @@
         <text class="result-message-title">等待输入</text>
         <text class="result-message-copy">{{outputHint}}</text>
       </view>
-
-      <view wx:if="{{resetError}}" class="reset-error" role="alert">{{resetError}}</view>
-
-      <view wx:if="{{loadReminderActive}}" class="load-reminder" role="status">
+      <scroll-view wx:if="{{!hasValidResult && loadReminderActive}}" class="result-details-scroll result-details-scroll-notice" scroll-y enhanced show-scrollbar="{{false}}" aria-label="输入提醒">
+        <view class="load-reminder" role="status">
           请确认当前工作模式并选择有效负载阻抗；输入完整后结果会自动更新。
-      </view>
+        </view>
+      </scroll-view>
     </view>
   </view>
 

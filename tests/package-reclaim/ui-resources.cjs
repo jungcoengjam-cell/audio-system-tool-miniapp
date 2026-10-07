@@ -43,6 +43,8 @@ for (const [relativePath, expectedHash] of Object.entries(baseline.expandedWxmlS
     const overlay = read('pages/gain-structure/gain-overlays.wxml')
     const controller = read('pages/gain-structure/gain-structure.js')
     const styles = read('pages/gain-structure/gain-structure.wxss')
+    const hasWxmlClass = (className) => [...source.matchAll(/class="([^"]*)"/g)]
+      .some((match) => match[1].split(/\s+/).includes(className))
     assert(source.indexOf('class="result-pane"') < source.indexOf('class="input-pane"'),
       'gain output must precede its independent input pane')
     assert(source.includes('<page-container') && source.includes('onPageContainerBeforeLeave')
@@ -63,9 +65,10 @@ for (const [relativePath, expectedHash] of Object.entries(baseline.expandedWxmlS
     assert(source.includes('disabled="{{!canReset}}"')
       && source.includes('disabled="{{!hasValidResult}}"'),
     'gain actions must expose their explicit disabled states')
-    assert(source.includes('class="placement-warning"')
+    assert(hasWxmlClass('placement-warning')
       && source.includes('result.placementWarning')
-      && source.includes('class="amplifier-setting"'),
+      && hasWxmlClass('amplifier-setting')
+      && source.includes('功放输入控制保持 0 dB'),
     'gain result must show output placement and fixed amplifier setting')
     assert(source.includes('calculationState === \'incomplete\'')
       && source.includes('输入完整后结果会自动更新'),

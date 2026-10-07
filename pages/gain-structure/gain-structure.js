@@ -28,10 +28,13 @@ const {
   REPORT_CANVAS_ID,
   REPORT_WIDTH,
   buildResultReportPayload,
-  calculateResultReportHeight,
-  drawResultReport,
   getExportDimensions,
 } = require('../../utils/result-report')
+const {
+  calculateResultReportHeight,
+  drawResultReport,
+  getCanonicalResultNature,
+} = require('./gain-report')
 
 const DEFAULT_AMPLIFIER_MODEL = 'TC-X2200B'
 const PREFERENCE_KEY = 'audioTool.gainStructure.preferences'
@@ -926,6 +929,7 @@ Page({
       if (typeof wx.showToast === 'function') wx.showToast({ title: '暂无可生成的标定结果', icon: 'none' })
       return false
     }
+    payload.resultNature = getCanonicalResultNature(record.resultText)
     if (this.data.isGeneratingResultReport || this.data.isCheckingResultReportCache) return false
     const signature = this.getResultReportSignature(record)
     if (this.data.resultReportImagePath && this.resultReportSignature === signature) {
@@ -974,7 +978,14 @@ Page({
       this.setData({ resultReportError: '当前微信版本暂不支持生成图片。' })
       return false
     }
-    const resultReportCanvasHeight = calculateResultReportHeight(payload)
+    let resultReportCanvasHeight
+    try {
+      const measureContext = wx.createCanvasContext(REPORT_CANVAS_ID, this)
+      resultReportCanvasHeight = calculateResultReportHeight(payload, measureContext)
+    } catch (error) {
+      this.setData({ resultReportError: '图片排版失败，请重试。' })
+      return false
+    }
     const revision = (this.resultReportRevision || 0) + 1
     const inputRevision = this._inputRevision || 0
     this.resultReportRevision = revision

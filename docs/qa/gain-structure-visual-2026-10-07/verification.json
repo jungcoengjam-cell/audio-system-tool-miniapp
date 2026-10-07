@@ -1,0 +1,114 @@
+{
+  "date": "2026-10-07",
+  "browserLayout": {
+    "runner": "Chromium bridge rendering actual gain page WXML/WXSS/controller",
+    "passedCases": 308,
+    "failedCases": 0,
+    "physicalDevice": false,
+    "classification": "supplementary geometry verification; not native or physical-device acceptance"
+  },
+  "officialWechatCompile": {
+    "compilersInstalled": true,
+    "WCC": {
+      "exitCode": 0
+    },
+    "WCSC": {
+      "exitCode": 0
+    },
+    "nativeRuntime": false,
+    "physicalDevice": false
+  },
+  "auditScripts": {
+    "passed": 51,
+    "total": 51
+  },
+  "releaseCheckFunctions": {
+    "passed": 16,
+    "total": 18,
+    "failed": [
+      {
+        "name": "checkReleasePackageGates",
+        "reason": "Candidate audit retained the existing control-protocol draft-resource gate."
+      },
+      {
+        "name": "checkData",
+        "reason": "Media resources total 677497 bytes, above the unchanged 338 KiB gate."
+      }
+    ]
+  },
+  "deterministicCases": {
+    "passed": 87,
+    "total": 87,
+    "releaseWrapperExitCode": 1,
+    "wrapperFailure": "Effective package size 2834.8 KiB exceeds the unchanged 2650 KiB limit."
+  },
+  "gainFocusedRegression": {
+    "command": "node tests/gain-structure-refactor-2026-10-07/run.cjs",
+    "passed": 9,
+    "total": 9
+  },  "releaseAcceptance": {
+    "passed": false,
+    "blockers": [
+      "Effective package size 2834.8 KiB exceeds 2650 KiB.",
+      "Candidate audit is blocked by the existing control-protocol draft-resource gate.",
+      "Media resources total 677497 bytes, above 338 KiB."
+    ],
+    "gatesRelaxed": false
+  },
+  "nativeEvidence": {
+    "gainPageScreenshotAvailable": false,
+    "availableScreenshotShows": "WeChat welcome page, not the gain page.",
+    "physicalPhoneAcceptance": "pending",
+    "wechatReleasePerformed": false
+  },
+  "shareReportTraceability": [
+    "generatedAt",
+    "appVersion",
+    "productDataDate"
+  ],
+  "behaviorScope": {
+    "algorithmsChanged": false,
+    "productDataChanged": false,
+    "calculationBenchmarksChanged": false,
+    "inputValidationChanged": false,
+    "recordOrStorageSemanticsChanged": false
+  },
+  "scopedFileHashes": {
+    "pages/gain-structure/gain-structure.js": {
+      "workingTreeSha256": "6649398776c26cdf7aea4998f209301939acf82d5850bff11871b9181bd7919b",
+      "isolatedCandidateSha256": "6649398776c26cdf7aea4998f209301939acf82d5850bff11871b9181bd7919b",
+      "matches": true
+    },
+    "pages/gain-structure/gain-structure.wxml": {
+      "workingTreeSha256": "6a7fa9e6b724ba51e27a2d13dfefe158d35c39ce91ad12c3aa2a8015dd57f07b",
+      "isolatedCandidateSha256": "6a7fa9e6b724ba51e27a2d13dfefe158d35c39ce91ad12c3aa2a8015dd57f07b",
+      "matches": true
+    },
+    "pages/gain-structure/gain-structure.wxss": {
+      "workingTreeSha256": "40d78a9a0c6bdb0bea5a281929466be1258b77aa9386a1cb56f8569a9e35b48b",
+      "isolatedCandidateSha256": "40d78a9a0c6bdb0bea5a281929466be1258b77aa9386a1cb56f8569a9e35b48b",
+      "matches": true
+    },
+    "pages/gain-structure/gain-report.js": {
+      "workingTreeSha256": "dc6e586051ea8f5fd7e00a0bf51ee9e709b86e3534a978a79b6d23b70bafc0fd",
+      "isolatedCandidateSha256": "dc6e586051ea8f5fd7e00a0bf51ee9e709b86e3534a978a79b6d23b70bafc0fd",
+      "matches": true
+    },
+    "tests/gain-report-regression.js": {
+      "workingTreeSha256": "026814402dd43b7a82679381ab6b33d509e9db972824140c80273871a265c86c",
+      "isolatedCandidateSha256": "026814402dd43b7a82679381ab6b33d509e9db972824140c80273871a265c86c",
+      "matches": true
+    },
+    "tests/package-reclaim/ui-resources.cjs": {
+      "workingTreeSha256": "fb07ff3f55fc3b8c919411de76b05e1ee2cf2c4555d8f78c711643fc54caaa11",
+      "isolatedCandidateSha256": "fb07ff3f55fc3b8c919411de76b05e1ee2cf2c4555d8f78c711643fc54caaa11",
+      "matches": true
+    },
+    "tests/release-check.js": {
+      "workingTreeSha256": "e4d2710afbb18520479d01f51058a53f59b04072af01d826dc1d080c83f497d8",
+      "isolatedCandidateSha256": "157479c7abf8aeb6804de1b1ea4f51f97c99137ecae83bca5a13632c01a25f0f",
+      "matches": false
+    }
+  },
+  "hashNote": "The isolated candidate is HEAD plus the gain-report regression audit hook. The working-tree release-check.js also preserves unrelated user changes, so those two hashes intentionally differ."
+}
