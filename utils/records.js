@@ -158,6 +158,37 @@ function normalizeText(value, maximumLength) {
   return String(value || '').trim().slice(0, maximumLength)
 }
 
+function normalizeProjectRecordMetadata(metadata) {
+  if (!isPlainObject(metadata) || !Object.prototype.hasOwnProperty.call(metadata, 'name')
+    || Object.keys(metadata).some((key) => key !== 'name' && key !== 'note')
+    || typeof metadata.name !== 'string'
+    || (Object.prototype.hasOwnProperty.call(metadata, 'note') && metadata.note !== undefined
+      && typeof metadata.note !== 'string')) return null
+  const name = metadata.name.trim()
+  const note = metadata.note === undefined ? '' : metadata.note.trim()
+  if (!name || name.length > 60 || note.length > 200) return null
+  return { name, note }
+}
+
+function isPlainObject(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  const prototype = Object.getPrototypeOf(value)
+  return prototype === Object.prototype || prototype === null
+}
+
+function withoutProjectRecordMetadata(record, projectId) {
+  if (record?.module !== 'limiter') return record
+  const source = record?.projectMetadata
+  if (!source || typeof source !== 'object' || Array.isArray(source)
+    || !Object.prototype.hasOwnProperty.call(source, projectId)) return record
+  const projectMetadata = { ...source }
+  delete projectMetadata[projectId]
+  const next = { ...record }
+  if (Object.keys(projectMetadata).length) next.projectMetadata = projectMetadata
+  else delete next.projectMetadata
+  return next
+}
+
 function normalizeProject(project) {
   if (!project || typeof project !== 'object' || !project.id || !project.name) return null
   const createdAt = Number.isFinite(project.createdAt) ? project.createdAt : Date.now()
@@ -308,6 +339,16 @@ function saveRecord(payload, options = {}) {
     createdAt: existing?.createdAt || now,
     updatedAt: now,
   }
+  if (options.projectMetadata && options.projectId) {
+    const previousMetadata = existing?.projectMetadata
+      && typeof existing.projectMetadata === 'object' && !Array.isArray(existing.projectMetadata)
+      ? existing.projectMetadata
+      : {}
+    record.projectMetadata = {
+      ...previousMetadata,
+      [options.projectId]: { ...options.projectMetadata, savedAt: now },
+    }
+  }
   const persistent = isPersistentRecord(record)
   if (!persistent && !existing) return null
   const nextRecords = persistent
@@ -434,10 +475,10 @@ function deleteProject(projectId) {
   const activeProjectId = readValue(ACTIVE_PROJECT_KEY, '')
   const writes = [
     { key: PROJECTS_KEY, value: projects.filter((project) => project.id !== projectId), previousValue: projects },
-    { key: RECORDS_KEY, value: keepPersistentRecords(records.map((record) => ({
+    { key: RECORDS_KEY, value: keepPersistentRecords(records.map((record) => withoutProjectRecordMetadata({
       ...record,
       projectIds: (record.projectIds || []).filter((id) => id !== projectId),
-    }))), previousValue: records },
+    }, projectId))), previousValue: records },
   ]
   if (activeProjectId === projectId) {
     writes.push({ key: ACTIVE_PROJECT_KEY, value: '', previousValue: activeProjectId })
@@ -455,13 +496,57 @@ function getActiveProject() {
   return getProjects().find((project) => project.id === activeId) || null
 }
 
-function addRecordToProject(payload, projectId) {
+function addRecordToProject(payload, projectId, metadata) {
+  const projectMetadata = metadata === undefined ? undefined : normalizeProjectRecordMetadata(metadata)
+  if (metadata !== undefined && (!projectMetadata || payload?.module !== 'limiter')) return null
   const project = getProjects().find((item) => item.id === projectId)
-  return project ? saveRecord(payload, { projectId }) : null
+  return project ? saveRecord(payload, { projectId, ...(projectMetadata ? { projectMetadata } : {}) }) : null
 }
 
 function getProjectRecords(projectId) {
   return getRecords().filter((record) => record.projectIds?.includes(projectId))
+}
+
+function getProjectRecordView(record, projectId) {
+  if (!record || typeof record !== 'object' || Array.isArray(record)) return record
+  const sourceMetadata = record.projectMetadata
+  const metadata = record.module === 'limiter'
+    && Array.isArray(record.projectIds) && record.projectIds.includes(projectId)
+    && isPlainObject(sourceMetadata)
+    && Object.prototype.hasOwnProperty.call(sourceMetadata, projectId)
+    && isPlainObject(sourceMetadata[projectId])
+    ? sourceMetadata[projectId]
+    : null
+  const name = metadata && Object.prototype.hasOwnProperty.call(metadata, 'name')
+    && typeof metadata.name === 'string' ? metadata.name.trim() : ''
+  const noteValue = metadata && Object.prototype.hasOwnProperty.call(metadata, 'note') ? metadata.note : undefined
+  const note = noteValue === undefined ? '' : typeof noteValue === 'string' ? noteValue.trim() : null
+  const validMetadata = Boolean(name && name.length <= 60 && note !== null && note.length <= 200)
+  const projectMetadata = isPlainObject(sourceMetadata)
+    ? Object.keys(sourceMetadata).reduce((copy, id) => {
+      const item = sourceMetadata[id]
+      copy[id] = isPlainObject(item) ? { ...item } : item
+      return copy
+    }, Object.getPrototypeOf(sourceMetadata) === null ? Object.create(null) : {})
+    : undefined
+  const view = {
+    ...record,
+    preferences: record.preferences && typeof record.preferences === 'object' && !Array.isArray(record.preferences)
+      ? { ...record.preferences }
+      : record.preferences,
+    projectIds: Array.isArray(record.projectIds) ? [...record.projectIds] : record.projectIds,
+    ...(projectMetadata === undefined ? {} : { projectMetadata }),
+  }
+  if (validMetadata) {
+    view.title = name
+    view.projectNote = note
+    view.updatedAt = Number.isFinite(metadata.savedAt) ? metadata.savedAt : record.updatedAt
+    view.hasProjectMetadata = true
+  } else {
+    delete view.projectNote
+    delete view.hasProjectMetadata
+  }
+  return view
 }
 
 function isValidStoredWiringSchedule(value) {
@@ -586,7 +671,10 @@ function removeRecordFromProject(recordId, projectId) {
   const now = Date.now()
   const nextRecords = keepPersistentRecords(records.map((item) => (
     item.id === recordId
-      ? { ...item, projectIds: item.projectIds.filter((id) => id !== projectId) }
+      ? withoutProjectRecordMetadata({
+        ...item,
+        projectIds: item.projectIds.filter((id) => id !== projectId),
+      }, projectId)
       : item
   )))
   const nextProjects = projects.map((item) => (
@@ -652,6 +740,7 @@ module.exports = {
   deleteProject: wrapMutation(deleteProject),
   getActiveProject,
   getProjectRecords,
+  getProjectRecordView,
   getProjectWiring,
   getProjects,
   getRecordByPayload,

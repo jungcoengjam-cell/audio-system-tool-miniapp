@@ -103,26 +103,45 @@ function assertCameraPageCoverage(assert, finiteTree, page, label) {
 
 module.exports = function register({ test, assert, finiteTree, close }) {
   for (const [name, modulePath] of pageCases) {
-    test(name + ' page output, copied text, and record payload agree', () => {
+    test(name + (name === 'limiter'
+      ? ' page result text and record payload agree'
+      : ' page output, copied text, and record payload agree'), () => {
       const context = bootPage(modulePath)
       try {
         const page = context.page
         assert.strictEqual(typeof page.onLoad, 'function', name + ' onLoad is required')
+        if (name === 'limiter') {
+          context.storage.set('audioTool.limiter.preferences', {
+            amplifierModel: 'TC-2350B', speakerModel: 'TS-803C', count: 1,
+            wiring: 'parallel', mode: 'stereo', sensitivityVoltage: 1, highPassFrequency: 80,
+          })
+        }
         page.onLoad()
         finiteTree(page.data, name + '.data')
         assert(page.data.result, name + ' should calculate its valid default input')
         if (name === 'camera') assertCameraPageCoverage(assert, finiteTree, page, 'camera default page')
-        assert.strictEqual(typeof page.getResultText, 'function', name + ' must expose result text')
-        const text = page.getResultText()
-        assert(typeof text === 'string' && text.trim().length > 0, name + ' result text must be present')
-        assert(!/NaN|Infinity/.test(text), name + ' result text must not expose non-finite values')
-        assert.strictEqual(typeof page.copyResult, 'function', name + ' should implement copyResult')
-        page.copyResult()
-        assert.strictEqual(context.copied[context.copied.length - 1], page.getResultText(), name + ' copied text must match visible result text')
-        assert.strictEqual(typeof page.getRecordPayload, 'function', name + ' should implement getRecordPayload')
-        const record = page.getRecordPayload()
-        assert(record, name + ' valid result should produce a record payload')
-        assert.strictEqual(context.copied[context.copied.length - 1], record.resultText, name + ' copied text must match the text saved in records')
+        if (name === 'limiter') {
+          assert.strictEqual(typeof page.getResultText, 'function', name + ' must expose result text')
+          const text = page.getResultText()
+          assert(typeof text === 'string' && text.trim().length > 0, name + ' result text must be present')
+          assert(!/NaN|Infinity/.test(text), name + ' result text must not expose non-finite values')
+          assert.strictEqual(typeof page.getRecordPayload, 'function', name + ' should implement getRecordPayload')
+          const record = page.getRecordPayload()
+          assert(record, name + ' valid result should produce a record payload')
+          assert.strictEqual(text, record.resultText, 'limiter result text must match saved record text')
+        } else {
+          assert.strictEqual(typeof page.copyResult, 'function', name + ' should implement copyResult')
+          page.copyResult()
+          const copiedText = context.copied[context.copied.length - 1]
+          const text = page.getResultText()
+          assert(typeof text === 'string' && text.trim().length > 0, name + ' result text must be present')
+          assert(!/NaN|Infinity/.test(text), name + ' result text must not expose non-finite values')
+          assert.strictEqual(copiedText, text, name + ' copied text must match visible result text')
+          assert.strictEqual(typeof page.getRecordPayload, 'function', name + ' should implement getRecordPayload')
+          const record = page.getRecordPayload()
+          assert(record, name + ' valid result should produce a record payload')
+          assert.strictEqual(copiedText, record.resultText, name + ' copied text must match the text saved in records')
+        }
       } finally { context.restore() }
     }, { classification: 'implementation bug', basis: 'Each real calculator page should keep its calculation, copied text, and record text consistent.' })
   }

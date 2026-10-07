@@ -192,8 +192,9 @@
               <view class="record-module">{{record.moduleLabel}}</view>
               <view class="record-time">{{record.timeText}}</view>
             </view>
-            <view class="record-title">{{record.title}}</view>
+            <view class="record-title {{record.hasProjectMetadata ? 'record-title-project-config' : ''}}">{{record.title}}</view>
             <view class="record-summary">{{record.summary}}</view>
+            <view wx:if="{{record.projectNote}}" class="record-summary record-project-note">配置备注：{{record.projectNote}}</view>
             <view class="record-trust-chip">{{record.trustLabel}}</view>
             <view class="record-actions">
               <button wx:if="{{group.records.length > 1}}" class="record-action record-action-compare {{record.compareSelected ? 'record-action-selected' : ''}}" data-id="{{record.id}}" bindtap="toggleCompareRecord">{{record.compareSelected ? '已选择' : '加入对比'}}</button>

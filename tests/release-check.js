@@ -62,6 +62,20 @@ const {
 const recordsApi = require('../utils/records')
 
 const root = path.resolve(__dirname, '..')
+function expandWxmlIncludes(relativePath, includeStack = []) {
+  const file = path.resolve(root, relativePath)
+  const normalizedPath = path.relative(root, file).replace(/\\/g, '/')
+  assert(!includeStack.includes(normalizedPath), `WXML include 循环：${normalizedPath}`)
+  const wxml = fs.readFileSync(file, 'utf8')
+  return wxml.replace(/<include\s+src="([^"]+)"\s*\/>/g, (includeTag, source) => {
+    const includedFile = path.resolve(path.dirname(file), source)
+    assert(includedFile === root || includedFile.startsWith(`${root}${path.sep}`),
+      `WXML include 越出工作区：${source}`)
+    const includedRelativePath = path.relative(root, includedFile).replace(/\\/g, '/')
+    return expandWxmlIncludes(includedRelativePath, [...includeStack, normalizedPath])
+  })
+}
+
 const themeAliasMap = {
   '--theme-text': '--tx',
   '--theme-text-secondary': '--ts',
@@ -495,7 +509,7 @@ function checkReleasePackageGates() {
     }
   })
   const darkRequiredByPage = {
-    'pages/limiter/limiter.wxss': ['.settings-card .compact-grid .picker-value', '.warning-title'],
+    'pages/limiter/limiter.wxss': ['.field-control', '.output-status-invalid'],
     'pages/spl/spl.wxss': ['.settings-card .speaker-field .equipment-value', '.selector-model'],
     'pages/cable/cable.wxss': ['.mode-tab.mode-tab-active .mode-label', '.cable-spec'],
     'pages/camera/camera.wxss': ['.selector-model.selector-model'],
@@ -838,7 +852,7 @@ function checkSharedResultReportPreviewTemplate() {
     && template.includes('bindtap="shareResultReportImage"')
     && template.includes('bindtap="saveResultReportImage"'),
   '共享结果图片模板缺少 Canvas、分享或保存入口')
-  ;['camera', 'cable', 'gain-structure', 'limiter', 'spl'].forEach((page) => {
+  ;['camera', 'cable', 'gain-structure', 'spl'].forEach((page) => {
     const source = fs.readFileSync(path.join(root, `pages/${page}/${page}.wxml`), 'utf8')
     assert.strictEqual(
       (source.match(/<include\s+src="\.\.\/\.\.\/templates\/result-report-preview\.wxml"\s*\/>/g) || []).length,
@@ -846,6 +860,18 @@ function checkSharedResultReportPreviewTemplate() {
       `${page} 页面未唯一引用共享结果图片模板`,
     )
   })
+  const limiter = expandWxmlIncludes('pages/limiter/limiter.wxml')
+  const limiterShareActions = /<view class="share-actions">([\s\S]*?)<\/view>/.exec(limiter)
+  assert(limiter.includes('canvas-id="resultReportCanvas"')
+    && limiter.includes('bindtap="openSharePreview"')
+    && limiter.includes('bindtap="shareResultReportImage"')
+    && limiter.includes('bindtap="saveResultReportImage"'),
+  '限制器本地结果图片模板缺少 Canvas、预览或发送/保存入口')
+  assert(limiterShareActions
+    && (limiterShareActions[1].match(/<button\b/g) || []).length === 2
+    && limiterShareActions[1].includes('发送给微信好友')
+    && limiterShareActions[1].includes('保存到手机'),
+  '限制器图片预览必须只提供发送与保存两个应用内动作')
 }
 
 function checkProjectReportPlan() {
@@ -1855,20 +1881,6 @@ function checkPageControllers() {
     }
   }
 
-  const expandWxmlIncludes = (relativePath, includeStack = []) => {
-    const file = path.resolve(root, relativePath)
-    const normalizedPath = path.relative(root, file).replace(/\\/g, '/')
-    assert(!includeStack.includes(normalizedPath), `WXML include 循环：${normalizedPath}`)
-    const wxml = fs.readFileSync(file, 'utf8')
-    return wxml.replace(/<include\s+src="([^"]+)"\s*\/>/g, (includeTag, source) => {
-      const includedFile = path.resolve(path.dirname(file), source)
-      assert(includedFile === root || includedFile.startsWith(`${root}${path.sep}`),
-        `WXML include 越出工作区：${source}`)
-      const includedRelativePath = path.relative(root, includedFile).replace(/\\/g, '/')
-      return expandWxmlIncludes(includedRelativePath, [...includeStack, normalizedPath])
-    })
-  }
-
   const assertWxmlHandlers = (page, relativePath) => {
     const wxml = expandWxmlIncludes(relativePath)
     const handlers = [...wxml.matchAll(/\b(?:bind|catch)[a-z]+="([^"]+)"/g)]
@@ -1907,19 +1919,30 @@ function checkPageControllers() {
     '限幅器仍把完整音箱目录常驻在 Page.data')
   assert.strictEqual(limiterPage.data.selectedAmplifier.model, 'TC-2350B')
   assert.strictEqual(limiterPage.data.selectedSpeaker.model, 'TS-803C')
-  limiterPage.copyResult()
-  assert(clipboard.includes('-19.2 dBFS')
-    && clipboard.includes('0 dBFS = +18.4 dBu')
-    && clipboard.includes('Attack：8 ms'))
-  assert(clipboard.includes('结果性质：产品参数计算'))
+  const limiterResultText = limiterPage.getResultText()
+  assert(limiterResultText.includes('-19.2 dBFS')
+    && limiterResultText.includes('0 dBFS = +18.4 dBu')
+    && limiterResultText.includes('Attack：8 ms'))
+  assert(limiterResultText.includes('结果性质：产品参数计算'))
+  assert.strictEqual(limiterPage.getRecordPayload().resultText, limiterResultText,
+    '限幅器结果图/可见结果文本之外的记录文本不得分叉')
   const limiterWxml = expandWxmlIncludes('pages/limiter/limiter.wxml')
   assert(limiterWxml.includes('0 dBFS = +18.4 dBu'), '限幅器页面未显示当前 DSP 校准值')
-  assert(limiterWxml.includes('bindtap="generateResultReportImage"')
+  assert(limiterWxml.includes('bindtap="openSharePreview"')
     && limiterWxml.includes('canvas-id="resultReportCanvas"'),
   '限幅器页面缺少结果图片生成入口或离屏 Canvas')
   assert(limiterWxml.includes('bindtap="shareResultReportImage"')
     && limiterWxml.includes('bindtap="saveResultReportImage"'),
   '限幅器结果图片缺少转发或保存入口')
+  assert(limiterWxml.includes('bindtap="onCountStep"')
+    && limiterWxml.includes('bindtap="onChoiceTap"'),
+  '限幅器数量、功放模式和输入灵敏度必须使用直接可选控件')
+  assert((limiterWxml.match(/<page-container\b/g) || []).length === 1
+    && limiterWxml.includes('show="{{pageContainerSupported && (selectorVisible || detailsVisible || shareSheetVisible || projectSheetVisible)}}"')
+    && limiterWxml.includes('bind:beforeleave="onPageContainerBeforeLeave"')
+    && limiterWxml.includes('bind:afterleave="onPageContainerAfterLeave"')
+    && limiterWxml.includes('!pageContainerSupported && (selectorVisible || detailsVisible || shareSheetVisible || projectSheetVisible)'),
+  '限幅器必须保留单个常驻页面容器、返回生命周期事件和旧基础库遮罩回退')
   let limiterReportExportCount = 0
   let exportedLimiterCanvas = null
   const limiterReportContext = new Proxy({}, {
@@ -1936,22 +1959,27 @@ function checkPageControllers() {
     assert.strictEqual(canvasId, 'resultReportCanvas')
     return limiterReportContext
   }
+  wx.getFileSystemManager = () => ({ access: ({ success }) => success() })
   wx.canvasToTempFilePath = (options) => {
     limiterReportExportCount += 1
     exportedLimiterCanvas = options
     options.success({ tempFilePath: 'temp://limiter-result.png' })
   }
-  wx.showLoading = () => {}
+  let limiterShowLoadingCalls = 0
+  wx.showLoading = () => { limiterShowLoadingCalls += 1 }
   wx.hideLoading = () => {}
-  limiterPage.generateResultReportImage()
+  limiterPage.onShow()
+  limiterPage.openSharePreview()
+  assert.strictEqual(limiterShowLoadingCalls, 0, '限幅器图片生成不得打开遮挡关闭按钮的全屏加载蒙层')
   assert.strictEqual(limiterPage.data.resultReportImagePath, 'temp://limiter-result.png')
   assert.strictEqual(limiterPage.data.resultReportPreviewVisible, true)
   assert(exportedLimiterCanvas.destWidth <= 1500 && exportedLimiterCanvas.destHeight <= 4096,
     '限幅器结果图导出尺寸超过安全上限')
   limiterPage.closeResultReportPreview()
-  limiterPage.generateResultReportImage()
+  limiterPage.openSharePreview()
   assert.strictEqual(limiterReportExportCount, 1, '相同限幅器结果没有复用已生成图片')
-  const thresholdOnlyResult = limiterPage.commitCalculatedState({ highPassFrequencyIndex: 0 })
+  limiterPage.closeSharePreview()
+  const thresholdOnlyResult = limiterPage.commitInput({ highPassFrequencyIndex: 0 })
   assert.strictEqual(thresholdOnlyResult.valid, true)
   assert.strictEqual(thresholdOnlyResult.timingReady, false)
   assert.strictEqual(limiterPage.data.resultReportImagePath, '', '限幅器参数变化后仍沿用旧结果图片')
@@ -1959,6 +1987,7 @@ function checkPageControllers() {
   assert(!limiterPage.getResultText().includes('Attack：'))
   assert(!limiterPage.getRecordPayload().summary.includes('Attack'))
   delete wx.createCanvasContext
+  delete wx.getFileSystemManager
   delete wx.canvasToTempFilePath
   delete wx.showLoading
   delete wx.hideLoading
@@ -3484,7 +3513,7 @@ function checkPageControllers() {
   const ledWxssForTheme = fs.readFileSync(path.join(root, 'pages/led-screen/led-screen.wxss'), 'utf8')
   assert(/\.input-wrap\s+text\{[^}]*color:var\(--ts\)/.test(ledWxssForTheme),
     'LED 输入单位未使用辅助文字主题色')
-  assert(/\.settings-card\s+\.equipment-grid\s+\.field-label\{[^}]*color:var\(--theme-text-secondary\)/.test(limiterWxssForTheme),
+  assert(/\.field-label\{[^}]*color:var\(--theme-text-secondary\)/.test(limiterWxssForTheme),
     '限制器设备字段标签未使用辅助文字主题色')
   assert(recordsWxmlForTheme.includes('class="project-notes"')
     && /\.project-detail-label\{[^}]*color:var\(--ts\)/.test(fs.readFileSync(path.join(root, 'pages/records/project.wxss'), 'utf8')),
@@ -3517,7 +3546,7 @@ function checkPageControllers() {
     ['pages/venue/venue.wxss', '.status-chip', 'background:var(--theme-control)', '场地状态标签背景被覆盖'],
     ['pages/venue/venue.wxss', '.status-chip', 'color:var(--theme-success)', '场地状态标签文字色被覆盖'],
     ['pages/records/project.wxss', '.project-notes .project-detail-label', 'color:var(--theme-text-secondary)', '记录备注标签文字色被覆盖'],
-    ['pages/limiter/limiter.wxss', '.settings-card .equipment-grid .field-label', 'color:var(--theme-text-secondary)', '限制器设备字段标签文字色被覆盖'],
+    ['pages/limiter/limiter.wxss', '.field-label', 'color:var(--theme-text-secondary)', '限制器设备字段标签文字色被覆盖'],
     ['pages/led-screen/led-screen.wxss', '.input-wrap text', 'color:var(--theme-text-secondary)', 'LED 输入单位文字色被覆盖'],
   ].forEach(([file, selector, declaration, message]) => assertFrozenCascade(file, selector, declaration, message, { darkOnly: false }))
   assert(recordsWxmlForTheme.includes('record-action-compare') && recordsWxmlForTheme.includes('record-action-selected'),
@@ -3586,11 +3615,10 @@ function checkPageControllers() {
     && dmxWxml.includes('fixture-channel-guide-expand'),
   'DMX 本轮深色真实结构缺少回归覆盖')
   assert(limiterWxml.includes('class="result-timing"')
-    && limiterWxml.includes('class="result-timing-title"')
-    && limiterWxml.includes('class="result-timing-band"')
+    && limiterWxml.includes('class="result-time-grid"')
     && limiterWxml.includes('class="result-time-item"')
     && limiterWxml.includes('class="result-time-label"')
-    && limiterWxml.includes('class="result-time-value"')
+    && /class="[^"]*\bresult-time-value\b[^"]*"/.test(limiterWxml)
     && limiterWxml.includes('class="result-time-source"'),
   '限制器结果时间卡片缺少本轮深色真实结构')
   ;['universe-tab-meta', 'universe-empty', 'group-result-tab-index', 'universe-detail-title',
@@ -3607,15 +3635,10 @@ function checkPageControllers() {
   'DMX 浅色选中分类、数量和通道选中态未保持高对比主色组合')
   assert(hexContrast('#0066cc', '#ffffff') >= 4.5, 'DMX 浅色选中态主色与白字对比度不足')
   ;[
-    ['.result-timing', 'border-top-color:var(--theme-divider)'],
-    ['.result-timing-title', 'color:var(--theme-text)'],
-    ['.result-timing-band', 'background:var(--theme-accent-soft)'],
-    ['.result-time-item', 'background:var(--theme-control)'],
+    ['.result-time-item', 'background:linear-gradient(145deg,var(--theme-surface),var(--theme-accent-soft))'],
     ['.result-time-label', 'color:var(--theme-text-secondary)'],
     ['.result-time-value', 'color:var(--theme-text)'],
     ['.result-time-source', 'color:var(--theme-text-secondary)'],
-    ['.result-grid', 'background:var(--theme-divider)'],
-    ['.metric', 'background:var(--theme-control)'],
   ].forEach(([selector, declaration]) => assertThemeCascade(
     limiterWxssForTheme, selector, declaration, `限制器 dark 结果区缺少最终 ${selector} 覆盖`,
   ))
@@ -6141,6 +6164,8 @@ const auditRegressionScripts = [
   'dmx-product-import-test.js',
   'product-detail-route-test.js',
   'result-project-target-test.js',
+  'limiter-project-metadata-test.js',
+  'limiter-refactor-2026-10-06/limiter-page-state-test.js',
   'report-lifecycle-regression.js',
   'dmx-lifecycle-regression.js',
   'dmx-first-use-experience-test.js',

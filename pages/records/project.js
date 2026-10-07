@@ -20,6 +20,7 @@ const {
 const {
   MODULES,
   getStorageHealth,
+  getProjectRecordView,
   getWorkspaceSnapshot,
   prepareProjectModule,
   removeRecordFromProject,
@@ -45,17 +46,25 @@ function formatDate(timestamp) {
 }
 
 function decorateRecords(records) {
-  return records.map((record, index) => ({
-    id: record.id,
-    module: record.module,
-    displayIndex: index + 1,
-    moduleLabel: MODULES[record.module]?.label || '计算',
-    trustLabel: MODULES[record.module]?.trustLabel || '计算结果',
-    theme: MODULES[record.module]?.theme || 'cyan',
-    timeText: formatTime(record.updatedAt),
-    title: record.title,
-    summary: record.summary,
-  }))
+  return records.map((record, index) => {
+    const decorated = {
+      id: record.id,
+      module: record.module,
+      displayIndex: index + 1,
+      moduleLabel: MODULES[record.module]?.label || '计算',
+      trustLabel: MODULES[record.module]?.trustLabel || '计算结果',
+      theme: MODULES[record.module]?.theme || 'cyan',
+      timeText: formatTime(record.updatedAt),
+      title: record.title,
+      summary: record.summary,
+    }
+    if (record.hasProjectMetadata) {
+      decorated.updatedAt = record.updatedAt
+      decorated.hasProjectMetadata = true
+      decorated.projectNote = record.projectNote
+    }
+    return decorated
+  })
 }
 
 function groupRecords(records) {
@@ -209,28 +218,44 @@ Page({
     }
 
     const rawRecords = allRecords.filter((record) => record.projectIds?.includes(project.id))
+      .map((record) => getProjectRecordView(record, project.id))
     const { wiringSchedule, ...projectViewFields } = project
     const wiringSummary = getProjectWiringSummary(project)
     const reportSourceSignature = JSON.stringify({
       project: projectViewFields,
-      records: rawRecords.map((record) => ({
-        id: record.id,
-        title: record.title,
-        summary: record.summary,
-        updatedAt: record.updatedAt,
-      })),
+      records: rawRecords.map((record) => {
+        const signatureRecord = {
+          id: record.id,
+          title: record.title,
+          summary: record.summary,
+          updatedAt: record.updatedAt,
+        }
+        if (record.hasProjectMetadata) {
+          signatureRecord.hasProjectMetadata = true
+          signatureRecord.projectNote = record.projectNote
+        }
+        return signatureRecord
+      }),
     })
     const viewSignature = JSON.stringify({
       project: projectViewFields,
       wiringSummary,
       wiringRevision: Number(wiringSchedule && wiringSchedule.revision) || 0,
       activeProjectId: activeProject?.id || '',
-      records: rawRecords.map((record) => ({
-        id: record.id,
-        updatedAt: record.updatedAt,
-        favorite: record.favorite,
-        projectIds: record.projectIds,
-      })),
+      records: rawRecords.map((record) => {
+        const signatureRecord = {
+          id: record.id,
+          updatedAt: record.updatedAt,
+          favorite: record.favorite,
+          projectIds: record.projectIds,
+        }
+        if (record.hasProjectMetadata) {
+          signatureRecord.title = record.title
+          signatureRecord.hasProjectMetadata = true
+          signatureRecord.projectNote = record.projectNote
+        }
+        return signatureRecord
+      }),
     })
     if (viewSignature === this.projectViewSignature) {
       if (this.data.workspaceError) this.setData({ workspaceError: '' })
@@ -492,6 +517,7 @@ Page({
         lines.push(
           `—— ${index + 1}. ${record.title} ——`,
           `记录时间：${formatTime(record.updatedAt, true)}`,
+          ...(record.projectNote ? [`配置备注：${record.projectNote}`] : []),
           record.resultText,
           '',
         )

@@ -1,5 +1,6 @@
 const REPORT_CANVAS_ID = 'projectReportCanvas'
 const MAX_REPORT_RECORDS = 12
+const MAX_REPORT_HEIGHT = 4096
 const { MODULES } = require('../../utils/records')
 const {
   REPORT_WIDTH,
@@ -33,6 +34,64 @@ function drawClippedText(context, text, x, y, maxWidth, options = {}) {
     options.weight || 400, options.align || 'left')
   const [line = ''] = splitText(context, text, maxWidth, 1)
   context.fillText(line, x, y)
+}
+
+function splitProjectNote(note) {
+  const text = `配置备注：${String(note || '').trim()}`
+  const characters = [...text]
+  const lines = []
+  let line = ''
+  let lineLength = 0
+  for (let index = 0; index < characters.length; index += 1) {
+    const character = characters[index]
+    if (character === '\r' || character === '\n') {
+      lines.push(line)
+      line = ''
+      lineLength = 0
+      if (character === '\r' && characters[index + 1] === '\n') index += 1
+      continue
+    }
+    if (lineLength === 20) {
+      lines.push(line)
+      line = ''
+      lineLength = 0
+    }
+    line += character
+    lineLength += 1
+  }
+  if (line || !lines.length) {
+    lines.push(line)
+  }
+  return lines.length > 3 ? [...lines.slice(0, 3), '备注摘录，全文见文字报告'] : lines
+}
+
+function getRecordTitleLineCount(record) {
+  if (!record.hasProjectMetadata) return 1
+  return Math.max(1, Math.ceil([...String(record.title || '')].length / 20))
+}
+
+function getRecordCardHeight(record) {
+  const extraTitleLines = Math.max(0, getRecordTitleLineCount(record) - 1)
+  if (!record.projectNote) return 112 + (extraTitleLines * 24)
+  return 110 + (splitProjectNote(record.projectNote).length * 19) + (extraTitleLines * 24)
+}
+
+function splitProjectTitle(context, title, firstLineWidth, otherLineWidth) {
+  const characters = [...String(title || '')]
+  const lines = []
+  let line = ''
+  let lineWidth = firstLineWidth
+  characters.forEach((character) => {
+    if (line && context.measureText(line + character).width > lineWidth) {
+      lines.push(line)
+      line = character
+      lineWidth = otherLineWidth
+    } else {
+      line += character
+    }
+  })
+  if (line || !lines.length) lines.push(line)
+  return lines
 }
 
 function drawPill(context, text, right, y, options = {}) {
@@ -69,13 +128,29 @@ function limitGroups(groups) {
 function calculateProjectReportHeight(payload) {
   const groupCount = payload.groups.length
   const recordCount = payload.groups.reduce((total, group) => total + group.records.length, 0)
-  return 700 + (groupCount * 76) + (recordCount * 126) + (payload.omittedCount ? 54 : 0) + 138
+  const expandedRecordSpace = payload.groups.reduce((total, group) => total + group.records.reduce((space, record) => (
+    space + Math.max(0, getRecordCardHeight(record) - 112)
+  ), 0), 0)
+  return 700 + (groupCount * 76) + (recordCount * 126) + expandedRecordSpace
+    + (payload.omittedCount ? 54 : 0) + 138
+}
+
+function fitReportHeight(payload) {
+  const groups = payload.groups.map((group) => ({ ...group, records: [...group.records] }))
+  let omittedCount = payload.omittedCount
+  while (groups.length && calculateProjectReportHeight({ ...payload, groups, omittedCount }) > MAX_REPORT_HEIGHT) {
+    const lastGroup = groups[groups.length - 1]
+    lastGroup.records.pop()
+    omittedCount += 1
+    if (!lastGroup.records.length) groups.pop()
+  }
+  return { ...payload, groups, omittedCount }
 }
 
 function buildProjectReportPayload(project, groups, metadata = {}) {
   if (!project || !groups?.length) return null
   const limited = limitGroups(groups)
-  return {
+  return fitReportHeight({
     project,
     groups: limited.groups,
     omittedCount: limited.omittedCount,
@@ -84,7 +159,7 @@ function buildProjectReportPayload(project, groups, metadata = {}) {
     generatedAt: metadata.generatedAt || '',
     appVersion: metadata.appVersion || '',
     productDataDate: metadata.productDataDate || '',
-  }
+  })
 }
 
 function drawProjectInfo(context, payload) {
@@ -134,20 +209,39 @@ function drawProgress(context, payload) {
 }
 
 function drawRecord(context, record, group, x, y, width) {
-  const height = 112
+  const height = getRecordCardHeight(record)
+  const noteLines = record.projectNote ? splitProjectNote(record.projectNote) : []
   roundedRect(context, x, y, width, height, 20, '#fafafa')
   context.setFillStyle(THEME_COLORS[group.theme] || COLORS.blue)
   context.fillRect(x, y + 14, 5, height - 28)
-  drawClippedText(context, record.title, x + 22, y + 31, width - 190, {
-    size: 22,
-    weight: 650,
-  })
+  let drawnTitleLineCount = 1
+  if (record.hasProjectMetadata) {
+    setText(context, 15, COLORS.tertiary, 400, 'right')
+    const timeWidth = context.measureText(String(record.timeText || '')).width
+    setText(context, 22, COLORS.text, 650)
+    const firstLineWidth = Math.max(1, width - 52 - timeWidth)
+    const titleLines = splitProjectTitle(context, record.title, firstLineWidth, width - 44)
+    titleLines.forEach((line, index) => {
+      drawText(context, line, x + 22, y + 31 + (index * 24), 22, COLORS.text, 650)
+    })
+    drawnTitleLineCount = titleLines.length
+  } else {
+    drawClippedText(context, record.title, x + 22, y + 31, width - 190, {
+      size: 22,
+      weight: 650,
+    })
+  }
+  const titleOffset = (drawnTitleLineCount - 1) * 24
   drawText(context, record.timeText, x + width - 18, y + 31, 15, COLORS.tertiary, 400, 'right')
-  drawWrappedText(context, record.summary, x + 22, y + 65, width - 44, 22, {
+  drawWrappedText(context, record.summary, x + 22, y + 65 + titleOffset, width - 44, 22, {
     size: 17,
     color: COLORS.secondary,
     maxLines: 2,
   })
+  noteLines.forEach((line, index) => {
+    drawText(context, line, x + 22, y + 109 + titleOffset + (index * 19), 15, COLORS.secondary, 400)
+  })
+  return height
 }
 
 function drawProjectResults(context, payload) {
@@ -168,8 +262,8 @@ function drawProjectResults(context, payload) {
     y += 18
     group.records.forEach((record) => {
       y += 12
-      drawRecord(context, record, group, 44, y, 662)
-      y += 114
+      const recordHeight = drawRecord(context, record, group, 44, y, 662)
+      y += recordHeight + 2
     })
     y += 10
   })
