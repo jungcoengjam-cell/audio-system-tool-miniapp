@@ -1,0 +1,347 @@
+/* Scoped workspace surfaces: the inherited report / keyboard styles stay intact. */
+page .wiring-page{--workspace-bg:#fff;--workspace-surface:#fff;--workspace-secondary:#f1f4f7;--workspace-border:#dee4eb;--workspace-text:#0b1224;--workspace-muted:#59657c;--workspace-accent:#007aff;--workspace-soft:#edf5ff;display:flex;flex-direction:column;box-sizing:border-box;background:var(--workspace-bg);color:var(--workspace-text)}
+.workspace-nav{position:relative;display:block;box-sizing:border-box;width:100%;min-height:44px;flex:0 0 auto;padding:0;background:var(--workspace-bg)}
+.workspace-title{position:absolute;right:52px;left:52px;box-sizing:border-box;min-width:0;height:44px;color:var(--workspace-text);font-size:20px;font-weight:650;text-align:center;white-space:nowrap;line-height:44px}
+.workspace-icon-button,.workspace-text-button,.workspace-close-button{display:flex;box-sizing:border-box;min-width:44px;min-height:44px;align-items:center;justify-content:center;margin:0;padding:0;border:0;background:transparent;color:var(--workspace-accent);font-size:30rpx;line-height:1.3}
+.workspace-icon-button::after,.workspace-text-button::after,.workspace-close-button::after,.workspace-tab::after,.workspace-project-button::after,.workspace-connect-button::after,.workspace-primary-button::after,.workspace-soft-button::after,.workspace-type-tile::after,.workspace-step-button::after,.workspace-add-pair::after,.workspace-pair-remove::after,.workspace-delete-button::after{border:0}
+.workspace-back{position:absolute;left:4px;color:var(--workspace-text);font-size:64rpx;font-weight:300}
+.workspace-share{position:absolute;font-size:28rpx}
+.workspace-share-icon{display:block;box-sizing:border-box;width:22px;height:22px;background-color:currentColor;-webkit-mask-position:center;mask-position:center;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-size:100% 100%;mask-size:100% 100%}
+.workspace-share-icon.icon-share{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 2v13'/%3E%3Cpath d='m16 6-4-4-4 4'/%3E%3Cpath d='M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 2v13'/%3E%3Cpath d='m16 6-4-4-4 4'/%3E%3Cpath d='M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8'/%3E%3C/svg%3E")}
+.workspace-project-row{display:flex;box-sizing:border-box;min-height:64px;flex:0 0 auto;align-items:center;justify-content:space-between;gap:16rpx;padding:8rpx 32rpx}
+.workspace-project-button{display:flex;box-sizing:border-box;min-height:44px;min-width:0;max-width:78%;align-items:center;gap:10rpx;margin:0;padding:0;border:0;background:transparent;color:var(--workspace-text);text-align:left;line-height:1.35}
+.workspace-project-name{min-width:0;overflow:hidden;color:var(--workspace-text);font-size:38rpx;font-weight:650;text-overflow:ellipsis;white-space:nowrap}
+.workspace-project-chevron{flex:0 0 auto;color:var(--workspace-muted);font-size:32rpx}
+.workspace-new{flex:0 0 auto;white-space:nowrap;font-size:29rpx}
+.workspace-tabs{display:flex;min-height:48px;flex:0 0 auto;margin:0 32rpx;border-bottom:1px solid var(--workspace-border)}
+.workspace-tab{position:relative;display:flex;box-sizing:border-box;min-width:0;min-height:48px;flex:1;align-items:center;justify-content:center;gap:10rpx;margin:0;padding:0;border:0;background:transparent;color:var(--workspace-muted);font-size:33rpx;line-height:1.3}
+.workspace-tab text{font-size:28rpx;font-weight:400}
+.workspace-tab-active{color:var(--workspace-accent);font-weight:650}
+.workspace-tab-active::before{position:absolute;right:16%;bottom:-1px;left:16%;height:3px;border-radius:3px;background:var(--workspace-accent);content:""}
+.workspace-search{display:flex;box-sizing:border-box;min-height:44px;height:88rpx;flex:0 0 auto;align-items:center;gap:16rpx;margin:28rpx 32rpx 0;padding:0 22rpx;border-radius:12rpx;background:var(--workspace-secondary)}
+.workspace-search-symbol{position:relative;box-sizing:border-box;width:25rpx;height:25rpx;flex:0 0 auto;border:3rpx solid var(--workspace-muted);border-radius:50%;opacity:.65}
+.workspace-search-symbol::after{position:absolute;right:-9rpx;bottom:-6rpx;width:13rpx;height:3rpx;border-radius:4rpx;background:var(--workspace-muted);content:"";transform:rotate(45deg)}
+.workspace-search-input{height:100%;min-height:44px;min-width:0;flex:1;color:var(--workspace-text);font-size:30rpx}
+.workspace-search-clear{width:44px;margin-right:-14rpx;color:var(--workspace-muted);font-size:38rpx}
+.workspace-scroll{height:0;min-height:0;flex:1;background:var(--workspace-bg)}
+.workspace-content{box-sizing:border-box;padding:28rpx 32rpx 24rpx}
+.workspace-state{display:flex;box-sizing:border-box;min-height:320rpx;align-items:center;justify-content:center;flex-direction:column;gap:16rpx;padding:48rpx 16rpx;text-align:center}
+.workspace-state-symbol{color:var(--workspace-accent);font-size:72rpx;line-height:1}
+.workspace-state-title{color:var(--workspace-text);font-size:33rpx;font-weight:600;line-height:1.4}
+.workspace-state-text{color:var(--workspace-muted);font-size:28rpx;line-height:1.5}
+.workspace-soft-button{display:flex;box-sizing:border-box;min-height:44px;align-items:center;justify-content:center;margin:12rpx 0 0;padding:0 32rpx;border:0;border-radius:14rpx;background:var(--workspace-soft);color:var(--workspace-accent);font-size:30rpx;line-height:1.3}
+.workspace-device-card{display:flex;box-sizing:border-box;min-height:176rpx;align-items:center;gap:24rpx;margin-bottom:24rpx;padding:24rpx;border:1px solid var(--workspace-border);border-radius:22rpx;background:var(--workspace-surface)}
+.workspace-device-copy{min-width:0;flex:1}
+.workspace-nowrap{display:inline-block;min-width:100%;white-space:nowrap}
+.workspace-device-name{color:var(--workspace-text);font-size:34rpx;font-weight:600;line-height:1.4}
+.workspace-wrapping-text{white-space:normal;overflow-wrap:anywhere;word-break:break-all}
+.workspace-device-meta{margin-top:9rpx;color:var(--workspace-muted);font-size:27rpx;line-height:1.35}
+.workspace-connect-button{display:flex;box-sizing:border-box;min-width:64px;min-height:44px;flex:0 0 auto;align-items:center;justify-content:center;margin:0;padding:0 18rpx;border:1px solid var(--workspace-accent);border-radius:14rpx;background:transparent;color:var(--workspace-accent);font-size:29rpx;line-height:1.3}
+.workspace-device-icon{display:flex;box-sizing:border-box;width:88rpx;height:82rpx;flex:0 0 auto;align-items:center;justify-content:center;color:var(--workspace-text)}
+.device-icon-body{position:relative;display:flex;box-sizing:border-box;width:80rpx;height:47rpx;align-items:center;justify-content:flex-end;gap:7rpx;padding:8rpx;border:2rpx solid currentColor;border-radius:5rpx}
+.device-icon-slot{width:24rpx;height:16rpx;margin-right:auto;border:2rpx solid currentColor;border-radius:2rpx}
+.device-icon-dot{width:5rpx;height:5rpx;flex:0 0 auto;border:2rpx solid currentColor;border-radius:50%}
+.device-icon-receiver .device-icon-body::before{position:absolute;left:8rpx;top:-21rpx;width:2rpx;height:20rpx;background:currentColor;content:"";transform:rotate(-15deg)}
+.device-icon-mixer .device-icon-body{height:60rpx;justify-content:space-around;gap:5rpx;transform:perspective(160rpx) rotateX(10deg)}
+.device-icon-mixer .device-icon-slot,.device-icon-mixer .device-icon-dot{position:relative;width:2rpx;height:36rpx;margin:0;border:0;border-radius:0;background:currentColor}
+.device-icon-mixer .device-icon-slot::after,.device-icon-mixer .device-icon-dot::after{position:absolute;top:10rpx;left:-5rpx;width:12rpx;height:5rpx;border-radius:2rpx;background:currentColor;content:""}
+.device-icon-mixer .device-icon-dot:last-child::after{top:22rpx}
+.device-icon-processor .device-icon-slot{width:28rpx}
+.device-icon-amplifier .device-icon-slot{width:12rpx;height:12rpx;border-radius:50%}
+.device-icon-speaker .device-icon-body{width:42rpx;height:66rpx;align-items:center;justify-content:flex-end;flex-direction:column;gap:5rpx;padding:5rpx}
+.device-icon-speaker .device-icon-slot{width:10rpx;height:10rpx;flex:0 0 auto;margin:0;border-radius:50%}
+.device-icon-speaker .device-icon-dot{width:22rpx;height:22rpx;flex:0 0 auto;border-radius:50%}
+.device-icon-speaker .device-icon-dot:last-child{display:none}
+.device-icon-custom .device-icon-body{width:55rpx;height:55rpx;align-items:center;justify-content:center;border-radius:9rpx}
+.device-icon-custom .device-icon-slot{position:relative;width:26rpx;height:2rpx;flex:0 0 auto;margin:0;border:0;background:currentColor}
+.device-icon-custom .device-icon-slot::after{position:absolute;top:-12rpx;left:12rpx;width:2rpx;height:26rpx;background:currentColor;content:""}
+.device-icon-custom .device-icon-dot{display:none}
+.workspace-line-group{overflow:hidden;margin:0 0 28rpx;border:1px solid var(--workspace-border);border-radius:20rpx;background:var(--workspace-surface)}
+.workspace-group-header{display:flex;box-sizing:border-box;min-height:48px;align-items:center;gap:12rpx;padding:12rpx 20rpx;background:var(--workspace-secondary);color:var(--workspace-text)}
+.workspace-group-name{width:0;min-width:0;flex:1;font-size:29rpx;font-weight:600;line-height:1.4}
+.workspace-group-target{text-align:left}
+.workspace-group-arrow{flex:0 0 auto;color:var(--workspace-muted);font-size:26rpx}
+.workspace-group-count{flex:0 0 auto;margin-left:3rpx;color:var(--workspace-muted);font-size:25rpx;white-space:nowrap}
+.workspace-group-chevron{flex:0 0 24rpx;color:var(--workspace-muted);font-size:27rpx;text-align:center;line-height:1}
+.workspace-group-chevron-collapsed{transform:rotate(180deg)}
+.workspace-line-row{display:flex;box-sizing:border-box;min-height:100rpx;align-items:center;gap:18rpx;padding:15rpx 18rpx;border-top:1px solid var(--workspace-border)}
+.workspace-line-row:first-child{border-top:0}
+.workspace-circle{display:flex;box-sizing:border-box;width:auto;min-width:32px;max-width:128rpx;min-height:32px;flex:0 0 auto;align-items:center;justify-content:center;padding:1rpx 9rpx;border:1.25px solid var(--workspace-accent);border-radius:999rpx;background:transparent;color:var(--workspace-accent);font-size:39rpx;font-weight:400;line-height:1.2;overflow-wrap:anywhere;word-break:break-all;text-align:center}
+.workspace-circle-numeric{white-space:nowrap;word-break:normal;overflow-wrap:normal}
+.workspace-line-ports{display:flex;min-width:0;flex:1;align-items:center;gap:18rpx}
+.workspace-port-cell{width:0;min-width:0;flex:1;color:var(--workspace-text);font-size:31rpx;line-height:1.45;white-space:normal;overflow-wrap:anywhere;word-break:break-all}
+.workspace-port-divider{width:1px;height:38rpx;flex:0 0 1px;background:var(--workspace-border)}
+.workspace-line-chevron{flex:0 0 auto;margin-left:0;color:var(--workspace-muted);font-size:36rpx;line-height:1}
+.workspace-bottom-bar{box-sizing:border-box;flex:0 0 auto;padding:16rpx 32rpx calc(18rpx + env(safe-area-inset-bottom));border-top:1px solid var(--workspace-border);background:var(--workspace-bg)}
+.workspace-primary-button{display:flex;box-sizing:border-box;width:100%;min-height:50px;height:100rpx;align-items:center;justify-content:center;margin:0;padding:0 20rpx;border:0;border-radius:19rpx;background:var(--workspace-accent);color:#fff;font-size:33rpx;font-weight:600;line-height:1.3}
+.workspace-primary-button[disabled]{background:var(--workspace-secondary);color:var(--workspace-muted);opacity:.65}
+.wiring-mask.workspace-mask{padding:0}
+.workspace-text-button[disabled],.workspace-icon-button[disabled],.workspace-connect-button[disabled],.workspace-step-button[disabled],.workspace-add-pair[disabled]{opacity:.45}
+.wiring-sheet.workspace-wheel-sheet,.wiring-sheet.workspace-new-project-sheet,.wiring-sheet.workspace-device-sheet,.wiring-sheet.workspace-detail-sheet,.wiring-sheet.workspace-editor-sheet,.wiring-sheet.workspace-continuous-sheet{box-sizing:border-box;padding:10rpx 32rpx calc(24rpx + env(safe-area-inset-bottom));border:1px solid var(--workspace-border);border-bottom:0;border-radius:40rpx 40rpx 0 0;background:var(--workspace-bg);color:var(--workspace-text);box-shadow:none}
+.wiring-sheet .wiring-sheet-handle{width:68rpx;height:8rpx;flex:0 0 auto;margin:2rpx auto 10rpx;border-radius:10rpx;background:var(--workspace-border)}
+.workspace-sheet-heading{display:flex;min-height:58px;flex:0 0 auto;align-items:center;justify-content:space-between;gap:16rpx;padding-bottom:8rpx}
+.workspace-sheet-title{min-width:0;color:var(--workspace-text);font-size:40rpx;font-weight:650;line-height:1.3}
+.workspace-close-button{width:44px;height:44px;min-width:44px;flex:0 0 auto;color:var(--workspace-muted);font-size:48rpx;font-weight:300}
+.workspace-section-title{color:var(--workspace-text);font-size:35rpx;font-weight:650;line-height:1.35}
+.workspace-field-label{margin:0 0 14rpx;color:var(--workspace-muted);font-size:28rpx;line-height:1.3}
+.workspace-field-label-spaced{margin-top:30rpx}
+.workspace-control{display:block;box-sizing:border-box;width:100%;min-width:0;min-height:44px;height:88rpx;margin:0;padding:0 18rpx;border:1px solid var(--workspace-border);border-radius:11rpx;background:var(--workspace-surface);color:var(--workspace-text);font-size:32rpx;line-height:1.4}
+.workspace-control-error{border-color:#d74a40}
+.workspace-picker-control{display:flex;align-items:center;justify-content:space-between;gap:12rpx}
+.workspace-picker-control text:first-child{min-width:0;overflow:hidden;flex:1;white-space:nowrap;text-overflow:ellipsis}
+.workspace-picker-arrow{flex:0 0 auto;color:var(--workspace-muted);font-size:27rpx}
+.workspace-new-project-sheet{height:auto!important;min-height:320rpx}
+.workspace-new-project-save{margin-top:32rpx}
+.wiring-sheet.workspace-wheel-sheet{height:45vh;min-height:310px;max-height:45vh}
+.workspace-wheel-toolbar{position:relative;display:block;box-sizing:border-box;min-height:48px;height:48px;flex:0 0 auto;margin:0 0 10rpx;padding:0 60px}
+.workspace-wheel-toolbar>.workspace-section-title{position:absolute;top:0;right:60px;left:60px;height:48px;text-align:center;white-space:nowrap;line-height:48px}
+.workspace-wheel-toolbar .workspace-text-button{min-width:52px}
+.workspace-done{font-weight:650}
+.workspace-project-wheel{display:block;box-sizing:border-box;width:100%;height:240px;min-height:0;flex:0 0 auto;margin:auto 0}
+.workspace-wheel-item{display:block;box-sizing:border-box;height:48px;overflow:hidden;padding:0 20rpx;color:var(--workspace-text);font-size:36rpx;font-weight:500;line-height:48px;text-align:center;text-overflow:ellipsis;white-space:nowrap}
+.workspace-wheel-item-selected{font-weight:650}
+.workspace-wheel-message,.workspace-wheel-empty{padding:44rpx 0;text-align:center}
+.workspace-device-sheet{max-height:94vh}
+.workspace-device-types{display:flex;flex-wrap:wrap;justify-content:space-between}
+.workspace-type-tile{position:relative;display:flex;box-sizing:border-box;width:100%;min-width:0;min-height:172rpx;align-items:center;justify-content:center;flex-direction:column;gap:5rpx;margin:0;padding:13rpx;border:1px solid var(--workspace-border);border-radius:13rpx;background:var(--workspace-surface);color:var(--workspace-text);font-size:31rpx;line-height:1.3}
+.workspace-type-tile .workspace-device-icon{height:76rpx}
+.workspace-type-selected{border:1.5px solid var(--workspace-accent);background:var(--workspace-soft);color:var(--workspace-accent)}
+.workspace-type-selected .workspace-device-icon{color:var(--workspace-accent)}
+.workspace-type-check{position:absolute;top:12rpx;right:14rpx;width:30rpx;height:30rpx;border-radius:50%;background:var(--workspace-accent);color:#fff;font-size:23rpx;line-height:30rpx;text-align:center}
+.workspace-stepper-row{display:flex;min-height:60px;align-items:center;justify-content:space-between;gap:20rpx;margin:22rpx 0}
+.workspace-stepper-row .workspace-field-label{margin:0;color:var(--workspace-text);font-size:31rpx}
+.workspace-stepper{display:flex;box-sizing:border-box;height:44px;align-items:center;overflow:hidden;border:1px solid var(--workspace-border);border-radius:12rpx}
+.workspace-step-button{display:flex;box-sizing:border-box;width:44px;height:44px;min-height:44px;align-items:center;justify-content:center;margin:0;padding:0;border:0;background:var(--workspace-secondary);color:var(--workspace-accent);font-size:38rpx;line-height:1}
+.workspace-step-input{box-sizing:border-box;width:60px;height:44px;min-height:44px;padding:0 8rpx;background:var(--workspace-surface);color:var(--workspace-text);font-size:32rpx;text-align:center}
+.workspace-preview-label{margin:4rpx 0 18rpx;color:var(--workspace-muted);font-size:28rpx;line-height:1.4}
+.workspace-device-preview{display:flex;flex-wrap:wrap;gap:14rpx;padding-bottom:18rpx}
+.workspace-name-chip{max-width:100%;padding:12rpx 19rpx;border-radius:11rpx;background:var(--workspace-secondary);color:var(--workspace-text);font-size:28rpx;line-height:1.4;word-break:break-all}
+.workspace-sheet-save{flex:0 0 auto;margin-top:24rpx}
+.workspace-detail-sheet{height:auto!important;max-height:90vh;padding-bottom:calc(30rpx + env(safe-area-inset-bottom))!important}
+.workspace-detail-title{display:flex;min-width:0;align-items:center;gap:18rpx}
+.workspace-detail-route{display:flex;min-width:0;align-items:center;gap:20rpx;padding:28rpx 0 32rpx;border-bottom:1px solid var(--workspace-border)}
+.workspace-detail-endpoint-column{min-width:0;flex:1}
+.workspace-detail-endpoint{width:100%;color:var(--workspace-text);font-size:35rpx;font-weight:500;line-height:1.5}
+.workspace-endpoint-dot{color:var(--workspace-muted)}
+.workspace-detail-direction{flex:0 0 24rpx;margin-top:38rpx;color:var(--workspace-muted);font-size:30rpx;text-align:center;line-height:1}
+.workspace-detail-cable{padding:40rpx 5rpx 48rpx}
+.workspace-cable-spec{padding:0 12rpx 18rpx;color:var(--workspace-accent);font-size:30rpx;line-height:1.5;word-break:break-word;text-align:center}
+.workspace-cable-stroke{position:relative;display:flex;height:2px;align-items:center;justify-content:space-between;margin:7rpx 7rpx 0;background:var(--workspace-accent)}
+.workspace-cable-dot{width:8px;height:8px;flex:0 0 auto;border-radius:50%;background:var(--workspace-accent)}
+.workspace-cable-connectors{display:flex;align-items:flex-start;justify-content:space-between;gap:24rpx;margin-top:23rpx;color:var(--workspace-muted);font-size:28rpx;line-height:1.4}
+.workspace-cable-connectors view{min-width:0;max-width:46%;word-break:break-word}
+.workspace-cable-connectors view:last-child{text-align:right}
+.workspace-editor-sheet{max-height:96vh}
+.workspace-editor-heading{position:relative;display:block;box-sizing:border-box;min-height:70px;flex:0 0 auto;padding:10px 52px}
+.workspace-editor-title-copy{display:block;box-sizing:border-box;width:100%;min-width:0;text-align:center}
+.workspace-editor-title{display:flex;min-width:0;align-items:center;justify-content:center;gap:16rpx;color:var(--workspace-text);font-size:40rpx;font-weight:650;line-height:1.3}
+.workspace-editor-project{overflow:hidden;margin-top:10rpx;color:var(--workspace-muted);font-size:27rpx;line-height:1.35;text-overflow:ellipsis;white-space:nowrap}
+.workspace-editor-heading-space{display:none}
+.workspace-sheet-heading.workspace-centered-sheet-heading{position:relative;display:block;box-sizing:border-box;min-height:78px;padding:10px 52px}
+.workspace-centered-heading-copy{min-width:0;text-align:center}
+.workspace-editor-section{margin-bottom:40rpx}
+.workspace-endpoint-pickers{display:flex;min-width:0;align-items:flex-end;gap:14rpx;margin-top:26rpx}
+.workspace-endpoint-picker{min-width:0;flex:1}
+.workspace-endpoint-arrow{display:flex;min-height:44px;flex:0 0 20rpx;align-items:center;justify-content:center;color:var(--workspace-muted);font-size:26rpx}
+.workspace-no-devices{margin-top:14rpx;color:var(--workspace-muted);font-size:26rpx;line-height:1.4}
+.workspace-section-heading{display:flex;min-height:44px;align-items:center;justify-content:space-between;gap:16rpx;margin-top:-12rpx}
+.workspace-continuous-button{font-size:28rpx}
+.workspace-port-labels{display:flex;gap:48rpx;margin:12rpx 0 14rpx;color:var(--workspace-muted);font-size:28rpx;line-height:1.3}
+.workspace-port-labels text{min-width:0;flex:1}
+.workspace-pair-row{display:flex;min-width:0;align-items:center;gap:8rpx;margin-bottom:20rpx}
+.workspace-pair-fields{display:flex;min-width:0;flex:1;align-items:center;gap:14rpx}
+.workspace-pair-fields .workspace-control{min-width:0;flex:1}
+.workspace-pair-arrow{flex:0 0 20rpx;color:var(--workspace-muted);font-size:26rpx;text-align:center}
+.workspace-pair-remove{display:flex;box-sizing:border-box;width:44px;min-width:44px;min-height:44px;flex:0 0 auto;align-items:center;justify-content:center;margin:0 -8rpx 0 0;padding:0;border:0;background:transparent;color:#d94940;font-size:40rpx;line-height:1}
+.workspace-add-pair{display:flex;box-sizing:border-box;width:100%;min-height:44px;align-items:center;justify-content:center;margin:0;padding:0 20rpx;border:0;border-radius:11rpx;background:var(--workspace-soft);color:var(--workspace-accent);font-size:29rpx;line-height:1.4}
+.workspace-two-fields{display:flex;min-width:0;gap:0;margin-top:26rpx}
+.workspace-two-fields>.workspace-field{width:0;min-width:0;flex:1;margin-right:24rpx}
+.workspace-two-fields>.workspace-field:last-child{margin-right:0}
+.workspace-field{min-width:0}
+.workspace-custom-connector{margin-top:12rpx}
+.workspace-spec-length-fields{display:flex;min-width:0;gap:0;margin-top:24rpx}
+.workspace-spec-length-fields>.workspace-field{width:0;min-width:0;flex:1}
+.workspace-spec-length-fields>.workspace-field:first-child{flex:2;margin-right:24rpx}
+.workspace-length-control{position:relative;min-width:0}
+.workspace-length-control .workspace-control{padding-right:44rpx}
+.workspace-length-control>text{position:absolute;top:50%;right:16rpx;color:var(--workspace-muted);font-size:28rpx;line-height:1;transform:translateY(-50%)}
+.workspace-delete-button{display:flex;box-sizing:border-box;min-height:44px;align-items:center;justify-content:center;margin:0 0 12rpx;padding:0 20rpx;border:0;border-radius:11rpx;background:transparent;color:#d94940;font-size:29rpx;line-height:1.4}
+.workspace-continuous-route{margin:4rpx 0 36rpx;padding:20rpx;border-radius:12rpx;background:var(--workspace-secondary);color:var(--workspace-text);font-size:31rpx;line-height:1.5;word-break:break-word;text-align:center}
+.workspace-continuous-route text{color:var(--workspace-muted)}
+.workspace-continuous-fields{margin-top:0}
+.workspace-continuous-hint{margin:0 0 30rpx;color:var(--workspace-muted);font-size:27rpx;line-height:1.5}
+.workspace-continuous-preview{padding-top:24rpx;border-top:1px solid var(--workspace-border)}
+.workspace-continuous-preview-row{display:flex;min-height:44px;align-items:center;gap:16rpx;border-top:1px solid var(--workspace-border);color:var(--workspace-text);font-size:29rpx;line-height:1.4}
+.workspace-continuous-preview-row>text{width:0;min-width:0;flex:1;word-break:break-word}
+.workspace-continuous-preview-row>.workspace-preview-ordinal{width:28rpx;flex:0 0 28rpx}
+.workspace-continuous-preview-row>.workspace-pair-arrow{width:24rpx;flex:0 0 24rpx}
+.workspace-preview-ordinal{color:var(--workspace-muted);font-size:25rpx}
+@media (prefers-color-scheme:dark){
+  page .wiring-page{--workspace-bg:#000;--workspace-surface:#121212;--workspace-secondary:#1c1c1e;--workspace-border:#34363a;--workspace-text:#f5f5f7;--workspace-muted:#b0b0b5;--workspace-accent:#1597ff;--workspace-soft:#08243b;background:#000;color:var(--workspace-text)}
+  .workspace-type-selected{background:#08243b}
+  .wiring-sheet.workspace-wheel-sheet,.wiring-sheet.workspace-new-project-sheet,.wiring-sheet.workspace-device-sheet,.wiring-sheet.workspace-detail-sheet,.wiring-sheet.workspace-editor-sheet,.wiring-sheet.workspace-continuous-sheet{background:#121212}
+  .workspace-control,.workspace-step-input{background:#1c1c1e}
+}
+.workspace-control,.workspace-step-input{font-size:max(32rpx,14px)}
+.workspace-field-label,.workspace-preview-label,.workspace-continuous-hint,.workspace-device-meta,.workspace-editor-project,.workspace-group-count,.workspace-cable-connectors,.workspace-no-devices{font-size:max(28rpx,14px)}
+.workspace-text-button,.workspace-connect-button,.workspace-add-pair,.workspace-delete-button,.workspace-port-labels,.workspace-continuous-preview-row,.workspace-group-name{font-size:max(29rpx,14px)}
+.workspace-stepper-row .workspace-field-label,.workspace-port-cell,.workspace-search-input{font-size:max(31rpx,14px)}
+.workspace-section-title{font-size:max(35rpx,18px)}
+.workspace-sheet-title,.workspace-editor-title{font-size:max(40rpx,20px)}
+.workspace-circle{font-size:max(39rpx,19px)}
+.workspace-device-name{font-size:max(34rpx,16px)}
+.workspace-device-card{min-height:max(176rpx,88px)}
+.workspace-type-tile{min-height:max(172rpx,86px)}
+.workspace-line-row{min-height:max(100rpx,48px)}
+@media (max-width:360px){
+  .workspace-project-row,.workspace-content{padding-right:28rpx;padding-left:28rpx}
+  .workspace-project-name{font-size:37rpx}
+  .workspace-device-card{gap:16rpx;padding-right:18rpx;padding-left:18rpx}
+  .workspace-device-card>.workspace-device-icon{width:76rpx}
+  .workspace-connect-button{min-width:56px;padding:0 15rpx}
+  .workspace-line-row{gap:14rpx;padding-right:16rpx;padding-left:16rpx}
+  .workspace-line-ports{gap:14rpx}
+  .workspace-group-header{gap:10rpx;padding-right:16rpx;padding-left:16rpx}
+  .workspace-pair-fields{gap:10rpx}
+  .workspace-two-fields,.workspace-spec-length-fields{gap:18rpx}
+}
+
+/* WeChat style:v2 supplies button:not([size=mini]) { width:184px; margin:auto }.
+   Component-qualified selectors deliberately outrank that native layout rule.
+   Keep layout separate from the state paint rules below. */
+.wiring-page button.workspace-icon-button,.wiring-page button.workspace-close-button{display:flex;box-sizing:border-box;width:44px;min-width:44px;max-width:44px;height:44px;min-height:44px;max-height:44px;flex:0 0 44px;align-items:center;justify-content:center;margin:0;padding:0;line-height:1.3}
+.wiring-page button.workspace-text-button{display:flex;box-sizing:border-box;width:auto;min-width:44px;max-width:none;min-height:44px;flex:0 0 auto;align-items:center;justify-content:center;margin:0;padding:0;line-height:1.3;white-space:nowrap}
+.wiring-page button.workspace-project-button{display:flex;box-sizing:border-box;width:0;min-width:0;max-width:none;min-height:44px;flex:1 1 0;align-items:center;margin:0;padding:0;line-height:1.35}
+.wiring-page button.workspace-tab{display:flex;box-sizing:border-box;width:0;min-width:0;max-width:none;min-height:48px;flex:1 1 0;align-items:center;justify-content:center;margin:0;padding:0;line-height:1.3}
+.wiring-page button.workspace-connect-button{display:flex;box-sizing:border-box;width:auto;min-width:64px;max-width:none;height:44px;min-height:44px;flex:0 0 auto;align-items:center;justify-content:center;margin:0;padding:0 18rpx;line-height:1.3;white-space:nowrap}
+.wiring-page button.workspace-primary-button{display:flex;box-sizing:border-box;width:100%;min-width:0;max-width:none;min-height:50px;height:100rpx;flex:0 0 auto;align-self:stretch;align-items:center;justify-content:center;margin:0;padding:0 20rpx;line-height:1.3}
+.wiring-page button.workspace-sheet-save{margin-top:24rpx}
+.wiring-page button.workspace-new-project-save{margin-top:32rpx}
+.wiring-page button.workspace-soft-button{display:flex;box-sizing:border-box;width:auto;min-width:44px;max-width:100%;min-height:44px;flex:0 0 auto;align-items:center;justify-content:center;margin:12rpx 0 0;padding:0 32rpx;line-height:1.3}
+.wiring-page button.workspace-type-tile{display:flex;box-sizing:border-box;width:calc(50% - 10rpx);min-width:0;max-width:calc(50% - 10rpx);min-height:86px;flex:0 0 auto;align-items:center;justify-content:center;flex-direction:column;margin:0 0 20rpx;padding:13rpx;line-height:1.3}
+.wiring-page button.workspace-type-tile:nth-last-child(-n+2){margin-bottom:0}
+.wiring-page button.workspace-step-button{display:flex;box-sizing:border-box;width:44px;min-width:44px;max-width:44px;height:44px;min-height:44px;max-height:44px;flex:0 0 44px;align-items:center;justify-content:center;margin:0;padding:0;line-height:1}
+.wiring-page button.workspace-add-pair{display:flex;box-sizing:border-box;width:100%;min-width:0;max-width:none;height:44px;min-height:44px;max-height:44px;flex:0 0 auto;align-items:center;justify-content:center;margin:0;padding:0 20rpx;line-height:1.3}
+.wiring-page button.workspace-pair-remove{display:flex;box-sizing:border-box;width:44px;min-width:44px;max-width:44px;height:44px;min-height:44px;flex:0 0 44px;align-items:center;justify-content:center;margin:0 -8rpx 0 0;padding:0;line-height:1}
+.wiring-page button.workspace-delete-button{display:flex;box-sizing:border-box;width:100%;min-width:0;max-width:none;min-height:44px;flex:0 0 auto;align-items:center;justify-content:center;margin:0 0 12rpx;padding:0 20rpx;line-height:1.3}
+.wiring-page button::after{border:0}
+.workspace-editor-heading>button.workspace-close-button{position:absolute;top:10px;left:0}
+.workspace-centered-sheet-heading>button.workspace-close-button{position:absolute;top:17px;right:0}
+.workspace-wheel-toolbar>button.workspace-wheel-cancel,.workspace-wheel-toolbar>button.workspace-done{position:absolute;top:0;box-sizing:border-box;width:52px;min-width:52px;max-width:52px;height:48px;min-height:48px;max-height:48px}
+.workspace-wheel-toolbar>button.workspace-wheel-cancel{left:0}
+.workspace-wheel-toolbar>button.workspace-done{right:0}
+
+/* Native default/disabled button paint has attribute-selector priority too. */
+.wiring-page button.workspace-icon-button,.wiring-page button.workspace-text-button,.wiring-page button.workspace-close-button,.wiring-page button.workspace-project-button{background:transparent;color:var(--workspace-accent)}
+.wiring-page button.workspace-back,.wiring-page button.workspace-project-button{color:var(--workspace-text)}
+.wiring-page button.workspace-close-button{color:var(--workspace-muted)}
+.wiring-page button.workspace-tab{background:transparent;color:var(--workspace-muted)}
+.wiring-page button.workspace-tab.workspace-tab-active{color:var(--workspace-accent)}
+.wiring-page button.workspace-type-tile{background:var(--workspace-surface);color:var(--workspace-text)}
+.wiring-page button.workspace-type-tile.workspace-type-selected{border-color:var(--workspace-accent);background:var(--workspace-soft);color:var(--workspace-accent)}
+.wiring-page button.workspace-primary-button{background:var(--workspace-accent);color:#fff}
+.wiring-page button.workspace-add-pair,.wiring-page button.workspace-soft-button{background:var(--workspace-soft);color:var(--workspace-accent)}
+.wiring-page button.workspace-connect-button{border:1px solid var(--workspace-accent);background:transparent;color:var(--workspace-accent)}
+.wiring-page button.workspace-step-button{background:var(--workspace-secondary);color:var(--workspace-accent)}
+.wiring-page button.workspace-pair-remove,.wiring-page button.workspace-delete-button{background:transparent;color:#d94940}
+.wiring-page button.workspace-primary-button[disabled],.wiring-page button.workspace-type-tile[disabled]{background:var(--workspace-secondary);color:var(--workspace-muted);opacity:.65}
+.wiring-page button.workspace-icon-button[disabled],.wiring-page button.workspace-text-button[disabled],.wiring-page button.workspace-close-button[disabled],.wiring-page button.workspace-project-button[disabled],.wiring-page button.workspace-tab[disabled],.wiring-page button.workspace-connect-button[disabled],.wiring-page button.workspace-pair-remove[disabled],.wiring-page button.workspace-delete-button[disabled]{background:transparent;color:var(--workspace-muted);opacity:.45}
+.wiring-page button.workspace-add-pair[disabled],.wiring-page button.workspace-soft-button[disabled],.wiring-page button.workspace-step-button[disabled]{background:var(--workspace-secondary);color:var(--workspace-muted);opacity:.45}
+
+/* Swipe actions are present only as a target while their row is open. */
+.workspace-swipe-row{position:relative;overflow:hidden;box-sizing:border-box;touch-action:pan-y}
+.workspace-device-swipe-row{margin-bottom:24rpx;border-radius:22rpx}
+.workspace-device-swipe-row .workspace-device-card{margin-bottom:0}
+.workspace-line-swipe-row{margin:0}
+.workspace-swipe-actions{position:absolute;z-index:2;top:50%;right:0;display:flex;width:72px;height:44px;align-items:stretch;justify-content:flex-end;overflow:hidden;border-radius:999px;background:transparent;pointer-events:none;transform:translateY(-50%)}
+.workspace-swipe-row-open .workspace-swipe-actions{pointer-events:auto}
+.wiring-page button.workspace-swipe-delete{position:absolute;top:0;right:0;display:flex;box-sizing:border-box;width:72px;min-width:72px;max-width:72px;height:44px;min-height:44px;max-height:44px;flex:0 0 72px;align-items:center;justify-content:center;margin:0;padding:0;border:0;border-radius:999px;background:#d70015;color:#fff;font-size:29rpx;line-height:1.2;pointer-events:none;transition:transform 200ms ease}
+.workspace-swipe-content{position:relative;z-index:1;transition:transform 200ms ease}
+.workspace-swipe-dragging{transition:none!important}
+.wiring-page button.workspace-swipe-delete.workspace-pressed{background:#b40012;color:#fff}
+
+/* Grid tracks give groups and retiring rows a bounded, content-sized collapse. */
+.workspace-tab-content{animation:workspaceTabIn 150ms ease both}
+.workspace-tab{transition:color 140ms ease}
+.workspace-tab::before{position:absolute;right:16%;bottom:-1px;left:16%;height:3px;border-radius:3px;background:var(--workspace-accent);opacity:0;content:"";transition:opacity 180ms ease}
+.workspace-tab-active::before{opacity:1}
+.workspace-group-chevron{transition:transform 210ms cubic-bezier(.22,1,.36,1)}
+.workspace-group-lines{display:grid;grid-template-rows:minmax(0,1fr);opacity:1;transition:grid-template-rows 210ms cubic-bezier(.22,1,.36,1),opacity 210ms ease}
+.workspace-group-lines-inner{min-height:0;overflow:hidden}
+.workspace-group-lines-collapsed{grid-template-rows:minmax(0,0fr);opacity:0;pointer-events:none}
+.workspace-line-group-inner{min-height:0;overflow:hidden}
+.workspace-line-group.workspace-line-group-retiring{display:grid;grid-template-rows:minmax(0,1fr);min-height:0;opacity:1;transition:grid-template-rows 220ms cubic-bezier(.22,1,.36,1),opacity 140ms ease,margin-bottom 220ms cubic-bezier(.22,1,.36,1),border-width 220ms cubic-bezier(.22,1,.36,1)}
+.workspace-line-group.workspace-line-group-retiring-exit{grid-template-rows:minmax(0,0fr);min-height:0;margin-bottom:0;border-width:0;opacity:0;pointer-events:none}
+.workspace-row-retiring{display:grid;grid-template-rows:minmax(0,1fr);overflow:hidden;opacity:1;transition:grid-template-rows 220ms cubic-bezier(.22,1,.36,1),opacity 140ms ease,margin 220ms cubic-bezier(.22,1,.36,1)}
+.workspace-row-retiring .workspace-swipe-content{min-height:0;overflow:hidden}
+.workspace-row-retiring-exit{grid-template-rows:minmax(0,0fr);margin-top:0!important;margin-bottom:0!important;opacity:0;pointer-events:none}
+
+.workspace-mask{pointer-events:auto}
+.workspace-mask .wiring-backdrop{opacity:1;transition:opacity 300ms cubic-bezier(.22,1,.36,1)}
+.workspace-mask .wiring-sheet{transform:translateY(0);transition:transform 300ms cubic-bezier(.22,1,.36,1)}
+.workspace-mask.workspace-overlay-preparing{pointer-events:auto}
+.workspace-mask.workspace-overlay-preparing .wiring-backdrop{opacity:0}
+.workspace-mask.workspace-overlay-preparing .wiring-sheet{transform:translateY(100%)}
+.workspace-mask.workspace-overlay-opening{pointer-events:auto}
+.workspace-mask.workspace-overlay-opening .wiring-backdrop{opacity:1}
+.workspace-mask.workspace-overlay-opening .wiring-sheet{transform:translateY(0)}
+.workspace-mask.workspace-overlay-closing{pointer-events:none}
+.workspace-mask.workspace-overlay-closing .wiring-backdrop{opacity:0;transition-duration:240ms;transition-timing-function:cubic-bezier(.4,0,1,1)}
+.workspace-mask.workspace-overlay-closing .wiring-sheet{transform:translateY(100%);transition-duration:240ms;transition-timing-function:cubic-bezier(.4,0,1,1)}
+.workspace-pressed{opacity:.78;transform:scale(.985);transition:opacity 120ms ease,transform 120ms ease}
+@keyframes workspaceTabIn{from{opacity:.72;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+@media (prefers-reduced-motion:reduce){
+  .workspace-tab-content{animation:none!important}
+  .workspace-tab,.workspace-tab::before,.workspace-group-chevron,.workspace-group-lines,.workspace-swipe-content,.workspace-swipe-actions,.workspace-swipe-delete,.workspace-row-retiring,.workspace-mask .wiring-backdrop,.workspace-mask .wiring-sheet,.workspace-pressed{transition-duration:0s!important}
+  .wiring-page button.workspace-swipe-delete{transition-duration:0s!important}
+  .workspace-line-group-retiring{transition-duration:0s!important}
+  .workspace-line-group-retiring-exit{grid-template-rows:minmax(0,0fr);min-height:0;margin-bottom:0!important;border-width:0;opacity:0;pointer-events:none}
+  .workspace-mask.workspace-overlay-closing{visibility:hidden;pointer-events:none}
+  .workspace-mask.workspace-overlay-closing .wiring-sheet{transform:translateY(100%)}
+  .workspace-row-retiring-exit{grid-template-rows:minmax(0,0fr);height:0!important;min-height:0!important;margin:0!important;opacity:0;pointer-events:none}
+  .workspace-row-retiring{grid-template-rows:minmax(0,0fr);height:0!important;min-height:0!important;margin:0!important;opacity:0;pointer-events:none}
+  .workspace-row-retiring .workspace-device-card,.workspace-row-retiring .workspace-line-row{height:0;min-height:0!important;padding-top:0;padding-bottom:0;border-width:0}
+  .workspace-group-lines-collapsed{grid-template-rows:minmax(0,0fr);opacity:0;pointer-events:none}
+  .workspace-pressed{transform:none;opacity:.78}
+}
+
+/* Keep the project controls in one row below native navigation. */
+.workspace-project-row{gap:0}
+.workspace-project-name{flex:1 1 auto}
+.workspace-new-plus{margin-right:6rpx;font-size:19px;font-weight:500;line-height:1}
+.wiring-page button.workspace-project-share{border:1px solid var(--workspace-border);border-radius:12px;background:var(--workspace-surface);color:var(--workspace-accent)}
+.wiring-page button.workspace-text-button.workspace-new{width:68px;min-width:68px;max-width:68px;height:44px;min-height:44px;max-height:44px;gap:0;flex:0 0 68px;margin:0;padding:0 12px;border:1px solid transparent;border-radius:12px;background:var(--workspace-accent);color:#fff;font-size:14px;font-weight:600;line-height:1.2}
+.wiring-page button.workspace-project-share[disabled]{background:transparent;color:var(--workspace-muted);opacity:.45}
+.wiring-page button.workspace-text-button.workspace-new[disabled]{background:var(--workspace-secondary);color:var(--workspace-muted);opacity:.45}
+
+/* Reveal a rounded delete capsule within a fixed transparent clipping area. */
+.workspace-swipe-row-dragging .workspace-swipe-actions{pointer-events:none}
+.workspace-swipe-row-open button.workspace-swipe-delete{pointer-events:auto}
+.workspace-swipe-row-dragging button.workspace-swipe-delete{pointer-events:none;transition:none!important}
+.wiring-page button.workspace-swipe-delete[disabled]{background:#d70015;color:#fff;opacity:.52;pointer-events:none}
+.workspace-swipe-delete-icon{display:block;box-sizing:border-box;width:18px;height:18px;background-color:currentColor;-webkit-mask-position:center;mask-position:center;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 6h18'/%3E%3Cpath d='M8 6V4h8v2'/%3E%3Cpath d='M19 6l-1 14H6L5 6'/%3E%3Cpath d='M10 11v5m4-5v5'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 6h18'/%3E%3Cpath d='M8 6V4h8v2'/%3E%3Cpath d='M19 6l-1 14H6L5 6'/%3E%3Cpath d='M10 11v5m4-5v5'/%3E%3C/svg%3E")}
+
+/* Center the selector on the full toolbar; edge actions do not shift its title. */
+.workspace-project-row{position:relative;justify-content:center;gap:0;padding:8rpx 0}
+.workspace-project-title-unit{position:relative;display:block;box-sizing:border-box;min-width:0;max-width:calc(100% - 80rpx);flex:0 1 auto}
+.workspace-project-name{display:block;min-width:0;max-width:100%;flex:0 1 auto;text-align:center}
+.workspace-project-chevron{position:absolute;top:50%;left:calc(100% + 6rpx);display:block;flex:0 0 auto;transform:translateY(-50%)}
+.wiring-page button.workspace-project-button{width:calc(100% - 192px);min-width:0;max-width:calc(100% - 192px);flex:0 0 calc(100% - 192px);justify-content:center;gap:6rpx;margin:0;padding:0;border:0;border-radius:0;background:transparent;text-align:center}
+.wiring-page button.workspace-text-button.workspace-new{position:absolute;top:0;bottom:0;left:16px;z-index:2;margin-top:auto;margin-bottom:auto}
+.wiring-page button.workspace-project-share{position:absolute;top:0;right:16px;bottom:0;z-index:2;display:flex;box-sizing:border-box;width:44px;min-width:44px;max-width:44px;height:44px;min-height:44px;max-height:44px;flex:0 0 44px;align-items:center;justify-content:center;margin-top:auto;margin-bottom:auto;padding:0;border:0;border-radius:999px;background:transparent;color:var(--workspace-accent)}
+.wiring-page button.workspace-project-share[disabled]{background:transparent;color:var(--workspace-muted);opacity:.45}
+@media (max-width:360px){
+  .workspace-project-row{gap:0}
+  .wiring-page button.workspace-text-button.workspace-new{width:60px;min-width:60px;max-width:60px;flex-basis:60px;padding-right:8px;padding-left:8px}
+}
+
+/* A full-height name target opens rename while its ancestor keeps swipe tracking. */
+.workspace-device-name-action{display:flex;box-sizing:border-box;width:100%;min-width:0;min-height:44px;align-items:center;border:0;border-radius:10px;background:transparent;color:inherit;text-align:left}
+.workspace-device-name-action .workspace-device-name{display:block;min-width:0;flex:1}
+.wiring-page input.workspace-device-inline-rename-input{display:block;box-sizing:border-box;width:100%;min-width:0;height:44px;min-height:44px;margin:0;padding:0 8rpx;border:1px solid var(--workspace-accent);border-radius:10px;background:var(--workspace-bg);color:var(--workspace-text);font-size:34rpx;font-weight:600;line-height:1.2}
+.wiring-page input.workspace-device-inline-rename-input::placeholder{color:var(--workspace-muted)}
+
+/* Static group labels wrap and stay inside the single parent toggle target. */
+.workspace-group-header{cursor:pointer}
+.workspace-group-name{display:block;width:0;min-width:0;flex:1 1 0;white-space:normal;overflow-wrap:anywhere;word-break:break-all;line-height:1.35}
+

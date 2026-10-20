@@ -137,7 +137,6 @@
           <view class="coverage-value-small">{{product.coverageText}}</view>
           <view class="coverage-label">水平 × 垂直覆盖角</view>
         </view>
-        <view wx:if="{{product.profile}}" class="coverage-role">会议室候选角色：{{product.profile.roleText}}</view>
       </view>
       <view wx:else class="coverage-empty">当前说明书没有明确给出最大声压级或覆盖角；缺项不会用默认值代替。</view>
     </view>
@@ -187,7 +186,6 @@
     <view class="source-card">
       <view class="source-label">产品资料来源</view>
       <view class="source-text">{{product.source}}</view>
-      <view wx:if="{{product.profile && product.profile.source != product.source}}" class="source-extra">覆盖资料：{{product.profile.source}}</view>
       <view wx:if="{{product.sourcePageText}}" class="source-extra">{{product.sourcePageText}}</view>
       <view class="source-review">数据复核日期：{{product.reviewDate}}</view>
     </view>

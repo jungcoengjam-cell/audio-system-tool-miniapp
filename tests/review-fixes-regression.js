@@ -1,4 +1,5 @@
 const assert = require('assert/strict')
+const fs = require('fs')
 
 function fresh(modulePath) {
   delete require.cache[require.resolve(modulePath)]
@@ -59,6 +60,8 @@ assert.equal(markedRecent.length, 12)
 assert.deepEqual(markedRecent.map((item) => item.model), recentModels.slice(1).reverse().concat(recentModels[0]).slice(0, 12))
 assert.deepEqual(storage.get(favoriteKey), [{ id: 'favorite' }])
 assert.deepEqual(storage.get(projectKey), [{ id: 'project' }])
+storage.delete(favoriteKey)
+storage.delete(projectKey)
 
 let productDetailPage
 const navigations = []
@@ -82,6 +85,57 @@ const calculatorCases = [
   ['camera', products.getProductDetail('camera', products.getProductList('camera')[0].model)],
   ['dmxAddress', fixture],
 ]
+
+function checkDmxDestinationImport(url, detail) {
+  const [destinationPath, queryString = ''] = url.split('?')
+  assert.equal(destinationPath, '/pages/dmx-address/dmx-address')
+  const options = Object.fromEntries(new URLSearchParams(queryString))
+  assert.deepEqual(options, { lightingCatalogImport: '1' }, 'DMX import route carries the exact destination flag')
+
+  const previousPage = global.Page
+  const lightingWorkspace = fresh('../pages/dmx-layout/lighting-workspace')
+  const originalImport = lightingWorkspace.importLegacyLightingPreferences
+  let importCount = 0
+  let destinationPage
+  lightingWorkspace.importLegacyLightingPreferences = (...args) => {
+    importCount += 1
+    return originalImport(...args)
+  }
+
+  try {
+    global.Page = (definition) => {
+      destinationPage = { ...definition, data: { ...definition.data } }
+    }
+    fresh('../pages/dmx-address/dmx-address')
+    destinationPage.setData = function setData(patch, callback) {
+      this.data = { ...this.data, ...patch }
+      if (callback) callback()
+    }
+    destinationPage.onLoad(options)
+
+    assert.equal(importCount, 1, 'destination onLoad consumes the import flag once')
+    assert.equal(destinationPage._contextId, lightingWorkspace.TEMPORARY_CONTEXT_ID)
+    assert.equal(destinationPage.data.currentContextTemporary, true)
+    const importedPreferences = storage.get('audioTool.dmxAddress.preferences')
+    assert.equal(destinationPage.data.startAddressText, importedPreferences.startAddressText || '1')
+    assert.equal(destinationPage.data.allocationMode, importedPreferences.allocationMode === 'manual' ? 'manual' : 'auto')
+    assert.equal(destinationPage.data.groups.length, 1, 'destination restores the imported fixture group')
+    assert.equal(destinationPage.data.groups[0].fixtureModel, detail.model)
+    assert.equal(destinationPage.data.groups[0].channelCount, String(detail.channelModes[0]))
+    assert.equal(destinationPage.data.groups[0].fixtureCount, '1')
+
+    const firstGroupCount = destinationPage.data.groups.length
+    destinationPage.onShow()
+    destinationPage.onShow()
+    assert.equal(importCount, 1, 'repeated show does not re-import legacy preferences')
+    assert.equal(destinationPage.data.groups.length, firstGroupCount, 'repeated show does not duplicate the imported group')
+    assert.equal(destinationPage.data.groups[0].fixtureModel, detail.model)
+  } finally {
+    lightingWorkspace.importLegacyLightingPreferences = originalImport
+    global.Page = previousPage
+  }
+}
+
 calculatorCases.forEach(([module, detail]) => {
   if (module === 'dmxAddress') storage.delete('audioTool.dmxAddress.preferences')
   productDetailPage._productDetail = detail
@@ -93,6 +147,7 @@ calculatorCases.forEach(([module, detail]) => {
       currentTarget: { dataset: { channelCount: String(detail.channelModes[0]) } },
     })
     productDetailPage.confirmDmxProductImport()
+    checkDmxDestinationImport(navigations[navigations.length - 1], detail)
   }
   const navigationCount = navigations.length
   const storedPreferences = storage.get({
@@ -105,7 +160,7 @@ calculatorCases.forEach(([module, detail]) => {
     limiter: '/pages/limiter/limiter',
     spl: '/pages/spl/spl',
     camera: '/pages/camera/camera',
-    dmxAddress: '/pages/dmx-address/dmx-address',
+    dmxAddress: '/pages/dmx-address/dmx-address?lightingCatalogImport=1',
   }[module])
   if (module === 'limiter') {
     assert.equal(storedPreferences[detail.type === 'amplifier' ? 'amplifierModel' : 'speakerModel'], detail.model)
@@ -160,6 +215,8 @@ calculatorCases.forEach(([module, detail]) => {
   assert.equal(navigations.length, failedNavigationCount + 1, `${module} 写入失败后无法重试`)
 })
 
+let reportDrawnText = []
+
 function reportContext() {
   return new Proxy({}, {
     get: (target, key) => {
@@ -168,12 +225,13 @@ function reportContext() {
         const done = typeof reserve === 'function' ? reserve : callback
         if (done) done()
       }
+      if (key === 'fillText') return (value) => reportDrawnText.push(String(value))
       return () => {}
     },
   })
 }
 
-function checkLateReportCallbacks(modulePath, loadMethod, generateMethod, canvasId, pageSetup) {
+function checkLateReportCallbacks(modulePath, loadMethod, generateMethod, canvasId, pageSetup, options = {}) {
   let page
   const exports = []
   let setDataCount = 0
@@ -194,8 +252,10 @@ function checkLateReportCallbacks(modulePath, loadMethod, generateMethod, canvas
   }
   const loadArgs = pageSetup(page)
   page[loadMethod](...(loadArgs || []))
-  page[generateMethod]()
+  if (options.trigger) options.trigger(page)
+  else page[generateMethod]()
   assert(exports[0], `${modulePath} 未创建导出请求`)
+  options.verifyExportRequest?.(exports[0], page)
   const toastCount = toastTitles.length
   const oldCallbackSetDataCount = setDataCount
   page.onUnload()
@@ -217,8 +277,10 @@ function checkLateReportCallbacks(modulePath, loadMethod, generateMethod, canvas
   }
   const newLoadArgs = pageSetup(page)
   page[loadMethod](...(newLoadArgs || []))
-  page[generateMethod]()
+  if (options.trigger) options.trigger(page)
+  else page[generateMethod]()
   assert(exports[1], `${modulePath} 未创建新导出请求`)
+  options.verifyExportRequest?.(exports[1], page)
   const newGeneratingState = page.data.isGeneratingReport
   const newPath = page.data.reportImagePath
   const newToastCount = toastTitles.length
@@ -239,17 +301,76 @@ function checkLateReportCallbacks(modulePath, loadMethod, generateMethod, canvas
   page.data.reportImagePath = ''
   page.data.reportPreviewVisible = false
   page.reportSignature = ''
-  page[generateMethod]()
+  if (options.trigger) options.trigger(page)
+  else page[generateMethod]()
   assert(exports[2], `${modulePath} 未创建当前失败请求`)
+  options.verifyExportRequest?.(exports[2], page)
   const currentToastCount = toastTitles.length
   exports[2].fail({ errMsg: 'current failure' })
   assert.equal(toastTitles.length, currentToastCount + 1, `${modulePath} 当前失败未提示`)
   assert.equal(page.data.isGeneratingReport, false, `${modulePath} 当前失败未恢复按钮状态`)
+
+  if (options.cancelOnHide) {
+    page.data.reportImagePath = ''
+    page.data.reportPreviewVisible = false
+    page.reportSignature = ''
+    const cancelIndex = exports.length
+    assert.equal(options.trigger(page), true, `${modulePath} 隐藏取消前无法启动导出`)
+    assert(exports[cancelIndex], `${modulePath} 隐藏取消未创建异步导出请求`)
+    options.verifyExportRequest?.(exports[cancelIndex], page)
+    assert.equal(page.data.isGeneratingReport, true, `${modulePath} 隐藏取消场景未处于生成中`)
+    const requestRevision = page.reportRevision
+    page.onHide()
+    assert.equal(page._pageVisible, false, `${modulePath} onHide 未标记页面隐藏`)
+    assert.equal(page.reportRevision > requestRevision, true, `${modulePath} 隐藏时未使进行中的导出失效`)
+    const afterHide = {
+      isGeneratingReport: page.data.isGeneratingReport,
+      reportImagePath: page.data.reportImagePath,
+      reportPreviewVisible: page.data.reportPreviewVisible,
+      reportPreviewError: page.data.reportPreviewError,
+      setDataCount,
+      hideLoadingCount,
+      toastCount: toastTitles.length,
+    }
+    exports[cancelIndex].success({ tempFilePath: 'temp://hidden-late-success.png' })
+    exports[cancelIndex].fail({ errMsg: 'hidden-late-failure' })
+    assert.deepEqual({
+      isGeneratingReport: page.data.isGeneratingReport,
+      reportImagePath: page.data.reportImagePath,
+      reportPreviewVisible: page.data.reportPreviewVisible,
+      reportPreviewError: page.data.reportPreviewError,
+      setDataCount,
+      hideLoadingCount,
+      toastCount: toastTitles.length,
+    }, afterHide, `${modulePath} 隐藏后迟到导出回调改变了页面状态`)
+  }
 }
 
+const ledScreenWxml = fs.readFileSync(require.resolve('../pages/led-screen/led-screen.wxml'), 'utf8')
+assert(ledScreenWxml.includes('bindtap="openSharePreview"'), 'LED 页面 WXML 不再由分享入口触发方案图片生成')
 checkLateReportCallbacks(
   '../pages/led-screen/led-screen', 'onLoad', 'generateReportImage', 'ledScreenReportCanvas',
   () => {},
+  {
+    trigger(page) {
+      page.onShow()
+      reportDrawnText = []
+      return page.openSharePreview()
+    },
+    verifyExportRequest(request, page) {
+      assert.equal(request.canvasId, 'ledScreenReportCanvas')
+      assert.equal(request.width, 750)
+      assert.equal(request.height, page.data.reportCanvasHeight)
+      assert(Number.isInteger(request.height) && request.height > 0, 'LED report export height is invalid')
+      assert.equal(request.fileType, 'png')
+      assert.equal(request.quality, 1)
+      assert(reportDrawnText.includes('LED 大屏尺寸方案'), 'LED report draw omitted the report title payload')
+      assert(reportDrawnText.includes(page.data.result.dimensionText), 'LED report draw omitted the current calculated dimensions')
+      assert(reportDrawnText.includes(`墙体 ${page.data.wallWidthText} × ${page.data.wallHeightText} m`),
+        'LED report draw omitted the current wall-input payload')
+    },
+    cancelOnHide: true,
+  },
 )
 
 const recordsApi = fresh('../utils/records')

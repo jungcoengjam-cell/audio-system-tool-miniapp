@@ -1,8 +1,12 @@
 const RECORDS_KEY = 'audioTool.records.v1'
 const PROJECTS_KEY = 'audioTool.projects.v1'
+const FAVORITES_KEY = 'audioTool.favorites.v1'
+const RECOVERY_KEY = 'audioTool.recovery.v1'
+const MIGRATION_BACKUPS_KEY = 'audioTool.storageMigrationBackups.v1'
+const MIGRATION_JOURNAL_KEY = 'audioTool.storageMigrationJournal.v1'
 const ACTIVE_PROJECT_KEY = 'audioTool.activeProject.v1'
 const STORAGE_SCHEMA_KEY = 'audioTool.storageSchemaVersion'
-const STORAGE_SCHEMA_VERSION = 3
+const STORAGE_SCHEMA_VERSION = 4
 const projectWiring = require('./project-wiring')
 const storageValueCache = new Map()
 const storageReadFailures = new Set()
@@ -13,6 +17,11 @@ let normalizedRecords = []
 let recordSignatureIndex = new Map()
 let normalizedProjectSource
 let normalizedProjects = []
+let normalizedFavoriteSource
+let normalizedFavorites = []
+let normalizedRecoverySource
+let normalizedRecoveryEntries = []
+let storageMigrationError = ''
 
 const MODULES = {
   limiter: {
@@ -38,14 +47,6 @@ const MODULES = {
     theme: 'amber',
     trustLabel: '公司标准推荐',
     trustDescription: '依据公司线材标准和公式校核推荐，实际施工仍需结合环境、敷设方式和当地规范复核。',
-  },
-  venue: {
-    label: '会议室',
-    path: '/pages/venue/venue',
-    preferenceKey: 'audioTool.venue.preferences',
-    theme: 'green',
-    trustLabel: '前期粗略方案',
-    trustDescription: '仅用于普通规则矩形会议室的前期估算，最终方案需经工程复核与现场测量确认。',
   },
   camera: {
     label: '摄像机',
@@ -79,6 +80,30 @@ const MODULES = {
     trustLabel: '前期尺寸预估',
     trustDescription: '基于墙体尺寸、整数拼装、画面比例和点间距作前期估算，最终需结合实际像素矩阵、结构、供配电和安装深化复核。',
   },
+  audioWiring: {
+    label: '接线助手',
+    path: '/pages/audio-wiring/index',
+    preferenceKey: 'audioWiringPreferencesV1',
+    theme: 'teal',
+    trustLabel: '接线参考',
+    trustDescription: '依据已建模的模拟音频接口组合生成接线参考；施工前须按具体设备型号说明书核对端口用途、端子标识和接线要求。',
+  },
+}
+
+const LEGACY_MODULES = {
+  venue: {
+    label: '会议室',
+    theme: 'green',
+    trustLabel: '历史结果',
+    trustDescription: '会议室扩声模块已移除；此历史记录仅供查看和复制，不支持恢复计算。',
+    retired: true,
+  },
+}
+
+function getModuleMetadata(key) {
+  if (Object.prototype.hasOwnProperty.call(MODULES, key)) return MODULES[key]
+  if (Object.prototype.hasOwnProperty.call(LEGACY_MODULES, key)) return LEGACY_MODULES[key]
+  return undefined
 }
 
 function withStorageMutation(operation) {
@@ -119,8 +144,8 @@ function readValue(key, fallback) {
   return readValueResult(key, fallback).value
 }
 
-function writeValue(key, value) {
-  if (mutationReadFailed) return false
+function writeValue(key, value, allowMigrationError = false) {
+  if (mutationReadFailed || (storageMigrationError && !allowMigrationError)) return false
   try {
     wx.setStorageSync(key, value)
     storageValueCache.set(key, value)
@@ -177,7 +202,7 @@ function isPlainObject(value) {
 }
 
 function withoutProjectRecordMetadata(record, projectId) {
-  if (record?.module !== 'limiter') return record
+  if (!['limiter', 'gainStructure', 'cable', 'spl', 'camera', 'ledScreen', 'audioWiring', 'venue'].includes(record?.module)) return record
   const source = record?.projectMetadata
   if (!source || typeof source !== 'object' || Array.isArray(source)
     || !Object.prototype.hasOwnProperty.call(source, projectId)) return record
@@ -211,49 +236,329 @@ function normalizeProject(project) {
 }
 
 function normalizeRecord(record) {
-  if (!record || typeof record !== 'object' || !record.id || !MODULES[record.module]) return null
-  if (!record.preferences || typeof record.preferences !== 'object' || !record.resultText) return null
+  if (!isPlainObject(record) || typeof record.id !== 'string' || !record.id
+    || typeof record.module !== 'string' || !record.module) return null
+  if (!isPlainObject(record.preferences) || typeof record.resultText !== 'string' || !record.resultText) return null
   const createdAt = Number.isFinite(record.createdAt) ? record.createdAt : Date.now()
   return {
     ...record,
     createdAt,
     updatedAt: Number.isFinite(record.updatedAt) ? record.updatedAt : createdAt,
-    favorite: Boolean(record.favorite),
+    favorite: false,
+    archived: record.archived === true || !getModuleMetadata(record.module),
     projectIds: Array.isArray(record.projectIds) ? [...new Set(record.projectIds.filter(Boolean))] : [],
   }
 }
 
+function normalizeFavorite(record) {
+  if (!isPlainObject(record) || typeof record.id !== 'string' || !record.id
+    || typeof record.module !== 'string' || !record.module
+    || !isPlainObject(record.preferences) || typeof record.resultText !== 'string' || !record.resultText) return null
+  const createdAt = Number.isFinite(record.createdAt) ? record.createdAt : undefined
+  const originProjectIds = Array.isArray(record.originProjectIds)
+    ? [...new Set(record.originProjectIds.filter((id) => typeof id === 'string' && id))]
+    : Array.isArray(record.projectIds) ? [...new Set(record.projectIds.filter((id) => typeof id === 'string' && id))] : []
+  const normalized = {
+    ...record,
+    favorite: true,
+    archived: record.archived === true || !getModuleMetadata(record.module),
+    originProjectIds,
+    projectIds: [],
+  }
+  if (createdAt === undefined) delete normalized.createdAt
+  else normalized.createdAt = createdAt
+  if (Number.isFinite(record.updatedAt)) normalized.updatedAt = record.updatedAt
+  else delete normalized.updatedAt
+  return normalized
+}
+
 function isPersistentRecord(record) {
-  return Boolean(record?.favorite || record?.projectIds?.length)
+  return Boolean(record?.projectIds?.length)
 }
 
 function keepPersistentRecords(records) {
   return records.filter(isPersistentRecord)
 }
 
-function ensureStorageSchema() {
-  const schemaResult = readStorageValue(STORAGE_SCHEMA_KEY, 1)
-  if (!schemaResult.ok) return
-  const storedSchemaVersion = schemaResult.value
-  if (storedSchemaVersion >= STORAGE_SCHEMA_VERSION) return
-  storageValueCache.delete(RECORDS_KEY)
-  storageValueCache.delete(PROJECTS_KEY)
-  const recordsResult = readStorageValue(RECORDS_KEY, [])
-  const projectsResult = readStorageValue(PROJECTS_KEY, [])
-  if (!recordsResult.ok || !projectsResult.ok) return
-  const storedRecords = recordsResult.value
-  const storedProjects = projectsResult.value
-  const projects = Array.isArray(storedProjects) ? storedProjects.map(normalizeProject).filter(Boolean) : []
-  const projectIds = new Set(projects.map((project) => project.id))
-  const records = keepPersistentRecords(Array.isArray(storedRecords)
-    ? storedRecords.map(normalizeRecord).filter(Boolean).map((record) => ({
-      ...record,
-      projectIds: record.projectIds.filter((id) => projectIds.has(id)),
-    }))
-    : [])
-  if (writeValue(RECORDS_KEY, records) && writeValue(PROJECTS_KEY, projects)) {
-    writeValue(STORAGE_SCHEMA_KEY, STORAGE_SCHEMA_VERSION)
+function cloneStorageValue(value) {
+  if (value === undefined) return undefined
+  try { return JSON.parse(JSON.stringify(value)) } catch (error) { return null }
+}
+
+function stableValue(value) {
+  if (Array.isArray(value)) return value.map(stableValue)
+  if (!isPlainObject(value)) return value
+  return Object.keys(value).sort().reduce((result, key) => {
+    if (value[key] !== undefined) result[key] = stableValue(value[key])
+    return result
+  }, {})
+}
+
+function snapshotsEqual(left, right) {
+  try { return JSON.stringify(stableValue(left)) === JSON.stringify(stableValue(right)) } catch (error) { return false }
+}
+
+function findRawSnapshotById(key, id) {
+  const result = readValueResult(key, undefined)
+  if (!result.ok || !Array.isArray(result.value)) return { ok: false, item: null }
+  return { ok: true, item: result.value.find((item) => item?.id === id) || null }
+}
+
+function readRawStorageValue(key) {
+  try {
+    const value = wx.getStorageSync(key)
+    const present = value !== undefined && value !== null && value !== ''
+    return { ok: true, present, value: present ? value : undefined }
+  } catch (error) {
+    storageReadFailures.add(key)
+    if (mutationDepth > 0) mutationReadFailed = true
+    return { ok: false, present: false, value: undefined }
   }
+}
+
+function removeStorageValue(key) {
+  try {
+    if (typeof wx.removeStorageSync === 'function') wx.removeStorageSync(key)
+    else wx.setStorageSync(key, '')
+    storageValueCache.delete(key)
+    return true
+  } catch (error) {
+    return false
+  }
+}
+
+function captureStorageSnapshot(keys) {
+  const values = {}
+  for (const key of keys) {
+    const result = readRawStorageValue(key)
+    if (!result.ok) return { ok: false, values: null }
+    values[key] = { present: result.present, value: cloneStorageValue(result.value) }
+  }
+  return { ok: true, values }
+}
+
+function writeRawSnapshot(snapshot, options = {}) {
+  const current = captureStorageSnapshot(Object.keys(snapshot || {}))
+  if (!current.ok) return false
+  const written = []
+  for (const [key, item] of Object.entries(snapshot || {})) {
+    const ok = item?.present
+      ? writeValue(key, cloneStorageValue(item.value), options.allowMigrationError === true)
+      : removeStorageValue(key)
+    if (ok) {
+      written.push(key)
+      continue
+    }
+    written.reverse().forEach((writtenKey) => {
+      const previous = current.values[writtenKey]
+      if (previous.present) writeValue(writtenKey, previous.value, options.allowMigrationError === true)
+      else removeStorageValue(writtenKey)
+    })
+    return false
+  }
+  return true
+}
+
+function makeIndependentDataSnapshot(snapshot) {
+  const storage = snapshot?.storage
+  const requiredKeys = [PROJECTS_KEY, RECORDS_KEY, FAVORITES_KEY, RECOVERY_KEY]
+  if (!isPlainObject(storage) || requiredKeys.some((key) => (
+    !isPlainObject(storage[key]) || typeof storage[key].present !== 'boolean'
+  ))) return null
+  const readArray = (key) => storage[key].present ? storage[key].value : []
+  const projects = readArray(PROJECTS_KEY)
+  const rawRecords = readArray(RECORDS_KEY)
+  const rawFavorites = readArray(FAVORITES_KEY)
+  const rawRecovery = readArray(RECOVERY_KEY)
+  if (!Array.isArray(projects) || projects.some((project) => !isPlainObject(project)
+    || typeof project.id !== 'string' || !project.id || typeof project.name !== 'string' || !project.name)) return null
+  if (!Array.isArray(rawRecords) || rawRecords.some((record) => !normalizeRecord(record))) return null
+  if (!Array.isArray(rawFavorites) || rawFavorites.some((favorite) => !normalizeFavorite(favorite))) return null
+  if (!Array.isArray(rawRecovery) || rawRecovery.some((entry) => !isPlainObject(entry))) return null
+
+  const projectRecords = []
+  const favoriteById = new Map()
+  const legacyRecent = []
+  for (const favorite of rawFavorites) {
+    const normalized = normalizeFavorite(favorite)
+    if (favoriteById.has(normalized.id)
+      && JSON.stringify(favoriteById.get(normalized.id)) !== JSON.stringify(normalized)) return null
+    favoriteById.set(normalized.id, normalized)
+  }
+  for (const rawRecord of rawRecords) {
+    const record = normalizeRecord(rawRecord)
+    const projectIds = Array.isArray(rawRecord.projectIds)
+      ? [...new Set(rawRecord.projectIds.filter((id) => typeof id === 'string' && id))]
+      : []
+    if (rawRecord.favorite) {
+      const favorite = normalizeFavorite({ ...rawRecord, projectIds, originProjectIds: projectIds })
+      const existing = favoriteById.get(favorite.id)
+      if (!existing) favoriteById.set(favorite.id, favorite)
+      else if (JSON.stringify(existing) !== JSON.stringify(favorite)) return null
+    }
+    if (projectIds.length) {
+      projectRecords.push({
+        ...rawRecord,
+        favorite: false,
+        projectIds,
+        signature: typeof rawRecord.signature === 'string'
+          ? rawRecord.signature
+          : createSignature(rawRecord.module, rawRecord.preferences),
+      })
+    } else if (!rawRecord.favorite) {
+      // Old unlinked recent results stay available in recovery without becoming a project record or favorite.
+      legacyRecent.push({
+        id: createId('recovery'),
+        kind: 'legacy-recent',
+        targetId: rawRecord.id,
+        ...(Number.isFinite(rawRecord.updatedAt) ? { deletedAt: rawRecord.updatedAt } : {}),
+        snapshot: cloneStorageValue(rawRecord),
+      })
+    }
+  }
+
+  return {
+    [PROJECTS_KEY]: cloneStorageValue(projects),
+    [RECORDS_KEY]: projectRecords,
+    [FAVORITES_KEY]: Array.from(favoriteById.values()),
+    [RECOVERY_KEY]: [...cloneStorageValue(rawRecovery), ...legacyRecent],
+    [STORAGE_SCHEMA_KEY]: STORAGE_SCHEMA_VERSION,
+  }
+}
+
+function getMigrationBackupEntries() {
+  const result = readRawStorageValue(MIGRATION_BACKUPS_KEY)
+  if (!result.ok) return null
+  if (!result.present) return []
+  return result.value?.version === 1 && Array.isArray(result.value.entries) ? result.value.entries : null
+}
+
+function completeStorageMigration(backupId) {
+  const entries = getMigrationBackupEntries()
+  if (!entries) {
+    storageMigrationError = '迁移备份格式异常，已阻止项目数据写入。'
+    return false
+  }
+  const backup = entries.find((item) => item.id === backupId && item.version === 1)
+  if (!backup) {
+    storageMigrationError = '找不到迁移前备份，已阻止项目数据写入。'
+    return false
+  }
+  const next = makeIndependentDataSnapshot(backup)
+  if (!next) {
+    storageMigrationError = '现有项目数据格式需要人工检查；原始数据与备份均已保留。'
+    return false
+  }
+  const writeSnapshot = Object.fromEntries(Object.entries(next).map(([key, value]) => [key, { present: true, value }]))
+  if (!writeRawSnapshot(writeSnapshot)) {
+    storageMigrationError = '项目数据迁移未完成；原始备份已保留，请重试。'
+    return false
+  }
+  normalizedRecordSource = undefined
+  normalizedProjectSource = undefined
+  normalizedFavoriteSource = undefined
+  normalizedRecoverySource = undefined
+  if (!removeStorageValue(MIGRATION_JOURNAL_KEY)) {
+    storageMigrationError = '项目数据已迁移，但迁移状态未能清理；请重试读取。'
+    return false
+  }
+  return true
+}
+
+function ensureStorageSchema() {
+  storageMigrationError = ''
+  const journalResult = readRawStorageValue(MIGRATION_JOURNAL_KEY)
+  if (!journalResult.ok) {
+    storageMigrationError = '读取项目数据迁移状态失败，请重试。'
+    return false
+  }
+  if (journalResult.present) {
+    if (journalResult.value?.version !== 1 || typeof journalResult.value.backupId !== 'string') {
+      storageMigrationError = '项目数据迁移状态格式异常，已阻止写入。'
+      return false
+    }
+    return completeStorageMigration(journalResult.value.backupId)
+  }
+
+  const schemaResult = readRawStorageValue(STORAGE_SCHEMA_KEY)
+  if (!schemaResult.ok) {
+    storageMigrationError = '读取项目数据版本失败，请重试。'
+    return false
+  }
+  const storedSchemaVersion = schemaResult.present ? Number(schemaResult.value) : 1
+  if (!Number.isSafeInteger(storedSchemaVersion) || storedSchemaVersion < 1) {
+    storageMigrationError = '项目数据版本格式异常，已阻止写入。'
+    return false
+  }
+  if (storedSchemaVersion > STORAGE_SCHEMA_VERSION) {
+    storageMigrationError = `项目数据来自较新版本（${storedSchemaVersion}），当前版本仅允许只读访问。`
+    return false
+  }
+  if (storedSchemaVersion === STORAGE_SCHEMA_VERSION) {
+    const projects = readValueResult(PROJECTS_KEY, undefined)
+    const records = readValueResult(RECORDS_KEY, undefined)
+    const favorites = readValueResult(FAVORITES_KEY, undefined)
+    const recovery = readValueResult(RECOVERY_KEY, undefined)
+    const validUniqueIds = (items) => Array.isArray(items)
+      && items.every((item) => typeof item?.id === 'string' && item.id)
+      && new Set(items.map((item) => item.id)).size === items.length
+    const projectRows = projects.ok ? projects.value : null
+    const recordRows = records.ok ? records.value : null
+    const favoriteRows = favorites.ok ? favorites.value : null
+    const recoveryRows = recovery.ok ? recovery.value : null
+    const validRecoveryKinds = new Set(['project', 'record', 'favorite', 'record-project-link', 'legacy-recent'])
+    const healthy = validUniqueIds(projectRows)
+      && projectRows.every((item) => normalizeProject(item))
+      && validUniqueIds(recordRows)
+      && recordRows.every((item) => normalizeRecord(item) && Array.isArray(item.projectIds)
+        && item.projectIds.length > 0 && item.favorite !== true)
+      && validUniqueIds(favoriteRows)
+      && favoriteRows.every((item) => normalizeFavorite(item))
+      && validUniqueIds(recoveryRows)
+      && recoveryRows.every((entry) => isPlainObject(entry) && validRecoveryKinds.has(entry.kind)
+        && isPlainObject(entry.snapshot) && typeof entry.snapshot.id === 'string' && entry.snapshot.id
+        && typeof entry.targetId === 'string' && entry.targetId)
+    if (!healthy) {
+      storageMigrationError = '项目、计算记录或收藏数据格式异常；已阻止写入，原始数据仍保留。'
+      return false
+    }
+    return true
+  }
+
+  const storageKeys = [STORAGE_SCHEMA_KEY, PROJECTS_KEY, RECORDS_KEY, FAVORITES_KEY, RECOVERY_KEY, ACTIVE_PROJECT_KEY]
+  const captured = captureStorageSnapshot(storageKeys)
+  if (!captured.ok) {
+    storageMigrationError = '读取完整项目数据失败，已阻止迁移。'
+    return false
+  }
+  const entries = getMigrationBackupEntries()
+  if (!entries) {
+    storageMigrationError = '迁移备份格式异常，已阻止项目数据写入。'
+    return false
+  }
+  const sameBackup = entries.find((item) => item.migration === 'independent-favorites-v1'
+    && item.schemaVersionBefore === storedSchemaVersion
+    && JSON.stringify(item.storage) === JSON.stringify(captured.values))
+  let backup = sameBackup
+  if (!backup) {
+    backup = {
+      id: createId('storage-backup'),
+      version: 1,
+      migration: 'independent-favorites-v1',
+      schemaVersionBefore: storedSchemaVersion,
+      createdAt: Date.now(),
+      storage: captured.values,
+    }
+    if (!writeValue(MIGRATION_BACKUPS_KEY, { version: 1, entries: [backup, ...entries] })) {
+      storageMigrationError = '创建迁移前备份失败；项目数据未修改。'
+      return false
+    }
+  }
+  if (!writeValue(MIGRATION_JOURNAL_KEY, { version: 1, backupId: backup.id })) {
+    storageMigrationError = '保存项目数据迁移状态失败；原始数据与备份均已保留。'
+    return false
+  }
+  return completeStorageMigration(backup.id)
 }
 
 function readNormalizedRecords() {
@@ -281,34 +586,85 @@ function readNormalizedProjects() {
   return normalizedProjects
 }
 
+function readNormalizedFavorites() {
+  const result = readValueResult(FAVORITES_KEY, [])
+  if (!result.ok) return normalizedFavorites
+  const favorites = result.value
+  if (favorites === normalizedFavoriteSource) return normalizedFavorites
+  normalizedFavoriteSource = favorites
+  normalizedFavorites = Array.isArray(favorites)
+    ? favorites.map(normalizeFavorite).filter(Boolean).sort((a, b) => b.updatedAt - a.updatedAt)
+    : []
+  return normalizedFavorites
+}
+
+function readNormalizedRecoveryEntries() {
+  const result = readValueResult(RECOVERY_KEY, [])
+  if (!result.ok) return normalizedRecoveryEntries
+  const entries = result.value
+  if (entries === normalizedRecoverySource) return normalizedRecoveryEntries
+  normalizedRecoverySource = entries
+  normalizedRecoveryEntries = Array.isArray(entries)
+    ? entries.filter((entry) => isPlainObject(entry) && typeof entry.id === 'string' && entry.kind)
+      .sort((a, b) => (Number(b.deletedAt) || 0) - (Number(a.deletedAt) || 0))
+    : []
+  return normalizedRecoveryEntries
+}
+
 function getRecords() {
-  ensureStorageSchema()
+  if (!ensureStorageSchema()) return []
   return readNormalizedRecords()
 }
 
 function getProjects() {
-  ensureStorageSchema()
+  if (!ensureStorageSchema()) return []
   return readNormalizedProjects()
+}
+
+function getFavorites() {
+  if (!ensureStorageSchema()) return []
+  return readNormalizedFavorites()
+}
+
+function getRecoveryEntries() {
+  if (!ensureStorageSchema()) return []
+  return readNormalizedRecoveryEntries()
 }
 
 function getWorkspaceSnapshot(options = {}) {
   if (options.forceRefresh) {
-    ;[STORAGE_SCHEMA_KEY, RECORDS_KEY, PROJECTS_KEY, ACTIVE_PROJECT_KEY].forEach((key) => storageValueCache.delete(key))
+    ;[STORAGE_SCHEMA_KEY, RECORDS_KEY, PROJECTS_KEY, FAVORITES_KEY, RECOVERY_KEY, ACTIVE_PROJECT_KEY,
+      MIGRATION_BACKUPS_KEY, MIGRATION_JOURNAL_KEY].forEach((key) => storageValueCache.delete(key))
     normalizedRecordSource = undefined
     normalizedProjectSource = undefined
+    normalizedFavoriteSource = undefined
+    normalizedRecoverySource = undefined
   }
   storageReadFailures.clear()
-  ensureStorageSchema()
+  if (!ensureStorageSchema()) {
+    return {
+      ok: false,
+      error: storageMigrationError || '项目数据读取失败，请检查本地存储后重试。',
+      records: normalizedRecords,
+      favorites: normalizedFavorites,
+      projects: normalizedProjects,
+      recoveryEntries: normalizedRecoveryEntries,
+      activeProject: null,
+    }
+  }
   const records = readNormalizedRecords()
+  const favorites = readNormalizedFavorites()
   const projects = readNormalizedProjects()
-  const activeId = readValue(ACTIVE_PROJECT_KEY, '')
+  const recoveryEntries = readNormalizedRecoveryEntries()
   const ok = storageReadFailures.size === 0
   return {
     ok,
     error: ok ? '' : '本地项目和收藏数据读取失败，请重试。',
     records,
+    favorites,
     projects,
-    activeProject: projects.find((project) => project.id === activeId) || null,
+    recoveryEntries,
+    activeProject: null,
   }
 }
 
@@ -317,28 +673,51 @@ function createSignature(module, preferences) {
 }
 
 function saveRecord(payload, options = {}) {
-  if (!payload?.module || !MODULES[payload.module] || !payload.preferences || !payload.resultText) {
+  if (Object.prototype.hasOwnProperty.call(options, 'favorite')) {
+    return options.favorite
+      ? saveFavoriteSnapshot(payload)
+      : null
+  }
+  if (!payload?.module || !getModuleMetadata(payload.module) || !payload.preferences || !payload.resultText) {
     return null
   }
 
   const signature = createSignature(payload.module, payload.preferences)
   const records = getRecords()
-  const existing = records.find((record) => record.signature === signature)
+  if (options.saveToken) {
+    const tokenRecord = records.find((record) => record.editorSaveToken === options.saveToken)
+    if (tokenRecord) {
+      const compatible = tokenRecord.module === payload.module
+        && tokenRecord.signature === signature
+        && (!options.projectId || tokenRecord.projectIds?.includes(options.projectId))
+        && (!options.recordId || options.recordId === tokenRecord.id)
+      return compatible ? tokenRecord : null
+    }
+  }
+  const isLegacy = Object.prototype.hasOwnProperty.call(LEGACY_MODULES, payload.module)
+  const existing = options.recordId
+    ? records.find((record) => record.id === options.recordId)
+    : options.saveAs !== true ? records.find((record) => record.signature === signature) : null
+  if (isLegacy && !existing) return null
+  if (options.recordId && (!existing || existing.module !== payload.module)) return null
+  if (options.projectId && !getProjects().some((project) => project.id === options.projectId)) return null
   const now = Date.now()
-  const projectIds = [...new Set([
-    ...(existing?.projectIds || []),
-    ...(options.projectId ? [options.projectId] : []),
-  ])]
+  const projectIds = options.saveAs === true
+    ? options.projectId ? [options.projectId] : []
+    : [...new Set([...(existing?.projectIds || []), ...(options.projectId ? [options.projectId] : [])])]
+  if (!projectIds.length) return null
   const record = {
-    ...existing,
-    ...payload,
+    ...(isLegacy ? existing : { ...existing, ...payload }),
     id: existing?.id || createId('record'),
     signature,
-    favorite: options.favorite === undefined ? Boolean(existing?.favorite) : options.favorite,
+    favorite: false,
+    archived: false,
     projectIds,
     createdAt: existing?.createdAt || now,
     updatedAt: now,
+    ...(options.saveToken ? { editorSaveToken: String(options.saveToken) } : {}),
   }
+  if (options.saveAs === true) delete record.projectMetadata
   if (options.projectMetadata && options.projectId) {
     const previousMetadata = existing?.projectMetadata
       && typeof existing.projectMetadata === 'object' && !Array.isArray(existing.projectMetadata)
@@ -349,11 +728,7 @@ function saveRecord(payload, options = {}) {
       [options.projectId]: { ...options.projectMetadata, savedAt: now },
     }
   }
-  const persistent = isPersistentRecord(record)
-  if (!persistent && !existing) return null
-  const nextRecords = persistent
-    ? [record, ...records.filter((item) => item.id !== record.id)]
-    : records.filter((item) => item.id !== record.id)
+  const nextRecords = [record, ...records.filter((item) => item.id !== record.id)]
 
   const writes = [{ key: RECORDS_KEY, value: nextRecords, previousValue: records }]
   if (options.projectId) {
@@ -365,30 +740,165 @@ function saveRecord(payload, options = {}) {
   }
   if (!writeValuesAtomically(writes)) return null
 
-  return persistent ? record : null
+  normalizedRecordSource = undefined
+  normalizedProjectSource = undefined
+  return record
 }
 
-function getRecordByPayload(payload) {
+function getRecordByPayload(payload, options = {}) {
+  if (!payload?.module || !payload.preferences) return null
+  const records = getRecords()
+  if (options.recordId) return records.find((record) => record.id === options.recordId) || null
+  const signature = createSignature(payload.module, payload.preferences)
+  return records.find((record) => record.signature === signature
+    && (!options.projectId || record.projectIds?.includes(options.projectId))) || null
+}
+
+function getRecordById(recordId) {
+  if (!recordId) return null
+  return getRecords().find((record) => record.id === recordId) || null
+}
+
+function getRecordBySaveToken(saveToken) {
+  if (!saveToken) return null
+  return getRecords().find((record) => record.editorSaveToken === saveToken) || null
+}
+
+function getFavoriteByPayload(payload) {
   if (!payload?.module || !payload.preferences) return null
   const signature = createSignature(payload.module, payload.preferences)
-  getRecords()
-  return recordSignatureIndex.get(signature) || null
+  return getFavorites().find((favorite) => favorite.signature === signature
+    || (!favorite.signature && createSignature(favorite.module, favorite.preferences) === signature)) || null
+}
+
+function saveFavoriteSnapshot(payload, options = {}) {
+  if (!payload?.module || !getModuleMetadata(payload.module) || !payload.preferences || !payload.resultText) return null
+  const favorites = getFavorites()
+  const signature = createSignature(payload.module, payload.preferences)
+  const isLegacy = Object.prototype.hasOwnProperty.call(LEGACY_MODULES, payload.module)
+  const existing = options.favoriteId
+    ? favorites.find((favorite) => favorite.id === options.favoriteId)
+    : options.saveAs === true ? null : favorites.find((favorite) => favorite.signature === signature
+      || (isLegacy && !favorite.signature && createSignature(favorite.module, favorite.preferences) === signature))
+  if (options.favoriteId && (!existing || existing.module !== payload.module
+    || (isLegacy && createSignature(existing.module, existing.preferences) !== signature))) return null
+  const now = Date.now()
+  let favorite
+  if (isLegacy && existing) {
+    // Retired results have no live editor. Keep their saved snapshot as the
+    // content authority; a caller can update management state but cannot
+    // replace the historical title, summary, result, or preferences.
+    favorite = {
+      ...existing,
+      signature,
+      favorite: true,
+      archived: false,
+      updatedAt: now,
+      projectIds: [],
+    }
+  } else if (isLegacy) {
+    // A new retired-module favorite can only be made from its protected
+    // project record. Never turn arbitrary caller payload into a new legacy
+    // snapshot, and never copy project-only association metadata to favorites.
+    const sourceRecord = getRecordByPayload({ module: payload.module, preferences: payload.preferences })
+    if (!sourceRecord || sourceRecord.module !== payload.module
+      || createSignature(sourceRecord.module, sourceRecord.preferences) !== signature) return null
+    const snapshot = { ...sourceRecord }
+    const originProjectIds = Array.isArray(snapshot.projectIds) ? [...snapshot.projectIds] : []
+    delete snapshot.id
+    delete snapshot.projectIds
+    delete snapshot.projectMetadata
+    delete snapshot.favorite
+    delete snapshot.archived
+    favorite = {
+      ...snapshot,
+      id: createId('favorite'),
+      signature,
+      favorite: true,
+      archived: false,
+      originProjectIds,
+      projectIds: [],
+      createdAt: now,
+      updatedAt: now,
+    }
+  } else {
+    const sourceRecord = existing ? null : getRecordByPayload(payload)
+    favorite = {
+      ...existing,
+      ...payload,
+      id: existing?.id || createId('favorite'),
+      signature,
+      favorite: true,
+      archived: false,
+      originProjectIds: existing?.originProjectIds || sourceRecord?.projectIds || [],
+      projectIds: [],
+      createdAt: existing?.createdAt || now,
+      updatedAt: now,
+    }
+  }
+  const nextFavorites = [favorite, ...favorites.filter((item) => item.id !== favorite.id)]
+  if (!writeValue(FAVORITES_KEY, nextFavorites)) return null
+  normalizedFavoriteSource = undefined
+  return favorite
 }
 
 function toggleFavorite(payload) {
-  const existing = getRecordByPayload(payload)
-  return saveRecord(payload, { favorite: !existing?.favorite })
+  const existing = getFavoriteByPayload(payload)
+  if (existing) return removeFavorite(existing.id) ? null : existing
+  return saveFavoriteSnapshot(payload)
 }
 
-function toggleFavoriteById(recordId) {
-  const record = getRecords().find((item) => item.id === recordId)
-  return record ? saveRecord(record, { favorite: !record.favorite }) : null
+function toggleFavoriteById(favoriteId) {
+  const favorite = getFavorites().find((item) => item.id === favoriteId)
+  return favorite ? (removeFavorite(favoriteId) ? null : favorite) : null
+}
+
+function appendRecoveryEntry(kind, targetId, snapshot, extra = {}) {
+  const entries = getRecoveryEntries()
+  const existing = entries.find((entry) => entry.kind === kind && entry.targetId === targetId)
+  if (existing) return { entries, entry: existing, alreadyPresent: true }
+  const entry = {
+    id: createId('recovery'),
+    kind,
+    targetId,
+    deletedAt: Date.now(),
+    snapshot: cloneStorageValue(snapshot),
+    ...extra,
+  }
+  return { entries: [entry, ...entries], entry, alreadyPresent: false }
+}
+
+function removeFavorite(favoriteId) {
+  const favorites = getFavorites()
+  const favorite = favorites.find((item) => item.id === favoriteId)
+  if (!favorite) return false
+  const recovery = appendRecoveryEntry('favorite', favorite.id, favorite)
+  const nextFavorites = favorites.filter((item) => item.id !== favoriteId)
+  const recoveryBefore = getRecoveryEntries()
+  const writes = [
+    { key: RECOVERY_KEY, value: recovery.entries, previousValue: recoveryBefore },
+    { key: FAVORITES_KEY, value: nextFavorites, previousValue: favorites },
+  ]
+  if (!writeValuesAtomically(writes)) return false
+  normalizedFavoriteSource = undefined
+  normalizedRecoverySource = undefined
+  return true
 }
 
 function removeRecord(recordId) {
   const records = getRecords()
-  if (!records.some((record) => record.id === recordId)) return false
-  return writeValue(RECORDS_KEY, records.filter((record) => record.id !== recordId))
+  const record = records.find((item) => item.id === recordId)
+  if (!record) return false
+  const recovery = appendRecoveryEntry('record', record.id, record)
+  const nextRecords = records.filter((item) => item.id !== recordId)
+  const recoveryBefore = getRecoveryEntries()
+  if (!writeValuesAtomically([
+    { key: RECOVERY_KEY, value: recovery.entries, previousValue: recoveryBefore },
+    { key: RECORDS_KEY, value: nextRecords, previousValue: records },
+  ])) return false
+  normalizedRecordSource = undefined
+  normalizedRecoverySource = undefined
+  return true
 }
 
 function createProject(name) {
@@ -398,9 +908,7 @@ function createProject(name) {
 
   const projects = getProjects()
   const existing = projects.find((project) => project.name === projectName)
-  if (existing) {
-    return setActiveProject(existing.id)
-  }
+  if (existing) return existing
 
   const now = Date.now()
   const project = {
@@ -418,11 +926,7 @@ function createProject(name) {
     createdAt: now,
     updatedAt: now,
   }
-  const activeProjectId = readValue(ACTIVE_PROJECT_KEY, '')
-  return writeValuesAtomically([
-    { key: PROJECTS_KEY, value: [project, ...projects], previousValue: projects },
-    { key: ACTIVE_PROJECT_KEY, value: project.id, previousValue: activeProjectId },
-  ]) ? project : null
+  return writeValue(PROJECTS_KEY, [project, ...projects]) ? project : null
 }
 
 function updateProject(projectId, changes = {}) {
@@ -470,20 +974,17 @@ function updateProject(projectId, changes = {}) {
 
 function deleteProject(projectId) {
   const projects = getProjects()
-  if (!projects.some((project) => project.id === projectId)) return false
-  const records = getRecords()
-  const activeProjectId = readValue(ACTIVE_PROJECT_KEY, '')
+  const project = projects.find((item) => item.id === projectId)
+  if (!project) return false
+  const recovery = appendRecoveryEntry('project', project.id, project)
   const writes = [
-    { key: PROJECTS_KEY, value: projects.filter((project) => project.id !== projectId), previousValue: projects },
-    { key: RECORDS_KEY, value: keepPersistentRecords(records.map((record) => withoutProjectRecordMetadata({
-      ...record,
-      projectIds: (record.projectIds || []).filter((id) => id !== projectId),
-    }, projectId))), previousValue: records },
+    { key: RECOVERY_KEY, value: recovery.entries, previousValue: getRecoveryEntries() },
   ]
-  if (activeProjectId === projectId) {
-    writes.push({ key: ACTIVE_PROJECT_KEY, value: '', previousValue: activeProjectId })
-  }
-  return writeValuesAtomically(writes)
+  writes.push({ key: PROJECTS_KEY, value: projects.filter((project) => project.id !== projectId), previousValue: projects })
+  if (!writeValuesAtomically(writes)) return false
+  normalizedProjectSource = undefined
+  normalizedRecoverySource = undefined
+  return true
 }
 
 function setActiveProject(projectId) {
@@ -496,11 +997,17 @@ function getActiveProject() {
   return getProjects().find((project) => project.id === activeId) || null
 }
 
-function addRecordToProject(payload, projectId, metadata) {
+function addRecordToProject(payload, projectId, metadata, options = {}) {
   const projectMetadata = metadata === undefined ? undefined : normalizeProjectRecordMetadata(metadata)
-  if (metadata !== undefined && (!projectMetadata || payload?.module !== 'limiter')) return null
+  if (metadata !== undefined && (!projectMetadata || !['limiter', 'gainStructure', 'cable', 'spl', 'camera', 'ledScreen', 'audioWiring', 'venue'].includes(payload?.module))) return null
   const project = getProjects().find((item) => item.id === projectId)
-  return project ? saveRecord(payload, { projectId, ...(projectMetadata ? { projectMetadata } : {}) }) : null
+  return project ? saveRecord(payload, {
+    projectId,
+    ...(projectMetadata ? { projectMetadata } : {}),
+    ...(options.recordId ? { recordId: options.recordId } : {}),
+    ...(options.saveAs === true ? { saveAs: true } : {}),
+    ...(options.saveToken ? { saveToken: String(options.saveToken) } : {}),
+  }) : null
 }
 
 function getProjectRecords(projectId) {
@@ -510,7 +1017,7 @@ function getProjectRecords(projectId) {
 function getProjectRecordView(record, projectId) {
   if (!record || typeof record !== 'object' || Array.isArray(record)) return record
   const sourceMetadata = record.projectMetadata
-  const metadata = record.module === 'limiter'
+  const metadata = ['limiter', 'gainStructure', 'cable', 'spl', 'camera', 'ledScreen', 'audioWiring', 'venue'].includes(record.module)
     && Array.isArray(record.projectIds) && record.projectIds.includes(projectId)
     && isPlainObject(sourceMetadata)
     && Object.prototype.hasOwnProperty.call(sourceMetadata, projectId)
@@ -554,23 +1061,26 @@ function isValidStoredWiringSchedule(value) {
     || value.version !== 1 || !Number.isSafeInteger(value.revision) || value.revision < 0
     || !Number.isSafeInteger(value.nextNumber) || value.nextNumber < 1
     || !Array.isArray(value.lines) || value.lines.length > projectWiring.MAX_LINES) return false
-  const scheduleKeys = new Set(['version', 'revision', 'nextNumber', 'lines'])
+  const scheduleKeys = new Set(['version', 'revision', 'nextNumber', 'lines', 'devices'])
   if (Object.keys(value).some((key) => !scheduleKeys.has(key))) return false
+  if (projectWiring.validateDeviceData(value)) return false
   const ids = new Set()
   const codes = new Set()
   const lineKeys = new Set([
     'id', 'code', 'purpose', 'fromDevice', 'fromPort', 'toDevice', 'toPort', 'buildType', 'cableType',
     'spec', 'connectorA', 'connectorB', 'lengthText', 'status', 'notes',
   ])
+  const allowedLineKeys = new Set([...lineKeys, 'fromDeviceId', 'toDeviceId'])
   const lineTextLimits = {
     id: 100, code: 32, purpose: 100, fromDevice: 100, fromPort: 80, toDevice: 100, toPort: 80,
     buildType: 20, cableType: 20, spec: 120, connectorA: 60, connectorB: 60,
     lengthText: projectWiring.MAX_LENGTH_TEXT, status: 20, notes: 300,
+    fromDeviceId: 100, toDeviceId: 100,
   }
   for (const line of value.lines) {
     if (!line || typeof line !== 'object' || Array.isArray(line)
-      || Object.keys(line).some((key) => !lineKeys.has(key))) return false
-    if (lineKeys.size !== Object.keys(line).length
+      || Object.keys(line).some((key) => !allowedLineKeys.has(key))) return false
+    if (Array.from(lineKeys).some((key) => !Object.prototype.hasOwnProperty.call(line, key))
       || Object.keys(line).some((key) => typeof line[key] !== 'string')) return false
     if (Object.keys(line).some((key) => line[key].length > lineTextLimits[key] || line[key] !== line[key].trim())) return false
     if (!line.id.trim() || !line.code.trim() || !line.fromDevice.trim() || !line.fromPort.trim()
@@ -659,6 +1169,7 @@ function saveProjectWiring(projectId, command, expectedRevision) {
     project: { id: rawProject.id, name: rawProject.name },
     schedule: change.schedule,
     lineIds: change.lineIds,
+    ...(change.deviceIds ? { deviceIds: change.deviceIds } : {}),
   }
 }
 
@@ -669,6 +1180,7 @@ function removeRecordFromProject(recordId, projectId) {
   if (!record?.projectIds?.includes(projectId) || !project) return false
 
   const now = Date.now()
+  const recovery = appendRecoveryEntry('record-project-link', `${recordId}:${projectId}`, record, { projectId })
   const nextRecords = keepPersistentRecords(records.map((item) => (
     item.id === recordId
       ? withoutProjectRecordMetadata({
@@ -680,38 +1192,223 @@ function removeRecordFromProject(recordId, projectId) {
   const nextProjects = projects.map((item) => (
     item.id === projectId ? { ...item, updatedAt: now } : item
   ))
-  return writeValuesAtomically([
+  const recoveryBefore = getRecoveryEntries()
+  const saved = writeValuesAtomically([
+    { key: RECOVERY_KEY, value: recovery.entries, previousValue: getRecoveryEntries() },
     { key: RECORDS_KEY, value: nextRecords, previousValue: records },
     { key: PROJECTS_KEY, value: nextProjects, previousValue: projects },
   ])
+  if (!saved) return false
+  normalizedRecordSource = undefined
+  normalizedProjectSource = undefined
+  normalizedRecoverySource = undefined
+  return true
+}
+
+function restoreRecoveryEntry(recoveryId, targetProjectId) {
+  const recoveryEntries = getRecoveryEntries()
+  const entry = recoveryEntries.find((item) => item.id === recoveryId)
+  if (!entry || !isPlainObject(entry.snapshot)) return false
+  const remainingEntries = recoveryEntries.filter((item) => item.id !== recoveryId)
+  const writes = []
+  const clearRecoveryOnly = () => {
+    if (!writeValue(RECOVERY_KEY, remainingEntries)) return false
+    normalizedRecoverySource = undefined
+    return true
+  }
+
+  if (entry.kind === 'project') {
+    const projects = getProjects()
+    const existing = projects.find((project) => project.id === entry.snapshot.id)
+    if (existing) {
+      const raw = findRawSnapshotById(PROJECTS_KEY, entry.snapshot.id)
+      if (!raw.ok || !snapshotsEqual(raw.item, entry.snapshot)) return false
+      return clearRecoveryOnly()
+    }
+    writes.push({ key: PROJECTS_KEY, value: [entry.snapshot, ...projects], previousValue: projects })
+    normalizedProjectSource = undefined
+  } else if (entry.kind === 'record') {
+    const records = getRecords()
+    const existing = records.find((record) => record.id === entry.snapshot.id)
+    if (existing) {
+      const raw = findRawSnapshotById(RECORDS_KEY, entry.snapshot.id)
+      if (!raw.ok || !snapshotsEqual(raw.item, entry.snapshot)) return false
+      return clearRecoveryOnly()
+    }
+    const record = normalizeRecord(entry.snapshot)
+    if (!record || !record.projectIds.length) return false
+    writes.push({ key: RECORDS_KEY, value: [entry.snapshot, ...records], previousValue: records })
+    normalizedRecordSource = undefined
+  } else if (entry.kind === 'favorite') {
+    const favorites = getFavorites()
+    const existing = favorites.find((favorite) => favorite.id === entry.snapshot.id)
+    if (existing) {
+      const raw = findRawSnapshotById(FAVORITES_KEY, entry.snapshot.id)
+      if (!raw.ok || !snapshotsEqual(raw.item, entry.snapshot)) return false
+      return clearRecoveryOnly()
+    }
+    const favorite = normalizeFavorite(entry.snapshot)
+    if (!favorite) return false
+    writes.push({ key: FAVORITES_KEY, value: [entry.snapshot, ...favorites], previousValue: favorites })
+    normalizedFavoriteSource = undefined
+  } else if (entry.kind === 'record-project-link') {
+    const records = getRecords()
+    const projectId = String(entry.projectId || '')
+    if (!projectId) return false
+    const current = records.find((record) => record.id === entry.snapshot.id)
+    if (current?.projectIds?.includes(projectId)) return clearRecoveryOnly()
+    if (!getProjects().some((project) => project.id === projectId)) return false
+    const restored = current
+      ? {
+        ...current,
+        projectIds: [...new Set([...(current.projectIds || []), projectId])],
+        projectMetadata: {
+          ...(current.projectMetadata && isPlainObject(current.projectMetadata) ? current.projectMetadata : {}),
+          ...(entry.snapshot.projectMetadata?.[projectId]
+            ? { [projectId]: entry.snapshot.projectMetadata[projectId] }
+            : {}),
+        },
+      }
+      : normalizeRecord(entry.snapshot)
+    if (!restored) return false
+    if (!restored.projectIds.includes(projectId)) restored.projectIds = [...restored.projectIds, projectId]
+    const nextRecords = current
+      ? records.map((record) => (record.id === current.id ? restored : record))
+      : [restored, ...records]
+    writes.push({ key: RECORDS_KEY, value: nextRecords, previousValue: records })
+    const projects = getProjects()
+    if (projects.some((project) => project.id === projectId)) {
+      const nextProjects = projects.map((project) => (
+        project.id === projectId ? { ...project, updatedAt: Date.now() } : project
+      ))
+      writes.push({ key: PROJECTS_KEY, value: nextProjects, previousValue: projects })
+    }
+    normalizedRecordSource = undefined
+    normalizedProjectSource = undefined
+  } else if (entry.kind === 'legacy-recent') {
+    const projectId = String(targetProjectId || '')
+    const project = getProjects().find((item) => item.id === projectId)
+    if (!project) return false
+    const records = getRecords()
+    const existing = records.find((record) => record.id === entry.snapshot.id)
+    if (existing) {
+      const raw = findRawSnapshotById(RECORDS_KEY, entry.snapshot.id)
+      if (!raw.ok || !snapshotsEqual(raw.item, entry.snapshot)) return false
+      return clearRecoveryOnly()
+    }
+    const normalized = normalizeRecord(entry.snapshot)
+    if (!normalized) return false
+    const restored = {
+      ...entry.snapshot,
+      id: normalized.id,
+      module: normalized.module,
+      signature: typeof entry.snapshot.signature === 'string'
+        ? entry.snapshot.signature
+        : createSignature(normalized.module, normalized.preferences),
+      favorite: false,
+      archived: normalized.archived,
+      projectIds: [projectId],
+    }
+    if (Number.isFinite(entry.snapshot.createdAt)) restored.createdAt = entry.snapshot.createdAt
+    else delete restored.createdAt
+    if (Number.isFinite(entry.snapshot.updatedAt)) restored.updatedAt = entry.snapshot.updatedAt
+    else delete restored.updatedAt
+    writes.push({ key: RECORDS_KEY, value: [restored, ...records], previousValue: records })
+    const projects = getProjects()
+    const nextProjects = projects.map((item) => (
+      item.id === projectId ? { ...item, updatedAt: Date.now() } : item
+    ))
+    writes.push({ key: PROJECTS_KEY, value: nextProjects, previousValue: projects })
+    normalizedRecordSource = undefined
+    normalizedProjectSource = undefined
+  } else {
+    return false
+  }
+
+  writes.push({ key: RECOVERY_KEY, value: remainingEntries, previousValue: recoveryEntries })
+  if (!writeValuesAtomically(writes)) return false
+  normalizedRecoverySource = undefined
+  return true
+}
+
+function getStorageMigrationBackups() {
+  const entries = getMigrationBackupEntries()
+  if (!entries) return { ok: false, error: '读取迁移备份失败或备份格式异常。', backups: [] }
+  return {
+    ok: true,
+    error: '',
+    backups: entries.map((entry) => ({
+      id: entry.id,
+      migration: entry.migration,
+      schemaVersionBefore: entry.schemaVersionBefore,
+      createdAt: entry.createdAt,
+    })),
+  }
+}
+
+function isValidRawMigrationSnapshot(snapshot) {
+  const keys = [STORAGE_SCHEMA_KEY, PROJECTS_KEY, RECORDS_KEY, FAVORITES_KEY, RECOVERY_KEY, ACTIVE_PROJECT_KEY]
+  return isPlainObject(snapshot) && keys.every((key) => (
+    isPlainObject(snapshot[key])
+      && typeof snapshot[key].present === 'boolean'
+      && (!snapshot[key].present || cloneStorageValue(snapshot[key].value) !== null)
+  )) && Object.keys(snapshot).every((key) => keys.includes(key))
+}
+
+function restoreStorageMigrationBackup(backupId) {
+  const entries = getMigrationBackupEntries()
+  const backup = entries?.find((entry) => entry.id === backupId && entry.version === 1)
+  if (!backup || !isValidRawMigrationSnapshot(backup.storage)) return false
+  const journalBefore = readRawStorageValue(MIGRATION_JOURNAL_KEY)
+  if (!journalBefore.ok) return false
+  const current = captureStorageSnapshot([...Object.keys(backup.storage), MIGRATION_JOURNAL_KEY])
+  if (!current.ok) return false
+  if (!writeRawSnapshot(backup.storage, { allowMigrationError: true })) return false
+  if (!removeStorageValue(MIGRATION_JOURNAL_KEY)) {
+    writeRawSnapshot(current.values, { allowMigrationError: true })
+    return false
+  }
+  storageMigrationError = ''
+  normalizedRecordSource = undefined
+  normalizedProjectSource = undefined
+  normalizedFavoriteSource = undefined
+  normalizedRecoverySource = undefined
+  normalizedRecords = []
+  normalizedProjects = []
+  normalizedFavorites = []
+  normalizedRecoveryEntries = []
+  recordSignatureIndex = new Map()
+  ;[STORAGE_SCHEMA_KEY, RECORDS_KEY, PROJECTS_KEY, FAVORITES_KEY, RECOVERY_KEY, ACTIVE_PROJECT_KEY]
+    .forEach((key) => storageValueCache.delete(key))
+  return true
 }
 
 function restoreRecord(record) {
+  if (!Object.prototype.hasOwnProperty.call(MODULES, record?.module)) return ''
   const module = MODULES[record?.module]
   if (!module || !record.preferences) return ''
-  return writeValue(module.preferenceKey, record.preferences) ? module.path : ''
+  const preferences = record.module === 'audioWiring'
+    ? {
+      version: record.preferences.version,
+      outputId: record.preferences.outputId,
+      inputId: record.preferences.inputId,
+      manualSelected: record.preferences.manualSelected,
+      viewMode: record.preferences.viewMode,
+      face: record.preferences.face,
+    }
+    : record.module === 'camera'
+      ? { ...record.preferences, cameraCalculationVersion: record.preferences.cameraCalculationVersion === 2 ? 2 : 1 }
+      : record.preferences
+  return module.path
 }
 
 function prepareProjectModule(projectId, moduleKey) {
-  const project = getProjects().find((item) => item.id === projectId)
+  if (!Object.prototype.hasOwnProperty.call(MODULES, moduleKey)) return ''
   const module = MODULES[moduleKey]
-  if (!project || !module) return ''
-
-  const writes = []
-  if (moduleKey === 'venue') {
-    const preferences = readStorageValue(module.preferenceKey, {}).value
-    writes.push({ key: module.preferenceKey, previousValue: preferences, value: {
-      ...preferences,
-      ...(project.roomLengthText ? { lengthText: project.roomLengthText } : {}),
-      ...(project.roomWidthText ? { widthText: project.roomWidthText } : {}),
-      ...(project.roomHeightText ? { heightText: project.roomHeightText } : {}),
-      standardClassKey: project.standardClassKey,
-      gradeKey: project.gradeKey,
-    } })
-  }
-  const activeProjectId = readValue(ACTIVE_PROJECT_KEY, '')
-  writes.push({ key: ACTIVE_PROJECT_KEY, value: project.id, previousValue: activeProjectId })
-  return writeValuesAtomically(writes) ? module.path : ''
+  if (!module) return ''
+  const project = getProjects().find((item) => item.id === projectId)
+  if (!project) return ''
+  return module.path
 }
 
 function getStorageHealth() {
@@ -735,22 +1432,33 @@ function getStorageHealth() {
 
 module.exports = {
   MODULES,
+  getModuleMetadata,
   addRecordToProject: wrapMutation(addRecordToProject),
   createProject: wrapMutation(createProject),
   deleteProject: wrapMutation(deleteProject),
   getActiveProject,
+  getFavoriteByPayload,
+  getFavorites,
   getProjectRecords,
   getProjectRecordView,
   getProjectWiring,
   getProjects,
+  getRecordById,
   getRecordByPayload,
+  getRecordBySaveToken,
   getRecords,
+  getRecoveryEntries,
+  getStorageMigrationBackups,
   getStorageHealth,
   getWorkspaceSnapshot,
   prepareProjectModule: wrapMutation(prepareProjectModule),
   removeRecordFromProject: wrapMutation(removeRecordFromProject),
   removeRecord: wrapMutation(removeRecord),
+  removeFavorite: wrapMutation(removeFavorite),
+  restoreRecoveryEntry: wrapMutation(restoreRecoveryEntry),
+  restoreStorageMigrationBackup: wrapMutation(restoreStorageMigrationBackup),
   restoreRecord: wrapMutation(restoreRecord),
+  saveFavoriteSnapshot: wrapMutation(saveFavoriteSnapshot),
   saveRecord: wrapMutation(saveRecord),
   saveProjectWiring: wrapMutation(saveProjectWiring),
   setActiveProject: wrapMutation(setActiveProject),

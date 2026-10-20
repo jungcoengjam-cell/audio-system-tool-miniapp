@@ -10,7 +10,6 @@ const {
 } = require('../../utils/project-wiring')
 const {
   createProject,
-  getActiveProject,
   getProjectWiring,
   getProjects,
   saveProjectWiring,
@@ -31,6 +30,7 @@ const EXPORT_TYPES = [
   { id: 'lines', label: '线路表' },
   { id: 'materials', label: '材料表' },
   { id: 'labels', label: '双端线号' },
+  { id: 'project', label: '接线清单' },
 ]
 const DRAFT_FIELDS = new Set([
   'purpose', 'fromDevice', 'fromPort', 'toDevice', 'toPort', 'buildType', 'cableType',
@@ -141,7 +141,7 @@ function safeToast(title) {
   if (typeof wx !== 'undefined' && typeof wx.showToast === 'function') wx.showToast({ title, icon: 'none' })
 }
 
-Page({
+const pageDefinition = {
   data: {
     project: null,
     loading: true,
@@ -256,15 +256,7 @@ Page({
       this.refreshProjectWiring()
       return
     }
-    let activeProject
-    try {
-      activeProject = getActiveProject()
-    } catch (error) {
-      activeProject = null
-    }
-    if (activeProject && typeof activeProject.then === 'function') {
-      activeProject.then((project) => this.openInitialProject(project)).catch(() => this.openInitialProject(null))
-    } else this.openInitialProject(activeProject)
+    this.openInitialProject(null)
   },
 
   openInitialProject(project) {
@@ -1085,13 +1077,16 @@ Page({
       const savedLine = result.schedule.lines.find((item) => item.id === (line.id || result.lineIds?.[0]))
       this.closeEditor()
       this.acceptSavedSchedule(result)
-      if (savedLine) wx.showToast({ title: `${savedLine.code} 已保存`, icon: 'success' })
+      if (savedLine) {
+        const label = require('./workspace-model').circleLabel(savedLine, result.schedule)
+        wx.showToast({ title: `${label} 已保存`, icon: 'success' })
+      }
     })
   },
 
   deleteLine() {
     if (this.data.draftIsNew || !this.data.draft || this.data.saving) return
-    const code = this.data.draft.code || '这条线路'
+    const code = require('./workspace-model').circleLabel(this.data.draft, this._schedule)
     wx.showModal({
       title: '删除线路？',
       content: `将从本项目布线表中删除 ${code}。`,
@@ -1454,7 +1449,7 @@ Page({
 
   generateExport(typeOverride = '') {
     if (!this.data.project || !this._schedule.lines.length || this.data.loading || this.data.saving) {
-      safeToast(this.data.project ? '请先添加线路，再导出图片' : '当前项目不可用')
+      safeToast(this.data.project ? '请先添加线路，再导出图片' : '请先选择项目')
       return
     }
     const selectedType = EXPORT_TYPES[this.data.exportTypeIndex] && EXPORT_TYPES[this.data.exportTypeIndex].id
@@ -1523,6 +1518,7 @@ Page({
         reportSaveMessage: '',
         reportSaveError: '',
       }, () => {
+        if (!isCurrent()) return
         this.syncReportSaveView()
         this.showReportPage(0)
       })
@@ -1586,6 +1582,15 @@ Page({
       reportPreviewVisible: true,
     })
     this.syncReportSaveView()
+  },
+
+  onReportPageSwipe(event) {
+    const index = Number(event && event.detail && event.detail.current)
+    if (this._destroyed || this._hidden || !this.data.reportPreviewVisible || !Number.isSafeInteger(index)
+      || index < 0 || index >= this.data.reportImages.length) return false
+    if (index === this.data.reportPageIndex) return true
+    this.showReportPage(index)
+    return true
   },
 
   previousReportPage() {
@@ -1809,4 +1814,7 @@ Page({
 
   stopEvent() {},
   preventTouchMove() {},
-})
+}
+
+const { createWorkspaceUI } = require('./workspace-ui')
+Page({ ...pageDefinition, ...createWorkspaceUI(pageDefinition) })

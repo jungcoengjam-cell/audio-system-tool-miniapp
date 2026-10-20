@@ -1,0 +1,16 @@
+{
+  "purpose": "Pin original expanded UI markup and XLR resource identity before approved reclaim edits.",
+  "xlrImageSha256": "565a37a65bed3e9431c5f517d83cef13c580da65b76e51d88968b3a27c37089d",
+  "expandedWxmlSha256": {
+    "pages/dmx-layout/dmx-layout.wxml": "c2d8afa55ba09dc9cc7455f3e4921b6053251e4a8f8f5db685fa9231ad94be6b",
+    "pages/dmx-layout-landscape/dmx-layout-landscape.wxml": "40fab3d8a201abb1423731d04f55621fd2a3a3fb565b732043b7fcc49f1356c5",
+    "pages/cable/cable.wxml": "9e3c62cf55ba857ea074f2ef2b7c1364e774b1b2f5b739fe57129656faf0d58d",
+    "pages/gain-structure/gain-structure.wxml": "2274609baae95eeac19b5065cf7ffbbb317828a1e1762803e5b4542542859871",
+    "pages/spl/spl.wxml": "5e8073a30f147dc64dc44e00e965678740d72c61e1e42f46c0083a2cdf258cf5"
+  },
+  "approvedSplRefactorExpandedWxmlSha256": "2dff8d6ddf4541b20685e93c7ad9b63a85fc8b07dc13a5654156ec224a51ce61",
+  "approvedDmxLightingRefactorExpandedWxmlSha256": {
+    "pages/dmx-layout/dmx-layout.wxml": "70e8242826fc2e15e7fbe6d51a6b5dd23973584ecc4e8a5ff98f23169929ca03",
+    "pages/dmx-layout-landscape/dmx-layout-landscape.wxml": "70e8242826fc2e15e7fbe6d51a6b5dd23973584ecc4e8a5ff98f23169929ca03"
+  }
+}

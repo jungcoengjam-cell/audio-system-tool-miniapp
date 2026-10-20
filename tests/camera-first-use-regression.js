@@ -1,17 +1,27 @@
 'use strict'
 
 const assert = require('node:assert/strict')
-const fs = require('node:fs')
-const path = require('node:path')
 const { createDelayedEnvironment } = require('./p2-safety-remediation/minimal/delayed-environment.cjs')
 
-const repoRoot = path.resolve(__dirname, '..')
-const wxml = fs.readFileSync(path.join(repoRoot, 'pages/camera/camera.wxml'), 'utf8')
+const CAMERA_PREFERENCE_KEY = 'audioTool.camera.preferences'
 
 function createPage() {
   const env = createDelayedEnvironment()
   const page = env.loadPage('pages/camera/camera.js')
   page.onLoad()
+  env.flushNextTicks()
+  page.onShow()
+  env.flushNextTicks()
+  return { env, page }
+}
+
+function createPageFromPreferences(preferences) {
+  const env = createDelayedEnvironment()
+  env.storage.set(CAMERA_PREFERENCE_KEY, env.clone(preferences))
+  const page = env.loadPage('pages/camera/camera.js')
+  page.onLoad()
+  env.flushNextTicks()
+  page.onShow()
   env.flushNextTicks()
   return { env, page }
 }
@@ -30,11 +40,6 @@ function chooseScene(env, page, index) {
   env.flushNextTicks()
 }
 
-function chooseSource(env, page, index) {
-  page.onSourceModeTap({ currentTarget: { dataset: { index } } })
-  env.flushNextTicks()
-}
-
 function generateReport(env, page) {
   page.generateResultReportImage()
   env.flushNextTicks()
@@ -49,7 +54,9 @@ function generateReport(env, page) {
 
 function testGeometryAndActiveValidation() {
   const { env, page } = createPage()
-  assert.equal(page.data.result.primaryDistanceMeters, 4.83, 'default ground distance baseline must remain 4.83 m')
+  assert.equal(page.data.result.primaryDistanceMeters, 4.65, 'camera-normal 10% framing allowance must use the real 4 m depth')
+  assert.equal(page.data.result.framingVersion, 2)
+  assert.equal(page.data.result.effectiveDepthMeters, 4, 'framing allowance must not enlarge site depth')
   assert.equal(page.data.result.cameraHeightMeters, 2.3, 'default automatic height baseline must remain 2.3 m')
 
   chooseScene(env, page, 1)
@@ -83,29 +90,118 @@ function testGeometryAndActiveValidation() {
   env.flushNextTicks()
   assert(page.data.result, 'an invalid fixed height should not block automatic-height mode')
   assert.equal(page.data.inputErrors.fixedCameraHeightText, undefined)
+}
 
-  chooseSource(env, page, 1)
-  input(page, 'customVerticalFovText', '  ')
-  assert.equal(page.data.result, null, 'a whitespace custom angle must be rejected before Number conversion')
-  assert(page.data.inputErrors.customVerticalFovText)
-  chooseSource(env, page, 0)
-  assert(page.data.result, 'blank custom angles must not block catalog optics')
-  assert.equal(page.data.inputErrors.customVerticalFovText, undefined)
+function testLegacyCustomPreferenceRequiresExplicitRecovery() {
+  const legacyPreferences = {
+    sourceMode: 'custom',
+    cameraModel: 'TV-6124HK',
+    viewIndex: 0,
+    definitionMode: 'angles',
+    customMountType: 'ptz',
+    customHorizontalFovText: '60',
+    customVerticalFovText: '36',
+    customSensorWidthText: '6.4',
+    customSensorHeightText: '3.6',
+    customFocalLengthText: '4.5',
+    sceneMode: 'ground',
+    heightMode: 'auto',
+    marginPercent: 10,
+    groundWidthText: '6',
+    groundDepthText: '4',
+    subjectHeightText: '1.8',
+    planeWidthText: '6',
+    planeHeightText: '2.5',
+    planeBottomHeightText: '0.8',
+    fixedCameraHeightText: '2.3',
+  }
+  const { env, page } = createPageFromPreferences(legacyPreferences)
+  assert.equal(page.data.legacyCustomUnsupported, true,
+    'a stored custom source must enter an explicit unsupported-recovery state')
+  assert.equal(page.data.result, null, 'a legacy custom result must not be displayed as a library calculation')
+  assert.equal(page.data.selectedCamera.model, 'TV-6124HK',
+    'legacy model fields must remain available for explicit library recovery without reviving the old custom result')
+  assert.deepEqual(env.storage.get(CAMERA_PREFERENCE_KEY), legacyPreferences,
+    'loading unsupported custom preferences must preserve their exact stored values')
+  assert.equal(env.effects.storage.length, 0,
+    'loading unsupported custom preferences must not automatically overwrite user preferences')
 
-  const anglePage = createPage()
-  chooseSource(anglePage.env, anglePage.page, 1)
-  input(anglePage.page, 'customHorizontalFovText', '0')
-  assert(anglePage.page.data.inputErrors.customHorizontalFovText, 'zero horizontal FOV must fail')
-  input(anglePage.page, 'customHorizontalFovText', '179')
-  assert(anglePage.page.data.inputErrors.customHorizontalFovText, '179 degree horizontal FOV must fail')
-  input(anglePage.page, 'customHorizontalFovText', '178.99')
-  blur(anglePage.env, anglePage.page)
-  assert(anglePage.page.data.result, 'an angle below the existing 179 degree limit should calculate')
-  input(anglePage.page, 'customVerticalFovText', '179')
-  assert(anglePage.page.data.inputErrors.customVerticalFovText, '179 degree vertical FOV must fail')
-  input(anglePage.page, 'customVerticalFovText', '36')
-  blur(anglePage.env, anglePage.page)
-  assert(anglePage.page.data.result, 'restoring a valid vertical angle should restore calculation')
+  chooseScene(env, page, 1)
+  input(page, 'planeWidthText', '8')
+  blur(env, page)
+  assert.equal(page.data.legacyCustomUnsupported, true,
+    'scene and input changes must not silently recover legacy custom preferences')
+  assert.equal(page.data.result, null,
+    'scene and input changes must not expose a calculated result while legacy custom preferences are blocked')
+  assert.deepEqual(env.storage.get(CAMERA_PREFERENCE_KEY), legacyPreferences,
+    'scene and input changes must not overwrite the untouched legacy custom preference bytes')
+  assert.equal(env.effects.storage.length, 0,
+    'scene and input changes must not write preferences before the user explicitly recovers')
+
+  page.openCameraSelector()
+  page.closeCameraSelector()
+  env.flushNextTicks()
+  assert.equal(page.data.legacyCustomUnsupported, true,
+    'opening and closing the model selector alone must leave legacy custom preferences blocked')
+  assert.equal(page.data.result, null,
+    'closing the model selector must not reveal a stale or synthetic result')
+  assert.deepEqual(env.storage.get(CAMERA_PREFERENCE_KEY), legacyPreferences,
+    'closing the selector must preserve the legacy preference until a model is explicitly selected')
+  assert.equal(env.effects.storage.length, 0,
+    'opening or closing the selector must not silently write replacement preferences')
+
+  chooseScene(env, page, 0)
+  assert.equal(page.data.legacyCustomUnsupported, true,
+    'returning to the default scene must not itself release a legacy custom preference')
+  assert.equal(page.data.result, null)
+  assert.deepEqual(env.storage.get(CAMERA_PREFERENCE_KEY), legacyPreferences)
+  assert.equal(env.effects.storage.length, 0)
+
+  page.openCameraSelector()
+  const libraryCamera = page.data.selectorItems.find((item) => item.model === 'TV-6124HK')
+  assert(libraryCamera, 'explicit recovery must offer the existing library camera')
+  assert.equal(page.data.selectedCamera.model, libraryCamera.model,
+    'the explicit recovery choice must remain available even when it matches the legacy model key')
+  page.selectCamera({ currentTarget: { dataset: { index: libraryCamera.index } } })
+  env.flushNextTicks()
+  assert.equal(page.data.legacyCustomUnsupported, false,
+    'explicitly selecting a library model must leave the unsupported recovery state')
+  assert.equal(page.data.result.displayModel, 'TV-6124HK',
+    'the fresh result must identify the explicitly selected library model')
+  assert.equal(page.data.result.primaryDistanceMeters, 4.65,
+    'explicit library recovery must use the authorized camera-normal framing calculation')
+
+  const resetCase = createPageFromPreferences(legacyPreferences)
+  resetCase.page.resetToDefaults()
+  resetCase.env.flushNextTicks()
+  assert.equal(resetCase.page.data.legacyCustomUnsupported, false,
+    'reset must leave the unsupported custom recovery state')
+  assert.equal(resetCase.page.data.selectedCamera.model, 'TV-6124HK')
+  assert.equal(resetCase.page.data.result, null,
+    'reset must leave the calculator empty until new numeric values are entered')
+  for (const field of [
+    'groundWidthText', 'groundDepthText', 'subjectHeightText',
+    'planeWidthText', 'planeHeightText', 'planeBottomHeightText', 'fixedCameraHeightText',
+    'customHorizontalFovText', 'customVerticalFovText', 'customSensorWidthText',
+    'customSensorHeightText', 'customFocalLengthText',
+  ]) assert.equal(resetCase.page.data[field], '', `${field} remains blank after reset`)
+  assert.deepEqual(resetCase.env.storage.get(CAMERA_PREFERENCE_KEY), resetCase.page.getPreferences(),
+    'reset persists the blank numeric values and default library selections')
+
+  const invalidLegacyPreferences = { ...legacyPreferences, groundWidthText: 'invalid' }
+  const invalidRecovery = createPageFromPreferences(invalidLegacyPreferences)
+  invalidRecovery.page.openCameraSelector()
+  const invalidLibraryCamera = invalidRecovery.page.data.selectorItems.find((item) => item.model === 'TV-6124HK')
+  invalidRecovery.page.selectCamera({ currentTarget: { dataset: { index: invalidLibraryCamera.index } } })
+  invalidRecovery.env.flushNextTicks()
+  assert.equal(invalidRecovery.page.data.legacyCustomUnsupported, false,
+    'an explicit library choice must leave the legacy custom recovery state even when the active inputs need correction')
+  assert.equal(invalidRecovery.page.data.result, null,
+    'invalid inputs after explicit recovery must remain blocked instead of producing a synthetic legacy result')
+  assert.equal(invalidRecovery.env.storage.get(CAMERA_PREFERENCE_KEY).sourceMode, 'library',
+    'explicit recovery with invalid inputs must persist the deliberate switch to library mode')
+  assert.equal(invalidRecovery.env.storage.get(CAMERA_PREFERENCE_KEY).groundWidthText, 'invalid',
+    'recovery must preserve the invalid input for correction instead of silently substituting a result')
 }
 
 function testReportInvalidation() {
@@ -131,7 +227,7 @@ function testReportInvalidation() {
   assert.equal(generating.page.data.resultReportImagePath, '')
 }
 
-function testSelectorAndHorizontalOnlyCopy() {
+function testSelectorAndHorizontalOnlyResult() {
   const { env, page } = createPage()
   page.openCameraSelector()
   const selectorItem = page.data.selectorItems.find((item) => item.model === 'TS-0650JSM')
@@ -154,56 +250,36 @@ function testSelectorAndHorizontalOnlyCopy() {
   assert.equal(page.data.result.horizontalOnly, true, 'a catalog view without vertical FOV should remain horizontal-only')
   assert(page.data.selectedOpticsLines[0].includes('固定视角'))
   assert(page.data.selectedOpticsLines[0].includes('垂直 未提供'))
-  assert(wxml.includes('垂直未校核 · 仅水平预估'), 'the main result should visibly flag missing vertical verification')
-  assert(wxml.includes("result.horizontalOnly ? '蓝色范围只代表水平覆盖，垂直画面尚未校核。'"), 'horizontal-only preview text must not claim complete framing')
-
-  const summary = page.getInstallSummary()
-  assert(summary.length < 350, 'installation summary should remain compact')
-  assert(summary.includes('TS-0650JSM') && summary.includes('教师全景'))
-  assert(summary.includes('镜头距拍摄区前沿（水平）'))
-  assert(summary.includes('垂直未校核') && summary.includes('说明书或样机验证'))
-  assert(!summary.includes('tan(') && !summary.includes('代入'), 'installation summary must not include formulas')
-  assert(wxml.includes('input-wrap-error') && wxml.includes('class="input-error"'), 'active input errors should have field-local styling')
+  const resultText = page.getResultText()
+  assert(resultText.includes('垂直未校核') && resultText.includes('最终安装应通过样机画面复核'),
+    'saved result semantics must retain the horizontal-only limitation')
+  assert(page.data.result.distanceReferenceText.includes('实际前沿（水平）'),
+    'the live graph result must retain its actual front-edge horizontal distance reference')
+  assert(resultText.includes(`摄像机距区域前沿：${page.data.result.cameraSetbackMeters} m`),
+    'saved result semantics must retain the actual front-edge distance and calculated value')
 }
 
-function testSummaryFlushAndHeightBasis() {
+function testInputFlushAndHeightBasis() {
   const { env, page } = createPage()
-  const oldDistance = page.data.result.primaryDistanceMeters
-  const originalSetData = page.setData
-  let deferredResultPatch
-  page.setData = (patch, callback) => {
-    if (patch?.result?.primaryDistanceMeters !== undefined) {
-      deferredResultPatch = { patch, callback }
-      return
-    }
-    originalSetData(patch, callback)
-  }
   input(page, 'groundWidthText', '8')
-  page.copyInstallSummary()
-  const copied = env.effects.clipboard.at(-1)
-  assert(copied.includes('地面区 8×4 m'), 'copy must flush the latest input before formatting the summary')
-  assert.notEqual(deferredResultPatch?.patch.result.primaryDistanceMeters, oldDistance, 'the deferred result should reflect the changed geometry')
-  assert.notEqual(copied, page.getInstallSummary(page.data.result), 'copy must use the new calculation instead of the displayed old result')
-  assert(deferredResultPatch, 'the test should hold the asynchronous result publication')
-  page.setData = originalSetData
-  originalSetData(deferredResultPatch.patch, deferredResultPatch.callback)
-  env.flushNextTicks()
+  blur(env, page)
+  assert.equal(page.data.result.widthMeters, 8, 'blur must publish the latest valid geometry')
+  assert.notEqual(page.data.result.primaryDistanceMeters, 4.83,
+    'the visible calculation must refresh from the latest width without a copy action')
 
   page.onHeightModeTap({ currentTarget: { dataset: { index: 1 } } })
   env.flushNextTicks()
-  const fixedSummary = page.getInstallSummary()
-  assert(fixedSummary.includes('已有镜头中心高'))
-  assert(fixedSummary.includes('沿用已填写高度'))
+  assert.equal(page.data.result.heightMode, 'fixed')
+  assert.equal(page.data.result.cameraHeightMeters, Number(page.data.fixedCameraHeightText))
   page.onHeightModeTap({ currentTarget: { dataset: { index: 0 } } })
   env.flushNextTicks()
-  const automaticSummary = page.getInstallSummary()
-  assert(automaticSummary.includes('最高点 + 0.5 m，且不低于 1.5 m'))
-  assert(automaticSummary.length < 350)
+  assert.equal(page.data.result.heightMode, 'auto')
+  assert.equal(page.data.result.cameraHeightMeters, 2.3,
+    'automatic height baseline must remain unchanged after changing modes')
 }
 
-function testStructuredOperationIsolation() {
+function testStructuredOperationIsUnsupportedWithoutCameraBinding() {
   const { env, page } = createPage()
-  chooseSource(env, page, 1)
   const facts = {
     horizontalFov: 60,
     sceneMode: 'ground',
@@ -213,44 +289,42 @@ function testStructuredOperationIsolation() {
     heightMode: 'auto',
     marginPercent: 10,
   }
-  page.beginStructuredOperation(facts, 'full-area')
+  const savedPreferences = env.clone(env.storage.get(CAMERA_PREFERENCE_KEY))
+  const preferenceWriteCount = env.effects.storage.length
+  const unsupported = page.beginStructuredOperation(facts, 'full-area')
   env.flushNextTicks()
-  assert(page.getOperationSnapshot()?.active)
-  assert.equal(page.data.result, null, 'unconfirmed structured operations should have no result')
-  assert.deepEqual(page.data.inputErrors, {}, 'manual field errors must not leak into a structured operation')
-  const beforeBlockedCopy = env.effects.clipboard.length
-  page.copyInstallSummary()
-  assert.equal(env.effects.clipboard.length, beforeBlockedCopy, 'unconfirmed structured operations must not copy a summary')
+  assert.equal(unsupported.status, 'unsupported')
+  assert.equal(unsupported.active, false)
+  assert.equal(page.data.operationActive, false,
+    'a structured camera operation without a bound library model/view must remain inactive')
+  assert.equal(page.getOperationSnapshot(), null,
+    'unsupported structured facts must not create a camera operation snapshot')
+  assert.equal(page.data.result, null,
+    'unsupported structured facts must clear any prior result rather than expose a library or synthetic result')
+  assert.match(page.data.operationUnsupportedMessage, /仅支持库内摄像机/)
 
-  page.confirmOperationField({ currentTarget: { dataset: { field: 'verticalFov' } } })
-  assert.equal(env.pending.modals.length, 1, 'missing vertical angle should use the existing confirmation boundary')
-  env.answerModal(0, true)
-  env.flushNextTicks()
-  assert(page.data.result && !page.data.result.horizontalOnly, 'confirmed structured fields should calculate as before')
-  const beforeConfirmedCopy = env.effects.clipboard.length
-  page.copyInstallSummary()
-  assert.equal(env.effects.clipboard.length, beforeConfirmedCopy + 1, 'a current confirmed structured result may copy its summary')
-
-  input(page, 'customVerticalFovText', '')
-  env.flushNextTicks()
-  assert.equal(page.data.result, null, 'editing a confirmed structured angle must invalidate its result')
-  assert.deepEqual(page.data.inputErrors, {}, 'manual input errors must not alter structured confirmation state')
-  const beforeInvalidCopy = env.effects.clipboard.length
-  page.copyInstallSummary()
-  assert.equal(env.effects.clipboard.length, beforeInvalidCopy, 'an invalidated structured result must not copy')
-  page.endOperation()
-  env.flushNextTicks()
-  assert(page.data.inputErrors.customVerticalFovText, 'ending the operation should validate the pending blank manual angle')
-  assert.equal(page.data.result, null)
+  const rejectedCommit = page.commitStructuredCalculatedState({ state: facts })
+  assert.equal(rejectedCommit, null,
+    'the camera structured-commit fallback must reject an operation that was not explicitly bound to a library camera/view')
+  assert.equal(page.data.result, null,
+    'a rejected structured commit must not publish a synthetic result')
+  assert.match(page.data.operationUnsupportedMessage, /仅支持库内摄像机/)
+  assert.deepEqual(env.storage.get(CAMERA_PREFERENCE_KEY), savedPreferences,
+    'unsupported structured operations must not overwrite the library preferences')
+  assert.equal(env.effects.storage.length, preferenceWriteCount,
+    'unsupported structured operations must not write preferences')
+  assert.equal(page.getRecordPayload(), null,
+    'a rejected structured operation must not expose a record payload without a result')
 }
 
 function run() {
   testGeometryAndActiveValidation()
+  testLegacyCustomPreferenceRequiresExplicitRecovery()
   testReportInvalidation()
-  testSelectorAndHorizontalOnlyCopy()
-  testSummaryFlushAndHeightBasis()
-  testStructuredOperationIsolation()
-  return { cameraFirstUse: 'passed', validation: 'passed', summary: 'passed', structuredIsolation: 'passed' }
+  testSelectorAndHorizontalOnlyResult()
+  testInputFlushAndHeightBasis()
+  testStructuredOperationIsUnsupportedWithoutCameraBinding()
+  return { cameraFirstUse: 'passed', validation: 'passed', legacyCustomRecovery: 'passed', horizontalOnly: 'passed', structuredOperationUnsupported: 'passed' }
 }
 
 if (require.main === module) process.stdout.write(`${JSON.stringify(run(), null, 2)}\n`)

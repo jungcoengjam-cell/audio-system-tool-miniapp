@@ -1,0 +1,48 @@
+<scroll-view class="home-scroll favorite-detail-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+  <view class="home-page favorite-detail-page">
+    <view class="home-header favorite-detail-header">
+      <view class="favorite-detail-heading">{{favorite.title || favorite.moduleLabel || '收藏详情'}}</view>
+      <button class="favorite-manage-button" hover-class="favorite-control-pressed" bindtap="openManageMenu">管理</button>
+    </view>
+
+    <view wx:if="{{workspaceError}}" class="home-panel favorite-detail-error">
+      <view class="home-empty-state-title">{{workspaceError}}</view>
+      <button class="home-secondary-button" bindtap="retry">重试</button>
+    </view>
+
+    <block wx:if="{{favorite}}">
+      <view class="home-panel favorite-detail-card">
+        <view class="favorite-detail-module">{{favorite.moduleLabel}} · {{favorite.trustLabel}}</view>
+        <view class="favorite-detail-summary">{{favorite.summary || '未保存摘要'}}</view>
+        <view class="favorite-detail-date">创建于 {{favorite.createdText}}</view>
+        <view class="favorite-detail-date">更新于 {{favorite.updatedText}}</view>
+        <view wx:if="{{projectNamesText}}" class="favorite-detail-origin">来源项目：{{projectNamesText}}</view>
+      </view>
+
+      <view class="home-panel favorite-data-panel">
+        <view class="favorite-section-title">保存时的完整参数</view>
+        <view wx:for="{{favorite.parameterRows}}" wx:key="index" class="favorite-parameter-row">
+          <view class="favorite-parameter-label">{{item.label}}</view>
+          <view class="favorite-parameter-value">{{item.value}}</view>
+        </view>
+        <view class="favorite-data-actions">
+          <button class="home-secondary-button favorite-small-button" hover-class="favorite-control-pressed" bindtap="copyParameters">复制原始参数</button>
+          <button class="favorite-raw-toggle" hover-class="favorite-control-pressed" bindtap="toggleRawParameters">{{rawParametersVisible ? '收起原始字段' : '查看原始字段'}}</button>
+        </view>
+        <view wx:if="{{rawParametersVisible}}" class="favorite-raw-value">{{favorite.parametersText}}</view>
+      </view>
+
+      <view class="home-panel favorite-data-panel">
+        <view class="favorite-section-title">保存时的计算结果</view>
+        <view class="favorite-raw-value">{{favorite.resultText}}</view>
+      </view>
+
+      <view class="favorite-detail-actions">
+        <view wx:if="{{favorite.loadReason}}" class="favorite-load-reason">{{favorite.loadReason}}</view>
+        <button wx:if="{{favorite.canLoad}}" class="home-primary-button favorite-load-button" hover-class="favorite-control-pressed" bindtap="openWorkingCopy">载入独立工作副本</button>
+        <view class="favorite-copy-note">重新计算会使用当前工具实现。收藏快照保持不变，保存到项目需要在工具中明确选择。</view>
+      </view>
+    </block>
+    <view class="home-bottom-space"></view>
+  </view>
+</scroll-view>

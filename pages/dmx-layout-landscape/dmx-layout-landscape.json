@@ -1,4 +1,5 @@
 {
   "navigationBarTitleText": "横屏灯具布置",
+  "navigationStyle": "custom",
   "pageOrientation": "landscape"
 }

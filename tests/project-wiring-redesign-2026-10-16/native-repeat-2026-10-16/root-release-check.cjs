@@ -1,0 +1,11 @@
+const fs = require('node:fs')
+const path = require('node:path')
+const { spawnSync } = require('node:child_process')
+const root = path.resolve(__dirname, '../../..')
+const startedAt = new Date().toISOString()
+const run = spawnSync(process.execPath, ['tests/release-check.js'], { cwd: root, encoding: 'utf8', timeout: 120000 })
+const output = (run.stdout || '') + (run.stderr || '') + (run.error ? '\n' + run.error.message : '')
+fs.writeFileSync(path.join(__dirname, 'release-check.txt'), output)
+fs.writeFileSync(path.join(__dirname, 'release-check.json'), JSON.stringify({ startedAt, finishedAt: new Date().toISOString(), args: ['tests/release-check.js'], exitCode: run.status, signal: run.signal, error: run.error && run.error.message, log: 'release-check.txt', nativeVerification: false }, null, 2) + '\n')
+console.log(output)
+process.exitCode = run.status === 0 ? 0 : 1

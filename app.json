@@ -1,17 +1,20 @@
 {
   "pages": [
-    "pages/index/index",
     "pages/tools/tools",
     "pages/projects/projects",
+    "pages/index/index",
+    "pages/settings/settings",
+    "pages/basis/detail",
+    "pages/projects/favorite-detail",
+    "pages/projects/recovery",
+    "pages/records/report",
     "pages/limiter/limiter",
     "pages/spl/spl",
     "pages/cable/cable",
-    "pages/venue/venue",
     "pages/camera/camera",
     "pages/led-screen/led-screen",
     "pages/gain-structure/gain-structure",
     "pages/dmx-layout/dmx-layout",
-    "pages/dmx-layout-landscape/dmx-layout-landscape",
     "pages/products/library",
     "pages/products/detail",
     "pages/records/project",
@@ -29,13 +32,15 @@
     {
       "root": "pages/audio-wiring",
       "pages": [
-        "index"
+        "index",
+        "report-bridge"
       ]
     },
     {
       "root": "pages/project-wiring",
       "pages": [
-        "index"
+        "index",
+        "report-bridge"
       ]
     },
     {
@@ -65,12 +70,6 @@
     "position": "bottom",
     "list": [
       {
-        "pagePath": "pages/index/index",
-        "text": "探索",
-        "iconPath": "@exploreIcon",
-        "selectedIconPath": "@exploreSelectedIcon"
-      },
-      {
         "pagePath": "pages/tools/tools",
         "text": "工具",
         "iconPath": "@toolsIcon",
@@ -81,6 +80,12 @@
         "text": "项目",
         "iconPath": "@projectsIcon",
         "selectedIconPath": "@projectsSelectedIcon"
+      },
+      {
+        "pagePath": "pages/index/index",
+        "text": "依据",
+        "iconPath": "@basisIcon",
+        "selectedIconPath": "@basisSelectedIcon"
       }
     ]
   },

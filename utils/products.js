@@ -25,7 +25,6 @@ const PRODUCT_FILTERS = {
     { key: 'spl', label: '可用于声压估算' },
     { key: 'maximumSpl', label: '有最大声压级' },
     { key: 'coverage', label: '有覆盖角' },
-    { key: 'venueProfile', label: '会议室候选已复核' },
   ],
   camera: [
     { key: 'all', label: '全部能力' },
@@ -38,7 +37,6 @@ const PRODUCT_FILTERS = {
 }
 
 let speakerSpecifications = null
-let recommendationProfiles = null
 let cameraFovApi = null
 
 function getSourceItems(type) {
@@ -67,18 +65,6 @@ function getSpeakerSpecifications() {
   return speakerSpecifications
 }
 
-function getRecommendationProfiles() {
-  if (recommendationProfiles) return recommendationProfiles
-  const { mainSpeakers, fillSpeakers } = require('../data/speaker-recommendation-profiles')
-  recommendationProfiles = new Map()
-  ;[...mainSpeakers, ...fillSpeakers].forEach((item) => {
-    const profiles = recommendationProfiles.get(item.model) || []
-    profiles.push(item)
-    recommendationProfiles.set(item.model, profiles)
-  })
-  return recommendationProfiles
-}
-
 function getCameraFovApi() {
   if (!cameraFovApi) cameraFovApi = require('./camera-fov')
   return cameraFovApi
@@ -87,19 +73,6 @@ function getCameraFovApi() {
 function getCategory(model) {
   const prefix = model.replace(/\d.*$/, '').replace(/-$/, '')
   return `${prefix || '其他'}系列`
-}
-
-function getRecommendationProfile(model) {
-  const profiles = getRecommendationProfiles().get(model) || []
-  if (!profiles.length) return null
-
-  const primary = profiles[0]
-  const roles = [...new Set(profiles.map((item) => item.role))]
-  return {
-    ...primary,
-    roles,
-    roleText: roles.join('、'),
-  }
 }
 
 function getProduct(type, model) {
@@ -122,7 +95,6 @@ function getProduct(type, model) {
     }[type],
     category: ['camera', 'lighting'].includes(type) ? item.category : getCategory(item.model),
     specification,
-    profile: type === 'speaker' ? getRecommendationProfile(item.model) : null,
   }
   PRODUCT_CACHE[type].set(model, product)
   return product
@@ -144,7 +116,6 @@ function getProductList(type) {
           ? '设备资料已录入'
           : dmxAddressable ? `${product.channelModes.length} 种 DMX 通道模式` : '非 DMX 控制',
         statusKey: product.categoryKey !== 'fixture' || dmxAddressable ? 'ready' : 'partial',
-        hasProfile: false,
         capabilities: { dmxAddress: dmxAddressable },
         abilityLabels: dmxAddressable ? ['DMX 自动编址'] : ['资料参考'],
         verifiedType: product.name,
@@ -171,7 +142,6 @@ function getProductList(type) {
             ? '仅支持水平覆盖预估'
           : calculableViewCount < viewCount ? `${calculableViewCount}/${viewCount} 组镜头可计算` : '厂家双轴视场角完整',
         statusKey: calculableViewCount === viewCount ? 'ready' : 'partial',
-        hasProfile: false,
         capabilities: { cameraFov: horizontalViewCount > 0 },
         abilityLabels: calculableViewCount ? ['安装计算'] : ['水平覆盖预估'],
         verifiedType: mountLabel,
@@ -181,15 +151,13 @@ function getProductList(type) {
     const hasSensitivity = Number.isFinite(product.sensitivityDb)
     const isSplitBand = Boolean(product.bands)
     const hasMaximumSpl = Number.isFinite(product.maximumSplDb)
-      || Number.isFinite(product.profile?.maximumSplDb)
-    const hasCoverage = Number.isFinite(product.horizontalCoverageDeg || product.profile?.horizontalCoverageDeg)
-      && Boolean(product.verticalCoverageDeg || product.verticalCoverage || product.profile?.verticalCoverageDeg)
+    const hasCoverage = Number.isFinite(product.horizontalCoverageDeg)
+      && Boolean(product.verticalCoverageDeg || product.verticalCoverage)
     const capabilities = {
       limiter: isAmplifier || (!product.calculationDisabled && Number.isFinite(product.ratedPower)),
       spl: !isAmplifier && !product.calculationDisabled && hasSensitivity,
       maximumSpl: !isAmplifier && hasMaximumSpl,
       coverage: !isAmplifier && hasCoverage,
-      venueProfile: !isAmplifier && Boolean(product.profile),
     }
 
     return {
@@ -201,15 +169,13 @@ function getProductList(type) {
         : `${product.ratedPower} W · ${product.impedance} Ω`,
       statusLabel: isSplitBand ? '分通道参数已录入' : isAmplifier || hasSensitivity ? '基础参数可用' : '灵敏度待补充',
       statusKey: isAmplifier || hasSensitivity || isSplitBand ? 'ready' : 'partial',
-      hasProfile: Boolean(product.profile),
       capabilities,
       abilityLabels: [
         ...(capabilities.limiter ? ['限幅器'] : []),
         ...(capabilities.spl ? ['声压估算'] : []),
         ...(capabilities.coverage ? ['覆盖角'] : []),
-        ...(capabilities.venueProfile ? ['会议室候选'] : []),
       ],
-      verifiedType: product.profile?.type || '',
+      verifiedType: '',
     }
   })
   PRODUCT_LIST_CACHE[type] = products
@@ -304,10 +270,9 @@ function buildProductComparison(type, models) {
         ['标称阻抗', (item) => formatProductValue(item.impedance, ' Ω')],
         ['最低频率', (item) => formatProductValue(item.minimumFrequency, ' Hz')],
         ['灵敏度', (item) => formatProductValue(item.sensitivityDb, ' dB')],
-        ['最大声压级', (item) => formatProductValue(item.maximumSplDb || item.profile?.maximumSplDb, ' dB SPL')],
-        ['水平覆盖', (item) => formatProductValue(item.horizontalCoverageDeg || item.profile?.horizontalCoverageDeg, '°')],
-        ['垂直覆盖', (item) => formatProductValue(item.verticalCoverageDeg || item.verticalCoverage || item.profile?.verticalCoverageDeg, typeof (item.verticalCoverageDeg || item.profile?.verticalCoverageDeg) === 'number' ? '°' : '')],
-        ['已复核用途', (item) => item.profile ? `${item.profile.roleText} · ${item.profile.type}` : '未专门复核'],
+        ['最大声压级', (item) => formatProductValue(item.maximumSplDb, ' dB SPL')],
+        ['水平覆盖', (item) => formatProductValue(item.horizontalCoverageDeg, '°')],
+        ['垂直覆盖', (item) => formatProductValue(item.verticalCoverageDeg || item.verticalCoverage, typeof item.verticalCoverageDeg === 'number' ? '°' : '')],
     ]
   }
 
@@ -359,16 +324,12 @@ function buildAmplifierDetail(product) {
 }
 
 function buildSpeakerDetail(product) {
-  const profile = product.profile
   const isSplitBand = Boolean(product.bands && Object.keys(product.bands).length)
   const hasMaximumSpl = Number.isFinite(product.maximumSplDb)
-    || Number.isFinite(profile && profile.maximumSplDb)
   const horizontalCoverageDeg = product.horizontalCoverageDeg
-    || (profile && profile.horizontalCoverageDeg)
   const verticalCoverage = Number.isFinite(product.verticalCoverageDeg)
     ? `${product.verticalCoverageDeg}°`
     : product.verticalCoverage
-      || (profile && `${profile.verticalCoverageDeg}°`)
   const hasCoverage = Number.isFinite(horizontalCoverageDeg) && Boolean(verticalCoverage)
   const missingParameters = []
 
@@ -394,10 +355,6 @@ function buildSpeakerDetail(product) {
     }
   })
 
-  const maximumSplDb = Number.isFinite(product.maximumSplDb)
-    ? product.maximumSplDb
-    : profile && profile.maximumSplDb
-
   const modules = [
     {
       key: 'limiter',
@@ -415,15 +372,6 @@ function buildSpeakerDetail(product) {
     },
   ]
 
-  if (profile) {
-    modules.push({
-      key: 'venue',
-      label: '会议室扩声预估',
-      description: `已复核为${profile.roleText}候选型号`,
-      actionable: false,
-    })
-  }
-
   return {
     ...product,
     statusLabel: isSplitBand ? '分通道参数已录入' : missingParameters.length ? '基础参数可用' : '资料完整',
@@ -440,8 +388,8 @@ function buildSpeakerDetail(product) {
       ? `${product.sensitivityDb}${Number.isFinite(product.sensitivityToleranceDb) ? ` ±${product.sensitivityToleranceDb}` : ''} dB`
       : '待补充',
     hasCoverageData: hasMaximumSpl || hasCoverage,
-    maximumSplText: Number.isFinite(maximumSplDb)
-      ? `${maximumSplDb}${Number.isFinite(product.maximumSplToleranceDb) ? ` ±${product.maximumSplToleranceDb}` : ''} dB SPL`
+    maximumSplText: Number.isFinite(product.maximumSplDb)
+      ? `${product.maximumSplDb}${Number.isFinite(product.maximumSplToleranceDb) ? ` ±${product.maximumSplToleranceDb}` : ''} dB SPL`
       : '说明书未提供',
     maximumSplLabel: Number.isFinite(product.ratedMaximumSplDb)
       ? `峰值；额定 ${product.ratedMaximumSplDb} dB SPL`

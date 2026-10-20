@@ -175,9 +175,18 @@ function findReportCard(report, predicate, label) {
 
 function assertGainReportLayout(report) {
   const badge = findReportCard(report, (card) => card.width === 260 && card.fill === '#eef6ff', 'module badge')
+  assert.strictEqual(badge.x, 44, 'module badge must align with the report left edge')
   const badgeItems = itemsWithinCard(report, badge)
   assert(badgeItems.length > 0, 'module badge must include its title')
-  badgeItems.forEach((item) => assertTextInsideCard(item, badge, 32, 16, 'module title'))
+  badgeItems.forEach((item) => {
+    const bounds = getItemBounds(item)
+    assert.strictEqual(item.align, 'left', 'module title must be left aligned')
+    assert.strictEqual(item.x, badge.x + 16, 'module title must use the badge left inset')
+    assert(bounds.left >= badge.x + 15 && bounds.right <= badge.x + badge.width - 15,
+      'module title must fit the badge text column')
+    assert(bounds.top >= badge.y - 1 && bounds.top + 32 <= badge.y + badge.height + 1,
+      'module title line box must fit the badge')
+  })
   const badgeFirstTop = Math.min(...badgeItems.map((item) => getItemBounds(item).top))
   const badgeLastBottom = Math.max(...badgeItems.map((item) => getItemBounds(item).top + 32))
   assert(Math.abs((badgeFirstTop - badge.y) - (badge.y + badge.height - badgeLastBottom)) <= 1, 'module title block must be vertically centered')
@@ -205,26 +214,69 @@ function assertGainReportLayout(report) {
   const execution = findReportCard(report, (card) => card.width === 662 && card.fill === '#ffffff', 'execution')
   const executionItems = itemsWithinCard(report, execution)
   assert(executionItems.length >= 8, 'execution card must retain four label/value groups')
+  assert.strictEqual(execution.width, 662, 'execution card must retain its content width')
   executionItems.forEach((item) => {
     assert.strictEqual(item.size, 26, 'execution headings must be at least as large as values')
     assert(item.weight === 650 || item.weight === 500, 'execution label/value weight hierarchy must remain clear')
-    assertTextInsideCard(item, execution, item.weight === 650 ? 34 : 36, 24, 'execution text')
+    const labelColumn = item.weight === 650
+    const expectedX = labelColumn ? 68 : 312
+    const columnWidth = labelColumn ? 228 : 370
+    const bounds = getItemBounds(item)
+    assert.strictEqual(item.align, 'left', 'execution text must be left aligned')
+    assert.strictEqual(item.x, expectedX, 'execution text must use its aligned column start')
+    assert(item.width <= columnWidth + 0.01, 'execution text line must fit its column width')
+    assert(bounds.left >= expectedX - 1 && bounds.right <= expectedX + columnWidth + 1,
+      'execution text must stay within its column bounds')
+    assert(bounds.top >= execution.y - 1 && bounds.top + 36 <= execution.y + execution.height + 1,
+      'execution line box must fit its card')
   })
   const executionLabels = executionItems.filter((item) => item.weight === 650)
   const executionValues = executionItems.filter((item) => item.weight === 500)
-  assert.strictEqual(executionLabels.length, 4, 'execution card must show four centered subheadings')
-  assert(executionValues.length >= 4, 'each execution heading must have visible content')
-  const firstExecutionTop = getItemBounds(executionItems[0]).top
-  const lastExecutionItem = executionItems[executionItems.length - 1]
-  const lastExecutionBottom = getItemBounds(lastExecutionItem).top + 36
-  assert(Math.abs(firstExecutionTop - execution.y - 14) <= 1 && Math.abs(execution.y + execution.height - lastExecutionBottom - 14) <= 1, 'execution groups must keep balanced vertical padding')
+  assert.strictEqual(executionLabels.length, 4, 'execution card must retain four labels')
+  assert(executionValues.length >= 4, 'each execution label must have visible content')
+  const executionRows = []
+  executionItems.forEach((item) => {
+    if (item.weight === 650) {
+      if (!executionRows.length || executionRows[executionRows.length - 1].values.length > 0) {
+        executionRows.push({ labels: [], values: [] })
+      }
+      executionRows[executionRows.length - 1].labels.push(item)
+    } else {
+      assert(executionRows.length > 0, 'execution value must follow its label')
+      executionRows[executionRows.length - 1].values.push(item)
+    }
+  })
+  assert.strictEqual(executionRows.length, 4, 'execution card must contain four label/value rows')
+  let rowTop = execution.y
+  executionRows.forEach((row) => {
+    assert(row.labels.length > 0 && row.values.length > 0, 'each execution row must contain both columns')
+    const labelTop = getItemBounds(row.labels[0]).top
+    const valueTop = getItemBounds(row.values[0]).top
+    assert(Math.abs(labelTop - rowTop - 14) <= 1, 'execution rows must keep 14px top padding')
+    assert(Math.abs(valueTop - labelTop) <= 1, 'execution label and value must share their first baseline')
+    row.labels.forEach((item, index) => {
+      assert(Math.abs(getItemBounds(item).top - (rowTop + 14 + (index * 36))) <= 1,
+        'wrapped execution labels must keep the shared 36px line height')
+    })
+    row.values.forEach((item, index) => {
+      assert(Math.abs(getItemBounds(item).top - (rowTop + 14 + (index * 36))) <= 1,
+        'wrapped execution values must keep the shared 36px line height')
+    })
+    const rowLineCount = Math.max(row.labels.length, row.values.length)
+    rowTop += (rowLineCount * 36) + 28
+  })
+  assert(Math.abs(execution.y + execution.height - rowTop) <= 1, 'execution rows must use the tallest column plus 28px total padding')
+  const lastRow = executionRows[executionRows.length - 1]
+  const lastRowLineCount = Math.max(lastRow.labels.length, lastRow.values.length)
+  const lastRowBottom = getItemBounds(lastRow.labels[0]).top + (lastRowLineCount * 36)
+  assert(Math.abs(execution.y + execution.height - lastRowBottom - 14) <= 1, 'execution rows must keep 14px bottom padding')
 
   const sectionTitles = report.drawnItems.filter((item) => item.size === 32)
   assert(sectionTitles.length > 0, 'execution section title must remain visible')
   sectionTitles.forEach((item) => {
     const bounds = getItemBounds(item)
-    assert.strictEqual(item.align, 'center', 'section title must be centered')
-    assert(Math.abs(item.x - 375) < 0.01 && bounds.left >= 43 && bounds.right <= 707, 'section title must fit the content bounds')
+    assert.strictEqual(item.align, 'left', 'section title must be left aligned')
+    assert(Math.abs(item.x - 44) < 0.01 && bounds.left >= 43 && bounds.right <= 707, 'section title must align with the left content bounds')
   })
 
   const warning = report.cardRects.find((card) => card.width === 662 && card.fill === '#fff4e5' && card.y > execution.y + execution.height)
@@ -533,8 +585,8 @@ assert.match(wxss, /\.result-details-scroll\{[^}]*height:0;[^}]*min-height:0;[^}
   'valid result details must use their available space and scroll when needed')
 assert.doesNotMatch(wxss, /\.result-details-scroll\{[^}]*height:150px/,
   'valid result details must not keep a fixed 150px viewport')
-assert.match(wxss, /\.result-primary\{[^}]*align-items:center;[^}]*padding:0 54px 0 6px/,
-  'primary result must align with the facts while keeping clear of the action rail')
+assert.match(wxss, /\.result-primary\{[^}]*align-items:center;[^}]*padding:0 44px/,
+  'primary result must retain symmetric gutters around the whole-card center')
 assert.match(wxss, /\.result-heading\{[^}]*padding-right:52px/,
   'the heading must reserve a safe gutter beside the vertical action rail')
 assert.match(wxss, /\.result-fact-value\{[^}]*font-size:18px/,
@@ -572,12 +624,25 @@ assert.match(wxss, /\.reset-error\{[^}]*padding-right:52px/,
   'reset storage errors must stay clear of the vertical action rail')
 assert.doesNotMatch(wxml, /class="editor-caption"/,
   'the redundant device-manual caption must be removed')
-assert.match(wxss, /\.action-button\.action-button\[disabled\]\{[^}]*opacity:1/,
-  'dark disabled actions must retain a visible border instead of fading away')
-assert.match(wxss, /\.action-button\.action-button\[aria-pressed="true"\]/,
-  'the selected favorite action must have a persistent pressed state')
-assert.match(wxss, /\.action-button\.action-button:active\{[^}]*background:#294a66/,
-  'the pressed interaction state must remain distinguishable from favorite selection')
+assert.match(wxss, /\.action-button\.action-button\[disabled\]\{[^}]*opacity:\.34/,
+  'disabled result actions must match the limiter opacity')
+assert.match(wxml, /aria-pressed="\{\{currentFavorite\}\}"/,
+  'the favorite action must retain its accessible pressed state')
+assert(wxml.includes("class=\"action-icon icon-bookmark {{currentFavorite ? 'icon-bookmark-active' : ''}}\""),
+  'the favorite icon must retain its base class in both states')
+assert.match(wxss, /\.icon-bookmark-active\{background-color:var\(--theme-accent\)/,
+  'the filled favorite state must match the limiter icon')
+assert.match(wxss, /\.action-button\.action-button:active\{[^}]*background:var\(--theme-accent-soft\);opacity:\.72/,
+  'the pressed feedback must match the limiter style')
+assert.match(wxss, /\.result-details-scroll\{[^}]*padding:0 44px/,
+  'secondary results must retain symmetric gutters around the whole-card center')
+assert.match(wxss, /\.action-rail\{[^}]*top:calc\(8px - var\(--gain-page-top-gap\)\);right:12px/,
+  'normal action coordinates must match limiter without changing page padding')
+assert.match(wxss, /@media\(max-height:600px\)\{[^}]*\.action-rail\{top:calc\(1px - var\(--gain-page-top-gap\)\);right:6px;gap:1px/,
+  'short-screen action coordinates must match limiter')
+for (const alias of ['--theme-surface:var(--tv)', '--theme-text-secondary:var(--ts)', '--theme-divider:var(--td)', '--theme-accent-text:var(--ta)', '--theme-accent-soft:var(--as)']) {
+  assert(wxss.includes(alias), 'action rail must reuse global theme alias ' + alias)
+}
 assert.doesNotMatch(wxss, /\.page-root\{height:auto;overflow-y:auto\}/,
   'short screens must not become whole-page scrolling layouts')
 assert.match(pageSource, /onTargetPeakTap\(event\)[\s\S]*?setSelectionAndCalculate\('targetPeakIndex', index\)/,

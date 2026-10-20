@@ -8,14 +8,51 @@ const reportBuilder = require('../pages/project-wiring/report')
 const pageModulePath = require.resolve('../pages/project-wiring/index')
 const recordsModulePath = require.resolve('../utils/records')
 const reportModulePath = require.resolve('../pages/project-wiring/report')
+const workspaceModulePath = require.resolve('../pages/project-wiring/workspace-ui')
 const oldPage = global.Page
 const oldWx = global.wx
 const oldPageModule = require.cache[pageModulePath]
 const oldRecordsModule = require.cache[recordsModulePath]
 const oldReportModule = require.cache[reportModulePath]
+const oldWorkspaceModule = require.cache[workspaceModulePath]
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value))
+}
+
+function installControlledTimers() {
+  const originalSetTimeout = global.setTimeout
+  const originalClearTimeout = global.clearTimeout
+  const timers = []
+  let now = 0
+  let nextId = 1
+  global.setTimeout = (callback, delay = 0, ...args) => {
+    const timer = { id: nextId++, callback, args, due: now + Math.max(0, Number(delay) || 0), active: true }
+    timers.push(timer)
+    return timer.id
+  }
+  global.clearTimeout = (id) => {
+    const timer = timers.find((item) => item.id === id)
+    if (timer) timer.active = false
+  }
+  return {
+    advanceBy(milliseconds) {
+      const target = now + Math.max(0, Number(milliseconds) || 0)
+      while (true) {
+        const timer = timers.filter((item) => item.active && item.due <= target)
+          .sort((first, second) => first.due - second.due || first.id - second.id)[0]
+        if (!timer) break
+        now = timer.due
+        timer.active = false
+        timer.callback(...timer.args)
+      }
+      now = target
+    },
+    restore() {
+      global.setTimeout = originalSetTimeout
+      global.clearTimeout = originalClearTimeout
+    },
+  }
 }
 
 function mockModule(modulePath, exports) {
@@ -33,7 +70,6 @@ function createRuntime() {
     activeProjectId: 'project-A',
     projectStores: null,
     readIds: [],
-    activeReads: 0,
     projectListReads: 0,
     createProjectCalls: [],
     failCreateProject: false,
@@ -102,12 +138,8 @@ function createRuntime() {
         project: clone(store.project),
         schedule: clone(result.schedule),
         lineIds: result.lineIds,
+        ...(result.deviceIds ? { deviceIds: result.deviceIds } : {}),
       }
-    },
-    getActiveProject() {
-      runtime.activeReads += 1
-      const store = runtime.projectStores.get(runtime.activeProjectId)
-      return store ? clone(store.project) : null
     },
     getProjects() {
       runtime.projectListReads += 1
@@ -122,7 +154,6 @@ function createRuntime() {
       const id = `project-C${runtime.createProjectCalls.length}`
       const project = { id, name }
       runtime.projectStores.set(id, { project, schedule: projectWiring.emptySchedule() })
-      runtime.activeProjectId = id
       return clone(project)
     },
   }
@@ -159,13 +190,22 @@ function installPage(runtime, options = { id: 'project-A' }) {
   mockModule(recordsModulePath, runtime.records)
   mockModule(reportModulePath, runtime.report)
   delete require.cache[pageModulePath]
+  delete require.cache[workspaceModulePath]
   require(pageModulePath)
   assert(page, 'project wiring page should register')
   page.data = clone(page.data)
   page.mutationCount = 0
   page.setData = (changes, callback) => {
     page.mutationCount += 1
-    Object.entries(changes).forEach(([key, value]) => { page.data[key] = value })
+    Object.entries(clone(changes)).forEach(([key, value]) => {
+      const path = key.split('.')
+      const leaf = path.pop()
+      const target = path.reduce((current, part) => {
+        if (!current[part] || typeof current[part] !== 'object') current[part] = {}
+        return current[part]
+      }, page.data)
+      target[leaf] = value
+    })
     if (callback) callback()
   }
   page.onLoad(options)
@@ -191,6 +231,26 @@ function addFirstLine(page) {
   input(page, 'toDevice', '功放')
   input(page, 'toPort', 'INPUT 1')
   page.saveLine()
+}
+
+function addDevice(page, name, type = 'mixer', count = '1') {
+  page.openDeviceEditor()
+  page.onDeviceType({ currentTarget: { dataset: { type } } })
+  input(page, 'name', name, 'onDeviceDraftInput')
+  input(page, 'count', count, 'onDeviceDraftInput')
+  page.saveDevices()
+  assert.equal(page.data.deviceEditorVisible, false, page.data.deviceFormError || page.data.batchError)
+}
+
+function chooseEndpoint(page, side, name) {
+  const choices = side === 'from' ? page.data.fromDeviceChoices : page.data.toDeviceChoices
+  const index = choices.findIndex((device) => device.name === name && device.id)
+  assert(index > 0, 'expected selectable device ' + name)
+  page.selectEndpoint({ currentTarget: { dataset: { side } }, detail: { value: String(index) } })
+}
+
+function pairInput(page, index, field, value) {
+  page.onPairInput({ currentTarget: { dataset: { index, field } }, detail: { value } })
 }
 
 function chooseHistory(page, field, value) {
@@ -265,48 +325,37 @@ function testCompactHistoryPickerBehavior() {
 }
 
 function testEndpointHistoryPickerTemplateBindings() {
-  const template = fs.readFileSync(path.join(__dirname, '../pages/project-wiring/index.wxml'), 'utf8').replace(/\r\n/g, '\n')
-  const endpoints = [
-    ['fromDevice', 'from-device', '来源', '设备', '输入设备名称', 100],
-    ['fromPort', 'from-port', '来源', '端口', '输入端口名称', 80],
-    ['toDevice', 'to-device', '去向', '设备', '输入设备名称', 100],
-    ['toPort', 'to-port', '去向', '端口', '输入端口名称', 80],
-  ]
-  endpoints.forEach(([field, fieldId, endpoint, label, placeholder, maxlength]) => {
-    const fieldStart = template.indexOf(`id="wiring-field-${fieldId}"`)
-    const headingStart = template.indexOf('<view class="wiring-editor-field-heading">', fieldStart)
-    const headingEnd = template.indexOf('</view>\n                  <input', headingStart)
-    assert(fieldStart >= 0 && headingStart > fieldStart && headingEnd > headingStart,
-      `${field} history picker remains in its label row`)
-    const heading = template.slice(headingStart, headingEnd)
-    ;[
-      `<view class="wiring-field-label">${label}</view>`,
-      `wx:if="{{${field}History.length}}"`,
-      `range="{{${field}History}}"`,
-      'value="0"',
-      `data-field="${field}"`,
-      'bindchange="chooseHistoryValue"',
-      `aria-label="选择已有${endpoint}${label}"`,
-      '<view class="wiring-history-picker-trigger">选用</view>',
-    ].forEach((binding) => assert(heading.includes(binding), `${field} template retains ${binding}`))
-
-    const inputStart = template.indexOf(`<input id="wiring-editor-${fieldId}"`, headingEnd)
-    const inputEnd = template.indexOf('/>', inputStart)
-    assert(inputStart > headingEnd && inputEnd > inputStart, `${field} input follows its history row`)
-    const inputMarkup = template.slice(inputStart, inputEnd)
-    ;[
-      `data-focus-id="wiring-editor-${fieldId}"`,
-      `maxlength="${maxlength}"`,
-      `value="{{draft.${field}}}"`,
-      `data-field="${field}"`,
-      'adjust-position="{{false}}"',
-      'bindfocus="onFormInputFocus"',
-      'bindblur="onFormInputBlur"',
-      'bindkeyboardheightchange="onFormKeyboardHeightChange"',
-      'bindinput="onDraftInput"',
-      `placeholder="${placeholder}"`,
-    ].forEach((binding) => assert(inputMarkup.includes(binding), `${field} input retains ${binding}`))
+  const pageRoot = path.join(__dirname, '../pages/project-wiring')
+  const expand = (file) => fs.readFileSync(file, 'utf8').replace(/<include\s+src="([^"]+)"\s*\/>/g,
+    (_match, include) => expand(path.join(path.dirname(file), include)))
+  const template = expand(path.join(pageRoot, 'index.wxml'))
+  const pickers = [...template.matchAll(/<picker\b[^>]*>/g)].map(([tag]) => tag)
+  ;['from', 'to'].forEach((side) => {
+    const range = side === 'from' ? 'fromDeviceChoices' : 'toDeviceChoices'
+    const picker = pickers.find((tag) => tag.includes('data-side="' + side + '"') && tag.includes(`range="{{${range}}}"`))
+    assert(picker)
+    assert(picker.includes(`range="{{${range}}}"`))
+    assert(picker.includes('range-key="choiceLabel"'))
+    assert(picker.includes('bindchange="selectEndpoint"'))
   })
+  ;['from', 'to'].forEach((side) => {
+    const tag = [...template.matchAll(/<input\b[^>]*>/g)].map(([value]) => value)
+      .find((value) => value.includes('id="wiring-pair-{{index}}-' + side + '"'))
+    assert(tag, 'each editable port pair has a stable indexed field')
+    assert(tag.includes('bindinput="onPairInput"'))
+    assert(tag.includes('maxlength="80"'))
+  })
+  assert.match(template, /<picker-view\b/)
+  assert.match(template, /bindtap="confirmProjectPicker"/)
+  assert.match(template, /bindtap="cancelProjectPicker"/)
+  assert.match(template, /catchtap="requestNewProject"/)
+  assert.match(template, /bindtap="openContinuous"/)
+  assert.match(template, /bindtap="fillContinuous"/)
+  assert.match(template, /来源接头/)
+  assert.match(template, /去向接头/)
+  assert.match(template, /catchtap="shareProject"/)
+  assert.doesNotMatch(template, /data-field="(?:purpose|notes)"|bindtap="duplicateLine"|更多信息|线缆侧接头/,
+    'approved compact UI removes extra fields and copy actions while legacy data remains supported')
 }
 
 function completeOneExport(runtime, pathName) {
@@ -420,23 +469,26 @@ function testProjectEntrySwitchAndOwnership() {
   const activeRuntime = createRuntime()
   activeRuntime.activeProjectId = 'project-B'
   const activePage = installPage(activeRuntime, {})
-  assert.equal(activePage.projectId, 'project-B', 'tool entry without an id should open the active project')
-  assert.deepEqual(activeRuntime.readIds, ['project-B'])
-  assert.equal(activeRuntime.activeReads, 1)
-  assert.equal(activeRuntime.navTitles.at(-1), '通道与线缆')
+  assert.equal(activePage.projectId, '', 'tool entry without an id requires an explicit project choice')
+  assert.equal(activePage.data.selectionRequired, true)
+  assert.equal(activePage.data.projectPickerVisible, true)
+  assert.deepEqual(activeRuntime.readIds, [], 'a legacy active-project key does not trigger an implicit wiring read')
 
   const explicitRuntime = createRuntime()
   explicitRuntime.activeProjectId = 'project-B'
   const explicitPage = installPage(explicitRuntime, { id: 'project-A' })
-  assert.equal(explicitPage.projectId, 'project-A', 'an explicit URL id takes precedence over the active project')
+  assert.equal(explicitPage.projectId, 'project-A', 'an explicit URL id opens its selected project')
   assert.deepEqual(explicitRuntime.readIds, ['project-A'])
-  assert.equal(explicitRuntime.activeReads, 0, 'explicit project entry must not read or change the active project')
+  assert.equal(explicitRuntime.activeProjectId, 'project-B', 'explicit project entry leaves the legacy key untouched')
 
   const runtime = createRuntime()
   const page = installPage(runtime)
   addFirstLine(page)
   page.openProjectPicker()
   assert.equal(page.data.projectPickerVisible, true)
+  page.onProjectWheelChange({ detail: { value: [1] } })
+  assert.equal(page.data.pendingProjectId, 'project-B')
+  assert.equal(page.projectId, 'project-A', 'moving the project wheel does not enter its candidate')
   page.cancelProjectPicker()
   assert.equal(page.data.project.id, 'project-A', 'cancelling a switch should retain the current project content')
   assert.equal(page.data.lineCount, 1)
@@ -446,12 +498,15 @@ function testProjectEntrySwitchAndOwnership() {
   assert(page._searchTimer)
   page.openProjectPicker()
   page.selectProject({ currentTarget: { dataset: { id: 'project-B' } } })
+  assert.equal(page.projectId, 'project-A', 'wheel selection is pending until Done')
+  assert.equal(page.data.pendingProjectId, 'project-B')
+  page.confirmProjectPicker()
   assert.equal(page.projectId, 'project-B')
   assert.equal(page.data.project.id, 'project-B')
   assert.equal(page.data.lineCount, 0, 'switching clears old project lines from the page')
   assert.equal(page.data.searchText, '', 'switching clears the previous project search')
   assert.equal(page._searchTimer, null, 'switching cancels the previous project search timer')
-  assert.equal(runtime.activeProjectId, 'project-A', 'selecting an existing project must not change global active project')
+  assert.equal(runtime.activeProjectId, 'project-A', 'selecting a project leaves the legacy key untouched')
   runtime.activeProjectId = 'project-A'
   page.onShow()
   assert.equal(page.projectId, 'project-B', 'onShow must keep using this page fixed project id')
@@ -468,6 +523,8 @@ function testProjectEntrySwitchAndOwnership() {
 }
 
 function testNoProjectCancelDirtyGuardAndCreateFailure() {
+  const clock = installControlledTimers()
+  try {
   const runtime = createRuntime()
   runtime.activeProjectId = ''
   const page = installPage(runtime, {})
@@ -478,35 +535,47 @@ function testNoProjectCancelDirtyGuardAndCreateFailure() {
   page.cancelProjectPicker()
   assert.equal(page.data.projectPickerVisible, false)
   assert.equal(page.data.selectionRequired, true, 'cancel leaves an explicit project selection entry')
+  clock.advanceBy(240)
   page.requestProjectPicker()
   assert.equal(page.data.projectPickerVisible, true)
   page.cancelProjectPicker()
+  clock.advanceBy(240)
 
   const withProject = createRuntime()
   const editingPage = installPage(withProject)
   editingPage.openNewLine()
-  input(editingPage, 'purpose', '保留草稿')
+  pairInput(editingPage, 0, 'fromPort', '保留草稿')
   editingPage.requestProjectPicker()
   const rejectSwitch = withProject.modals.at(-1)
   rejectSwitch.success({ confirm: false })
   assert.equal(editingPage.data.editorVisible, true, 'declining the switch prompt should keep the editor open')
-  assert.equal(editingPage.data.draft.purpose, '保留草稿')
+  assert.equal(editingPage.data.draftPairs[0].fromPort, '保留草稿')
   assert.equal(editingPage.data.projectPickerVisible, false)
   editingPage.requestProjectPicker()
   const approveSwitch = withProject.modals.at(-1)
   approveSwitch.success({ confirm: true })
   assert.equal(editingPage.data.editorVisible, false)
+  assert.equal(editingPage.data.workspaceOverlayPhases.lineEditor, 'closing', 'discard closes the editor immediately and retains its exit phase')
+  assert.equal(editingPage.data.projectPickerVisible, false, 'the next picker waits until the editor exit finishes')
+  clock.advanceBy(239)
+  assert.equal(editingPage.data.projectPickerVisible, false, 'the picker must not overlap the editor closing transition')
+  clock.advanceBy(1)
   assert.equal(editingPage.data.projectPickerVisible, true)
+  clock.advanceBy(0)
+  assert.equal(editingPage.data.workspaceOverlayPhases.projectPicker, 'opening', 'the picker enters after the editor close timer completes')
   editingPage.cancelProjectPicker()
   assert.equal(editingPage.projectId, 'project-A', 'cancel after confirmed discard keeps the same project selected')
+  clock.advanceBy(240)
 
   const createRuntimeFailure = createRuntime()
   createRuntimeFailure.activeProjectId = ''
   createRuntimeFailure.failCreateProject = true
   const failedCreatePage = installPage(createRuntimeFailure, {})
+  failedCreatePage.requestNewProject()
+  clock.advanceBy(240)
   failedCreatePage.onProjectNameInput({ detail: { value: '新现场' } })
   failedCreatePage.createAndOpenProject()
-  assert.equal(failedCreatePage.data.projectPickerVisible, true)
+  assert.equal(failedCreatePage.data.newProjectVisible, true)
   assert.equal(failedCreatePage.data.projectPickerError, '创建项目失败，请重试。')
   assert.equal(failedCreatePage.projectId, '')
 
@@ -515,16 +584,23 @@ function testNoProjectCancelDirtyGuardAndCreateFailure() {
   const listFailurePage = installPage(listFailureRuntime)
   listFailurePage.openProjectPicker()
   assert.match(listFailurePage.data.projectPickerError, /读取项目列表失败/)
+  } finally {
+    clock.restore()
+  }
 }
 
 function testCreateProjectEntersCreatedProject() {
+  const clock = installControlledTimers()
+  try {
   const runtime = createRuntime()
   runtime.activeProjectId = ''
   const page = installPage(runtime, {})
+  page.requestNewProject()
+  clock.advanceBy(240)
   page.onProjectNameInput({ detail: { value: '新录音棚' } })
   page.createAndOpenProject()
   assert.deepEqual(runtime.createProjectCalls, ['新录音棚'])
-  assert.equal(runtime.activeProjectId, 'project-C1', 'createProject retains its existing active-project behavior')
+  assert.equal(runtime.activeProjectId, '', 'creating a project to open it does not write the legacy key')
   assert.equal(page.projectId, 'project-C1')
   assert.equal(page.data.project.id, 'project-C1')
   assert.equal(page.data.project.name, '新录音棚')
@@ -534,6 +610,9 @@ function testCreateProjectEntersCreatedProject() {
   })
   page.saveLine()
   assert.equal(runtime.saveCalls.at(-1).projectId, 'project-C1')
+  } finally {
+    clock.restore()
+  }
 }
 
 function testProjectPickerCancelsLateExport() {
@@ -571,6 +650,7 @@ function testLateLoadFromPreviousProjectIsIgnored() {
   assert.equal(page.data.loading, true)
   page.openProjectPicker()
   page.selectProject({ currentTarget: { dataset: { id: 'project-B' } } })
+  page.confirmProjectPicker()
   assert.equal(page.data.project.id, 'project-B')
   const oldSchedule = projectWiring.applyScheduleChange(projectWiring.emptySchedule(), {
     type: 'upsert',
@@ -592,13 +672,12 @@ function testAddSearchAndSaveFailure() {
   page.openNewLine()
   page.saveLine()
   assert.equal(runtime.saveCalls.length, 0, 'missing endpoints must be validated before storage')
-  assert.match(page.data.formError, /来源设备、来源端口、去向设备、去向端口/)
+  assert.match(page.data.formError, /请选择两端设备.*每条线路.*端口/)
   assert.deepEqual(page.data.formFieldErrors, {
-    fromDevice: '请填写来源设备',
-    fromPort: '请填写来源端口',
-    toDevice: '请填写去向设备',
-    toPort: '请填写去向端口',
+    fromDevice: '请选择设备',
+    toDevice: '请选择设备',
   })
+  assert.deepEqual(page.data.pairErrors, [{ fromPort: true, toPort: true }])
   ;['fromDevice', 'fromPort', 'toDevice', 'toPort'].forEach((field, index) => {
     input(page, field, ['调音台', 'MAIN L', '功放', 'INPUT 1'][index])
   })
@@ -607,8 +686,9 @@ function testAddSearchAndSaveFailure() {
   assert.equal(runtime.schedule.lines[0].code, 'A001')
   assert.equal(runtime.schedule.lines[0].lengthText, '', 'empty length must remain unknown, not zero')
   assert.equal(runtime.schedule.lines[0].status, 'pending')
-  assert.equal(runtime.schedule.lines[0].connectorA, 'xlrFemale')
-  assert.equal(runtime.schedule.lines[0].connectorB, 'xlrMale')
+  assert.equal(runtime.schedule.lines[0].connectorA, '')
+  assert.equal(runtime.schedule.lines[0].connectorB, '')
+  assert.equal(runtime.schedule.lines[0].spec, '', 'new cable data remains blank until entered')
 
   page.onSearchInput({ detail: { value: 'MAIN L' } })
   page.applySearch({ detail: { value: 'MAIN L' } })
@@ -631,43 +711,35 @@ function testAddSearchAndSaveFailure() {
 }
 
 function testRequiredEndpointErrorsAndHistoryClear() {
-  const fields = [
-    ['fromDevice', '来源设备', 'wiring-field-from-device'],
-    ['fromPort', '来源端口', 'wiring-field-from-port'],
-    ['toDevice', '去向设备', 'wiring-field-to-device'],
-    ['toPort', '去向端口', 'wiring-field-to-port'],
-  ]
-  fields.forEach(([missingField, label, target]) => {
+  for (const missingField of ['fromDevice', 'fromPort', 'toDevice', 'toPort']) {
     const runtime = createRuntime()
     const page = installPage(runtime)
+    addDevice(page, '来源调音台1', 'mixer')
+    addDevice(page, '目标功放1', 'amplifier')
+    const writesBefore = runtime.saveCalls.length
     page.openNewLine()
-    fields.filter(([field]) => field !== missingField).forEach(([field], index) => {
-      input(page, field, `${field}-${index}`)
-    })
-    input(page, missingField, '   ')
+    if (missingField !== 'fromDevice') chooseEndpoint(page, 'from', '来源调音台1')
+    if (missingField !== 'toDevice') chooseEndpoint(page, 'to', '目标功放1')
+    if (missingField !== 'fromPort') pairInput(page, 0, 'fromPort', 'OUT 1')
+    if (missingField !== 'toPort') pairInput(page, 0, 'toPort', 'IN 1')
     page.saveLine()
-    assert.equal(page.data.formFieldErrors[missingField], `请填写${label}`)
-    assert.equal(page.data.formScrollTarget, target, `${missingField} should scroll to its stable wrapper`)
-    assert.equal(runtime.saveCalls.length, 0, 'validation must not write partial lines')
-    const mutationsBeforeRepeat = page.mutationCount
+    if (missingField.endsWith('Device')) assert.equal(page.data.formFieldErrors[missingField], '请选择设备')
+    else assert.equal(page.data.pairErrors[0][missingField], true)
+    assert.equal(runtime.saveCalls.length, writesBefore, 'validation must not write partial lines')
     page.saveLine()
-    assert.equal(page.mutationCount, mutationsBeforeRepeat + 2, 'repeated validation must retrigger scrolling to the same field')
-    assert.equal(page.data.formScrollTarget, target)
-    input(page, missingField, '已填写')
-    assert.equal(page.data.formFieldErrors[missingField], undefined, 'typing into a missing field should clear its error')
-  })
-
-  const runtime = createRuntime()
-  const page = installPage(runtime)
-  addFirstLine(page)
-  page.openNewLine()
-  ;[['fromDevice', '新设备'], ['fromPort', 'OUT 2'], ['toDevice', '功放']]
-    .forEach(([field, value]) => input(page, field, value))
-  page.saveLine()
-  assert.equal(page.data.formFieldErrors.toPort, '请填写去向端口')
-  chooseHistory(page, 'toPort', '0')
-  assert.equal(page.data.draft.toPort, 'INPUT 1')
-  assert.equal(page.data.formFieldErrors.toPort, undefined, 'selecting a valid history entry must clear that field error')
+    assert.equal(runtime.saveCalls.length, writesBefore, 'repeated validation remains side effect free')
+    if (missingField.endsWith('Device')) {
+      chooseEndpoint(page, missingField === 'fromDevice' ? 'from' : 'to', missingField === 'fromDevice' ? '来源调音台1' : '目标功放1')
+      assert.equal(page.data.formFieldErrors[missingField], undefined, 'selecting a device clears its missing-field state')
+    } else {
+      pairInput(page, 0, missingField, '已填写端口')
+      assert.equal(page.data.pairErrors.some((error) => error.fromPort || error.toPort), false,
+        'editing a port clears stale pair errors')
+    }
+    page.saveLine()
+    assert.equal(runtime.schedule.lines.length, 1)
+    assert.equal(runtime.saveCalls.length, writesBefore + 1)
+  }
 }
 
 function testBatchDuplicateEndpointWarning() {
@@ -723,148 +795,135 @@ function testCustomConnectorAndCableDefaults() {
 }
 
 function testSpecPresetsAndPreservation() {
-  const defaultRuntime = createRuntime()
-  const defaultPage = installPage(defaultRuntime)
-  addFirstLine(defaultPage)
-  const defaultLine = defaultRuntime.schedule.lines[0]
-  const defaultSpec = 'RVPE 2×0.5 mm²'
-  assert.equal(defaultLine.spec, defaultSpec, 'saving an untouched new line should retain the default audio specification')
-  assert.equal(defaultPage.data.visibleLines[0].spec, defaultSpec, 'the line list should show the default specification')
-  assert(projectWiring.buildScheduleText(defaultRuntime.project.name, defaultRuntime.schedule).includes(defaultSpec),
-    'the line schedule should include the default specification')
-  assert(reportBuilder.buildScheduleReportPages(defaultRuntime.project.name, defaultRuntime.schedule, 'lines')
-    .pages.flatMap((reportPage) => reportPage.rows).some((row) => row.textLines.some((line) => line.includes(defaultSpec))),
-  'the line report should include the default specification')
-
-  const defaultBatchRuntime = createRuntime()
-  const defaultBatchPage = installPage(defaultBatchRuntime)
-  defaultBatchPage.openBatch()
-  Object.entries({ count: '1', fromDevice: 'DSP', fromPrefix: 'OUT-', fromStart: '1',
-    toDevice: '功放', toPrefix: 'IN-', toStart: '1', purpose: '批量音频' })
-    .forEach(([field, value]) => input(defaultBatchPage, field, value, 'onBatchInput'))
-  defaultBatchPage.refreshBatchPreview()
-  assert.equal(defaultBatchPage.data.batchPreviewLines[0].spec, defaultSpec,
-    'an untouched batch audio line should preview with the default')
-  defaultBatchPage.commitBatch()
-  assert.equal(defaultBatchRuntime.schedule.lines[0].spec, defaultSpec,
-    'an untouched batch audio line should save with the default')
-
   const runtime = createRuntime()
   const page = installPage(runtime)
-  const defaultAudioSpec = 'RVPE 2×0.5 mm²'
-  const audioSpecs = []
-  const speakerSpecs = ['RVV 2×1.5 mm²', 'RVV 2×2.5 mm²']
+  addFirstLine(page)
+  const savedLine = runtime.schedule.lines[0]
+  assert.equal(savedLine.spec, '', 'untouched new lines never infer a cable specification')
+  assert.equal(savedLine.connectorA, '')
+  assert.equal(savedLine.connectorB, '')
   page.openNewLine()
-  assert.equal(page.data.draft.spec, defaultAudioSpec, 'a new line should default to RVPE 2×0.5 mm²')
-  assert.deepEqual(page.data.specOptions, audioSpecs)
-  assert.deepEqual(page.data.specOptionViews, [], 'audio quick-pick views should be hidden')
+  assert.equal(page.data.draft.spec, '')
+  assert.equal(page.data.draft.connectorA, '')
+  assert.equal(page.data.draft.connectorB, '')
   page.chooseSpecPreset({ currentTarget: { dataset: { value: 'unlisted cable value' } } })
-  assert.equal(page.data.draft.spec, defaultAudioSpec, 'a value outside the current choices must not be accepted')
-
-  selectOption(page, 'cableType', page.data.cableOptions, 'unbalanced')
-  assert.equal(page.data.draft.spec, defaultAudioSpec, 'switching audio types should keep the default')
+  assert.equal(page.data.draft.spec, '')
   selectOption(page, 'cableType', page.data.cableOptions, 'speaker')
-  assert.equal(page.data.draft.spec, '', 'switching an untouched default to speaker should clear RVPE')
-  assert.deepEqual(page.data.specOptions, speakerSpecs)
-  selectOption(page, 'cableType', page.data.cableOptions, 'balanced')
-  assert.equal(page.data.draft.spec, defaultAudioSpec, 'switching back to audio should restore the default')
-  input(page, 'spec', '现场手工规格')
-  selectOption(page, 'cableType', page.data.cableOptions, 'speaker')
-  assert.deepEqual(page.data.specOptions, speakerSpecs)
-  assert.equal(page.data.draft.spec, '现场手工规格', 'changing cable type should preserve hand-entered text')
-  input(page, 'spec', '')
-  selectOption(page, 'cableType', page.data.cableOptions, 'balanced')
-  assert.equal(page.data.draft.spec, '', 'an explicitly cleared specification should not be restored')
-  input(page, 'spec', defaultAudioSpec)
-  selectOption(page, 'cableType', page.data.cableOptions, 'speaker')
+  const speakerSpecs = ['RVV 2×1.5 mm²', 'RVV 2×2.5 mm²']
+  assert.deepEqual(page.data.specOptions, speakerSpecs, 'legacy preset API remains available')
   page.chooseSpecPreset({ currentTarget: { dataset: { value: speakerSpecs[0] } } })
   assert.equal(page.data.draft.spec, speakerSpecs[0])
   selectOption(page, 'cableType', page.data.cableOptions, 'custom')
-  assert.deepEqual(page.data.specOptions, [], 'custom cable types should have no preset choices')
-  assert.equal(page.data.draft.spec, speakerSpecs[0], 'custom cable type should preserve the entered specification')
+  assert.equal(page.data.draft.spec, speakerSpecs[0], 'explicit user specifications survive type changes')
+  input(page, 'spec', '')
   selectOption(page, 'cableType', page.data.cableOptions, 'balanced')
-  assert.equal(page.data.draft.spec, speakerSpecs[0], 'manual preset selection should be preserved across cable types')
-  ;[['purpose', '主扩输出'], ['fromDevice', '调音台'], ['fromPort', 'MAIN L'],
-    ['toDevice', '功放'], ['toPort', 'INPUT 1']].forEach(([field, value]) => input(page, field, value))
-  page.saveLine()
-
-  const savedLine = runtime.schedule.lines[0]
-  assert.equal(savedLine.spec, speakerSpecs[0], 'the selected speaker preset should be saved')
-  assert.equal(page.data.visibleLines[0].spec, speakerSpecs[0], 'the line list should retain the complete specification')
-  assert(projectWiring.buildScheduleText(runtime.project.name, runtime.schedule).includes(speakerSpecs[0]),
-    'the copied schedule text should retain the complete specification')
-  const lineReport = reportBuilder.buildScheduleReportPages(runtime.project.name, runtime.schedule, 'lines')
-  assert(lineReport.pages.flatMap((reportPage) => reportPage.rows)
-    .some((row) => row.textLines.some((line) => line.includes(speakerSpecs[0]))),
-  'the line report should render the complete specification')
-  const materialReport = reportBuilder.buildScheduleReportPages(runtime.project.name, runtime.schedule, 'materials')
-  assert(materialReport.pages.flatMap((reportPage) => reportPage.rows)
-    .some((row) => row.textLines.some((line) => line.includes(speakerSpecs[0]))),
-  'the material report should render the complete specification')
+  assert.equal(page.data.draft.spec, '', 'cleared specs never regain a default')
+  page.closeEditor()
 
   const historicalSpec = '历史自定义采购规格'
   page.editLine({ currentTarget: { dataset: { id: savedLine.id } } })
-  assert.equal(page.data.draft.spec, speakerSpecs[0], 'editing should refill the saved specification')
   input(page, 'spec', historicalSpec)
   page.saveLine()
   page.editLine({ currentTarget: { dataset: { id: savedLine.id } } })
-  assert.equal(page.data.draft.spec, historicalSpec, 'editing should preserve an existing custom specification')
+  assert.equal(page.data.draft.spec, historicalSpec)
   input(page, 'spec', '未保存的替代规格')
   page.requestCloseEditor()
+  runtime.modals.at(-1).success({ confirm: false })
+  assert.equal(page.data.editorVisible, true)
+  assert.equal(page.data.draft.spec, '未保存的替代规格')
+  page.requestCloseEditor()
   runtime.modals.at(-1).success({ confirm: true })
-  assert.equal(page.data.editorVisible, false)
-  assert.equal(runtime.schedule.lines[0].spec, historicalSpec, 'cancelling an edit must leave the stored specification unchanged')
-
+  assert.equal(runtime.schedule.lines[0].spec, historicalSpec, 'cancel leaves the persisted specification unchanged')
   page.editLine({ currentTarget: { dataset: { id: savedLine.id } } })
   page.duplicateLine()
-  assert.equal(page.data.draft.spec, historicalSpec, 'copying a line should retain its custom specification')
+  assert.equal(page.data.draft.spec, historicalSpec, 'legacy copy API preserves historical data')
   page.saveLine()
-  const copiedLine = runtime.schedule.lines.find((line) => line.id !== savedLine.id)
-  assert.equal(copiedLine.spec, historicalSpec, 'the copied line should save its complete custom specification')
-
-  ;['', 'RVPE 2×0.3 mm²', '历史自定义规格'].forEach((legacySpec) => {
+  assert.equal(runtime.schedule.lines[1].spec, historicalSpec)
+  assert(projectWiring.buildScheduleText(runtime.project.name, runtime.schedule).includes(historicalSpec))
+  const report = reportBuilder.buildScheduleReportPages(runtime.project.name, runtime.schedule, 'lines')
+  assert(report.pages.flatMap((value) => value.rows).some((row) => row.textLines.some((line) => line.includes(historicalSpec))))
+  for (const legacySpec of ['', 'RVPE 2×0.3 mm²', historicalSpec]) {
     page._schedule.lines.find((line) => line.id === savedLine.id).spec = legacySpec
     page.editLine({ currentTarget: { dataset: { id: savedLine.id } } })
-    assert.equal(page.data.draft.spec, legacySpec, `editing must preserve historical specification ${legacySpec}`)
-    page.duplicateLine()
-    assert.equal(page.data.draft.spec, legacySpec, `copying must preserve historical specification ${legacySpec}`)
+    assert.equal(page.data.draft.spec, legacySpec)
     page.closeEditor()
-  })
+  }
 
+  // The old prefix batch API remains compatible independently of the replaced UI.
   page.openBatch()
-  assert.equal(page.data.batchDraft.spec, defaultAudioSpec, 'batch lines should default to RVPE 2×0.5 mm²')
-  assert.deepEqual(page.data.batchSpecOptions, audioSpecs)
-  assert.deepEqual(page.data.batchSpecOptionViews, [], 'batch audio quick-pick views should be hidden')
   input(page, 'spec', '批量手工规格', 'onBatchInput')
   page.onBatchCableChange({ detail: { value: String(page.data.cableOptions.findIndex((item) => item.id === 'speaker')) } })
-  assert.equal(page.data.batchDraft.spec, '批量手工规格', 'manual batch specifications should survive cable type changes')
+  assert.equal(page.data.batchDraft.spec, '批量手工规格')
   input(page, 'spec', '', 'onBatchInput')
-  page.onBatchCableChange({ detail: { value: String(page.data.cableOptions.findIndex((item) => item.id === 'balanced')) } })
-  assert.equal(page.data.batchDraft.spec, '', 'a manually cleared batch specification should remain empty')
-  page.openBatch()
-  const batchInputs = {
-    count: '2', fromDevice: 'DSP', fromPrefix: 'OUT-', fromStart: '1',
-    toDevice: '功放', toPrefix: 'IN-', toStart: '1', purpose: '扬声器分区',
+  page.onBatchCableChange({ detail: { value: '0' } })
+  assert.equal(page.data.batchDraft.spec, '')
+  page.closeBatch()
+}
+
+function testDevicePickersContinuousDraftAndAtomicSave() {
+  const clock = installControlledTimers()
+  try {
+  const runtime = createRuntime()
+  const page = installPage(runtime)
+  addDevice(page, '同名设备', 'mixer', '2')
+  addDevice(page, '功放1', 'amplifier')
+  const devices = page._schedule.devices
+  assert.notEqual(devices[0].id, devices[1].id)
+  assert.equal(page.data.devices.length, 3)
+  page.connectDevice({ currentTarget: { dataset: {
+    id: devices[1].id, projectId: page.projectId, revision: page._schedule.revision,
+  } } })
+  assert.equal(page.data.draft.fromDeviceId, devices[1].id)
+  chooseEndpoint(page, 'to', '功放1')
+  const before = clone(runtime.schedule)
+  const savesBefore = runtime.saveCalls.length
+  page.openContinuous()
+  ;[['fromPort', 'OUT09'], ['toPort', 'IN09'], ['count', '3']]
+    .forEach(([field, value]) => input(page, field, value, 'onContinuousInput'))
+  assert.deepEqual(page.data.continuousPairs.map((pair) => pair.fromPort), ['OUT09', 'OUT10', 'OUT11'])
+  page.fillContinuous()
+  assert.deepEqual(runtime.schedule, before)
+  assert.equal(runtime.saveCalls.length, savesBefore, 'Fill changes only the parent draft')
+  assert.equal(page.data.continuousVisible, false)
+  assert.equal(page.data.draftPairs.length, 3)
+  pairInput(page, 1, 'toPort', '手工端口')
+  input(page, 'lengthText', '5')
+  input(page, 'spec', '用户规格')
+  pairInput(page, 2, 'lengthText', '0')
+  page.saveLine()
+  assert.match(page.data.formError, /长度/)
+  assert.deepEqual(runtime.schedule, before, 'one invalid pair rejects the complete append')
+  assert.equal(runtime.saveCalls.length, savesBefore)
+  pairInput(page, 2, 'lengthText', '5')
+  runtime.failNextSave = true
+  const draftBeforeFailure = clone(page.data.draftPairs)
+  page.saveLine()
+  assert.equal(page.data.editorVisible, true)
+  assert.deepEqual(page.data.draftPairs, draftBeforeFailure)
+  assert.deepEqual(runtime.schedule, before)
+  assert.equal(page.data.saveError, '模拟存储失败')
+  page.saveLine()
+  assert.equal(runtime.schedule.lines.length, 3)
+  assert.equal(runtime.schedule.revision, before.revision + 1)
+  assert.equal(runtime.saveCalls.at(-1).command.type, 'append-lines')
+  assert.equal(page.data.editorVisible, false, 'successful save closes the editor immediately')
+  clock.advanceBy(240)
+  assert.deepEqual(runtime.schedule.lines.map((line) => line.code), ['A001', 'A002', 'A003'])
+  assert.equal(runtime.schedule.lines[1].toPort, '手工端口')
+  assert(runtime.schedule.lines.every((line) => line.fromDeviceId === devices[1].id))
+  assert(runtime.schedule.lines.every((line) => line.spec === '用户规格' && line.connectorA === '' && line.connectorB === ''))
+  const savedCount = runtime.saveCalls.length
+  page.saveLine()
+  assert.equal(runtime.saveCalls.length, savedCount, 'repeated Save after success does not append again')
+  page.editLine({ currentTarget: { dataset: { id: runtime.schedule.lines[0].id } } })
+  page.addDraftPair()
+  page.openContinuous()
+  assert.equal(page.data.draftPairs.length, 1, 'single-line editing has no batch behavior')
+  assert.equal(page.data.continuousVisible, false)
+  page.closeEditor()
+  } finally {
+    clock.restore()
   }
-  Object.entries(batchInputs).forEach(([field, value]) => input(page, field, value, 'onBatchInput'))
-  const speakerIndex = page.data.cableOptions.findIndex((item) => item.id === 'speaker')
-  page.onBatchCableChange({ detail: { value: String(speakerIndex) } })
-  assert.deepEqual(page.data.batchSpecOptions, speakerSpecs)
-  assert.equal(page.data.batchDraft.spec, '', 'batch type changes should clear untouched RVPE for speaker cable')
-  page.chooseBatchSpecPreset({ currentTarget: { dataset: { value: speakerSpecs[0] } } })
-  page.refreshBatchPreview()
-  assert.equal(page.data.batchPreviewLines.length, 2)
-  assert.equal(page.data.batchPreviewLines[0].spec, speakerSpecs[0])
-  page.chooseBatchSpecPreset({ currentTarget: { dataset: { value: speakerSpecs[1] } } })
-  assert.equal(page.data.batchPreviewLines.length, 0, 'changing the batch specification must invalidate its old preview')
-  page.refreshBatchPreview()
-  assert.equal(page.data.batchPreviewLines.length, 2)
-  assert(page.data.batchPreviewLines.every((line) => line.spec === speakerSpecs[1]),
-    'a refreshed preview should use the new complete specification')
-  page.commitBatch()
-  const batchLines = runtime.schedule.lines.slice(-2)
-  assert.equal(batchLines.length, 2)
-  assert(batchLines.every((line) => line.spec === speakerSpecs[1]), 'batch save should retain the refreshed specification')
 }
 
 function testBatchDuplicateDeleteAndStableNumbers() {
@@ -947,8 +1006,8 @@ function testCopyCurrentTextUsesUnfilteredSchedule() {
   assert.match(copiedText, /A002/, 'the copied text includes the line hidden by search')
   assert.match(copiedText, /材料汇总：/)
   const template = fs.readFileSync(path.join(__dirname, '../pages/project-wiring/index.wxml'), 'utf8')
-  assert.match(template, /class="wiring-export-button wiring-copy-all-button" bindtap="copyCurrentText">复制全部布线文字<\/button>/,
-    'the full-text copy action is reachable from the main page')
+  assert.doesNotMatch(template, /bindtap="copyCurrentText"/,
+    'legacy copy API remains compatible without reintroducing a removed UI action')
 }
 
 function testPagedExportActionsAndLateCallbacks() {
@@ -997,6 +1056,36 @@ function testPagedExportActionsAndLateCallbacks() {
   lateDraw()
   assert.equal(page.mutationCount, mutationsBeforeUnloadCallback, 'late draw callbacks after unload must not write page state')
   assert(runtime.loadingHidden > 0, 'cancelled exports should clear the loading mask')
+}
+
+function testSharedProjectExportAcrossTabs() {
+  const runtime = createRuntime()
+  const page = installPage(runtime)
+  addFirstLine(page)
+  page.openNewLine()
+  ;[['fromDevice', 'DSP'], ['fromPort', 'OUT 2'], ['toDevice', '舞台音箱'], ['toPort', 'IN 2']]
+    .forEach(([field, value]) => input(page, field, value))
+  page.saveLine()
+  page.applySearch({ detail: { value: 'A001' } })
+  assert.equal(page.data.visibleLines.length, 1)
+  const reportInputs = []
+  runtime.report.buildScheduleReportPages = (name, schedule, type) => {
+    reportInputs.push({ name, schedule: clone(schedule), type })
+    return runtime.buildReports(name, schedule, type)
+  }
+  page.onWorkspaceTab({ currentTarget: { dataset: { tab: 'devices' } } })
+  page.shareProject()
+  completeAllExports(runtime, 'shared-project')
+  assert.equal(reportInputs.length, 1)
+  assert.equal(reportInputs[0].type, 'project')
+  assert.deepEqual(reportInputs[0].schedule, runtime.schedule, 'Share includes the complete project despite search')
+  const images = clone(page.data.reportImages)
+  page.closeReportPreview()
+  page.onWorkspaceTab({ currentTarget: { dataset: { tab: 'lines' } } })
+  page.shareProject()
+  assert.equal(reportInputs.length, 1, 'both tabs use the same project image cache')
+  assert.deepEqual(page.data.reportImages, images)
+  assert.equal(page.data.reportPreviewVisible, true)
 }
 
 function generateThreePageReport(page, runtime, paths) {
@@ -1242,17 +1331,19 @@ try {
   testRequiredEndpointErrorsAndHistoryClear()
   testCustomConnectorAndCableDefaults()
   testSpecPresetsAndPreservation()
+  testDevicePickersContinuousDraftAndAtomicSave()
   testCopyCurrentTextUsesUnfilteredSchedule()
   testBatchDuplicateDeleteAndStableNumbers()
   testBatchDuplicateEndpointWarning()
   testPagedExportActionsAndLateCallbacks()
+  testSharedProjectExportAcrossTabs()
   testSaveAllSerialFailureAndResume()
   testSaveJobsTrackPageIndicesNotPaths()
   testSingleSaveSharesJobAndPermissionHandling()
   testSaveJobGuardsAndLateCallbacks()
   testLateSaveIdentityAndClosedPreviewResume()
   testExportTypeWithTapEvent()
-  console.log('project wiring page tests passed (entry routing, fixed project ownership, history picker template and behavior, picker cancellation, dirty-form guard, project creation/failures, stale exports, add/edit/search, batch, save retention and delete/copy numbering)')
+  console.log('project wiring page tests passed (fixed ownership, wheel Cancel/Done, device pickers, paired ports, blank cable data, draft-only continuous fill, atomic save and retry, stable IDs/codes, legacy API compatibility, shared project export and report lifecycle guards)')
 } finally {
   if (oldPage === undefined) delete global.Page
   else global.Page = oldPage
@@ -1260,10 +1351,12 @@ try {
   else global.wx = oldWx
   delete require.cache[pageModulePath]
   delete require.cache[reportModulePath]
+  delete require.cache[workspaceModulePath]
   if (oldPageModule) require.cache[pageModulePath] = oldPageModule
   if (oldRecordsModule) require.cache[recordsModulePath] = oldRecordsModule
   else delete require.cache[recordsModulePath]
   if (oldReportModule) require.cache[reportModulePath] = oldReportModule
+  if (oldWorkspaceModule) require.cache[workspaceModulePath] = oldWorkspaceModule
 }
 
 require('./project-wiring-keyboard-test')

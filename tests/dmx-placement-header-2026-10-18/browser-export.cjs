@@ -1,0 +1,14 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto'),{launch,delay}=require('../dmx-ui-round3-2026-10-18/browser-driver.cjs')
+const out=path.join(__dirname,'evidence/export');fs.mkdirSync(out,{recursive:true})
+async function run(){const b=await launch(),results=[];try{for(const profile of [{width:390,height:844,theme:'light',long:false},{width:320,height:568,theme:'dark',long:false},{width:390,height:844,theme:'light',long:true}]){
+ await b.viewport(profile.width,profile.height,profile.theme);await b.navigate({page:'layout',theme:profile.theme,fixture:profile.long?'export-dense':'standard'});await delay(100)
+ if(profile.long)await b.evaluate(`(()=>{const p=window.__lightingQa.page,l=JSON.parse(JSON.stringify(p._layout));l.stageDepthText='40';p._fixtures.slice(0,40).forEach((f,i)=>l.positionsById[f.stableId]={rodId:l.internalRods[0].id,t:(i+1)/41});p._layout=l;p.updateLayoutData()})()`)
+ await b.evaluate(`window.__dispatch('generateLayoutImage')`);await delay(300)
+ const state=await b.evaluate(`(()=>{const q=s=>document.querySelector(s),rect=n=>{const r=n.getBoundingClientRect();return{x:r.x,y:r.y,right:r.right,bottom:r.bottom,width:r.width,height:r.height}},i=q('.export-image'),s=q('.export-image-scroll'),e=window.__lightingQa.events.exports[0];return{image:rect(i),scroll:rect(s),sheet:rect(q('.export-sheet')),close:rect(q('.export-heading .sheet-close')),actions:rect(q('.export-actions')),naturalWidth:i.naturalWidth,naturalHeight:i.naturalHeight,scrollHeight:s.scrollHeight,clientHeight:s.clientHeight,png:e}})()`)
+ assert(state.scroll.height>0);assert(state.sheet.y>=0&&state.sheet.bottom<=profile.height);assert(state.actions.bottom<=state.sheet.bottom);assert(state.close.height>=44);assert(state.scroll.height-state.image.height<=4,'no unused area below image '+JSON.stringify(state))
+ if(profile.long)assert(state.scrollHeight>state.clientHeight+20,'long image retains scrolling')
+ const name=profile.width+'-'+profile.theme+(profile.long?'-long':'');const bytes=Buffer.from(state.png.url.split(',')[1],'base64');fs.writeFileSync(path.join(out,name+'.png'),bytes);await b.screenshot(path.join(out,name+'-preview.png'))
+ const sha=crypto.createHash('sha256').update(bytes).digest('hex');if(profile.width===390&&!profile.long){assert.equal(sha,crypto.createHash('sha256').update(fs.readFileSync(path.join(__dirname,'evidence/export-before.png'))).digest('hex'),'preview resizing leaves actual PNG unchanged')}
+ delete state.png.url;results.push({profile,state,pngSha256:sha});console.log('PASS content-sized export preview '+name)
+ }}finally{fs.writeFileSync(path.join(out,'summary.json'),JSON.stringify({runAt:new Date().toISOString(),nativeRuntime:false,physicalDevice:false,results},null,2));await b.close()}}
+run().catch(e=>{console.error(e);process.exitCode=1})

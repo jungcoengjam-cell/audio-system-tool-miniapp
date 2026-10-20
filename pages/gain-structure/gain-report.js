@@ -108,23 +108,28 @@ function addTextLines(commands, lines, x, top, lineHeight, size, color,
 
 function addSectionTitle(commands, context, title, y) {
   const lines = wrapText(context, title, CONTENT_WIDTH, 32, 650)
-  return y + addTextLines(commands, lines, REPORT_WIDTH / 2, y, 40,
-    32, COLORS.text, 650, 'center') + 10
+  return y + addTextLines(commands, lines, LEFT, y, 40,
+    32, COLORS.text, 650, 'left') + 10
 }
 
 function addKeyValueRow(commands, context, label, value, y) {
+  const innerX = LEFT + 24
   const innerWidth = CONTENT_WIDTH - 48
-  const labelLines = wrapText(context, label, innerWidth, 26, 650)
-  const valueLines = wrapText(context, value || '\u2014', innerWidth, 26, 500)
-  const labelLineHeight = 34
-  const valueLineHeight = 36
+  const labelWidth = 228
+  const columnGap = 16
+  const valueWidth = innerWidth - labelWidth - columnGap
+  const valueX = innerX + labelWidth + columnGap
+  const labelLines = wrapText(context, label, labelWidth, 26, 650)
+  const valueLines = wrapText(context, value || '\u2014', valueWidth, 26, 500)
+  const lineHeight = 36
   const groupPadding = 14
-  let textY = y + groupPadding
-  textY += addTextLines(commands, labelLines, REPORT_WIDTH / 2, textY,
-    labelLineHeight, 26, COLORS.secondary, 650, 'center') + 4
-  textY += addTextLines(commands, valueLines, REPORT_WIDTH / 2, textY,
-    valueLineHeight, 26, COLORS.text, 500, 'center')
-  return textY - y + groupPadding
+  const textY = y + groupPadding
+  addTextLines(commands, labelLines, innerX, textY,
+    lineHeight, 26, COLORS.secondary, 650, 'left')
+  addTextLines(commands, valueLines, valueX, textY,
+    lineHeight, 26, COLORS.text, 500, 'left')
+  return Math.max(labelLines.length, valueLines.length) * lineHeight
+    + (groupPadding * 2)
 }
 
 function addRoundedCard(commands, x, y, width, height, fill, stroke) {
@@ -205,7 +210,7 @@ function buildReportModel(payload, measureContext) {
   let y = 32
   const badge = textValue(payload.moduleLabel) || '系统增益结构'
   const badgeWidth = Math.min(CONTENT_WIDTH, 260)
-  const badgeX = (REPORT_WIDTH - badgeWidth) / 2
+  const badgeX = LEFT
   const badgeInnerWidth = badgeWidth - 32
   const badgeLines = wrapText(measureContext, badge, badgeInnerWidth, 24, 650)
   const badgeLineHeight = 32
@@ -214,8 +219,8 @@ function buildReportModel(payload, measureContext) {
   addRoundedCard(commands, badgeX, y, badgeWidth, badgeHeight,
     COLORS.tile, COLORS.tileBorder)
   const badgeTextTop = y + ((badgeHeight - badgeTextHeight) / 2)
-  addTextLines(commands, badgeLines, REPORT_WIDTH / 2, badgeTextTop,
-    badgeLineHeight, 24, COLORS.accent, 650, 'center')
+  addTextLines(commands, badgeLines, badgeX + 16, badgeTextTop,
+    badgeLineHeight, 24, COLORS.accent, 650, 'left')
   y += badgeHeight + 22
 
   const heroTop = y

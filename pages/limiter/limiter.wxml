@@ -6,6 +6,7 @@
       <button class="action-button" aria-label="收藏当前配置" disabled="{{!hasValidResult}}" bindtap="toggleCurrentFavorite"><view class="action-icon icon-bookmark {{currentFavorite ? 'icon-bookmark-active' : ''}}"></view></button>
       <button class="action-button" aria-label="保存到项目" disabled="{{!hasValidResult}}" bindtap="openProjectSheet"><view class="action-icon icon-folder"><view></view></view></button>
     </view>
+    <include src="../../templates/result-record-actions.wxml" />
     <view class="result-card">
     <view class="result-heading">
       <view wx:if="{{hasValidResult}}" class="output-status result-success-status">{{outputStatus}}</view>
@@ -121,4 +122,5 @@
   </view>
 
   <canvas id="resultReportCanvas" canvas-id="resultReportCanvas" class="result-report-canvas-offscreen" width="{{resultReportCanvasWidth}}" height="{{resultReportCanvasHeight}}" style="width:{{resultReportCanvasWidth}}px;height:{{resultReportCanvasHeight}}px;"></canvas>
+  <include src="../../templates/editor-navigation-guard.wxml" />
 </view>

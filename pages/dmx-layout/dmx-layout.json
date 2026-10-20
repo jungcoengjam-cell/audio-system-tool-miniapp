@@ -1,3 +1,5 @@
 {
-  "navigationBarTitleText": "灯具位置图"
+  "navigationBarTitleText": "灯位图",
+  "navigationStyle": "custom",
+  "pageOrientation": "portrait"
 }

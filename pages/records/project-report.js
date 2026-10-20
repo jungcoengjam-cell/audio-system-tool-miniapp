@@ -154,7 +154,7 @@ function buildProjectReportPayload(project, groups, metadata = {}) {
     project,
     groups: limited.groups,
     omittedCount: limited.omittedCount,
-    completedModuleCount: groups.length,
+    completedModuleCount: groups.filter((group) => MODULES[group.module]).length,
     totalModuleCount: metadata.totalModuleCount || Object.keys(MODULES).length,
     generatedAt: metadata.generatedAt || '',
     appVersion: metadata.appVersion || '',
@@ -174,14 +174,16 @@ function drawProjectInfo(context, payload) {
   const rows = [
     ['场地名称', project.venueName || '未填写', '调试日期', project.projectDate || '未填写'],
     ['调试人员', project.engineer || '未填写', '场地尺寸', project.dimensionText || '未填写'],
-    ['扩声目标', project.standardText || '未填写', '更新时间', project.timeText || '未填写'],
+    ['更新时间', project.timeText || '未填写'],
   ]
   rows.forEach((row, index) => {
     const y = 296 + (index * 49)
     drawText(context, row[0], 74, y, 16, COLORS.tertiary, 400)
     drawClippedText(context, row[1], 158, y, 190, { size: 19, weight: 550 })
-    drawText(context, row[2], 390, y, 16, COLORS.tertiary, 400)
-    drawClippedText(context, row[3], 474, y, 190, { size: 19, weight: 550 })
+    if (row[2]) {
+      drawText(context, row[2], 390, y, 16, COLORS.tertiary, 400)
+      drawClippedText(context, row[3], 474, y, 190, { size: 19, weight: 550 })
+    }
   })
   context.setStrokeStyle(COLORS.line)
   context.setLineWidth(1)

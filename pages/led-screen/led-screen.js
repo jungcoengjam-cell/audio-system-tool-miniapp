@@ -1,7 +1,7 @@
 const { printPerformanceSummary, startMeasurement } = require('../../utils/performance')
 const finishLedScreenModuleLoad = startMeasurement('LED大屏/脚本加载')
-const { calculateLedScreenPlan, LED_UNIT_SPECS, PREFERRED_RATIO_ERROR } = require('../../utils/led-screen')
-const { findValueIndex, readPreferences, writePreferences } = require('../../utils/preferences')
+const { calculateLedScreenPlan, LED_PIXEL_PITCHES, LED_UNIT_SPECS, PREFERRED_RATIO_ERROR } = require('../../utils/led-screen')
+const { findValueIndex, readPreferences, writePreferences, writePreferencesDetailed } = require('../../utils/preferences')
 const { vibrate } = require('../../utils/haptics')
 const {
   createOperationMethods,
@@ -10,8 +10,10 @@ const {
   captureOperationResult,
   isOperationResultCurrent,
 } = require('../../utils/operation-inputs')
-const { addPageToActiveProject, syncPageFavorite, togglePageFavorite } = require('../../utils/result-record-actions')
-const { drawAndExportReport } = require('../../utils/report-canvas')
+const { syncPageFavorite, togglePageFavorite } = require('../../utils/result-record-actions')
+const { attachResultEditor, captureEditorBaseline, createEditorNavigationMethods, finalizeResultEditor } = require('../../utils/result-record-context')
+const { saveEditorRecord: saveEditorRecordAction, requestEditorLeave } = require('../../utils/result-record-actions')
+const { getExportDimensions } = require('../../utils/report-drawing')
 const {
   previewGeneratedImage,
   saveGeneratedImage,
@@ -21,9 +23,11 @@ const {
   REPORT_CANVAS_ID,
   REPORT_HEIGHT,
   REPORT_WIDTH,
+  buildLedScreenReportLayout,
   buildLedScreenReportPayload,
   drawLedScreenReport,
 } = require('./report')
+const { createLedProjectData, createLedProjectMethods } = require('./led-project')
 const getUnitSpec = (key) => LED_UNIT_SPECS[key] || null
 
 const PREFERENCE_KEY = 'audioTool.ledScreen.preferences'
@@ -76,6 +80,74 @@ const ledOperationMethods = createOperationMethods({
   fields: LED_OPERATION_FIELDS,
   requiredFields: Object.keys(LED_OPERATION_FIELDS),
 })
+
+function drawAndExportLedReport(page, options) {
+  const {
+    canvasId,
+    isCurrent,
+    width,
+    height,
+    draw,
+    getExportOptions,
+    startExportMeasurement,
+    onSuccess,
+    onFailure,
+  } = options
+  let settled = false
+  let finishExport = () => {}
+  const fail = () => {
+    if (settled || !isCurrent()) return
+    settled = true
+    onFailure()
+  }
+  const recordExportResult = (success) => {
+    try {
+      finishExport({ success })
+      return true
+    } catch (error) {
+      fail()
+      return false
+    }
+  }
+
+  try {
+    const context = wx.createCanvasContext(canvasId, page)
+    draw(context)
+    context.draw(false, () => {
+      if (settled || !isCurrent()) return
+      try {
+        const exportOptions = getExportOptions()
+        finishExport = startExportMeasurement()
+        wx.canvasToTempFilePath({
+          canvasId,
+          width,
+          height,
+          ...exportOptions,
+          fileType: 'png',
+          quality: 1,
+          success: ({ tempFilePath } = {}) => {
+            if (settled || !isCurrent()) return
+            if (!recordExportResult(Boolean(tempFilePath))) return
+            if (!tempFilePath) return fail()
+            settled = true
+            onSuccess(tempFilePath)
+          },
+          fail: () => {
+            if (settled || !isCurrent()) return
+            if (!recordExportResult(false)) return
+            fail()
+          },
+        }, page)
+      } catch (error) {
+        recordExportResult(false)
+        fail()
+      }
+    })
+  } catch (error) {
+    fail()
+  }
+}
+const ledProjectMethods = createLedProjectMethods()
 
 function operationUiState(page, values) {
   const indexOf = (items, value, key) => value === undefined ? -1 : items.findIndex((item) => item[key] === value)
@@ -204,6 +276,16 @@ function decorateResult(result, state) {
   const actualRatioText = `${Number(exactActualRatio.toFixed(2))}:1`
   const ratioDeviationText = `${ratioDeviationPercent.toFixed(1)}%`
   const unitTypeLabel = result.unitType === 'module' ? '模组' : '箱体'
+  const isFinestAvailablePitch = Number(result.pixelPitch) === Math.min(...LED_PIXEL_PITCHES)
+  const viewingAssessmentText = result.statusKey === 'near'
+    ? `${result.viewingDistanceMeters} m 低于 ${result.comfortableMinimumMeters} m 的舒适距离参考下限。${isFinestAvailablePitch
+      ? `${result.pitchMode === 'recommended' ? '系统推荐' : '当前指定'}已是现有规格中最细的 ${result.pitchText}。`
+      : `当前按 ${result.pitchModeLabel} ${result.pitchText} 校核。`}`
+    : result.statusKey === 'avoid'
+      ? `${result.viewingDistanceMeters} m 低于 ${result.pitchText} 对应的点间距距离参考。`
+      : result.statusKey === 'surplus'
+        ? `${result.viewingDistanceMeters} m 超过舒适距离参考上限 ${result.comfortableMaximumMeters} m，当前点间距清晰度有余。`
+        : ''
   return {
     ...result,
     layoutText: `横向${unitTypeLabel} ${result.columns} × 纵向${unitTypeLabel} ${result.rows}，总共 ${result.totalUnits} 块`,
@@ -213,10 +295,15 @@ function decorateResult(result, state) {
     actualRatioText,
     ratioSummaryText: `目标 ${result.targetAspectRatioKey} · 实际 ${actualRatioText}（偏差 ${ratioDeviationText}）`,
     ratioFallbackText: ratioFallback ? '整数拼装偏差超过 5%，无法满足目标比例，当前为最接近方案。' : '',
+    viewingAssessmentText,
+    viewingDetailsText: result.statusKey === 'near' && isFinestAvailablePitch
+      ? `“观看位置偏近”表示低于舒适距离参考下限；${result.pitchMode === 'recommended' ? '系统推荐' : '当前指定'}档位已选用现有最细规格 ${result.pitchText}。`
+      : result.statusText,
     integerLayoutNote: ratioDeviation > 1e-9
       ? '完整单元拼装会产生比例偏差，内容按实际比例适配。'
       : '屏体按完整单元拼装，内容按实际比例显示。',
     diagramHeightRpx: Math.round(Math.min(DIAGRAM_STAGE_HEIGHT_RPX, legacyDiagramHeightRpx)),
+    diagramStageStyle: `padding-top:${(diagramBoxHeightRpx / DIAGRAM_STAGE_WIDTH_RPX * 100).toFixed(6)}%`,
     diagramFitStyle: `width:${diagramFitWidthPercent.toFixed(6)}%`,
     wallDiagramStyle: `padding-top:${(wallHeight / wallWidth * 100).toFixed(6)}%`,
     diagramLabelsBelow: diagramWidthRpx < 260 || diagramBoxHeightRpx < 100,
@@ -272,7 +359,9 @@ function buildPreferences(state) {
 finishLedScreenModuleLoad()
 
 Page({
+  ...createEditorNavigationMethods(),
   ...ledOperationMethods,
+  ...ledProjectMethods,
   data: {
     wallWidthText: '6',
     wallHeightText: '3',
@@ -312,13 +401,21 @@ Page({
     reportCanvasHeight: REPORT_HEIGHT,
     reportImagePath: '',
     reportPreviewVisible: false,
+    reportPreviewClosing: false,
+    reportPreviewError: false,
+    resetPersistenceError: false,
     isGeneratingReport: false,
     operationSnapshot: null,
     operationActive: false,
+    viewingDetailsExpanded: false,
+    ...createLedProjectData(),
   },
 
-  onLoad() {
+  onLoad(options = {}) {
+    attachResultEditor(this, 'ledScreen', options)
     this._pageVisible = false
+    this._ledReportPreviewCloseTimer = null
+    this._ledReportPreviewCloseRevision = 0
     this._favoriteSyncedSinceLoad = false
     const finishInitialization = startMeasurement('LED大屏/初始化总耗时')
     const preferences = readPreferences(PREFERENCE_KEY)
@@ -327,22 +424,27 @@ Page({
       : preferences.assemblyType
     const unitKey = preferences.unitKey || legacyUnitKey
     const changes = {
-      wallWidthText: preferences.wallWidthText || '6',
-      wallHeightText: preferences.wallHeightText || '3',
+      wallWidthText: preferences.wallWidthText === undefined ? '6' : preferences.wallWidthText,
+      wallHeightText: preferences.wallHeightText === undefined ? '3' : preferences.wallHeightText,
       topReserveText: preferences.topReserveText ?? '0.2',
       bottomReserveText: preferences.bottomReserveText ?? '0.2',
       frameWidthText: preferences.frameWidthText ?? '5',
-      viewingDistanceText: preferences.viewingDistanceText || '3',
+      viewingDistanceText: preferences.viewingDistanceText === undefined ? '3' : preferences.viewingDistanceText,
       aspectRatioIndex: findValueIndex(this.data.aspectRatioOptions, preferences.aspectRatio, (item) => item.key),
       unitIndex: findValueIndex(this.data.unitOptions, unitKey, (item) => item.key),
       pitchIndex: findValueIndex(this.data.pitchOptions, preferences.pitch, (item) => item.value),
     }
     const pageState = { ...this.data, ...changes }
     const finishCoreCalculation = startMeasurement('LED大屏/核心计算', { source: 'onLoad' })
-    const calculated = calculatePageResult(pageState)
+    const resetFields = ['wallWidthText', 'wallHeightText', 'topReserveText', 'bottomReserveText', 'frameWidthText', 'viewingDistanceText']
+    const intentionallyCleared = resetFields.every((field) => String(changes[field] ?? '').trim() === '')
+    const calculated = intentionallyCleared
+      ? { result: null, inputError: '', inputSuggestion: '', fieldErrors: {} }
+      : calculatePageResult(pageState)
     finishCoreCalculation({ valid: Boolean(calculated.result) })
     const finishViewUpdate = startMeasurement('LED大屏/setData视图更新', { source: 'onLoad' })
     this.setData({ ...changes, ...calculated }, () => {
+      captureEditorBaseline(this)
       finishViewUpdate()
       finishInitialization({ valid: Boolean(calculated.result) })
       if (this._pageVisible && !this._favoriteSyncedSinceLoad) {
@@ -360,20 +462,39 @@ Page({
     }
   },
 
+  getEditorPreferences(state = this.data) {
+    return buildPreferences(state)
+  },
+
+  saveEditorContext(event) {
+    return saveEditorRecordAction(this, event?.currentTarget?.dataset?.saveAs === 'true')
+  },
+
+  leaveEditorContext() {
+    return requestEditorLeave(this)
+  },
+
   onHide() {
     this._pageVisible = false
     this.flushInputCalculation()
+    this.cancelLedProjectDialogForHide()
+    this.closeReportPreview(true)
+    if (this.data.isGeneratingReport) this.invalidateReportGeneration()
+    this.setData({ reportPreviewVisible: false, reportPreviewClosing: false, reportPreviewError: false, isGeneratingReport: false })
   },
   onUnload() {
+    this._pageVisible = false
     disposeOperation(this)
     if (!this._ledUnloaded) {
-      this._pageVisible = false
       this._ledUnloaded = true
       this.cancelInputCalculation()
+      this.cancelLedProjectDialogForHide()
+      this.closeReportPreview(true)
       this.reportRevision = (this.reportRevision || 0) + 1
       this.reportPendingSignature = ''
       if (this.data.isGeneratingReport && typeof wx.hideLoading === 'function') wx.hideLoading()
       printPerformanceSummary('LED大屏/')
+      finalizeResultEditor(this)
     }
   },
 
@@ -417,6 +538,7 @@ Page({
   onOperationInvalidate(reason) {
     this.cancelInputCalculation()
     this.invalidateReportGeneration()
+    this.closeProjectDialog(true)
     this._ledOperationResultGuard = null
     this.setData({
       result: null,
@@ -427,7 +549,10 @@ Page({
       inputPending: false,
       reportImagePath: '',
       reportPreviewVisible: false,
+      reportPreviewClosing: false,
+      reportPreviewError: false,
       isGeneratingReport: false,
+      viewingDetailsExpanded: false,
     })
   },
 
@@ -485,8 +610,13 @@ Page({
       this.reportSignature
       || this.reportPendingSignature
       || this.data.reportImagePath
+      || this.data.reportPreviewVisible
+      || this.data.reportPreviewClosing
       || this.data.isGeneratingReport,
     )
+    if (this.data.reportPreviewVisible || this.data.reportPreviewClosing || this._ledReportPreviewCloseTimer != null) {
+      this.closeReportPreview(true)
+    }
     if (!hasReportState) return false
     this.reportRevision = (this.reportRevision || 0) + 1
     this.reportPendingSignature = ''
@@ -499,12 +629,14 @@ Page({
     const field = event.currentTarget.dataset.field
     const value = event.detail.value
     if (!field || this.data[field] === value) return
+    this.closeReportPreview(true)
     if (this.getOperationSnapshot()) {
       const operationKey = Object.entries(LED_OPERATION_FIELDS).find(([, descriptor]) => descriptor.dataKey === field)?.[0]
       this.setData({ [field]: value, fieldErrors: {}, inputSuggestion: '', inputPending: false })
       if (operationKey) this.setOperationCandidate(operationKey, value, LED_OPERATION_FIELDS[operationKey].unit)
       return
     }
+    if (this.data.projectDialogVisible) this.closeProjectDialog(true)
     this.invalidateReportGeneration()
     this._ledOperationResultGuard = null
     this.setData({
@@ -517,12 +649,63 @@ Page({
       inputPending: true,
       reportImagePath: '',
       reportPreviewVisible: false,
+      reportPreviewClosing: false,
       isGeneratingReport: false,
     })
     this.scheduleInputCalculation()
   },
 
   onFieldBlur() { this.flushInputCalculation() },
+
+  retryResetPersistence() {
+    const persisted = writePreferencesDetailed(PREFERENCE_KEY, buildPreferences(this.data))
+    this.setData({ resetPersistenceError: !persisted.ok })
+    wx.showToast({ title: persisted.ok ? '已保存清空状态' : '保存失败，请检查本地存储', icon: 'none' })
+    return persisted.ok
+  },
+
+  resetInputs() {
+    this.cancelInputCalculation()
+    this.invalidateReportGeneration()
+    this.closeProjectDialog(true)
+    if (this.getOperationSnapshot()) {
+      this._ledManualUiSnapshot = null
+      this.endStructuredOperation()
+    }
+    const changes = {
+      wallWidthText: '',
+      wallHeightText: '',
+      topReserveText: '',
+      bottomReserveText: '',
+      frameWidthText: '',
+      viewingDistanceText: '',
+      aspectRatioIndex: 0,
+      unitIndex: 0,
+      pitchIndex: 0,
+      result: null,
+      currentFavorite: false,
+      inputError: '',
+      inputSuggestion: '',
+      fieldErrors: {},
+      inputPending: false,
+      reportImagePath: '',
+      reportPreviewVisible: false,
+      reportPreviewClosing: false,
+      isGeneratingReport: false,
+      operationSnapshot: null,
+      operationActive: false,
+    }
+    this._ledOperationResultGuard = null
+    this.reportSignature = ''
+    this.reportPendingSignature = ''
+    this.setData(changes)
+    const preferences = buildPreferences({ ...this.data, ...changes })
+    const persisted = writePreferencesDetailed(PREFERENCE_KEY, preferences)
+    this.setData({ resetPersistenceError: !persisted.ok })
+    if (!persisted.ok) wx.showToast({ title: '清空未保存，请重试', icon: 'none' })
+    vibrate('light')
+    return true
+  },
 
   onAspectRatioChange(event) {
     const aspectRatioIndex = Number(event.detail.value)
@@ -617,7 +800,10 @@ Page({
       ...calculated,
       ...(!calculated.result ? { currentFavorite: false } : {}),
       inputPending: false,
-      ...(reportInvalidated ? { reportImagePath: '', reportPreviewVisible: false, isGeneratingReport: false } : {}),
+      ...(reportInvalidated ? {
+        reportImagePath: '', reportPreviewVisible: false, reportPreviewClosing: false,
+        isGeneratingReport: false,
+      } : {}),
     }, () => {
       finishViewUpdate()
       if (calculated.result && this._pageVisible) syncPageFavorite(this)
@@ -675,92 +861,223 @@ Page({
   },
 
   generateReportImage() {
+    if (this._pageVisible === false || this._ledUnloaded) return false
     this.flushInputCalculation()
     const state = this.getOutputState()
     const capture = this.captureCurrentOutput()
     const payload = buildLedScreenReportPayload(state)
-    if (!payload || this.data.isGeneratingReport) return
+    if (!payload || !capture || this.data.isGeneratingReport || this.data.inputPending || this.data.inputError) return false
     const signature = this.getReportSignature(state)
     if (this.data.reportImagePath && this.reportSignature === signature) {
-      if (!this.isCapturedOutputCurrent(capture)) return
-      vibrate('light')
-      this.setData({ reportPreviewVisible: true })
-      return
+      if (!this.isCapturedOutputCurrent(capture)) return false
+      if (this.hasAccessibleReportImage()) {
+        vibrate('light')
+        return this.openReportPreview()
+      }
+      this.reportSignature = ''
+      this.setData({ reportImagePath: '', reportPreviewError: false })
     }
     if (typeof wx.createCanvasContext !== 'function'
       || typeof wx.canvasToTempFilePath !== 'function') {
       wx.showToast({ title: '当前微信版本暂不支持生成图片', icon: 'none' })
-      return
+      return false
     }
 
+    let layout
+    try {
+      const measurementContext = wx.createCanvasContext(REPORT_CANVAS_ID, this)
+      layout = buildLedScreenReportLayout(measurementContext, payload)
+    } catch (error) {
+      wx.showToast({ title: '图片生成失败，请重试', icon: 'none' })
+      return false
+    }
+    if (!layout || !Number.isFinite(layout.height) || layout.height <= 0) return false
+
+    this.cancelReportPreviewCloseTimer()
     vibrate('medium')
     const revision = (this.reportRevision || 0) + 1
     this.reportRevision = revision
     this.reportPendingSignature = signature
-    const isCurrent = () => this.reportRevision === revision && this.isCapturedOutputCurrent(capture)
+    const isCurrent = () => this._pageVisible !== false && !this._ledUnloaded
+      && this.reportRevision === revision && this.isCapturedOutputCurrent(capture)
       && this.reportPendingSignature === signature
-    this.setData({ isGeneratingReport: true, reportPreviewVisible: false })
-    if (typeof wx.showLoading === 'function') wx.showLoading({ title: '正在生成图片', mask: true })
+    this.setData({
+      isGeneratingReport: true,
+      reportPreviewVisible: false,
+      reportPreviewClosing: false,
+      reportPreviewError: false,
+      reportCanvasHeight: layout.height,
+    }, () => {
+      if (!isCurrent() || this._ledUnloaded) return
+      if (typeof wx.showLoading === 'function') wx.showLoading({ title: '正在生成图片', mask: true })
+      try {
+        drawAndExportLedReport(this, {
+          canvasId: REPORT_CANVAS_ID,
+          isCurrent,
+          width: REPORT_WIDTH,
+          height: layout.height,
+          draw: (context) => {
+            const finishReportDrawing = startMeasurement('LED大屏/长图绘制')
+            try {
+              drawLedScreenReport(context, payload, layout)
+            } finally {
+              finishReportDrawing()
+            }
+          },
+          getExportOptions: () => getExportDimensions(layout.height),
+          startExportMeasurement: () => startMeasurement('LED大屏/长图导出'),
+          onSuccess: (tempFilePath) => {
+            if (!isCurrent()) return
+            this.reportSignature = signature
+            this.openReportPreview({ reportImagePath: tempFilePath })
+            this.finishReportGeneration(revision)
+          },
+          onFailure: () => {
+            this.finishReportGeneration(revision)
+            wx.showToast({ title: '图片生成失败，请重试', icon: 'none' })
+          },
+        })
+      } catch (error) {
+        if (!isCurrent()) return
+        this.finishReportGeneration(revision)
+        wx.showToast({ title: '图片生成失败，请重试', icon: 'none' })
+      }
+    })
+    return true
+  },
 
+  openSharePreview() { return this.generateReportImage() },
+
+  hasAccessibleReportImage(path = this.data.reportImagePath) {
+    if (!path) return false
     try {
-      drawAndExportReport(this, {
-        canvasId: REPORT_CANVAS_ID,
-        isCurrent,
-        width: REPORT_WIDTH,
-        height: REPORT_HEIGHT,
-        draw: (context) => {
-          const finishReportDrawing = startMeasurement('LED大屏/长图绘制')
-          drawLedScreenReport(context, payload)
-          finishReportDrawing()
-        },
-        getExportOptions: () => ({ destWidth: REPORT_WIDTH * 2, destHeight: REPORT_HEIGHT * 2 }),
-        startExportMeasurement: () => startMeasurement('LED大屏/长图导出'),
-        onSuccess: (tempFilePath) => {
-          this.reportSignature = signature
-          this.finishReportGeneration(revision, {
-            reportImagePath: tempFilePath,
-            reportPreviewVisible: true,
-          })
-        },
-        onFailure: () => {
-          this.finishReportGeneration(revision)
-          wx.showToast({ title: '图片生成失败，请重试', icon: 'none' })
-        },
-      })
+      const manager = typeof wx.getFileSystemManager === 'function' ? wx.getFileSystemManager() : null
+      if (typeof manager?.accessSync !== 'function') return true
+      manager.accessSync(path)
+      return true
     } catch (error) {
-      if (!isCurrent()) return
-      this.finishReportGeneration(revision)
-      wx.showToast({ title: '图片生成失败，请重试', icon: 'none' })
+      return false
     }
   },
 
-  closeReportPreview() {
+  cancelReportPreviewCloseTimer() {
+    if (this._ledReportPreviewCloseTimer !== null && this._ledReportPreviewCloseTimer !== undefined) {
+      clearTimeout(this._ledReportPreviewCloseTimer)
+    }
+    this._ledReportPreviewCloseTimer = null
+    this._ledReportPreviewCloseRevision = (this._ledReportPreviewCloseRevision || 0) + 1
+    return this._ledReportPreviewCloseRevision
+  },
+
+  openReportPreview(changes = {}) {
+    if (this._pageVisible === false || this._ledUnloaded) return false
+    this.cancelReportPreviewCloseTimer()
+    this.setData({
+      reportPreviewVisible: true,
+      reportPreviewClosing: false,
+      reportPreviewError: false,
+      ...changes,
+    })
+    return true
+  },
+
+  closeReportPreview(immediate = false) {
+    if (immediate === true) {
+      const hadPreview = Boolean(this.data.reportPreviewVisible || this.data.reportPreviewClosing || this.data.reportPreviewError)
+      this.cancelReportPreviewCloseTimer()
+      if (hadPreview) this.setData({ reportPreviewVisible: false, reportPreviewClosing: false, reportPreviewError: false })
+      return hadPreview
+    }
+    if (!this.data.reportPreviewVisible || this.data.reportPreviewClosing
+      || this._pageVisible === false || this._ledUnloaded) return false
     vibrate('light')
-    this.setData({ reportPreviewVisible: false })
+    const revision = this.cancelReportPreviewCloseTimer()
+    this.setData({ reportPreviewClosing: true }, () => {
+      const isCurrentClose = () => this._ledReportPreviewCloseRevision === revision
+        && this._pageVisible !== false && !this._ledUnloaded
+        && this.data.reportPreviewVisible && this.data.reportPreviewClosing
+      if (!isCurrentClose()) return
+      this._ledReportPreviewCloseTimer = setTimeout(() => {
+        if (!isCurrentClose()) return
+        this._ledReportPreviewCloseTimer = null
+        this.setData({ reportPreviewVisible: false, reportPreviewClosing: false, reportPreviewError: false })
+      }, 300)
+    })
+    return true
   },
 
   stopEvent() {},
   preventTouchMove() {},
 
-  previewReportImage() {
+  isCurrentReportPreview() {
+    if (!this.data.reportPreviewVisible || this.data.reportPreviewClosing || this.data.reportPreviewError
+      || this.data.isGeneratingReport || this._pageVisible === false || this._ledUnloaded
+      || !this.data.reportImagePath) return false
+    const output = this.getOutputState()
     const capture = this.captureCurrentOutput()
-    if (capture && this.isCapturedOutputCurrent(capture) && this.reportSignature === this.getReportSignature(this.getOutputState())) {
-      previewGeneratedImage(this.data.reportImagePath)
+    return Boolean(output && capture && this.isCapturedOutputCurrent(capture)
+      && this.reportSignature === this.getReportSignature(output))
+  },
+
+  previewReportImage() {
+    if (!this.isCurrentReportPreview()) return false
+    const path = this.data.reportImagePath
+    if (!this.hasAccessibleReportImage(path)) {
+      this.reportSignature = ''
+      this.setData({ reportImagePath: '', reportPreviewError: false })
+      return this.generateReportImage()
     }
+    return previewGeneratedImage(path)
+  },
+
+  onReportPreviewImageError(event) {
+    const dataset = event?.currentTarget?.dataset || {}
+    if (!this.data.reportPreviewVisible || this.data.reportPreviewClosing || this._pageVisible === false || this._ledUnloaded
+      || dataset.imagePath !== this.data.reportImagePath || !this.data.reportImagePath) return false
+    this.reportSignature = ''
+    this.setData({ reportImagePath: '', reportPreviewError: true })
+    return true
+  },
+
+  retryReportPreview() {
+    if (!this.data.reportPreviewVisible || this.data.reportPreviewClosing || this.data.isGeneratingReport
+      || this._pageVisible === false || this._ledUnloaded) return false
+    this.reportSignature = ''
+    this.setData({ reportImagePath: '', reportPreviewError: false })
+    return this.generateReportImage()
+  },
+
+  copyResultFromReport() {
+    if (!this.data.reportPreviewVisible) return false
+    return this.copyResult()
+  },
+
+  toggleViewingDetails() {
+    if (!this.data.result || this.data.result.statusKey === 'fit') return false
+    this.setData({ viewingDetailsExpanded: !this.data.viewingDetailsExpanded })
+    return true
   },
 
   shareReportImage() {
-    const capture = this.captureCurrentOutput()
-    if (capture && this.isCapturedOutputCurrent(capture) && this.reportSignature === this.getReportSignature(this.getOutputState())) {
-      shareGeneratedImage(this.data.reportImagePath)
+    if (!this.isCurrentReportPreview()) return false
+    const path = this.data.reportImagePath
+    if (!this.hasAccessibleReportImage(path)) {
+      this.reportSignature = ''
+      this.setData({ reportImagePath: '', reportPreviewError: true })
+      return false
     }
+    return shareGeneratedImage(path)
   },
 
   saveReportImage() {
-    const capture = this.captureCurrentOutput()
-    if (capture && this.isCapturedOutputCurrent(capture) && this.reportSignature === this.getReportSignature(this.getOutputState())) {
-      saveGeneratedImage(this.data.reportImagePath)
+    if (!this.isCurrentReportPreview()) return false
+    const path = this.data.reportImagePath
+    if (!this.hasAccessibleReportImage(path)) {
+      this.reportSignature = ''
+      this.setData({ reportImagePath: '', reportPreviewError: true })
+      return false
     }
+    return saveGeneratedImage(path)
   },
 
   getRecordLookupPayload() {
@@ -829,9 +1146,6 @@ Page({
   },
 
   saveToActiveProject() {
-    this.flushInputCalculation()
-    const capture = this.captureCurrentOutput()
-    if (!capture || !this.getRecordPayload()) return
-    return addPageToActiveProject(this, () => this.isCapturedOutputCurrent(capture))
+    return this.openProjectSheet()
   },
 })

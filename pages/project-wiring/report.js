@@ -6,6 +6,7 @@ const {
   CONNECTOR_OPTIONS,
   STATUS_OPTIONS,
 } = require('../../utils/project-wiring')
+const { buildWorkspace } = require('./workspace-model')
 
 const REPORT_WIDTH = 720
 const MAX_PAGE_HEIGHT = 1750
@@ -692,7 +693,311 @@ function paginateRows(rows, projectName, title, subtitleLines, type) {
   })
 }
 
+// The project report is a presentation of the same workspace used by both tabs.
+// Keep the legacy report types below intact for existing saved/report consumers.
+const PROJECT_REPORT = Object.freeze({
+  width: 720, maxHeight: 1750, margin: 20, innerLeft: 20, innerRight: 700,
+  bottom: 1640, groupGap: 12, nameSize: 30, nameLineHeight: 38,
+  rowMinHeight: 54, rowLineHeight: 26,
+  text: '#111111', secondary: '#3F454D', border: '#D7DCE2', accent: '#111111',
+  background: '#ffffff', groupHeader: '#F1F3F5', columnHeader: '#F7F8FA',
+  columns: [
+    { id: 'displayNumber', fieldId: 'header.displayNumber', label: '\u7f16\u53f7', x: 20, width: 64 },
+    { id: 'ports', fieldId: 'header.ports', label: '\u6765\u6e90 \u2192 \u76ee\u6807\u7aef\u53e3', x: 84, width: 162 },
+    { id: 'spec', fieldId: 'header.spec', label: '\u89c4\u683c', x: 246, width: 196 },
+    { id: 'length', fieldId: 'header.length', label: '\u957f\u5ea6', x: 442, width: 48 },
+    { id: 'connectors', fieldId: 'header.connectors', label: 'A \u63a5\u5934 \u2192 B \u63a5\u5934', x: 490, width: 210 },
+  ],
+})
+
+function estimateProjectPortLineWidth(value, size) {
+  const characterWidth = [...String(value || '')].reduce((total, character) => {
+    return total + Math.max(
+      estimateProjectLineWidth(character, size),
+      /[0-9]/.test(character) ? size * 0.64 : 0
+    )
+  }, 0)
+  return characterWidth * 1.1
+}
+
+function wrapProjectPortText(value, width, size) {
+  const text = String(value === null || value === undefined ? '' : value).replace(/\r\n?|\n/g, ' ')
+  if (estimateProjectPortLineWidth(text, size) <= width) return [text]
+  const lines = []
+  let line = ''
+  for (const character of [...text]) {
+    const candidate = line + character
+    if (line && estimateProjectPortLineWidth(candidate, size) > width) {
+      lines.push(line)
+      line = character
+    } else {
+      line = candidate
+    }
+  }
+  if (line || !lines.length) lines.push(line)
+  return lines
+}
+
+function wrapProjectText(value, width, size) {
+  const text = String(value === null || value === undefined ? '' : value).replace(/\r\n?|\n/g, ' ')
+  if (estimateProjectLineWidth(text, size) <= width) return [text]
+  return wrapLineValue(text, width, size)
+}
+
+function estimateProjectLineWidth(value, size) {
+  return [...String(value || '')].reduce((total, character) => {
+    if (/\s/.test(character)) return total + size * 0.28
+    if (character === '\u00b2') return total + size * 0.56
+    if (character === '\u00d7' || character === '\u2192') return total + size * 0.9
+    if (/^[\x00-\xff]$/.test(character)) {
+      if (/[ilI1|.,:;!'`]/.test(character)) return total + size * 0.3
+      if (/[MW@#%&]/.test(character)) return total + size * 0.85
+      if (/[mw]/.test(character)) return total + size * 0.8
+      if (/[A-Z]/.test(character)) return total + size * 0.62
+      if (/[0-9]/.test(character)) return total + size * 0.56
+      if (/[a-z]/.test(character)) return total + size * 0.5
+      if (/[-_+()[\]\/]/.test(character)) return total + size * 0.38
+      return total + size * 0.5
+    }
+    return total + size
+  }, 0)
+}
+
+function projectTextItems(value, fieldId, x, top, width, size, lineHeight, options = {}) {
+  const lines = wrapProjectText(value, Math.max(1, width - (options.inset || 0)), size)
+  const align = options.align || 'left'
+  const boundsX = x + (options.inset || 0) / 2
+  const boundsWidth = width - (options.inset || 0)
+  return {
+    lines,
+    height: lines.length * lineHeight,
+    items: lines.map((text, index) => ({
+      text, fieldId,
+      x: align === 'right' ? boundsX + boundsWidth : align === 'center' ? boundsX + boundsWidth / 2 : boundsX,
+      y: top + size + index * lineHeight,
+      fontSize: size,
+      colorRole: options.colorRole || 'text',
+      weight: options.weight || 500,
+      align,
+      bounds: { x: boundsX, y: top + index * lineHeight, width: boundsWidth, height: lineHeight },
+    })),
+  }
+}
+
+function projectGroupRow(group) {
+  const left = projectTextItems(group.fromDevice || '\u672a\u586b\u5199', 'from.device', 30, 7, 282, 18, 24,
+    { weight: 600, inset: 4 })
+  const arrow = projectTextItems('\u2192', 'group.direction', 318, 7, 72, 18, 24,
+    { align: 'center', colorRole: 'secondary' })
+  const right = projectTextItems(group.toDevice || '\u672a\u586b\u5199', 'to.device', 408, 7, 282, 18, 24,
+    { weight: 600, inset: 4 })
+  return {
+    kind: 'project-group', key: group.key, groupKey: group.key,
+    fromDevice: group.fromDevice || '\u672a\u586b\u5199', toDevice: group.toDevice || '\u672a\u586b\u5199',
+    fromDeviceId: group.fromDeviceId, toDeviceId: group.toDeviceId,
+    drawItems: [...left.items, ...arrow.items, ...right.items],
+    height: Math.max(38, Math.max(left.height, right.height) + 14),
+  }
+}
+
+function projectColumnsRow() {
+  const height = 30
+  const drawItems = PROJECT_REPORT.columns.map((column) => {
+    const result = projectTextItems(column.label, column.fieldId, column.x + 4, (height - 18) / 2,
+      column.width - 8, 14, 18, { align: 'center', colorRole: 'secondary', weight: 600 })
+    return result.items[0]
+  })
+  return { kind: 'project-columns', height, drawItems }
+}
+
+function projectNumberLines(value) {
+  const text = String(value === null || value === undefined || value === '' ? '\u2014' : value)
+  return { text, lines: wrapProjectText(text, 50, 18), size: 18 }
+}
+
+function projectLineRow(line, groupKey) {
+  const displayNumber = line.displayNumber
+  if (!Number.isSafeInteger(displayNumber) || displayNumber < 1) {
+    throw new TypeError('\u9879\u76ee\u7ebf\u8def\u7f3a\u5c11\u6709\u6548\u663e\u793a\u7f16\u53f7')
+  }
+  const number = projectNumberLines(displayNumber)
+  const displayValue = (value) => String(value === null || value === undefined ? '' : value).replace(/\r\n?|\n/g, ' ')
+  const fromPort = displayValue(line.fromPort || '\u672a\u586b\u5199')
+  const toPort = displayValue(line.toPort || '\u672a\u586b\u5199')
+  const connectorA = displayValue(line.connectorA ? line.connectorALabel : '\u5f85\u586b\u5199')
+  const connectorB = displayValue(line.connectorB ? line.connectorBLabel : '\u5f85\u586b\u5199')
+  const fields = {
+    displayNumber: number.text,
+    ports: fromPort + ' \u2192 ' + toPort,
+    spec: displayValue(line.spec ? line.specLabel : '\u5f85\u586b\u5199'),
+    length: displayValue(line.lengthText ? line.lengthLabel : '\u5f85\u786e\u8ba4'),
+    connectors: connectorA + ' \u2192 ' + connectorB,
+    fromPort,
+    toPort,
+    connectorA,
+    connectorB,
+    raw: {
+      displayNumber: String(displayNumber === null || displayNumber === undefined ? '\u2014' : displayNumber),
+      circleLabel: String(line.circleLabel || '\u2014'),
+      fromPort: String(line.fromPort || ''),
+      toPort: String(line.toPort || ''),
+      spec: String(line.spec || ''),
+      length: String(line.lengthText || ''),
+      connectorA: String(line.connectorA || ''),
+      connectorB: String(line.connectorB || ''),
+    },
+  }
+  const fieldLayouts = PROJECT_REPORT.columns.map((column) => {
+    if (column.id === 'displayNumber') return { column, lines: number.lines, size: number.size, lineHeight: 22 }
+    const size = column.id === 'connectors' || column.id === 'length' ? 18 : 20
+    const lineHeight = column.id === 'connectors' || column.id === 'length' ? 22 : 26
+    const lines = column.id === 'ports' || (column.id === 'length' && line.lengthText)
+      ? wrapProjectPortText(fields[column.id], column.width - 10, size)
+      : wrapProjectText(fields[column.id], column.width - 10, size)
+    return { column, lines, size, lineHeight }
+  })
+  const contentHeight = Math.max(...fieldLayouts.map((layout) => layout.lines.length * layout.lineHeight))
+  const height = Math.max(PROJECT_REPORT.rowMinHeight, contentHeight + 8)
+  const drawItems = []
+  fieldLayouts.forEach(({ column, lines, size, lineHeight }) => {
+    const fieldTop = (height - lines.length * lineHeight) / 2
+    const align = column.id === 'displayNumber' ? 'center' : 'left'
+    const inset = column.id === 'displayNumber' ? 7 : 5
+    const width = column.width - inset * 2
+    lines.forEach((text, index) => {
+      const boundsY = fieldTop + index * lineHeight
+      drawItems.push({
+        text, fieldId: column.id,
+        x: align === 'center' ? column.x + column.width / 2 : column.x + inset,
+        y: boundsY + size,
+        fontSize: size,
+        colorRole: 'text',
+        weight: column.id === 'ports' ? 600 : 500,
+        align,
+        bounds: { x: column.x + inset, y: boundsY, width, height: lineHeight },
+      })
+    })
+  })
+  return {
+    kind: 'project-line', key: line.id, lineId: line.id, groupKey,
+    displayNumber: number.text, fields, height, drawItems,
+  }
+}
+
+function positionProjectRow(row, y) {
+  return {
+    ...row, x: PROJECT_REPORT.margin, width: PROJECT_REPORT.innerRight - PROJECT_REPORT.innerLeft, y,
+    drawItems: row.drawItems.map((item) => ({
+      ...item, y: y + item.y, bounds: { ...item.bounds, y: y + item.bounds.y },
+    })),
+    ...(Array.isArray(row.primitives) ? {
+      primitives: row.primitives.map((item) => ({ ...item, y: y + item.y })),
+    } : {}),
+  }
+}
+
+function buildProjectWiringReportPages(projectName, scheduleValue) {
+  const workspace = buildWorkspace(scheduleValue)
+  const name = String(projectName || '').trim() || '\u672a\u547d\u540d\u9879\u76ee'
+  const nameLines = wrapProjectText(name, PROJECT_REPORT.innerRight - PROJECT_REPORT.innerLeft, PROJECT_REPORT.nameSize)
+  const nameY = 32
+  const titleY = nameY + nameLines.length * PROJECT_REPORT.nameLineHeight + 14
+  const startY = titleY + 42
+  const pages = []
+  let rows = []
+  let y = startY
+  const finishPage = () => {
+    if (!rows.length) return
+    pages.push({
+      type: 'project', title: '\u9879\u76ee\u7ebf\u8def\u6e05\u5355', projectName: name, width: PROJECT_REPORT.width,
+      height: Math.max(1, Math.min(PROJECT_REPORT.maxHeight, y + 32)), lineCount: workspace.lineCount,
+      nameLines, nameY, nameFontSize: PROJECT_REPORT.nameSize,
+      nameLineHeight: PROJECT_REPORT.nameLineHeight,
+      titleY, startY, contentBottom: y,
+      subtitleLines: ['\u5171 ' + workspace.lineCount + ' \u6761\u7ebf\u8def'], rows,
+    })
+    rows = []
+    y = startY
+  }
+  workspace.groups.forEach((group) => {
+    const heading = projectGroupRow(group)
+    const columns = projectColumnsRow()
+    const lineRows = group.lines.map((line) => projectLineRow(line, group.key))
+    let needsHeading = true
+    lineRows.forEach((lineRow) => {
+      const prefixHeight = needsHeading ? heading.height + columns.height + (rows.length ? PROJECT_REPORT.groupGap : 0) : 0
+      if (rows.length && y + prefixHeight + lineRow.height > PROJECT_REPORT.bottom) {
+        finishPage()
+        needsHeading = true
+      }
+      if (needsHeading) {
+        if (rows.length) y += PROJECT_REPORT.groupGap
+        rows.push(positionProjectRow(heading, y)); y += heading.height
+        rows.push(positionProjectRow(columns, y)); y += columns.height
+        needsHeading = false
+      }
+      if (y + lineRow.height > PROJECT_REPORT.bottom) {
+        finishPage()
+        rows.push(positionProjectRow(heading, y)); y += heading.height
+        rows.push(positionProjectRow(columns, y)); y += columns.height
+      }
+      if (y + lineRow.height > PROJECT_REPORT.bottom) throw new RangeError('\u7ebf\u8def\u884c\u8d85\u51fa\u9875\u9762\u53ef\u7528\u533a\u57df')
+      rows.push(positionProjectRow(lineRow, y)); y += lineRow.height
+    })
+  })
+  finishPage()
+  pages.forEach((page, index) => { page.pageNumber = index + 1; page.pageCount = pages.length })
+  const text = [name, '\u9879\u76ee\u7ebf\u8def\u6e05\u5355', '\u5171 ' + workspace.lineCount + ' \u6761\u7ebf\u8def',
+    ...workspace.groups.flatMap((group) => [
+      group.fromDevice + ' \u2192 ' + group.toDevice,
+      ...group.lines.map((line) => {
+        const row = projectLineRow(line, group.key)
+        return [row.fields.displayNumber, row.fields.ports, row.fields.spec, row.fields.length, row.fields.connectors].join(' | ')
+      }),
+    ])].join('\n')
+  return freezeDeep({ pages, text, title: '\u9879\u76ee\u7ebf\u8def\u6e05\u5355', lineCount: workspace.lineCount, type: 'project' })
+}
+
+function strokeProjectLine(context, x1, y1, x2, y2, color, width) {
+  context.setStrokeStyle(color)
+  context.setLineWidth(width)
+  context.beginPath()
+  context.moveTo(x1, y1)
+  context.lineTo(x2, y2)
+  context.stroke()
+}
+
+function drawProjectWiringReport(context, page) {
+  const colors = PROJECT_REPORT
+  context.setFillStyle(colors.background)
+  context.fillRect(0, 0, page.width, page.height)
+  page.nameLines.forEach((line, index) => drawText(context, line, PROJECT_REPORT.innerLeft,
+    page.nameY + page.nameFontSize + index * page.nameLineHeight,
+    page.nameFontSize, colors.text, 700))
+  drawText(context, page.title, PROJECT_REPORT.innerLeft, page.titleY + 22, 22, colors.secondary, 600)
+  drawText(context, page.subtitleLines[0], PROJECT_REPORT.innerRight, page.titleY + 21, 14, colors.secondary, 500, 'right')
+  page.rows.forEach((row) => {
+    if (row.kind === 'project-group') {
+      roundedRect(context, row.x, row.y, row.width, row.height, 10, colors.groupHeader)
+    } else if (row.kind === 'project-columns') {
+      context.setFillStyle(colors.columnHeader)
+      context.fillRect(row.x, row.y, row.width, row.height)
+      strokeProjectLine(context, row.x, row.y + row.height, row.x + row.width, row.y + row.height, colors.border, 1)
+    } else if (row.kind === 'project-line') {
+      context.setFillStyle(colors.background)
+      context.fillRect(row.x, row.y, row.width, row.height)
+      strokeProjectLine(context, row.x, row.y + row.height, row.x + row.width, row.y + row.height, colors.border, 1)
+      PROJECT_REPORT.columns.slice(1).forEach((column) => {
+        strokeProjectLine(context, column.x, row.y + 5, column.x, row.y + row.height - 5, colors.border, 1)
+      })
+    }
+    row.drawItems.forEach((item) => drawText(context, item.text, item.x, item.y, item.fontSize,
+      item.colorRole === 'secondary' ? colors.secondary : colors.text, item.weight, item.align))
+  })
+  return { height: page.height, contentHeight: page.height }
+}
 function buildScheduleReportPages(projectName, scheduleValue, type = 'lines') {
+  if (type === 'project') return buildProjectWiringReportPages(projectName, scheduleValue)
   const normalizedType = ['lines', 'materials', 'labels'].includes(type) ? type : 'lines'
   const schedule = normalizeSchedule(scheduleValue)
   const summary = buildMaterialSummary(schedule)
@@ -743,8 +1048,10 @@ function roundedRect(context, x, y, width, height, radius, fill, stroke) {
   context.lineTo(x, y + r)
   context.quadraticCurveTo(x, y, x + r, y)
   context.closePath()
-  context.setFillStyle(fill)
-  context.fill()
+  if (fill) {
+    context.setFillStyle(fill)
+    context.fill()
+  }
   if (stroke) {
     context.setStrokeStyle(stroke)
     context.setLineWidth(1)
@@ -784,6 +1091,7 @@ function drawLineScheduleReport(context, page, colors) {
 
 function drawScheduleReport(context, page, options = {}) {
   if (!context || !page || !Array.isArray(page.rows)) throw new TypeError('布线报告页面无效')
+  if (page.type === 'project') return drawProjectWiringReport(context, page)
   const colors = palette(options.theme)
   if (page.type === 'lines') return drawLineScheduleReport(context, page, colors)
   context.setFillStyle(colors.background)

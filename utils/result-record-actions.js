@@ -1,11 +1,20 @@
 const {
   addRecordToProject,
   createProject,
+  getFavoriteByPayload,
   getRecordByPayload,
   getWorkspaceSnapshot,
   toggleFavorite,
 } = require('./records')
 const { vibrate } = require('./haptics')
+const {
+  discardResultEditor,
+  isEditorDirty,
+  markEditorSaved,
+  prepareEditorSave,
+  reconcilePendingEditorSave,
+  setEditorDirty,
+} = require('./result-record-context')
 
 const ACTION_SHEET_LIMIT = 6
 
@@ -25,8 +34,9 @@ function showToast(title) {
 
 function syncPageFavorite(page) {
   const payload = getLookupPayload(page)
-  const currentFavorite = Boolean(payload && getRecordByPayload(payload)?.favorite)
+  const currentFavorite = Boolean(payload && getFavoriteByPayload(payload))
   if (page.data.currentFavorite !== currentFavorite) page.setData({ currentFavorite })
+  setEditorDirty(page)
   return currentFavorite
 }
 
@@ -34,10 +44,14 @@ function togglePageFavorite(page) {
   const payload = getPayload(page)
   if (!payload) return
 
-  const wasFavorite = Boolean(getRecordByPayload(payload)?.favorite)
+  const wasFavorite = Boolean(getFavoriteByPayload(payload))
   const record = toggleFavorite(payload)
   const currentFavorite = Boolean(record?.favorite)
-  const removedFavorite = wasFavorite && !record && !getRecordByPayload(payload)
+  const removedFavorite = wasFavorite && !record && !getFavoriteByPayload(payload)
+  if (wasFavorite && currentFavorite) {
+    showToast('取消收藏失败，原收藏仍然保留')
+    return false
+  }
   if (!record && !removedFavorite) {
     showToast('保存失败，请检查本地存储')
     return
@@ -45,6 +59,208 @@ function togglePageFavorite(page) {
   page.setData({ currentFavorite })
   vibrate('medium')
   showToast(currentFavorite ? '已收藏常用' : '已取消收藏')
+}
+
+function saveEditorRecord(page, saveAs = false, onComplete = () => {}) {
+  let session = page?._resultEditorSession
+  if (!session || page._editorSavePending) return false
+  const initialPayload = getPayload(page)
+  const payloadSignature = serializePayload(initialPayload)
+  if (!initialPayload || !payloadSignature) {
+    showToast('当前结果尚未完成，暂时无法保存')
+    return false
+  }
+  if (session.pendingSave && session.pendingSave.payloadSignature !== payloadSignature) {
+    if (!reconcilePendingEditorSave(page)) {
+      showToast('上次保存已完成或仍在同步，请先重试保存状态')
+      onComplete(false, null, { sessionPersistenceError: true })
+      return false
+    }
+    session = page._resultEditorSession
+  }
+  const pendingSave = session.pendingSave || null
+  const effectiveSaveAs = pendingSave ? pendingSave.saveAs : saveAs === true
+  const isExistingRecord = session.sourceKind === 'project-record' && Boolean(session.recordId)
+  if (isExistingRecord && !effectiveSaveAs && !pendingSave && !isEditorDirty(page)) {
+    showToast('内容未更改')
+    onComplete(true, { unchanged: true })
+    return true
+  }
+
+  page._editorSavePending = true
+  const requestId = (page._editorSaveRequestId || 0) + 1
+  page._editorSaveRequestId = requestId
+  const isPending = () => page._editorSavePending && page._editorSaveRequestId === requestId
+  const finish = (success, record, details) => {
+    if (!isPending()) return
+    page._editorSavePending = false
+    onComplete(success, record, details)
+  }
+  const saveToProject = (projectId, projectName) => {
+    if (!isPending()) return
+    if (!isSaveCurrent(page, () => true, payloadSignature)) {
+      showToast('输入内容已变化，请等待计算完成后重试')
+      return finish(false)
+    }
+    const operationSaveAs = page._resultEditorSession?.pendingSave
+      ? page._resultEditorSession.pendingSave.saveAs
+      : effectiveSaveAs
+    const preparedSave = prepareEditorSave(page, projectId, payloadSignature, operationSaveAs)
+    if (!preparedSave) {
+      showToast('编辑状态同步失败，未创建项目记录，请重试')
+      return finish(false, null, { sessionPersistenceError: true, recordPersisted: false })
+    }
+    const options = {
+      ...(!operationSaveAs && preparedSave.recordId ? { recordId: preparedSave.recordId } : {}),
+      ...(operationSaveAs ? { saveAs: true } : {}),
+      saveToken: preparedSave.token,
+    }
+    const saved = addRecordToProject(JSON.parse(payloadSignature), projectId, undefined, options)
+    if (!saved) {
+      showToast('保存失败，输入内容已保留，请重试')
+      return finish(false)
+    }
+    const sessionSaved = markEditorSaved(page, saved, { saveAs: operationSaveAs, projectId })
+    vibrate('medium')
+    if (sessionSaved) showToast(operationSaveAs ? '已另存为独立记录' : `已保存到${projectName || '项目'}`)
+    else showToast('记录已保存；编辑状态同步失败，请重试以完成同步')
+    finish(sessionSaved, saved, { recordPersisted: true, sessionPersistenceError: !sessionSaved })
+  }
+  const snapshot = getFreshWorkspace()
+  if (!snapshot) return finish(false)
+  if (pendingSave) {
+    const target = snapshot.projects.find((item) => item.id === pendingSave.projectId)
+    if (!target) {
+      showToast('上次保存的目标项目已不存在，编辑草稿仍保留')
+      return finish(false, null, { sessionPersistenceError: true })
+    }
+    saveToProject(target.id, target.name)
+    return true
+  }
+  const intendedProjectId = session.projectId || ''
+  const intendedProject = intendedProjectId
+    ? snapshot.projects.find((item) => item.id === intendedProjectId)
+    : null
+  if (intendedProject) {
+    saveToProject(intendedProject.id, intendedProject.name)
+    return true
+  }
+
+  const showChoices = (start = 0, starts = [0]) => {
+    if (!isPending()) return
+    const projects = snapshot.projects
+    if (!projects.length) {
+      wx.showModal({
+        title: '新建现场项目',
+        content: '',
+        editable: true,
+        placeholderText: '例如：三楼会议室',
+        confirmText: '创建并保存',
+        success: ({ confirm, content }) => {
+          if (!confirm) return finish(false)
+          if (!isPending() || !isSaveCurrent(page, () => true, payloadSignature)) return finish(false)
+          const project = createProject(content)
+          if (!project) {
+            showToast(content?.trim() ? '新建失败，请检查本地存储' : '请输入项目名称')
+            return finish(false)
+          }
+          saveToProject(project.id, project.name)
+        },
+        fail: () => finish(false),
+      })
+      return
+    }
+    const canPrevious = start > 0
+    const remaining = projects.length - start
+    const canNext = remaining > ACTION_SHEET_LIMIT - 1 - (canPrevious ? 1 : 0)
+    const pageSize = Math.max(1, ACTION_SHEET_LIMIT - (canPrevious ? 1 : 0) - (canNext ? 1 : 0))
+    const pageProjects = projects.slice(start, start + pageSize)
+    const actions = pageProjects.map((project) => ({ type: 'project', project }))
+    const itemList = pageProjects.map((project) => project.name)
+    if (canPrevious) {
+      itemList.push('上一页项目')
+      actions.push({ type: 'previous' })
+    }
+    if (canNext) {
+      itemList.push('下一页项目')
+      actions.push({ type: 'next', start: start + pageSize })
+    }
+    wx.showActionSheet({
+      itemList,
+      success: ({ tapIndex }) => {
+        const action = actions[tapIndex]
+        if (!action) return finish(false)
+        if (action.type === 'project') return saveToProject(action.project.id, action.project.name)
+        if (action.type === 'previous') {
+          const previous = starts.slice(0, -1)
+          return showChoices(previous[previous.length - 1] || 0, previous)
+        }
+        const nextStarts = [...starts, action.start]
+        return showChoices(action.start, nextStarts)
+      },
+      fail: () => finish(false),
+    })
+  }
+  showChoices()
+  return true
+}
+
+function navigateBackFromEditor(page) {
+  if (page?.data?.editorGuardSupported && page.data.editorGuardArmed) {
+    page._editorGuardClosingForNavigation = true
+    page._editorNavigationPending = true
+    page.setData({ editorGuardArmed: false })
+    return true
+  }
+  wx.navigateBack()
+  return true
+}
+
+function armEditorGuard(page) {
+  if (!page?.data?.editorGuardSupported || !page._resultEditorSession) return false
+  page.setData({ editorGuardArmed: true })
+  return true
+}
+
+function requestEditorLeave(page, options = {}) {
+  const session = page?._resultEditorSession
+  if (!session) {
+    wx.navigateBack()
+    return true
+  }
+  if (!isEditorDirty(page)) {
+    navigateBackFromEditor(page)
+    return true
+  }
+  if (page._editorLeavePromptPending) return true
+  page._editorLeavePromptPending = true
+  const settlePrompt = () => { page._editorLeavePromptPending = false }
+  const cancelNativeLeave = () => {
+    settlePrompt()
+    if (options.nativeBack) armEditorGuard(page)
+  }
+  wx.showActionSheet({
+    itemList: ['保存并退出', '放弃更改', '留在此页'],
+    success: ({ tapIndex }) => {
+      if (tapIndex === 0) {
+        saveEditorRecord(page, false, (saved) => {
+          settlePrompt()
+          if (saved) navigateBackFromEditor(page)
+          else cancelNativeLeave()
+        })
+      } else if (tapIndex === 1) {
+        settlePrompt()
+        if (!discardResultEditor(page)) {
+          showToast('恢复原临时输入失败，请重试')
+          if (options.nativeBack) armEditorGuard(page)
+          return
+        }
+        navigateBackFromEditor(page)
+      } else cancelNativeLeave()
+    },
+    fail: cancelNativeLeave,
+  })
+  return true
 }
 
 function serializePayload(payload) {
@@ -88,6 +304,10 @@ function getFreshWorkspace() {
 }
 
 function addPageToActiveProject(page, isCurrent = () => true) {
+  if (page?._resultEditorSession?.sourceKind === 'project-draft'
+    || page?._resultEditorSession?.sourceKind === 'project-record') {
+    return saveEditorRecord(page, false)
+  }
   if (page._projectSavePending || !isCurrent() || !isPageVisible(page)) return false
   const initialPayload = getPayload(page)
   const payloadSignature = serializePayload(initialPayload)
@@ -178,9 +398,7 @@ function addPageToActiveProject(page, isCurrent = () => true) {
     const canNext = remaining > maxProjectsWithoutNext
     const pageSize = Math.min(remaining, maxProjectsWithoutNext - (canNext ? 1 : 0))
     const pageProjects = projects.slice(start, start + pageSize)
-    const itemList = pageProjects.map((project) => (
-      `${project.name}${snapshot.activeProject?.id === project.id ? '（当前）' : ''}`
-    ))
+    const itemList = pageProjects.map((project) => project.name)
     const actions = pageProjects.map((project) => ({ type: 'project', id: project.id, name: project.name }))
     if (canPrevious) {
       itemList.push('上一页项目')
@@ -223,6 +441,10 @@ function addPageToActiveProject(page, isCurrent = () => true) {
 
 module.exports = {
   addPageToActiveProject,
+  armEditorGuard,
+  navigateBackFromEditor,
+  requestEditorLeave,
+  saveEditorRecord,
   syncPageFavorite,
   togglePageFavorite,
 }

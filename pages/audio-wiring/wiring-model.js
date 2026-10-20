@@ -80,6 +80,11 @@ const OUTPUT_OPTIONS = [
     signalLabel: 'LINE OUT · 非平衡单声道', connectorType: '6.35 mm TS',
     image: '/pages/audio-wiring/assets/ts.png', side: 'output',
   },
+  {
+    id: 'stereo635', label: '6.35 mm TRS 立体声输出', deviceLabel: '音频设备',
+    signalLabel: '立体声模拟 L/R/G · 非平衡', connectorType: '6.35 mm 大三芯 TRS · 立体声',
+    image: '/pages/audio-wiring/assets/trs.png', side: 'output',
+  },
 ]
 
 const INPUT_OPTIONS = [
@@ -118,6 +123,16 @@ const INPUT_OPTIONS = [
     signalLabel: 'LINE IN · 非平衡单声道', connectorType: '6.35 mm TS',
     image: '/pages/audio-wiring/assets/ts.png', side: 'input',
   },
+  {
+    id: 'stereo635', label: '6.35 mm TRS 立体声输入', deviceLabel: '音频设备',
+    signalLabel: '立体声 L/R/G · 非平衡', connectorType: '6.35 mm 大三芯 TRS · 立体声',
+    image: '/pages/audio-wiring/assets/trs.png', side: 'input',
+  },
+  {
+    id: 'stereo35', label: '3.5 mm 立体声输入', deviceLabel: '电脑/播放设备',
+    signalLabel: '立体声模拟 L/R · 非平衡', connectorType: '3.5 mm 立体声',
+    image: '/pages/audio-wiring/assets/stereo35.png', side: 'input',
+  },
 ]
 
 const OUTPUT_BY_ID = Object.fromEntries(OUTPUT_OPTIONS.map((item) => [item.id, item]))
@@ -125,6 +140,9 @@ const INPUT_BY_ID = Object.fromEntries(INPUT_OPTIONS.map((item) => [item.id, ite
 const BALANCED_IDS = new Set(['xlrBalanced', 'trsBalanced', 'terminalBalanced'])
 const MONO_IDS = new Set(['rcaMono', 'tsMono'])
 const DUAL_IDS = new Set(['rcaStereo', 'tsStereo'])
+const STEREO_OUTPUT_IDS = new Set(['stereo35', 'stereo635'])
+const STEREO_INPUT_IDS = new Set(['stereo35', 'stereo635'])
+const STEREO_SPLIT_MONO_INPUT_IDS = new Set(['xlrBalanced', 'trsBalanced', 'terminalBalanced', 'rcaMono', 'tsMono'])
 const COLORS = { positive: '#1976d2', negative: '#ed8b23', shield: '#78818c', left: '#1976d2', right: '#7a5ce1' }
 
 function endpoint(option, side, isKnown) {
@@ -143,7 +161,17 @@ function endpoint(option, side, isKnown) {
   }
 }
 
-function pin(id, role, channel = '') {
+function stereoSplitMonoEndpoint(option, side) {
+  const result = endpoint(option, side, true)
+  const balanced = BALANCED_IDS.has(option.id)
+  result.channelCount = 2
+  result.connectorType = `${option.connectorType} ×2`
+  result.label = `${option.label}（L/R 各一个）`
+  result.signalLabel = `LINE IN · L/R 各一路${balanced ? '平衡' : '非平衡'}单声道`
+  return result
+}
+
+function pin(id, role, channel = '', side = 'output') {
   if (id === 'xlrBalanced') {
     return role === 'positive' ? ['2', '2 号针（+）']
       : role === 'negative' ? ['3', '3 号针（−）'] : ['1', '1 号针（屏蔽）']
@@ -159,7 +187,12 @@ function pin(id, role, channel = '') {
   if (id === 'stereo35') {
     if (role === 'left') return ['T', 'T 尖端（左声道 L）']
     if (role === 'right') return ['R', 'R 环（右声道 R）']
-    return ['S', 'S 套筒（源端公共回路）']
+    return ['S', side === 'input' ? 'S 套筒（公共回路 G）' : 'S 套筒（源端公共回路）']
+  }
+  if (id === 'stereo635') {
+    if (role === 'left') return ['T', 'T 尖端（左声道 L）']
+    if (role === 'right') return ['R', 'R 环（右声道 R）']
+    return ['S', 'S 套筒（公共回路 G）']
   }
   if (id === 'rcaMono') {
     return role === 'signal' ? ['中心针', 'RCA 中心针（信号）']
@@ -202,12 +235,12 @@ function balancedConnections(outputId, inputId) {
   })
 }
 
-function stereoBreakoutConnections(inputId) {
+function stereoBreakoutConnections(inputId, outputId = 'stereo35') {
   return [
-    makeConnection('left', pin('stereo35', 'left'), pin(inputId, 'signal', 'left'), '左声道 L', COLORS.left, 'left', 'left'),
-    makeConnection('right', pin('stereo35', 'right'), pin(inputId, 'signal', 'right'), '右声道 R', COLORS.right, 'right', 'right'),
-    makeConnection('shield-left', pin('stereo35', 'return'), pin(inputId, 'return', 'left'), '公共回路分支 · 左', COLORS.shield, 'return', 'return', 'shield'),
-    makeConnection('shield-right', pin('stereo35', 'return'), pin(inputId, 'return', 'right'), '公共回路分支 · 右', COLORS.shield, 'return', 'return', 'shield'),
+    makeConnection('left', pin(outputId, 'left'), pin(inputId, 'signal', 'left'), '左声道 L', COLORS.left, 'left', 'left'),
+    makeConnection('right', pin(outputId, 'right'), pin(inputId, 'signal', 'right'), '右声道 R', COLORS.right, 'right', 'right'),
+    makeConnection('shield-left', pin(outputId, 'return'), pin(inputId, 'return', 'left'), '公共回路分支 · 左', COLORS.shield, 'return', 'return', 'shield'),
+    makeConnection('shield-right', pin(outputId, 'return'), pin(inputId, 'return', 'right'), '公共回路分支 · 右', COLORS.shield, 'return', 'return', 'shield'),
   ]
 }
 
@@ -226,39 +259,19 @@ function monoOutputDualInput(outputId, inputId) {
   return MONO_IDS.has(outputId) && DUAL_IDS.has(inputId)
 }
 
-function requiredChoices(outputId, inputId) {
-  const choices = []
-  if (BALANCED_IDS.has(outputId) && !BALANCED_IDS.has(inputId)) {
-    choices.push({
-      id: 'outputMode', title: '冷端接法',
-      hint: '',
-      options: [
-        { id: 'coldReturn', label: '冷端与屏蔽在输入端汇接', detail: '确认两台设备手册允许此接法' },
-      ],
-    })
+function getFixedWiringSelections(outputId, inputId) {
+  const selections = {}
+  if (!Object.prototype.hasOwnProperty.call(OUTPUT_BY_ID, outputId)
+    || !Object.prototype.hasOwnProperty.call(INPUT_BY_ID, inputId)) return selections
+  if (BALANCED_IDS.has(outputId) && !BALANCED_IDS.has(inputId)) selections.outputMode = 'coldReturn'
+  if ((DUAL_IDS.has(inputId) || STEREO_INPUT_IDS.has(inputId))
+    && (BALANCED_IDS.has(outputId) || MONO_IDS.has(outputId))) {
+    selections.destinationChannel = 'both'
   }
-  if (outputId === 'stereo35' && (BALANCED_IDS.has(inputId) || MONO_IDS.has(inputId))) {
-    choices.push({
-      id: 'sourceChannel', title: '立体声源声道',
-      hint: '本直连接法只取一路，可能遗漏另一声道内容；未选声道不接。',
-      options: [
-        { id: 'left', label: '左声道 L', detail: '使用 T 尖端；R 环不接。' },
-        { id: 'right', label: '右声道 R', detail: '使用 R 环；T 尖端不接。' },
-      ],
-    })
+  if (STEREO_OUTPUT_IDS.has(outputId) && (BALANCED_IDS.has(inputId) || MONO_IDS.has(inputId))) {
+    selections.sourceChannel = 'both'
   }
-  if (monoOutputDualInput(outputId, inputId) || (BALANCED_IDS.has(outputId) && DUAL_IDS.has(inputId))) {
-    choices.push({
-      id: 'destinationChannel', title: '双声道输入分配',
-      hint: '选择一个输入侧，或将一个输出分送到两个彼此独立的高阻 LINE 输入。',
-      options: [
-        { id: 'left', label: '只接左声道 L', detail: '另一侧不接。' },
-        { id: 'right', label: '只接右声道 R', detail: '另一侧不接。' },
-        { id: 'both', label: '分送到 L 和 R', detail: '一个输出分送两路，须确认允许负载。' },
-      ],
-    })
-  }
-  return choices
+  return selections
 }
 
 function unsupportedReason(outputId, inputId, knownOutput, knownInput) {
@@ -271,20 +284,37 @@ function unsupportedReason(outputId, inputId, knownOutput, knownInput) {
 
 function getCableSummary(outputId, inputId, selections = {}) {
   if (BALANCED_IDS.has(outputId) && BALANCED_IDS.has(inputId)) return '双芯双绞屏蔽平衡音频线'
+  if (inputId === 'stereo35') {
+    if (outputId === 'stereo35') return '3.5 mm 立体声直连接线'
+    if (outputId === 'stereo635') return '6.35 mm TRS 转 3.5 mm 立体声接线'
+    if (BALANCED_IDS.has(outputId)) return '平衡输出分接至 3.5 mm 立体声输入的接线'
+    if (MONO_IDS.has(outputId)) return '单声道输出分接至 3.5 mm 立体声输入的接线'
+  }
+  if (inputId === 'stereo635') {
+    if (STEREO_OUTPUT_IDS.has(outputId)) return '6.35 mm TRS 立体声直连接线'
+    if (BALANCED_IDS.has(outputId)) return '平衡输出分接至 6.35 mm TRS 立体声输入的接线'
+    if (MONO_IDS.has(outputId)) return '单声道输出分接至 6.35 mm TRS L/R 的接线'
+  }
+  if (outputId === 'stereo635' && DUAL_IDS.has(inputId)) return inputId === 'rcaStereo'
+    ? '6.35 mm TRS 转双 RCA 立体声分线缆' : '6.35 mm TRS 转双 TS 立体声分线缆'
+  if (outputId === 'stereo635' && (BALANCED_IDS.has(inputId) || MONO_IDS.has(inputId))) {
+    return BALANCED_IDS.has(inputId)
+      ? '6.35 mm TRS 转双平衡单声道输入线（L/R）'
+      : `6.35 mm TRS 转双 ${INPUT_BY_ID[inputId].connectorType} 单声道输入线（L/R）`
+  }
   if (outputId === 'stereo35' && DUAL_IDS.has(inputId)) return inputId === 'rcaStereo'
     ? '3.5 mm TRS 转双 RCA 立体声分线缆' : '3.5 mm TRS 转双 TS 立体声分线缆'
   if (MONO_IDS.has(outputId) && MONO_IDS.has(inputId)) return '单芯屏蔽非平衡音频线'
   if (MONO_IDS.has(outputId) && BALANCED_IDS.has(inputId)) return '双芯屏蔽音频线；源端回路汇接到屏蔽'
   if (MONO_IDS.has(outputId) && DUAL_IDS.has(inputId)) {
-    return selections.destinationChannel === 'both'
-      ? '单声道屏蔽线分送到双路输入（Y 分线）'
-      : '单声道屏蔽线接双声道输入的一侧'
+    return '单声道屏蔽线分送到双路输入（Y 分线）'
   }
   if (outputId === 'stereo35' && (BALANCED_IDS.has(inputId) || MONO_IDS.has(inputId))) {
-    return BALANCED_IDS.has(inputId) ? '双芯屏蔽音频线；TRS 公共回路在源端分接' : '3.5 mm TRS 至单声道屏蔽线；只接所选声道'
+    return BALANCED_IDS.has(inputId)
+      ? '3.5 mm TRS 转双平衡单声道输入线（L/R）'
+      : `3.5 mm TRS 转双 ${INPUT_BY_ID[inputId].connectorType} 单声道输入线（L/R）`
   }
   if (BALANCED_IDS.has(outputId) && !BALANCED_IDS.has(inputId)) {
-    if (selections.outputMode !== 'coldReturn') return '先按两台设备说明书确认冷端接法'
     return '双芯屏蔽音频线；冷端与屏蔽仅按说明书在输入端汇接'
   }
   return '无通用线材建议'
@@ -304,6 +334,11 @@ function sourcesFor(outputId, inputId, status) {
   }
   if (outputId === 'stereo35') return [SOURCE_LIST.yamahaCable, SOURCE_LIST.rane109,
     ...(BALANCED_IDS.has(inputId) ? [SOURCE_LIST.jensenAN003] : [])]
+  if (outputId === 'stereo635') return [SOURCE_LIST.yamahaCable, SOURCE_LIST.rane109,
+    ...(BALANCED_IDS.has(inputId) ? [SOURCE_LIST.jensenAN003] : [])]
+  if (inputId === 'stereo635' && BALANCED_IDS.has(outputId)) return [SOURCE_LIST.rane110, SOURCE_LIST.raneMlm82s]
+  if (inputId === 'stereo635' && MONO_IDS.has(outputId)) return [SOURCE_LIST.yamahaCable, SOURCE_LIST.rane109]
+  if (inputId === 'stereo35' && MONO_IDS.has(outputId)) return [SOURCE_LIST.yamahaCable, SOURCE_LIST.rane109]
   if (MONO_IDS.has(outputId) && DUAL_IDS.has(inputId)) return [SOURCE_LIST.rane109, SOURCE_LIST.yamahaCable]
   if (MONO_IDS.has(outputId) && MONO_IDS.has(inputId)) return [SOURCE_LIST.yamahaCable, SOURCE_LIST.rane110]
   return status === 'unsupported' ? [SOURCE_LIST.rane110, SOURCE_LIST.rane109] : [SOURCE_LIST.yamahaCable]
@@ -320,13 +355,52 @@ function notesFor(outputId, inputId, status) {
       ? ['Phoenix/欧式端子按 +、−、G 功能丝印确认；实际端子排列因设备而异。'] : []),
     ...common,
   ]
-  if (outputId === 'stereo35') return [
-    '仅适用于电脑/播放设备的模拟立体声输出或已确认的 LINE 输出；不适用于 TRRS 耳麦、麦克风输入或数字音频口。',
-    DUAL_IDS.has(inputId)
-      ? 'T/R 分别对应左/右声道并送入 L/R；L/R 不可直接并接。'
-      : '本直连接法只取一路，可能遗漏另一声道内容。需要两边内容时先通过播放设备或混音器合成为单声道；L/R 不可直接并接。',
-    'T 为左声道、R 为右声道、S 为公共回路。',
-    '输入须为 LINE 用途；关闭幻象或插孔馈电。开始播放前先调低音量，再逐步升高。',
+  if (STEREO_OUTPUT_IDS.has(outputId)) {
+    if (inputId === 'stereo35') return [
+      '仅适用于已确认用途的模拟立体声输出与 3.5 mm 立体声 LINE 输入；不适用于 TRRS 耳麦、麦克风输入或数字音频口。',
+      'T（L）、R（R）、S（G）一一对应，保留左右声道。',
+      '输入须为 LINE 用途；关闭幻象或插孔馈电。开始播放前先调低音量，再逐步升高。',
+      ...common,
+    ]
+    if (outputId === 'stereo35') return [
+      '仅适用于电脑/播放设备的模拟立体声输出或已确认的 LINE 输出；不适用于 TRRS 耳麦、麦克风输入或数字音频口。',
+      STEREO_SPLIT_MONO_INPUT_IDS.has(inputId)
+        ? 'T（L）与 R 分别接入 L/R 两个独立单声道输入；保留左右声道，不并接。'
+        : 'T/R 分别对应左/右声道并送入 L/R；L/R 不可直接并接。',
+      ...(BALANCED_IDS.has(inputId) && STEREO_SPLIT_MONO_INPUT_IDS.has(inputId)
+        ? ['两路均为非平衡源接入平衡 LINE 输入，不会生成平衡信号。'] : []),
+      'T 为左声道、R 为右声道、S 为公共回路。',
+      '输入须为 LINE 用途；关闭幻象或插孔馈电。开始播放前先调低音量，再逐步升高。',
+      ...common,
+    ]
+    if (inputId === 'stereo635') return [
+      '仅适用于已确认用途的 6.35 mm TRS 立体声 LINE 输入/输出；不适用于耳麦、麦克风输入或数字音频口。',
+      'T（L）、R（R）、S（G）一一对应，保留左右声道。',
+      '输入须为 LINE 用途；关闭幻象或插孔馈电。开始播放前先调低音量，再逐步升高。',
+      ...common,
+    ]
+    return [
+      '仅适用于已确认用途的 6.35 mm TRS 立体声 LINE 输出；不适用于耳麦、麦克风输入或数字音频口。',
+      STEREO_SPLIT_MONO_INPUT_IDS.has(inputId)
+        ? 'T（L）与 R 分别接入 L/R 两个独立单声道输入；保留左右声道，不并接。'
+        : 'T/R 分别对应左/右声道并送入 L/R；L/R 不可直接并接。',
+      ...(BALANCED_IDS.has(inputId) && STEREO_SPLIT_MONO_INPUT_IDS.has(inputId)
+        ? ['两路均为非平衡源接入平衡 LINE 输入，不会生成平衡信号。'] : []),
+      '6.35 mm TRS 的 T 为 L、R 为 R、S 为公共回路 G。',
+      '输入须为 LINE 用途；关闭幻象或插孔馈电。开始播放前先调低音量，再逐步升高。',
+      ...common,
+    ]
+  }
+  if (inputId === 'stereo35' && MONO_IDS.has(outputId)) return [
+    '仅适用于非平衡单声道 LINE 输出与已确认用途的 3.5 mm 立体声 LINE 输入。',
+    '固定将单声道信号分别接入 T（L）与 R（R），回路接 S（G）；核对输入用途与设备说明书。',
+    '此接法把同一单声道信号送到左右声道，不是立体声混音。',
+    ...common,
+  ]
+  if (inputId === 'stereo635' && MONO_IDS.has(outputId)) return [
+    '仅适用于非平衡单声道 LINE 输出与已确认的 6.35 mm TRS 立体声 LINE 输入。',
+    '固定将单声道信号分别接入 T（L）与 R（R），回路接 S（G）；核对输入用途与设备说明书。',
+    '此接法把同一单声道信号送到左右声道，不是立体声混音。',
     ...common,
   ]
   if (MONO_IDS.has(outputId) && BALANCED_IDS.has(inputId)) return [
@@ -337,15 +411,14 @@ function notesFor(outputId, inputId, status) {
     ...common,
   ]
   if (BALANCED_IDS.has(outputId) && !BALANCED_IDS.has(inputId)) return [
-    '仅适用于两端确认为 LINE 用途，且所选冷端处理得到这两台设备说明书明确支持的组合。',
-    '不得从平衡接口名称推定冷端接法；必须核对两台设备说明书。',
+    '本助手固定将冷端与屏蔽在输入端汇接；仅适用于两端确认为 LINE 用途且两台设备说明书明确允许此接法。',
+    '不得从平衡接口名称推定冷端电路；施工前核对两台设备说明书。',
     '不自动补偿电平差；按设备说明书核对输入/输出接地、屏蔽和允许负载。',
     ...common,
   ]
   if (MONO_IDS.has(outputId) && DUAL_IDS.has(inputId)) return [
     '仅适用于非平衡单声道 LINE 输出与双路高阻 LINE 输入。',
-    '分送 L/R 是一台输出驱动两个独立输入，不是混音；先确认两输入并联负载在输出设备允许范围内。',
-    '选择单侧时另一侧信号与回路均保持未接。',
+    '固定将一台输出分送到 L/R 两个独立输入，不是混音；先确认两输入并联负载在输出设备允许范围内。',
     ...common,
   ]
   if (MONO_IDS.has(outputId) && MONO_IDS.has(inputId)) return [
@@ -367,8 +440,8 @@ function addUnselectedDestination(unconnectedPins, inputId, selected) {
   unconnectedPins.push(unconnected('input', pin(inputId, 'return', unselected), `${label}声道未选择，回路保持未接。`))
 }
 
-function monoToDualConnections(outputId, inputId, selected) {
-  const channels = selected === 'both' ? ['left', 'right'] : [selected]
+function monoToDualConnections(outputId, inputId) {
+  const channels = ['left', 'right']
   const wires = []
   channels.forEach((channel) => {
     const label = channel === 'left' ? '分送到左声道 L' : '分送到右声道 R'
@@ -399,6 +472,41 @@ function balancedToUnbalancedConnections(outputId, inputId, destination) {
   return wires
 }
 
+function balancedToStereo635Connections(outputId, inputId = 'stereo635') {
+  return [
+    makeConnection('positive-left', pin(outputId, 'positive'), pin(inputId, 'left', '', 'input'),
+      '信号 + → T（L）', COLORS.left, 'positive', 'left', 'positive'),
+    makeConnection('positive-right', pin(outputId, 'positive'), pin(inputId, 'right', '', 'input'),
+      '信号 + → R（R）', COLORS.right, 'positive', 'right', 'positive'),
+    makeConnection('negative', pin(outputId, 'negative'), pin(inputId, 'return', '', 'input'),
+      '冷端 − → S（G）', COLORS.negative, 'negative', 'return', 'negative'),
+    makeConnection('shield', pin(outputId, 'shield'), pin(inputId, 'return', '', 'input'),
+      '屏蔽 → S（G）', COLORS.shield, 'shield', 'return', 'shield'),
+  ]
+}
+
+function monoToStereo635Connections(outputId, inputId = 'stereo635') {
+  return [
+    makeConnection('signal-left', pin(outputId, 'signal'), pin(inputId, 'left', '', 'input'),
+      '单声道信号 → T（L）', COLORS.left, 'signal', 'left', 'signal'),
+    makeConnection('signal-right', pin(outputId, 'signal'), pin(inputId, 'right', '', 'input'),
+      '单声道信号 → R（R）', COLORS.right, 'signal', 'right', 'signal'),
+    makeConnection('return', pin(outputId, 'return'), pin(inputId, 'return', '', 'input'),
+      '回路 → S（G）', COLORS.shield, 'return', 'return', 'return'),
+  ]
+}
+
+function stereoToStereo635Connections(outputId, inputId = 'stereo635') {
+  return [
+    makeConnection('left', pin(outputId, 'left'), pin(inputId, 'left', '', 'input'),
+      '左声道 T（L）', COLORS.left, 'left', 'left', 'left'),
+    makeConnection('right', pin(outputId, 'right'), pin(inputId, 'right', '', 'input'),
+      '右声道 R（R）', COLORS.right, 'right', 'right', 'right'),
+    makeConnection('return', pin(outputId, 'return'), pin(inputId, 'return', '', 'input'),
+      '公共回路 S（G）', COLORS.shield, 'return', 'return', 'shield'),
+  ]
+}
+
 function monoToBalancedConnections(outputId, inputId) {
   return [
     makeConnection('signal-positive', pin(outputId, 'signal'), pin(inputId, 'positive'), '非平衡信号 → +', COLORS.positive, 'signal', 'positive'),
@@ -407,30 +515,54 @@ function monoToBalancedConnections(outputId, inputId) {
   ]
 }
 
-function stereoToMonoConnections(inputId, channel) {
-  const chosenRole = channel === 'left' ? 'left' : 'right'
-  const signal = makeConnection(`signal-${channel}`, pin('stereo35', chosenRole),
-    pin(inputId, BALANCED_IDS.has(inputId) ? 'positive' : 'signal'),
-    `只取${channel === 'left' ? '左声道 L' : '右声道 R'}`, channel === 'left' ? COLORS.left : COLORS.right,
-    chosenRole, BALANCED_IDS.has(inputId) ? 'positive' : 'signal')
-  if (!BALANCED_IDS.has(inputId)) {
-    return [signal, makeConnection('return', pin('stereo35', 'return'), pin(inputId, 'return'),
-      'S 公共回路 → 非平衡回路', COLORS.shield, 'return', 'return')]
+function stereoToDualMonoConnections(inputId, outputId = 'stereo35') {
+  const balanced = BALANCED_IDS.has(inputId)
+  const channelPin = (role, channel) => {
+    const base = pin(inputId, role)
+    const short = channel === 'left' ? 'L' : 'R'
+    return [`${short}·${base[0]}`, `${short} ${base[1]}`]
   }
-  return [signal,
-    makeConnection('return-negative', pin('stereo35', 'return'), pin(inputId, 'negative'),
-      'S 公共回路芯线 → −', COLORS.negative, 'return', 'negative'),
-    makeConnection('shield', pin('stereo35', 'return'), pin(inputId, 'shield'),
-      'S 公共回路屏蔽 → G', COLORS.shield, 'shield', 'shield'),
+  const channels = [
+    { id: 'left', sourceRole: 'left', sourceLabel: '左声道 L' },
+    { id: 'right', sourceRole: 'right', sourceLabel: '右声道 R' },
   ]
+  const wires = []
+  channels.forEach((channel) => {
+    const targetRole = balanced ? 'positive' : 'signal'
+    const target = channelPin(targetRole, channel.id)
+    wires.push(makeConnection(`${channel.id}-signal`, pin(outputId, channel.sourceRole), target,
+      `${channel.sourceLabel} → ${channel.id === 'left' ? 'L' : 'R'} ${balanced ? '+' : '信号'}`,
+      channel.id === 'left' ? COLORS.left : COLORS.right, channel.sourceRole, targetRole))
+  })
+  if (balanced) {
+    channels.forEach((channel) => {
+      const short = channel.id === 'left' ? 'L' : 'R'
+      wires.push(makeConnection(`${channel.id}-cold`, pin(outputId, 'return'), channelPin('negative', channel.id),
+        `S 公共回路 → ${short} −`, COLORS.negative, 'return', 'negative'))
+      wires.push(makeConnection(`${channel.id}-shield`, pin(outputId, 'return'), channelPin('shield', channel.id),
+        `S 公共回路 → ${short} G`, COLORS.shield, 'return', 'shield'))
+    })
+  } else {
+    channels.forEach((channel) => {
+      const short = channel.id === 'left' ? 'L' : 'R'
+      wires.push(makeConnection(`${channel.id}-return`, pin(outputId, 'return'), channelPin('return', channel.id),
+        `S 公共回路 → ${short} 回路`, COLORS.shield, 'return', 'return'))
+    })
+  }
+  return wires
 }
 
-function selectionSummaryFor(selections) {
+function selectionSummaryFor(outputId, inputId, selections) {
   const summary = []
   if (selections.outputMode === 'coldReturn') summary.push('平衡输出冷端与屏蔽按设备手册在输入回路汇接')
-  if (selections.sourceChannel) summary.push(`只取${selections.sourceChannel === 'left' ? '左声道 L' : '右声道 R'}`)
-  if (selections.destinationChannel) summary.push(selections.destinationChannel === 'both'
-    ? '一个输出分送到 L/R 两个独立输入' : `只接${selections.destinationChannel === 'left' ? '左声道 L' : '右声道 R'}输入`)
+  if (STEREO_OUTPUT_IDS.has(outputId) && (BALANCED_IDS.has(inputId) || MONO_IDS.has(inputId))) {
+    summary.push('T（L）与 R 分别连接到独立的 L/R 单声道输入')
+  }
+  if (selections.destinationChannel === 'both') summary.push(inputId === 'stereo635'
+    ? '单声道信号固定分接到 6.35 mm TRS 的 T（L）与 R（R）'
+    : inputId === 'stereo35'
+      ? '单声道信号固定分接到 3.5 mm 立体声输入的 T（L）与 R（R）'
+      : '一个输出固定分送到 L/R 两个独立输入')
   return summary
 }
 
@@ -439,8 +571,21 @@ function criticalNotesFor(outputId, inputId, selections) {
   if (BALANCED_IDS.has(outputId) && !BALANCED_IDS.has(inputId)) {
     notes.push('冷端与屏蔽分别接到输入回路，并只在输入端汇接；仅当这两台设备手册明确允许此具体接法时施工。')
   }
-  if (outputId === 'stereo35' && (BALANCED_IDS.has(inputId) || MONO_IDS.has(inputId))) {
-    notes.push(`${selections.sourceChannel === 'left' ? '右' : '左'}声道信号输出保持未接；只取一路，不将 L/R 并接。`)
+  if (STEREO_OUTPUT_IDS.has(outputId) && (BALANCED_IDS.has(inputId) || MONO_IDS.has(inputId))) {
+    notes.push('T（L）与 R 分别连接到两个独立单声道输入；保留左右声道，不将 L/R 并接。')
+    if (BALANCED_IDS.has(inputId)) notes.push('每个平衡输入头各接收一路非平衡信号；此接法不会生成平衡信号。')
+  }
+  if (inputId === 'stereo635' && MONO_IDS.has(outputId)) {
+    notes.push('单声道信号分接到 6.35 mm TRS 的 T（L）与 R（R），回路接 S（G）；须核对输入用途与设备手册。')
+  }
+  if (inputId === 'stereo635' && BALANCED_IDS.has(outputId)) {
+    notes.push('平衡输出的 + 分接到 T（L）和 R（R）；冷端与屏蔽只在输入 S（G）汇接，须核对设备手册。')
+  }
+  if (inputId === 'stereo35' && MONO_IDS.has(outputId)) {
+    notes.push('单声道信号分接到 3.5 mm 立体声输入的 T（L）与 R（R），回路接 S（G）；须核对输入用途与设备手册。')
+  }
+  if (inputId === 'stereo35' && BALANCED_IDS.has(outputId)) {
+    notes.push('平衡输出的 + 分接到 T（L）和 R（R）；冷端与屏蔽只在输入 S（G）汇接，须核对设备手册。')
   }
   if (DUAL_IDS.has(inputId) && selections.destinationChannel) {
     if (selections.destinationChannel === 'both') {
@@ -449,7 +594,7 @@ function criticalNotesFor(outputId, inputId, selections) {
       notes.push(`${selections.destinationChannel === 'left' ? '右' : '左'}声道输入的信号与回路均保持未接。`)
     }
   }
-  if ((MONO_IDS.has(outputId) || outputId === 'stereo35') && BALANCED_IDS.has(inputId)) {
+  if ((MONO_IDS.has(outputId) || STEREO_OUTPUT_IDS.has(outputId)) && BALANCED_IDS.has(inputId)) {
     notes.push('输入须为 LINE 用途并关闭幻象或插孔馈电；不自动补偿 6 dB 或其他电平差。')
   }
   return notes
@@ -459,56 +604,46 @@ function getWiringModel(outputId, inputId, selections = {}) {
   const knownOutput = typeof outputId === 'string' && Object.prototype.hasOwnProperty.call(OUTPUT_BY_ID, outputId)
   const knownInput = typeof inputId === 'string' && Object.prototype.hasOwnProperty.call(INPUT_BY_ID, inputId)
   const output = endpoint(knownOutput ? OUTPUT_BY_ID[outputId] : outputId, 'output', knownOutput)
-  const input = endpoint(knownInput ? INPUT_BY_ID[inputId] : inputId, 'input', knownInput)
-  const validSelections = selections && typeof selections === 'object' && !Array.isArray(selections) ? selections : {}
-  const requirements = knownOutput && knownInput ? requiredChoices(outputId, inputId).map((requirement) => ({
-    ...requirement,
-    value: typeof validSelections[requirement.id] === 'string' ? validSelections[requirement.id] : '',
-  })) : []
-  const validated = requirements.every((requirement) => requirement.options.some((option) => option.id === requirement.value))
-  const unsupported = !knownOutput || !knownInput || (!BALANCED_IDS.has(outputId) && !BALANCED_IDS.has(inputId)
-    && outputId !== 'stereo35' && !(MONO_IDS.has(outputId) && DUAL_IDS.has(inputId))
-    && !(MONO_IDS.has(outputId) && MONO_IDS.has(inputId)))
-  const status = unsupported ? 'unsupported' : (requirements.length && !validated ? 'needs-choice' : 'ready')
-  const selectedChoices = {}
-  requirements.forEach((requirement) => {
-    if (requirement.options.some((option) => option.id === requirement.value)) selectedChoices[requirement.id] = requirement.value
-  })
+  const input = knownInput && STEREO_OUTPUT_IDS.has(outputId) && STEREO_SPLIT_MONO_INPUT_IDS.has(inputId)
+    ? stereoSplitMonoEndpoint(INPUT_BY_ID[inputId], 'input')
+    : endpoint(knownInput ? INPUT_BY_ID[inputId] : inputId, 'input', knownInput)
+  const fixedSelections = knownOutput && knownInput ? getFixedWiringSelections(outputId, inputId) : {}
+  const unsupported = !knownOutput || !knownInput
+  const status = unsupported ? 'unsupported' : 'ready'
+  const selectedChoices = fixedSelections
+  const requirements = []
   let connections = []
   const unconnectedPins = []
   if (status === 'ready') {
     if (BALANCED_IDS.has(outputId) && BALANCED_IDS.has(inputId)) connections = balancedConnections(outputId, inputId)
     else if (outputId === 'stereo35' && DUAL_IDS.has(inputId)) connections = stereoBreakoutConnections(inputId)
+    else if (outputId === 'stereo635' && DUAL_IDS.has(inputId)) connections = stereoBreakoutConnections(inputId, outputId)
+    else if (STEREO_OUTPUT_IDS.has(outputId) && STEREO_INPUT_IDS.has(inputId)) connections = stereoToStereo635Connections(outputId, inputId)
+    else if (BALANCED_IDS.has(outputId) && STEREO_INPUT_IDS.has(inputId)) connections = balancedToStereo635Connections(outputId, inputId)
+    else if (MONO_IDS.has(outputId) && STEREO_INPUT_IDS.has(inputId)) connections = monoToStereo635Connections(outputId, inputId)
     else if (MONO_IDS.has(outputId) && MONO_IDS.has(inputId)) connections = monoConnections(outputId, inputId)
     else if (MONO_IDS.has(outputId) && BALANCED_IDS.has(inputId)) connections = monoToBalancedConnections(outputId, inputId)
     else if (BALANCED_IDS.has(outputId) && !BALANCED_IDS.has(inputId)) {
-      connections = balancedToUnbalancedConnections(outputId, inputId, validSelections.destinationChannel)
-      if (DUAL_IDS.has(inputId) && validSelections.destinationChannel !== 'both') {
-        addUnselectedDestination(unconnectedPins, inputId, validSelections.destinationChannel)
-      }
+      connections = balancedToUnbalancedConnections(outputId, inputId, DUAL_IDS.has(inputId) ? 'both' : undefined)
     } else if (outputId === 'stereo35' && (BALANCED_IDS.has(inputId) || MONO_IDS.has(inputId))) {
-      connections = stereoToMonoConnections(inputId, validSelections.sourceChannel)
-      unconnectedPins.push(unconnected('output', pin('stereo35', validSelections.sourceChannel === 'left' ? 'right' : 'left'),
-        '未选择的声道输出保持未接，不与已选声道并接。'))
+      connections = stereoToDualMonoConnections(inputId)
+    } else if (outputId === 'stereo635' && STEREO_SPLIT_MONO_INPUT_IDS.has(inputId)) {
+      connections = stereoToDualMonoConnections(inputId, outputId)
     } else if (monoOutputDualInput(outputId, inputId)) {
-      connections = monoToDualConnections(outputId, inputId, validSelections.destinationChannel)
-      if (validSelections.destinationChannel !== 'both') addUnselectedDestination(unconnectedPins, inputId, validSelections.destinationChannel)
+      connections = monoToDualConnections(outputId, inputId)
     }
   }
   const supported = status === 'ready' && connections.length > 0
-  const reason = status === 'unsupported' ? unsupportedReason(outputId, inputId, knownOutput, knownInput)
-    : status === 'needs-choice' ? `需要选择：${requirements.filter((requirement) => !requirement.value ||
-      !requirement.options.some((option) => option.id === requirement.value)).map((requirement) => requirement.title).join('、')}。`
-      : ''
+  const reason = status === 'unsupported' ? unsupportedReason(outputId, inputId, knownOutput, knownInput) : ''
   const title = knownOutput && knownInput ? `${output.connectorType} → ${input.connectorType}` : '接线方式不可识别'
-  const selectionSummary = supported ? selectionSummaryFor(selectedChoices) : []
+  const selectionSummary = supported ? selectionSummaryFor(outputId, inputId, selectedChoices) : []
   const criticalNotes = supported ? criticalNotesFor(outputId, inputId, selectedChoices) : []
   return {
     status, supported, reason, title, output, input, connections, requirements,
     selectionSummary, criticalNotes, unconnectedPins,
     notes: notesFor(outputId, inputId, status),
     sources: sourcesFor(outputId, inputId, status).map((source) => ({ ...source })),
-    cableSummary: getCableSummary(outputId, inputId, status === 'ready' ? selectedChoices : {}),
+    cableSummary: getCableSummary(outputId, inputId, selectedChoices),
   }
 }
 
@@ -535,6 +670,7 @@ function buildWiringText(model) {
 module.exports = {
   OUTPUT_OPTIONS,
   INPUT_OPTIONS,
+  getFixedWiringSelections,
   getWiringModel,
   buildWiringText,
 }

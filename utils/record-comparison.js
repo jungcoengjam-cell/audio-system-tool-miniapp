@@ -1,15 +1,9 @@
+const { getModuleMetadata } = require('./records')
+
 const VALUE_LABELS = {
   wiring: { parallel: '并联', series: '串联' },
   mode: { stereo: '立体声/单通道', bridge: '桥接' },
   summationMode: { coherent: '相干叠加', power: '功率叠加', independent: '独立声源' },
-  sceneMode: { report: '报告/培训型', discussion: '围桌讨论型' },
-  layout: { short: '短边前置主扩', long: '长边前置主扩' },
-  discussionTableShape: { round: '圆桌', rectangular: '矩形桌' },
-  discussionInstallationCondition: { flat: '平整吊顶', blocked: '顶面受限', open: '挑高/开放顶' },
-  discussionPagNagEnabled: { true: '已启用' },
-  discussionPagNagSpeakerMode: { single: '同一只音箱', multiple: '多音箱取点' },
-  standardClassKey: { conference: '会议类扩声' },
-  gradeKey: { I: '一级', II: '二级' },
   environment: { indoor: '室内', outdoor: '室外' },
   modeCable: { constant: '定压广播', professional: '专业音箱' },
   cameraSourceMode: { library: '库内摄像机', custom: '自定义摄像机' },
@@ -40,22 +34,6 @@ const DEFINITIONS = {
     ['mode', '线路类型', '', 'modeCable'], ['environment', '敷设环境', '', 'environment'],
     ['constantPowerText', '定压总功率', 'W'], ['constantDistanceText', '定压距离', 'm'],
     ['professionalPowerText', '专业音箱功率', 'W'], ['professionalDistanceText', '专业音箱距离', 'm'],
-  ],
-  venue: [
-    ['sceneMode', '会议类型', '', 'sceneMode'], ['lengthText', '场地长度', 'm'],
-    ['widthText', '场地宽度', 'm'], ['heightText', '场地高度', 'm'],
-    ['standardClassKey', '扩声类别', '', 'standardClassKey'], ['gradeKey', '目标等级', '', 'gradeKey'],
-    ['layout', '主扩方向', '', 'layout'], ['discussionTableShape', '会议桌形状', '', 'discussionTableShape'],
-    ['discussionInstallationCondition', '安装条件', '', 'discussionInstallationCondition'],
-    ['participantCountText', '参会人数', '人'],
-    ['discussionPagNagEnabled', '传声增益检查', '', 'discussionPagNagEnabled'],
-    ['discussionPagNagSpeakerMode', '音箱取点方式', '', 'discussionPagNagSpeakerMode'],
-    ['discussionPagNagDsText', '嘴到话筒', 'm'],
-    ['discussionPagNagD0Text', '发言人到最远听众', 'm'],
-    ['discussionPagNagDnText', '发言人到最近听众', 'm'],
-    ['discussionPagNagD1Text', '话筒到音箱', 'm'],
-    ['discussionPagNagD2Text', '音箱到同一最远听众', 'm'],
-    ['discussionPagNagNomText', '同时开放话筒数', '支'],
   ],
   camera: [
     ['sourceMode', '参数来源', '', 'cameraSourceMode'], ['cameraModel', '摄像机型号'],
@@ -102,33 +80,12 @@ function formatValue(value, unit, mapKey) {
 function buildRecordComparison(records) {
   if (!Array.isArray(records) || records.length !== 2 || records[0].module !== records[1].module) return null
   const [first, second] = records
+  if (getModuleMetadata(first.module)?.retired) return null
   let definitions = DEFINITIONS[first.module] || []
-  const isPagNagKey = (key) => key.startsWith('discussionPagNag')
-  const pagNagRelevant = first.module === 'venue'
-    && ((first.preferences.sceneMode === 'discussion'
-      && first.preferences.discussionPagNagEnabled === true)
-      || (second.preferences.sceneMode === 'discussion'
-        && second.preferences.discussionPagNagEnabled === true))
-  const pagNagMultipleRelevant = pagNagRelevant && [first, second].some((record) => (
-    record.preferences.sceneMode === 'discussion'
-      && record.preferences.discussionPagNagEnabled === true
-      && record.preferences.discussionPagNagSpeakerMode === 'multiple'
-  ))
-  if (!pagNagMultipleRelevant) {
-    definitions = definitions.filter(([key]) => key !== 'discussionPagNagSpeakerMode')
-  }
   if (first.module === 'cable' && first.preferences.mode === second.preferences.mode) {
     definitions = definitions.filter(([key]) => first.preferences.mode === 'constant'
       ? !key.startsWith('professional')
       : key !== 'environment' && !key.startsWith('constant'))
-  }
-  if (first.module === 'venue' && first.preferences.sceneMode === second.preferences.sceneMode) {
-    definitions = definitions.filter(([key]) => first.preferences.sceneMode === 'discussion'
-      ? key !== 'layout'
-      : !key.startsWith('discussion') && key !== 'participantCountText')
-  }
-  if (first.module === 'venue' && !pagNagRelevant) {
-    definitions = definitions.filter(([key]) => !isPagNagKey(key))
   }
   if (first.module === 'camera' && first.preferences.sourceMode === second.preferences.sourceMode) {
     definitions = definitions.filter(([key]) => first.preferences.sourceMode === 'library'
@@ -152,21 +109,8 @@ function buildRecordComparison(records) {
     definitions = definitions.filter(([key]) => key !== 'fixedCameraHeightText')
   }
   const rows = definitions.map(([key, label, unit = '', mapKey = '']) => {
-    const formatRecordValue = (record) => {
-      if (!isPagNagKey(key)) return formatValue(record.preferences[key], unit, mapKey)
-      if (record.preferences.sceneMode !== 'discussion') return '不适用'
-      if (record.preferences.discussionPagNagEnabled !== true) return '未启用'
-      if (key === 'discussionPagNagSpeakerMode') {
-        const mode = Object.prototype.hasOwnProperty.call(
-          record.preferences, 'discussionPagNagSpeakerMode',
-        ) ? record.preferences.discussionPagNagSpeakerMode : 'single'
-        return mode === 'single' || mode === 'multiple'
-          ? VALUE_LABELS.discussionPagNagSpeakerMode[mode] : '资料无效'
-      }
-      return formatValue(record.preferences[key], unit, mapKey)
-    }
-    const firstValue = formatRecordValue(first)
-    const secondValue = formatRecordValue(second)
+    const firstValue = formatValue(first.preferences[key], unit, mapKey)
+    const secondValue = formatValue(second.preferences[key], unit, mapKey)
     return { key, label, firstValue, secondValue, different: firstValue !== secondValue }
   }).filter((row) => row.different)
 

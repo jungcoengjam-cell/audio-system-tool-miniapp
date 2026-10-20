@@ -34,24 +34,73 @@ function roundMilliseconds(value) {
   return Math.round(Math.max(0, value) * 10) / 10
 }
 
+function addMeasurement(entry) {
+  measurements.push(entry)
+  if (measurements.length > MAX_MEASUREMENTS) measurements.shift()
+  try {
+    if (typeof console !== 'undefined' && typeof console.info === 'function') {
+      console.info('[PERF] ' + entry.name + '：' + entry.duration + ' ms', entry.details)
+    }
+  } catch (error) {}
+  return entry
+}
+
 function startMeasurement(name, details = {}) {
   if (!isPerformanceMeasurementEnabled()) return () => null
-  const startedAt = now()
+  let startedAt
+  try { startedAt = now() } catch (error) { return () => null }
   let finished = false
   return (extraDetails = {}) => {
     if (finished) return null
     finished = true
-    const entry = {
+    try {
+      const baseDetails = typeof details === 'function' ? details() : details
+      const resolvedExtraDetails = typeof extraDetails === 'function' ? extraDetails() : extraDetails
+      return addMeasurement({
+        name,
+        duration: roundMilliseconds(now() - startedAt),
+        details: { ...baseDetails, ...resolvedExtraDetails },
+      })
+    } catch (error) {
+      return null
+    }
+  }
+}
+
+function utf8ByteLength(value) {
+  let bytes = 0
+  for (let index = 0; index < value.length; index += 1) {
+    const code = value.charCodeAt(index)
+    if (code <= 0x7f) bytes += 1
+    else if (code <= 0x7ff) bytes += 2
+    else if (code >= 0xd800 && code <= 0xdbff && index + 1 < value.length) {
+      const next = value.charCodeAt(index + 1)
+      if (next >= 0xdc00 && next <= 0xdfff) {
+        bytes += 4
+        index += 1
+      } else bytes += 3
+    } else bytes += 3
+  }
+  return bytes
+}
+
+function measureJsonPayloadBytes(name, payload) {
+  if (!isPerformanceMeasurementEnabled()) return null
+  let startedAt
+  try { startedAt = now() } catch (error) { return null }
+  try {
+    const serialized = JSON.stringify(payload)
+    if (typeof serialized !== 'string') return null
+    const bytes = utf8ByteLength(serialized)
+    const duration = roundMilliseconds(now() - startedAt)
+    addMeasurement({
       name,
-      duration: roundMilliseconds(now() - startedAt),
-      details: { ...details, ...extraDetails },
-    }
-    measurements.push(entry)
-    if (measurements.length > MAX_MEASUREMENTS) measurements.shift()
-    if (typeof console !== 'undefined' && typeof console.info === 'function') {
-      console.info(`[PERF] ${entry.name}：${entry.duration} ms`, entry.details)
-    }
-    return entry
+      duration,
+      details: { payloadBytes: bytes, serializationAndCountingMs: duration },
+    })
+    return { bytes, duration }
+  } catch (error) {
+    return null
   }
 }
 
@@ -79,13 +128,16 @@ function getPerformanceSummary(prefix = '') {
 function printPerformanceSummary(prefix = '') {
   if (!isPerformanceMeasurementEnabled()) return []
   const summary = getPerformanceSummary(prefix)
-  if (typeof console !== 'undefined' && typeof console.info === 'function') {
-    summary.forEach((item) => {
-      console.info(
-        `[PERF汇总] ${item.name}｜${item.count} 次｜平均 ${item.average} ms｜P95 ${item.p95} ms｜最大 ${item.maximum} ms`,
-      )
-    })
-  }
+  try {
+    if (typeof console !== 'undefined' && typeof console.info === 'function') {
+      summary.forEach((item) => {
+        console.info(
+          '[PERF汇总] ' + item.name + '｜' + item.count + ' 次｜平均 ' + item.average
+            + ' ms｜P95 ' + item.p95 + ' ms｜最大 ' + item.maximum + ' ms',
+        )
+      })
+    }
+  } catch (error) {}
   return summary
 }
 
@@ -97,6 +149,7 @@ module.exports = {
   clearPerformanceMeasurements,
   getPerformanceSummary,
   isPerformanceMeasurementEnabled,
+  measureJsonPayloadBytes,
   printPerformanceSummary,
   startMeasurement,
 }

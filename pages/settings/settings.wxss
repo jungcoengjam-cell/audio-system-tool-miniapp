@@ -1,0 +1,28 @@
+@import "../../styles/homepage.wxss";
+
+.home-section-label{margin:34rpx 4rpx 12rpx;color:var(--theme-text-secondary);font-size:24rpx;font-weight:650;letter-spacing:.2rpx}
+.settings-info-panel,.settings-reset-panel{padding:20rpx 22rpx}
+.settings-info-row{display:flex;box-sizing:border-box;min-height:66rpx;align-items:center;justify-content:space-between;gap:20rpx}
+.settings-info-label{color:var(--theme-text-secondary);font-size:23rpx}
+.settings-info-value{color:var(--theme-text);font-size:24rpx;font-weight:620;text-align:right}
+.home-divider{height:1rpx;background:var(--theme-divider)}
+.settings-page .home-row-button{display:flex;box-sizing:border-box;width:100%;min-width:0;max-width:none;min-height:64px;height:auto;margin:0;padding:12px 14px;align-items:center;justify-content:space-between;border:1rpx solid var(--theme-divider);border-radius:22rpx;background:var(--theme-surface);color:var(--theme-text);line-height:normal;text-align:left;transition:opacity .14s ease,transform .14s ease}
+.home-row-button::after{border:0}
+.settings-row-copy{min-width:0;flex:1}
+.settings-row-title{color:var(--theme-text);font-size:14px;font-weight:640;line-height:1.4}
+.settings-row-subtitle{margin-top:5rpx;color:var(--theme-text-secondary);font-size:13px;line-height:1.4}
+.settings-page .settings-reset-button{width:100%;max-width:none;min-height:44px;margin-top:18rpx;line-height:normal}
+.settings-reset-panel{margin-top:18px}
+.settings-section-copy{color:var(--theme-text);font-size:15px;font-weight:650}
+.settings-description{margin:7px 0 12px;color:var(--theme-text-secondary);font-size:13px;line-height:1.5}
+.settings-tools-panel{padding:0 14px}
+.settings-tool-row{display:flex;box-sizing:border-box;min-height:64px;gap:12px;align-items:center;border-top:1rpx solid var(--theme-divider)}
+.settings-tool-row:first-child{border-top:0}
+.settings-tool-icon{display:block;width:32px;height:32px;flex:0 0 32px}
+.settings-tool-copy{min-width:0;flex:1}
+.settings-tool-state{margin-top:3px;color:var(--theme-text-secondary);font-size:13px;line-height:1.4}
+.settings-tool-row switch{flex:0 0 auto;margin:0}
+.settings-visibility-error{margin:10px 0;padding:12px;border-radius:12px;background:var(--theme-warning-soft);color:var(--theme-warning);font-size:14px;line-height:1.5}
+.settings-visibility-error button{min-height:44px;margin-top:8px;line-height:44px}
+.settings-footnote{margin-top:12rpx;padding:0 4rpx;color:var(--theme-text-tertiary);font-size:23rpx;line-height:1.45}
+@media (max-width: 340px){.home-section-label,.settings-row-subtitle,.settings-footnote,.settings-info-label,.settings-info-value{font-size:13px}}

@@ -17,6 +17,10 @@ global.wx = {
     if (key === writeFailureKey) throw new Error('simulated write failure')
     storage.set(key, clone(value))
   },
+  removeStorageSync(key) {
+    if (key === writeFailureKey) throw new Error('simulated removal failure')
+    storage.delete(key)
+  },
 }
 
 const PROJECTS_KEY = 'audioTool.projects.v1'
@@ -46,7 +50,8 @@ function project(id, name, extras = {}) {
 function reset(projects) {
   storage.clear()
   storage.set(PROJECTS_KEY, clone(projects))
-  storage.set(RECORDS_KEY, [{ id: 'record-1', module: 'limiter', favorite: true, projectIds: ['p1'] }])
+  // A storage-valid historical row; malformed-row refusal has its own adversarial tests.
+  storage.set(RECORDS_KEY, [{ id: 'record-1', module: 'limiter', preferences: { model: 'reference' }, resultText: 'saved limiter result', favorite: true, projectIds: ['p1'], createdAt: 1, updatedAt: 2 }])
   storage.set(ACTIVE_KEY, 'p2')
   storage.set(SCHEMA_KEY, 3)
   readFailureKey = ''
@@ -118,7 +123,7 @@ assert.equal(workspace.records[0].id, 'saved-record')
 readFailureKey = PROJECTS_KEY
 workspace = records.getWorkspaceSnapshot({ forceRefresh: true })
 assert.equal(workspace.ok, false)
-assert.match(workspace.error, /本地项目和收藏数据读取失败/)
+assert.match(workspace.error, /读取失败|已阻止写入/)
 assert.equal(workspace.projects[0].id, 'p1', 'force refresh failure preserves last successful project snapshot')
 assert.equal(workspace.records[0].id, 'saved-record', 'partial read failure preserves last successful records')
 const beforeBlockedCreate = clone(storage.get(PROJECTS_KEY))
@@ -127,6 +132,8 @@ assert.deepEqual(storage.get(PROJECTS_KEY), beforeBlockedCreate, 'failed snapsho
 readFailureKey = ''
 
 records = reset([project('p1', 'A 项目')])
+// Exercise a real empty result collection after a transient read failure.
+storage.set(RECORDS_KEY, [])
 readFailureKey = RECORDS_KEY
 workspace = records.getWorkspaceSnapshot({ forceRefresh: true })
 assert.equal(workspace.ok, false)

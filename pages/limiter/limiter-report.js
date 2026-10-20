@@ -7,22 +7,25 @@ const {
 
 const COLORS = {
   background: '#f5f5f7',
-  card: '#eef6ff',
-  cardBorder: '#c8dcf2',
+  card: '#ffffff',
+  cardBorder: '#e5e5ea',
+  hero: '#eaf7f5',
+  heroBorder: '#c5e5de',
+  tile: '#eef6ff',
+  tileBorder: '#d6e5f4',
   text: '#1d1d1f',
   secondary: '#6e6e73',
-  tertiary: '#6e6e73',
-  line: '#d9dfe8',
-  result: '#087f5b',
+  accent: '#087f70',
   reminder: '#fff4e5',
   reminderText: '#8a5700',
+  reminderBorder: '#f0d4ad',
 }
 
 const LEFT = 44
 const CONTENT_WIDTH = REPORT_WIDTH - (LEFT * 2)
-const INPUT_LABEL_WIDTH = 210
-const INPUT_VALUE_X = LEFT + INPUT_LABEL_WIDTH + 16
-const INPUT_VALUE_WIDTH = CONTENT_WIDTH - INPUT_LABEL_WIDTH - 16
+const INPUT_LABEL_WIDTH = 228
+const INPUT_VALUE_X = LEFT + 24 + INPUT_LABEL_WIDTH + 16
+const INPUT_VALUE_WIDTH = CONTENT_WIDTH - 48 - INPUT_LABEL_WIDTH - 16
 const OMITTED_LINES = new Set([
   '功放额定输出低于音箱额定承受能力，阈值按功放满功率输入限制。',
   '阈值按音箱额定功率计算。',
@@ -49,16 +52,32 @@ function wrapText(context, text, maxWidth, size, weight = 400) {
       return
     }
     let line = ''
-    Array.from(paragraph).forEach((character) => {
+    const appendCharacter = (character) => {
       const candidate = line + character
       if (line && context.measureText(candidate).width > maxWidth) {
-        lines.push(line)
-        line = character
+        lines.push(line.replace(/\s+$/, ''))
+        line = character.replace(/^\s+/, '')
       } else {
         line = candidate
       }
+    }
+    const tokens = paragraph.match(/(?:[+-]?\d+(?:\.\d+)?\s*(?:dBFS|dBu|dB|V|W|Ω|ohm|ms|毫秒|Hz|kHz)(?![A-Za-z]))|\s+|./giu) || []
+    tokens.forEach((token) => {
+      if (/^\s+$/.test(token)) {
+        if (line && context.measureText(line + token).width <= maxWidth) line += token
+        return
+      }
+      if (line && context.measureText(line + token).width > maxWidth) {
+        lines.push(line.replace(/\s+$/, ''))
+        line = ''
+      }
+      if (context.measureText(token).width > maxWidth) {
+        Array.from(token).forEach(appendCharacter)
+      } else {
+        line += token
+      }
     })
-    lines.push(line)
+    lines.push(line.replace(/\s+$/, ''))
   })
   return lines.length ? lines : ['']
 }
@@ -145,12 +164,14 @@ function addTextLines(commands, lines, x, top, lineHeight, size, color, weight =
   return lines.length * lineHeight
 }
 
-function addLine(commands, x1, y1, x2, y2, color = COLORS.line, width = 1) {
-  commands.push({ type: 'line', x1, y1, x2, y2, color, width })
-}
-
-function addSeparator(commands, y) {
-  addLine(commands, LEFT, y, LEFT + CONTENT_WIDTH, y)
+function addRoundedCard(commands, x, y, width, height, fill, stroke) {
+  commands.push({ type: 'roundRect', x, y, width, height, radius: 22, fill })
+  if (stroke) {
+    commands.push({
+      type: 'roundRectStroke', x, y, width, height, radius: 22,
+      color: stroke, lineWidth: 1,
+    })
+  }
 }
 
 function buildReportModel(payload, measureContext) {
@@ -181,11 +202,21 @@ function buildReportModel(payload, measureContext) {
   const secondaryItems = []
   sourceLines.forEach((line, index) => {
     if (consumed.has(index)) return
-    if (lineHasLabel(line, [
-      '总负载', '总阻抗', '目标输出电压', 'DSP 模拟输出', 'DSP模拟输出', 'DSP 输出',
-    ])) {
+    const { label, value } = splitLabelValue(line)
+    if (label === '总负载') {
+      const load = /^\s*([+-]?\d+(?:\.\d+)?)\s*Ω\s*·\s*([+-]?\d+(?:\.\d+)?)\s*W\s*$/.exec(value)
       consumed.add(index)
-      secondaryItems.push(line)
+      if (load) {
+        secondaryItems.push({ label: '总阻抗', value: load[1].trim() + ' Ω' })
+        secondaryItems.push({ label: '音箱总额定功率', value: load[2].trim() + ' W' })
+      } else {
+        secondaryItems.push({ label: '总负载', value })
+      }
+    } else if ([
+      '总阻抗', '目标输出电压', 'DSP 模拟输出', 'DSP模拟输出', 'DSP 输出',
+    ].includes(label)) {
+      consumed.add(index)
+      secondaryItems.push({ label, value })
     }
   })
 
@@ -207,12 +238,12 @@ function buildReportModel(payload, measureContext) {
   const speakerCount = inputValue('每通道音箱数量')
   if (speakerModel && speakerCount) {
     consumeExactLegacyLine(sourceLines, consumed, '音箱',
-      `${speakerModel} × ${speakerCount} 只/通道`)
+      speakerModel + ' × ' + speakerCount + ' 只/通道')
   }
   const wiring = inputValue('连接方式')
   const amplifierMode = inputValue('功放模式')
   if (wiring && amplifierMode) {
-    consumeExactLegacyLine(sourceLines, consumed, '连接', `${wiring} · ${amplifierMode}`)
+    consumeExactLegacyLine(sourceLines, consumed, '连接', wiring + ' · ' + amplifierMode)
   }
 
   const reminderItems = []
@@ -225,145 +256,183 @@ function buildReportModel(payload, measureContext) {
   const supplementaryItems = sourceLines.filter((line, index) => !consumed.has(index))
   const moduleLabel = textValue(payload.moduleLabel) || '计算结果'
   const commands = []
-  let y = 12
+  let y = 32
 
-  const title = textValue(payload.title) || moduleLabel
-
-  const summary = textValue(payload.summary).trim()
-  const summaryRepeatsStructuredValues = Boolean(threshold
-    && /阈值/.test(summary)
-    && ((attackItem || releaseItem) ? /(Attack|Release)/i.test(summary) : true))
-  if (summary && !summaryRepeatsStructuredValues && summary !== title) {
-    y += 6
-    const summaryLines = wrapText(measureContext, summary, CONTENT_WIDTH, 30, 500)
-    y += addTextLines(commands, summaryLines, LEFT, y, 38, 30, COLORS.secondary, 500)
-  }
+  const badgeWidth = Math.min(CONTENT_WIDTH, 260)
+  const badgeHeight = 52
+  addRoundedCard(commands, LEFT, y, badgeWidth, badgeHeight,
+    COLORS.tile, COLORS.tileBorder)
+  addTextLines(commands, ['限幅器'], LEFT + 16, y + ((badgeHeight - 32) / 2),
+    32, 24, COLORS.accent, 650, 'left')
+  y += badgeHeight + 22
 
   const shouldDrawTiming = Boolean(attackItem || releaseItem || thresholdItem
     || /限幅器/.test(moduleLabel))
-  if (threshold || shouldDrawTiming || reminderItems.length) {
-    y += 16
-    const cardTop = y
-    const innerLeft = LEFT + 28
-    const innerWidth = CONTENT_WIDTH - 56
-    const cardCommands = []
-    let cardY = cardTop + 24
-
-    reminderItems.forEach((item, index) => {
-      const lines = wrapText(measureContext, item, innerWidth - 24, 26, 600)
-      const badgeHeight = Math.max(42, (lines.length * 34) + 16)
-      cardCommands.push({
-        type: 'roundRect', x: innerLeft, y: cardY, width: innerWidth,
-        height: badgeHeight, radius: 12, fill: COLORS.reminder,
-      })
-      cardY += addTextLines(cardCommands, lines, innerLeft + 12, cardY + 8,
-        34, 26, COLORS.reminderText, 600)
-      cardY = Math.max(cardY, cardTop + 24 + badgeHeight) + (index < reminderItems.length - 1 ? 8 : 14)
-    })
+  if (threshold || shouldDrawTiming) {
+    const heroTop = y
+    const heroPadding = 26
+    const heroWidth = CONTENT_WIDTH - (heroPadding * 2)
+    const center = LEFT + (CONTENT_WIDTH / 2)
+    const heroCommands = []
+    let heroY = heroTop + heroPadding
 
     if (threshold) {
-      const labelLines = wrapText(measureContext, threshold.label, innerWidth, 29, 600)
-      const valueText = `${threshold.value}${threshold.unit ? ` ${threshold.unit}` : ''}`
-      const valueLines = wrapText(measureContext, valueText, innerWidth, 80, 700)
+      const labelLines = wrapText(measureContext, threshold.label, heroWidth, 23, 650)
+      const valueText = threshold.value + (threshold.unit ? ' ' + threshold.unit : '')
+      const valueLines = wrapText(measureContext, valueText, heroWidth, 72, 720)
       const calibrationLines = threshold.calibration
-        ? wrapText(measureContext, threshold.calibration, innerWidth, 29, 500)
+        ? wrapText(measureContext, threshold.calibration, heroWidth, 24, 400)
         : []
-      const center = LEFT + (CONTENT_WIDTH / 2)
-      cardY += addTextLines(cardCommands, labelLines, center, cardY, 36, 29, COLORS.secondary, 600, 'center')
-      cardY += 4
-      cardY += addTextLines(cardCommands, valueLines, center, cardY, 92, 80, COLORS.result, 700, 'center')
+      heroY += addTextLines(heroCommands, labelLines, center, heroY,
+        32, 23, COLORS.accent, 650, 'center') + 12
+      heroY += addTextLines(heroCommands, valueLines, center, heroY,
+        84, 72, COLORS.text, 720, 'center')
       if (calibrationLines.length) {
-        cardY += 2
-        cardY += addTextLines(cardCommands, calibrationLines, center, cardY,
-          36, 29, COLORS.secondary, 500, 'center')
+        heroY += 8
+        heroY += addTextLines(heroCommands, calibrationLines, center, heroY,
+          34, 24, COLORS.secondary, 400, 'center')
       }
-      cardY += 14
     }
 
     if (shouldDrawTiming) {
+      heroY += threshold ? 14 : 0
       const timing = [
         parseTiming(attackItem && attackItem.line, '建立时间 Attack'),
         parseTiming(releaseItem && releaseItem.line, '释放时间 Release'),
       ]
       const columnGap = 24
-      const columnWidth = (innerWidth - columnGap) / 2
+      const columnWidth = (heroWidth - columnGap) / 2
       const timingColumns = timing.map((item) => ({
         ...item,
-        labelLines: wrapText(measureContext, item.label, columnWidth, 28, 600),
+        labelLines: wrapText(measureContext, item.label, columnWidth, 23, 650),
         valueLines: wrapText(measureContext,
-          `${item.value}${item.unit ? ` ${item.unit}` : ''}`,
-          columnWidth, 54, 700),
+          item.value + (item.unit ? ' ' + item.unit : ''),
+          columnWidth, 72, 720),
       }))
-      const labelHeight = Math.max(...timingColumns.map((item) => item.labelLines.length * 36))
-      const valueHeight = Math.max(...timingColumns.map((item) => item.valueLines.length * 62))
+      const labelHeight = Math.max(...timingColumns.map((item) => item.labelLines.length * 32))
+      const valueHeight = Math.max(...timingColumns.map((item) => item.valueLines.length * 84))
       timingColumns.forEach((item, index) => {
-        const x = innerLeft + (index * (columnWidth + columnGap))
-        const center = x + (columnWidth / 2)
-        addTextLines(cardCommands, item.labelLines, center, cardY, 36,
-          28, COLORS.secondary, 600, 'center')
-        addTextLines(cardCommands, item.valueLines, center, cardY + labelHeight + 4,
-          62, 54, COLORS.result, 700, 'center')
+        const x = LEFT + heroPadding + (index * (columnWidth + columnGap))
+        const columnCenter = x + (columnWidth / 2)
+        addTextLines(heroCommands, item.labelLines, columnCenter, heroY, 32,
+          23, COLORS.accent, 650, 'center')
       })
-      cardY += labelHeight + 4 + valueHeight + 8
+      heroY += labelHeight + 8
+      timingColumns.forEach((item, index) => {
+        const x = LEFT + heroPadding + (index * (columnWidth + columnGap))
+        const columnCenter = x + (columnWidth / 2)
+        addTextLines(heroCommands, item.valueLines, columnCenter, heroY, 84,
+          72, COLORS.text, 720, 'center')
+      })
+      heroY += valueHeight
     }
 
-    const cardHeight = Math.ceil(cardY - cardTop + 24)
-    commands.push({
-      type: 'roundRect', x: LEFT, y: cardTop, width: CONTENT_WIDTH,
-      height: cardHeight, radius: 24, fill: COLORS.card,
-    })
-    commands.push({
-      type: 'roundRectStroke', x: LEFT, y: cardTop, width: CONTENT_WIDTH,
-      height: cardHeight, radius: 24, color: COLORS.cardBorder, lineWidth: 1,
-    })
-    commands.push(...cardCommands)
-    y = cardTop + cardHeight + 18
+    const heroHeight = Math.ceil(heroY - heroTop + heroPadding)
+    addRoundedCard(commands, LEFT, heroTop, CONTENT_WIDTH, heroHeight,
+      COLORS.hero, COLORS.heroBorder)
+    commands.push(...heroCommands)
+    y = heroTop + heroHeight + 18
+  }
+
+  if (reminderItems.length) {
+    const reminderWidth = CONTENT_WIDTH - 40
+    const reminderLines = reminderItems.flatMap((item) => (
+      wrapText(measureContext, item, reminderWidth, 24, 600)
+    ))
+    const reminderLineHeight = 34
+    const reminderTextHeight = reminderLines.length * reminderLineHeight
+    const reminderTop = y
+    const reminderHeight = reminderTextHeight + 40
+    addRoundedCard(commands, LEFT, reminderTop, CONTENT_WIDTH, reminderHeight,
+      COLORS.reminder, COLORS.reminderBorder)
+    addTextLines(commands, reminderLines, LEFT + (CONTENT_WIDTH / 2),
+      reminderTop + 20, reminderLineHeight, 24, COLORS.reminderText, 600, 'center')
+    y = reminderTop + reminderHeight + 20
   }
 
   if (secondaryItems.length) {
-    secondaryItems.forEach((item, index) => {
-      const lines = wrapText(measureContext, item, CONTENT_WIDTH, 34, 500)
-      y += addTextLines(commands, lines, LEFT, y, 44, 34, COLORS.text, 500)
-      if (index < secondaryItems.length - 1) y += 2
-    })
-    y += 8
+    const metricGap = 12
+    const metricWidth = (CONTENT_WIDTH - metricGap) / 2
+    const tileInnerWidth = metricWidth - 36
+    for (let index = 0; index < secondaryItems.length; index += 2) {
+      const row = secondaryItems.slice(index, index + 2).map((metric, column) => {
+        const labelLines = wrapText(measureContext, metric.label, tileInnerWidth, 24, 600)
+        const valueLines = wrapText(measureContext, metric.value || '—', tileInnerWidth, 30, 650)
+        const contentHeight = (labelLines.length * 32) + 10 + (valueLines.length * 40)
+        return {
+          x: LEFT + (column * (metricWidth + metricGap)),
+          labelLines,
+          valueLines,
+          contentHeight,
+        }
+      })
+      const rowHeight = Math.max(144, ...row.map((metric) => metric.contentHeight + 44))
+      row.forEach((metric) => {
+        addRoundedCard(commands, metric.x, y, metricWidth, rowHeight,
+          COLORS.tile, COLORS.tileBorder)
+        const center = metric.x + (metricWidth / 2)
+        let metricY = y + ((rowHeight - metric.contentHeight) / 2)
+        metricY += addTextLines(commands, metric.labelLines, center, metricY,
+          32, 24, COLORS.secondary, 600, 'center') + 10
+        addTextLines(commands, metric.valueLines, center, metricY,
+          40, 30, COLORS.text, 650, 'center')
+      })
+      y += rowHeight + (index + 2 < secondaryItems.length ? 12 : 0)
+    }
+    y += 26
   }
 
   if (inputFields.length) {
-    addSeparator(commands, y)
-    y += 18
     const sectionTitle = wrapText(measureContext, '输入参数', CONTENT_WIDTH, 32, 650)
-    y += addTextLines(commands, sectionTitle, LEFT, y, 40, 32, COLORS.text, 650)
-    y += 8
-    inputFields.forEach((field) => {
-      const labelLines = wrapText(measureContext, field.label, INPUT_LABEL_WIDTH, 28, 500)
-      const valueLines = wrapText(measureContext, field.value, INPUT_VALUE_WIDTH, 36, 400)
-      addTextLines(commands, labelLines, LEFT, y, 36, 28, COLORS.secondary, 500)
-      addTextLines(commands, valueLines, INPUT_VALUE_X, y, 46, 36, COLORS.text, 400)
-      y += Math.max(labelLines.length * 36, valueLines.length * 46) + 8
+    y += addTextLines(commands, sectionTitle, LEFT, y, 40, 32, COLORS.text, 650, 'left')
+    y += 10
+
+    const inputRows = inputFields.map((field) => {
+      const labelLines = wrapText(measureContext, field.label, INPUT_LABEL_WIDTH, 26, 650)
+      const valueLines = wrapText(measureContext, field.value || '—', INPUT_VALUE_WIDTH, 26, 500)
+      const lineCount = Math.max(labelLines.length, valueLines.length)
+      return { labelLines, valueLines, lineCount, height: (lineCount * 36) + 28 }
     })
+    const inputTop = y
+    const inputHeight = inputRows.reduce((total, row) => total + row.height, 0)
+    addRoundedCard(commands, LEFT, inputTop, CONTENT_WIDTH, inputHeight,
+      COLORS.card, COLORS.cardBorder)
+    let rowY = inputTop
+    inputRows.forEach((row) => {
+      const textTop = rowY + 14
+      addTextLines(commands, row.labelLines, LEFT + 24, textTop, 36,
+        26, COLORS.secondary, 650, 'left')
+      addTextLines(commands, row.valueLines, INPUT_VALUE_X, textTop, 36,
+        26, COLORS.text, 500, 'left')
+      rowY += row.height
+    })
+    y = inputTop + inputHeight
   }
 
   if (supplementaryItems.length) {
-    if (inputFields.length || secondaryItems.length || threshold || shouldDrawTiming) {
-      y += 2
-      addSeparator(commands, y)
-      y += 18
-    }
-    const sectionTitle = wrapText(measureContext, '补充信息', CONTENT_WIDTH, 32, 650)
-    y += addTextLines(commands, sectionTitle, LEFT, y, 40, 32, COLORS.text, 650)
-    y += 8
-    supplementaryItems.forEach((item, index) => {
-      const lines = wrapText(measureContext, item, CONTENT_WIDTH, 32, 400)
-      y += addTextLines(commands, lines, LEFT, y, 42, 32, COLORS.secondary, 400)
-      if (index < supplementaryItems.length - 1) y += 4
+    if (inputFields.length) y += 18
+    const supplementaryInnerWidth = CONTENT_WIDTH - 48
+    const supplementaryRows = supplementaryItems.map((item) => {
+      const lines = wrapText(measureContext, item, supplementaryInnerWidth, 26, 400)
+      return { lines, height: (lines.length * 36) + 12 }
     })
+    const supplementaryTop = y
+    const supplementaryHeight = 14
+      + supplementaryRows.reduce((total, row) => total + row.height, 0) + 14
+    addRoundedCard(commands, LEFT, supplementaryTop, CONTENT_WIDTH, supplementaryHeight,
+      COLORS.card, COLORS.cardBorder)
+    let supplementaryY = supplementaryTop + 14
+    supplementaryRows.forEach((row) => {
+      addTextLines(commands, row.lines, LEFT + 24, supplementaryY, 36,
+        26, COLORS.secondary, 400, 'left')
+      supplementaryY += row.height
+    })
+    y = supplementaryTop + supplementaryHeight
   }
 
-  y += 28
+  y += 20
   return { commands, height: Math.ceil(y) }
 }
-
 function calculateResultReportHeight(payload, measureContext) {
   return buildReportModel(payload, measureContext).height
 }

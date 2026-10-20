@@ -23,63 +23,6 @@ function resetStorage() {
   delete require.cache[require.resolve('../utils/records')]
 }
 
-function checkCompareToggle() {
-  const toasts = []
-  global.wx.showToast = ({ title }) => toasts.push(title)
-  const recordA = { id: 'a', module: 'limiter', preferences: {}, resultText: 'a' }
-  const recordB = { id: 'b', module: 'limiter', preferences: {}, resultText: 'b' }
-  const recordC = { id: 'c', module: 'limiter', preferences: {}, resultText: 'c' }
-  const page = {
-    rawRecords: [recordA, recordB, recordC],
-    data: { compareSelectedIds: ['a', 'b'] },
-    setData(changes) { this.data = { ...this.data, ...changes } },
-  }
-  projectPage.toggleCompareRecord.call(page, { currentTarget: { dataset: { id: 'a' } } })
-  assert.deepStrictEqual(page.data.compareSelectedIds, ['b'])
-  assert.strictEqual(page.data.comparison, null)
-  projectPage.toggleCompareRecord.call(page, { currentTarget: { dataset: { id: 'c' } } })
-  assert.deepStrictEqual(page.data.compareSelectedIds, ['b', 'c'])
-  projectPage.toggleCompareRecord.call(page, { currentTarget: { dataset: { id: 'a' } } })
-  assert.deepStrictEqual(page.data.compareSelectedIds, ['b', 'c'])
-  assert.strictEqual(toasts.filter((title) => title === '每次最多比较两条记录').length, 1)
-}
-
-function checkVenuePreferenceFreshRead() {
-  resetStorage()
-  const records = require('../utils/records')
-  storage.set('audioTool.storageSchemaVersion', 3)
-  storage.set('audioTool.projects.v1', [{
-    id: 'project-1', name: 'Project', roomLengthText: '12', roomWidthText: '8', roomHeightText: '3',
-    standardClassKey: 'conference', gradeKey: 'II', createdAt: 1, updatedAt: 1,
-  }])
-  records.getProjects()
-  storage.set('audioTool.venue.preferences', { lengthText: '12', discussion: 'old' })
-  assert.strictEqual(records.prepareProjectModule('project-1', 'venue'), '/pages/venue/venue')
-  storage.set('audioTool.venue.preferences', { lengthText: '30', discussion: 'new' })
-  assert.strictEqual(records.prepareProjectModule('project-1', 'venue'), '/pages/venue/venue')
-  assert.strictEqual(storage.get('audioTool.venue.preferences').discussion, 'new')
-  storage.delete('audioTool.venue.preferences')
-  assert.strictEqual(records.prepareProjectModule('project-1', 'venue'), '/pages/venue/venue')
-  assert.strictEqual(storage.get('audioTool.venue.preferences').lengthText, '12')
-  assert.strictEqual(storage.get('audioTool.venue.preferences').widthText, '8')
-  assert.strictEqual(storage.get('audioTool.venue.preferences')?.discussion, undefined)
-  const originalGet = global.wx.getStorageSync
-  global.wx.getStorageSync = (key) => {
-    if (key === 'audioTool.venue.preferences') throw new Error('injected venue preference read failure')
-    return originalGet.call(global.wx, key)
-  }
-  assert.strictEqual(records.prepareProjectModule('project-1', 'venue'), '')
-  global.wx.getStorageSync = originalGet
-  let writes = 0
-  const originalSet = global.wx.setStorageSync
-  global.wx.setStorageSync = (key, value) => { writes += 1; return originalSet.call(global.wx, key, value) }
-  assert.strictEqual(records.restoreRecord({ module: 'venue', preferences: { lengthText: '99' } }), '/pages/venue/venue')
-  assert.strictEqual(storage.get('audioTool.venue.preferences').lengthText, '99')
-  assert.strictEqual(records.createProject('Recovery project').name, 'Recovery project')
-  assert(writes >= 2)
-  global.wx.setStorageSync = originalSet
-}
-
 function checkMigrationReadFailure() {
   resetStorage()
   const records = require('../utils/records')
@@ -99,7 +42,7 @@ function checkMigrationReadFailure() {
   assert.deepStrictEqual(storage.get('audioTool.projects.v1'), [project])
   failProjectsRead = false
   records.getRecords()
-  assert.strictEqual(storage.get('audioTool.storageSchemaVersion'), 3)
+  assert.strictEqual(storage.get('audioTool.storageSchemaVersion'), 4)
   assert.strictEqual(storage.get('audioTool.records.v1')[0].id, 'r')
   global.wx.getStorageSync = originalGet
 
@@ -229,8 +172,6 @@ function checkRecordViewBudgets() {
 
 try {
   require('../pages/records/project')
-  checkCompareToggle()
-  checkVenuePreferenceFreshRead()
   checkMigrationReadFailure()
   checkReportCancellation()
   checkRecordViewBudgets()

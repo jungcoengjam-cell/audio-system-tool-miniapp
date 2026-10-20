@@ -1,134 +1,185 @@
-const { printPerformanceSummary, startMeasurement } = require('../../utils/performance')
+'use strict'
+
 const {
-  MODULES,
-  addRecordToProject,
   createProject,
-  deleteProject,
+  getModuleMetadata,
   getWorkspaceSnapshot,
-  removeRecord,
-  restoreRecord,
-  setActiveProject,
   toggleFavoriteById,
 } = require('../../utils/records')
+const { getLightingContexts } = require('../dmx-layout/lighting-workspace')
 
-function pad(value) {
-  return value < 10 ? `0${value}` : String(value)
-}
+const PROJECT_FILTERS = [
+  { key: 'all', label: '全部' },
+  { key: 'calculation', label: '计算记录' },
+  { key: 'wiring', label: '线路' },
+  { key: 'lighting', label: '灯位' },
+]
 
 function formatTime(timestamp) {
+  if (!Number.isFinite(timestamp)) return '时间未记录'
   const date = new Date(timestamp)
+  const pad = (value) => String(value).padStart(2, '0')
   return `${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`
 }
 
-function projectViewFields(project) {
-  const { wiringSchedule, ...fields } = project || {}
-  return fields
-}
-
-function getWiringLineCount(project) {
+function projectLines(project) {
   const lines = project?.wiringSchedule?.lines
   return Array.isArray(lines) ? lines.length : 0
 }
 
-function buildViewSignature(projects, records, activeProject, recordTabIndex) {
-  const projectSignature = projects.map((item) => (
-    `${item.id}:${item.updatedAt}:${item.name}:${item.wiringSchedule?.revision || 0}:${getWiringLineCount(item)}`
-  )).join('|')
-  const recordSignature = records.map((item) => (
-    `${item.id}:${item.updatedAt}:${item.favorite ? 1 : 0}:${(item.projectIds || []).join(',')}`
-  )).join('|')
-  return `${recordTabIndex}#${activeProject?.id || ''}#${projectSignature}#${recordSignature}`
-}
-
-function showWorkspaceReadError() {
-  wx.showToast({ title: '本地项目和收藏读取失败，请重试', icon: 'none' })
+function filterRows(rows, query, moduleKey) {
+  const q = String(query || '').trim().toLowerCase()
+  return rows.filter((row) => {
+    if (moduleKey && moduleKey !== 'all' && row.module !== moduleKey) return false
+    if (!q) return true
+    return [row.title, row.name, row.summary, row.moduleLabel, row.venueName]
+      .some((value) => String(value || '').toLowerCase().includes(q))
+  })
 }
 
 Page({
   data: {
-    recordTabs: ['现场项目', '常用收藏'],
-    recordTabIndex: 0,
-    displayRecords: [],
+    tabs: ['项目', '收藏'],
+    tabIndex: 0,
+    projectFilters: PROJECT_FILTERS,
+    projectFilter: 'all',
+    favoriteModules: [],
+    favoriteFilter: 'all',
+    searchText: '',
     projects: [],
-    activeProject: null,
+    favorites: [],
+    recoveryCount: 0,
+    workspaceError: '',
+    lightingWarning: '',
   },
 
   onShow() {
-    this.refreshWorkspace('onShow', { forceRead: true })
+    this.refresh({ forceRefresh: true })
   },
 
-  onHide() {
-    printPerformanceSummary('项目页/')
-  },
-
-  refreshWorkspace(source = 'interaction', changes = {}) {
-    const finishRefresh = startMeasurement('项目页/工作区刷新总耗时', { source })
-    const { forceRead, ...viewChanges } = changes
-    const snapshot = getWorkspaceSnapshot({ forceRefresh: forceRead || Boolean(this.data.workspaceError) })
-    if (snapshot.ok === false) {
-      this.setData({ workspaceError: snapshot.error || '本地项目和收藏数据读取失败，请重试。' })
-      finishRefresh({ error: true })
-      return
+  refresh(options = {}) {
+    const snapshot = getWorkspaceSnapshot({ forceRefresh: options.forceRefresh === true || Boolean(this.data.workspaceError) })
+    if (!snapshot.ok) {
+      this.setData({ workspaceError: snapshot.error || '项目和收藏读取失败，请重试。' })
+      return false
     }
-    const { projects: rawProjects, records: rawRecords, activeProject } = snapshot
-    const recordTabIndex = viewChanges.recordTabIndex ?? this.data.recordTabIndex
-    const viewSignature = buildViewSignature(rawProjects, rawRecords, activeProject, recordTabIndex)
-    if (viewSignature === this.workspaceViewSignature) {
-      if (this.data.workspaceError) this.setData({ workspaceError: '' })
-      finishRefresh({ projects: rawProjects.length, records: rawRecords.length, skipped: true })
-      return
-    }
-
-    const projectNames = Object.create(null)
-    const projectRecordCounts = Object.create(null)
-    rawProjects.forEach((project) => {
-      projectNames[project.id] = project.name
-      projectRecordCounts[project.id] = 0
-    })
-    rawRecords.forEach((record) => {
-      ;(record.projectIds || []).forEach((id) => {
-        if (Object.prototype.hasOwnProperty.call(projectRecordCounts, id)) projectRecordCounts[id] += 1
+    const lighting = getLightingContexts()
+    const lightingRows = lighting.ok ? lighting.rows : []
+    const lightingWarning = lighting.ok ? '' : '灯位统计暂不可用；项目内原始灯光数据仍保留。'
+    const recordCounts = Object.create(null)
+    snapshot.projects.forEach((project) => { recordCounts[project.id] = 0 })
+    snapshot.records.forEach((record) => {
+      ;(record.projectIds || []).forEach((projectId) => {
+        if (Object.prototype.hasOwnProperty.call(recordCounts, projectId)) recordCounts[projectId] += 1
       })
     })
-    const decoratedRecords = recordTabIndex === 0 ? [] : rawRecords.filter((record) => record.favorite).map((record) => ({
-      moduleLabel: MODULES[record.module]?.label || '计算',
-      id: record.id,
-      trustLabel: MODULES[record.module]?.trustLabel || '计算结果',
-      theme: MODULES[record.module]?.theme || 'cyan',
-      timeText: formatTime(record.updatedAt),
-      title: record.title,
-      summary: record.summary,
-      projectNames: (record.projectIds || []).map((id) => projectNames[id]).filter(Boolean).join('、'),
-      favorite: record.favorite,
-    }))
-
-    this.workspaceViewSignature = viewSignature
-    this.rawRecords = rawRecords
-    this.setData({
-      ...viewChanges,
-      ...(this.data.workspaceError ? { workspaceError: '' } : {}),
-      displayRecords: decoratedRecords,
-      projects: rawProjects.map((project) => ({
-        ...projectViewFields(project),
+    const projects = snapshot.projects.map((project) => {
+      const context = lightingRows.find((item) => item.id === project.id)
+      const wiringCount = projectLines(project)
+      const lightingCount = context?.hasLighting && Number(context.revision) > 0 ? 1 : 0
+      return {
+        id: project.id,
+        name: project.name,
+        venueName: project.venueName || '',
+        recordCount: recordCounts[project.id] || 0,
+        wiringCount,
+        lightingCount,
         timeText: formatTime(project.updatedAt),
-        recordCount: projectRecordCounts[project.id] || 0,
-        wiringLineCount: getWiringLineCount(project),
-        isActive: project.id === activeProject?.id,
+        contentText: [
+          recordCounts[project.id] ? `${recordCounts[project.id]} 条计算` : '',
+          wiringCount ? `${wiringCount} 条线路` : '',
+          lightingCount ? '含灯位方案' : '',
+        ].filter(Boolean).join(' · ') || '尚无计算、线路或灯位内容',
+      }
+    })
+    const metadataByModule = Object.create(null)
+    Object.keys(require('../../utils/records').MODULES).forEach((key) => {
+      metadataByModule[key] = getModuleMetadata(key)
+    })
+    const favorites = snapshot.favorites.map((favorite) => {
+      const metadata = metadataByModule[favorite.module] || getModuleMetadata(favorite.module)
+      return {
+        id: favorite.id,
+        module: favorite.module,
+        moduleLabel: metadata?.label || favorite.module,
+        theme: metadata?.theme || 'cyan',
+        title: favorite.title || favorite.summary || metadata?.label || '计算收藏',
+        summary: favorite.summary || favorite.resultText,
+        timeText: formatTime(favorite.updatedAt || favorite.createdAt),
+        archived: Boolean(metadata?.retired),
+      }
+    })
+    const favoriteModules = [
+      { key: 'all', label: '全部' },
+      ...Array.from(new Set(snapshot.favorites.map((item) => item.module))).map((key) => ({
+        key,
+        label: getModuleMetadata(key)?.label || key,
       })),
-      activeProject: activeProject ? projectViewFields(activeProject) : null,
-    }, () => finishRefresh({ projects: rawProjects.length, records: rawRecords.length }))
+    ]
+    const filteredProjects = filterRows(projects, this.data.searchText, '')
+      .filter((project) => {
+        if (this.data.projectFilter === 'calculation') return project.recordCount > 0
+        if (this.data.projectFilter === 'wiring') return project.wiringCount > 0
+        if (this.data.projectFilter === 'lighting') return project.lightingCount > 0
+        return true
+      })
+    const filteredFavorites = filterRows(favorites, this.data.searchText, this.data.favoriteFilter)
+    this.setData({
+      projects: filteredProjects,
+      favorites: filteredFavorites,
+      favoriteModules,
+      recoveryCount: snapshot.recoveryEntries.length,
+      lightingWarning,
+      workspaceError: '',
+    })
+    this._allProjects = projects
+    this._allFavorites = favorites
+    return true
   },
 
-  onRecordTabTap(event) {
-    this.refreshWorkspace('recordTab', { recordTabIndex: Number(event.currentTarget.dataset.index) })
+  refreshFiltered() {
+    const projects = this._allProjects || []
+    const favorites = this._allFavorites || []
+    const filteredProjects = filterRows(projects, this.data.searchText, '').filter((project) => {
+      if (this.data.projectFilter === 'calculation') return project.recordCount > 0
+      if (this.data.projectFilter === 'wiring') return project.wiringCount > 0
+      if (this.data.projectFilter === 'lighting') return project.lightingCount > 0
+      return true
+    })
+    const filteredFavorites = filterRows(favorites, this.data.searchText, this.data.favoriteFilter)
+    this.setData({ projects: filteredProjects, favorites: filteredFavorites })
+  },
+
+  onTabTap(event) {
+    const tabIndex = Number(event.currentTarget.dataset.index)
+    this.setData({ tabIndex, searchText: '', scrollTop: 1 }, () => {
+      this.setData({ scrollTop: 0 })
+      this.refresh({ forceRefresh: true })
+    })
+  },
+
+  onSearchInput(event) {
+    this.setData({ searchText: event.detail.value || '' }, () => this.refreshFiltered())
+  },
+
+  clearSearch() {
+    this.setData({ searchText: '' }, () => this.refreshFiltered())
+  },
+
+  onProjectFilterTap(event) {
+    this.setData({ projectFilter: String(event.currentTarget.dataset.key || 'all') }, () => this.refreshFiltered())
+  },
+
+  onFavoriteFilterTap(event) {
+    this.setData({ favoriteFilter: String(event.currentTarget.dataset.key || 'all') }, () => this.refreshFiltered())
   },
 
   retryWorkspace() {
-    this.refreshWorkspace('retry', { forceRead: true })
+    this.refresh({ forceRefresh: true })
   },
 
   createProject() {
-    if (this.data.workspaceError) return showWorkspaceReadError()
+    if (this.data.workspaceError) return
     wx.showModal({
       title: '新建现场项目',
       content: '',
@@ -137,111 +188,39 @@ Page({
       confirmText: '创建',
       success: ({ confirm, content }) => {
         if (!confirm) return
-        if (this.data.workspaceError) return showWorkspaceReadError()
         const project = createProject(content)
         if (!project) {
           wx.showToast({ title: content?.trim() ? '新建失败，请检查本地存储' : '请输入项目名称', icon: 'none' })
           return
         }
-        this.refreshWorkspace()
+        this.refresh({ forceRefresh: true })
       },
     })
   },
 
-  selectProject(event) {
-    wx.navigateTo({ url: `/pages/records/project?id=${event.currentTarget.dataset.id}` })
+  openProject(event) {
+    const projectId = String(event.currentTarget.dataset.id || '')
+    if (projectId) wx.navigateTo({ url: `/pages/records/project?id=${encodeURIComponent(projectId)}` })
   },
 
-  openProjectWiring(event) {
-    const projectId = event.currentTarget.dataset.id
-    if (!projectId) return
-    wx.navigateTo({ url: `/pages/project-wiring/index?id=${encodeURIComponent(projectId)}` })
+  openFavorite(event) {
+    const favoriteId = String(event.currentTarget.dataset.id || '')
+    if (favoriteId) wx.navigateTo({ url: `/pages/projects/favorite-detail?id=${encodeURIComponent(favoriteId)}` })
   },
 
-  openProjectReport(event) {
-    this.selectProject(event)
+  openRecovery() {
+    wx.navigateTo({ url: '/pages/projects/recovery' })
   },
 
-  activateProject(event) {
-    if (this.data.workspaceError) return showWorkspaceReadError()
-    if (!setActiveProject(event.currentTarget.dataset.id)) {
-      wx.showToast({ title: '设置失败，请重试', icon: 'none' })
-      return
+  removeFavorite(event) {
+    const favoriteId = String(event.currentTarget.dataset.id || '')
+    const before = (this._allFavorites || []).some((favorite) => favorite.id === favoriteId)
+    const result = toggleFavoriteById(favoriteId)
+    if (!before || result) {
+      wx.showToast({ title: '移入恢复区失败，收藏仍然保留', icon: 'none' })
+      return false
     }
-    this.refreshWorkspace()
-    wx.showToast({ title: '已设为当前项目', icon: 'none' })
-  },
-
-  restoreRecord(event) {
-    if (this.data.workspaceError) return showWorkspaceReadError()
-    const record = this.rawRecords.find((item) => item.id === event.currentTarget.dataset.id)
-    const path = restoreRecord(record)
-    if (path) wx.navigateTo({ url: path })
-  },
-
-  toggleRecordFavorite(event) {
-    if (this.data.workspaceError) return showWorkspaceReadError()
-    const recordId = event.currentTarget.dataset.id
-    const before = (this.rawRecords || []).find((item) => item.id === recordId)
-    if (!before) return
-    const result = toggleFavoriteById(recordId)
-    const after = getWorkspaceSnapshot().records.find((item) => item.id === recordId)
-    const removedAsExpected = before.favorite && !after
-    if (!result && !removedAsExpected) {
-      wx.showToast({ title: '保存失败，请检查本地存储', icon: 'none' })
-      return
-    }
-    this.refreshWorkspace()
-  },
-
-  addRecordToActiveProject(event) {
-    if (this.data.workspaceError) return showWorkspaceReadError()
-    const project = this.data.activeProject
-    const record = this.rawRecords.find((item) => item.id === event.currentTarget.dataset.id)
-    if (!project || !record) return
-    if (!addRecordToProject(record, project.id)) {
-      wx.showToast({ title: '保存失败，请检查本地存储', icon: 'none' })
-      return
-    }
-    this.refreshWorkspace()
-    wx.showToast({ title: `已加入${project.name}`, icon: 'none' })
-  },
-
-  deleteRecord(event) {
-    if (this.data.workspaceError) return showWorkspaceReadError()
-    const recordId = event.currentTarget.dataset.id
-    wx.showModal({
-      title: '删除这条记录？',
-      content: '删除后，该记录也会从相关现场项目中移除。',
-      confirmColor: '#ff3b30',
-      success: ({ confirm }) => {
-        if (!confirm) return
-        if (this.data.workspaceError) return showWorkspaceReadError()
-        if (!removeRecord(recordId)) {
-          wx.showToast({ title: '删除失败，请重试', icon: 'none' })
-          return
-        }
-        this.refreshWorkspace()
-      },
-    })
-  },
-
-  deleteProject(event) {
-    if (this.data.workspaceError) return showWorkspaceReadError()
-    const projectId = event.currentTarget.dataset.id
-    wx.showModal({
-      title: '删除这个项目？',
-      content: '项目及其布线资料会被删除；未收藏且不属于其他项目的计算记录将同时清理。',
-      confirmColor: '#ff3b30',
-      success: ({ confirm }) => {
-        if (!confirm) return
-        if (this.data.workspaceError) return showWorkspaceReadError()
-        if (!deleteProject(projectId)) {
-          wx.showToast({ title: '删除失败，请重试', icon: 'none' })
-          return
-        }
-        this.refreshWorkspace()
-      },
-    })
+    this.refresh({ forceRefresh: true })
+    return true
   },
 })

@@ -1,72 +1,44 @@
-<scroll-view class="tools-scroll" scroll-y enhanced show-scrollbar="{{false}}">
-  <view class="tools-content">
-    <view class="page-header">
-      <view class="page-title">工具</view>
+<scroll-view class="home-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+  <view class="home-page tools-page">
+    <view class="home-header home-main-header">
+      <view class="home-title home-main-title">工具</view>
+      <view class="home-header-action" hover-class="home-pressed" bindtap="openSettings" role="button" aria-label="打开设置">
+        <text class="tools-settings-glyph" aria-hidden="true">⚙</text>
+      </view>
     </view>
 
-    <view class="tool-domain">
-      <view class="domain-title">音频</view>
-      <scroll-view class="module-strip" scroll-x enhanced show-scrollbar="{{false}}">
-        <view class="module-track">
-          <navigator wx:for="{{audioModules}}" wx:key="id" class="module-card" url="{{item.path}}" hover-class="card-pressed">
-            <view class="module-visual">
-              <image class="module-image" src="{{item.image}}" mode="aspectFit" lazy-load aria-label="{{item.title}}配图" />
-            </view>
-            <view class="module-title">{{item.title}}</view>
-          </navigator>
+    <scroll-view class="home-category-strip" scroll-x enhanced show-scrollbar="{{false}}" aria-label="工具分类">
+      <view class="home-category-track">
+        <view wx:for="{{categories}}" wx:key="*this" class="home-chip {{activeCategory === item ? 'home-chip-active' : ''}}" data-category="{{item}}" bindtap="onCategoryTap" hover-class="home-chip-pressed" role="button" aria-pressed="{{activeCategory === item}}">{{item}}</view>
+      </view>
+    </scroll-view>
+
+    <view wx:if="{{visibilityError}}" class="tools-visibility-warning">{{visibilityError}}</view>
+    <view wx:if="{{!tools.length}}" class="tools-empty-state">
+      <view class="home-empty-title">此分类暂无显示的工具</view>
+      <view class="home-empty-copy">可以在设置中重新打开工具入口。</view>
+      <button class="home-secondary-button" bindtap="openSettings">管理工具显示</button>
+    </view>
+    <view class="home-tool-grid" aria-label="工具目录">
+      <navigator wx:for="{{tools}}" wx:key="id" class="home-tool-card" url="{{item.path}}" hover-class="home-pressed" aria-label="打开{{item.title}}，{{item.subtitle}}">
+        <view class="home-tool-icon-wrap"><image class="home-tool-icon" src="{{item.icon}}" mode="aspectFit" lazy-load aria-hidden="true" /></view>
+        <view class="home-tool-title">
+          <block wx:if="{{item.id === 'projectWiring'}}">
+            <view class="home-tool-title-line">通道与</view><view class="home-tool-title-line">线缆</view>
+          </block>
+          <block wx:elif="{{item.id === 'camera'}}">
+            <view class="home-tool-title-line">摄像机</view><view class="home-tool-title-line">视场角</view>
+          </block>
+          <view wx:else class="home-tool-title-line">{{item.title}}</view>
         </view>
-      </scroll-view>
+      </navigator>
     </view>
 
-    <view class="tool-domain">
-      <view class="domain-title">视频</view>
-      <view class="module-row">
-        <navigator wx:for="{{videoModules}}" wx:key="id" class="module-card" url="{{item.path}}" hover-class="card-pressed">
-          <view class="module-visual">
-            <image class="module-image" src="{{item.image}}" mode="aspectFit" lazy-load aria-label="{{item.title}}配图" />
-          </view>
-          <view class="module-title">{{item.title}}</view>
-        </navigator>
-      </view>
-    </view>
-
-    <view class="tool-domain">
-      <view class="domain-title">灯光</view>
-      <view class="module-row">
-        <navigator wx:for="{{lightingModules}}" wx:key="id" class="module-card" url="{{item.path}}" hover-class="card-pressed">
-          <view class="module-visual">
-            <image class="module-image" src="{{item.image}}" mode="aspectFit" lazy-load aria-label="{{item.title}}配图" />
-          </view>
-          <view class="module-title">{{item.title}}</view>
-        </navigator>
-      </view>
-    </view>
-
-    <view class="tool-domain">
-      <view class="domain-title">中控</view>
-      <view class="module-row">
-        <navigator class="module-card" url="/pages/control-protocol/index" hover-class="card-pressed" aria-label="控制协议">
-          <view class="module-visual">
-            <image class="module-image" src="/assets/home/module-control-protocol-catalog.png" mode="aspectFit" lazy-load aria-label="控制协议配图" />
-          </view>
-          <view class="module-title">控制协议</view>
-        </navigator>
-      </view>
-    </view>
-
-    <view class="domain-title library-heading">资料</view>
-    <navigator class="product-library-card" url="/pages/products/library" hover-class="card-pressed">
-      <view class="product-library-copy">
-        <view class="product-library-title">产品资料库</view>
-      </view>
-      <view class="product-library-arrow">›</view>
+    <navigator class="home-library-card" url="/pages/products/library" hover-class="home-pressed" aria-label="打开产品资料库">
+      <view class="home-library-icon" aria-hidden="true">▤</view>
+      <view class="home-library-title">产品资料库</view>
+      <view class="home-chevron" aria-hidden="true">›</view>
     </navigator>
-    <view class="tools-footer">
-      <view>版本 {{appVersion}} · 产品数据复核 {{productDataDate}}</view>
-      <view class="footer-actions">
-        <button class="footer-action" open-type="feedback">问题反馈</button>
-        <button class="footer-action footer-action-muted" bindtap="resetPreferences">恢复默认设置</button>
-      </view>
-    </view>
+    <view class="home-bottom-space"></view>
   </view>
 </scroll-view>

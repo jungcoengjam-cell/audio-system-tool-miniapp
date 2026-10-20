@@ -1,0 +1,98 @@
+<view class="report-page">
+  <view wx:if="{{isLoading}}" class="report-state-wrap">
+    <view class="report-state-card">
+      <view class="report-state-title">正在读取项目内容</view>
+      <view class="report-state-copy">正在读取计算记录、线路与灯位。</view>
+    </view>
+  </view>
+
+  <view wx:elif="{{pageError}}" class="report-state-wrap">
+    <view class="report-state-card">
+      <view class="report-state-title">无法读取报告内容</view>
+      <view class="report-state-copy">{{pageError}}</view>
+      <button class="report-primary-button report-state-retry" bindtap="retryLoadSource">重试</button>
+    </view>
+  </view>
+
+  <block wx:elif="{{mode === 'select'}}">
+    <scroll-view class="report-selection-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+      <view class="report-project-card">
+        <view class="report-kicker">项目</view>
+        <view class="report-project-name">{{project.name}}</view>
+        <view class="report-project-id">项目编号：{{project.id}}</view>
+      </view>
+
+      <view wx:if="{{!totalCount}}" class="report-state-card report-empty-card">
+        <view class="report-state-title">暂无可选报告内容</view>
+        <view class="report-state-copy">此项目当前没有可加入报告的计算记录、线路或灯位方案。</view>
+      </view>
+
+      <view wx:if="{{totalCount}}" class="report-select-all" bindtap="toggleAllReportItems" hover-class="report-pressed">
+        <view class="report-check {{allSelected ? 'report-check-active' : ''}}">{{allSelected ? '✓' : ''}}</view>
+        <view class="report-select-all-title">全选</view>
+        <view class="report-select-all-count">已选 {{selectedCount}} / {{totalCount}} 项</view>
+      </view>
+
+      <view wx:for="{{selectionSections}}" wx:key="key" class="report-section">
+        <view class="report-section-heading">
+          <view class="report-section-title">{{item.title}}</view>
+          <view class="report-section-count">{{item.items.length}} 项</view>
+        </view>
+        <view wx:for="{{item.items}}" wx:for-item="reportItem" wx:key="id"
+          class="report-item {{reportItem.checked ? 'report-item-selected' : ''}}"
+          data-id="{{reportItem.id}}" bindtap="toggleReportItem" hover-class="report-pressed">
+          <view class="report-check {{reportItem.checked ? 'report-check-active' : ''}}">{{reportItem.checked ? '✓' : ''}}</view>
+          <view class="report-item-copy">
+            <view class="report-item-title">{{reportItem.title}}</view>
+            <view class="report-item-subtitle">{{reportItem.subtitle}}</view>
+            <view wx:if="{{reportItem.imageError}}" class="report-item-image-error">图片暂不可生成：{{reportItem.imageError}} 请取消勾选后继续。</view>
+          </view>
+          <view class="report-item-chevron">›</view>
+        </view>
+      </view>
+      <view class="report-selection-bottom-space"></view>
+    </scroll-view>
+
+    <view class="report-selection-footer">
+      <view class="report-footer-status" wx:if="{{pageStatus}}">{{pageStatus}}</view>
+      <view class="report-footer-count">已选 {{selectedCount}} / {{totalCount}} 项</view>
+      <button class="report-primary-button report-generate-button" disabled="{{!hasSelection}}" bindtap="generateReport">生成报告预览</button>
+    </view>
+  </block>
+
+  <view wx:elif="{{mode === 'rendering'}}" class="report-state-wrap report-rendering-wrap">
+    <view class="report-state-card">
+      <view class="report-rendering-indicator"></view>
+      <view class="report-state-title">正在生成分页图片</view>
+      <view class="report-state-copy">{{renderProgressText}}</view>
+      <view class="report-state-copy">请保持此页打开；完成后可逐页检查与分享。</view>
+      <button class="report-secondary-button report-cancel-button" bindtap="cancelReportGeneration">取消生成</button>
+    </view>
+  </view>
+
+  <block wx:elif="{{mode === 'preview'}}">
+    <view class="report-return-selection-wrap">
+      <button class="report-secondary-button report-return-selection" bindtap="backToSelection">‹ 返回选择</button>
+    </view>
+    <view class="report-page-nav">
+      <button class="report-page-arrow" disabled="{{currentPageIndex === 0}}" bindtap="previousReportPage">‹</button>
+      <view class="report-page-counter">第 {{currentPageNumber}} / {{pageCount}} 页</view>
+      <button class="report-page-arrow" disabled="{{currentPageIndex + 1 >= pageCount}}" bindtap="nextReportPage">›</button>
+    </view>
+    <scroll-view class="report-preview-scroll" scroll-y enhanced show-scrollbar="{{false}}" scroll-top="{{previewScrollTop}}">
+      <image class="report-preview-image" src="{{currentPagePath}}" mode="widthFix" bindtap="inspectReportPages" aria-label="项目报告分页图片，点击可缩放查看"></image>
+      <view class="report-preview-hint">白纸报告 · 点击图片可全屏缩放，左右滑动查看各页</view>
+    </scroll-view>
+    <view class="report-preview-footer">
+      <view class="report-save-status">{{saveProgressText || pageStatus}}</view>
+      <view class="report-preview-actions">
+        <button class="report-secondary-button report-preview-action" disabled="{{!currentPagePath}}" bindtap="shareCurrentReportPage">分享第 {{currentPageNumber}} 页</button>
+        <button class="report-primary-button report-preview-action" disabled="{{!pageCount || isSaving}}" bindtap="saveAllReportPages">{{isSaving ? '正在保存…' : saveButtonText}}</button>
+      </view>
+    </view>
+  </block>
+
+  <canvas id="projectReportExportCanvas" canvas-id="projectReportExportCanvas" class="report-canvas-offscreen"
+    width="{{reportCanvasWidth}}" height="{{reportCanvasHeight}}"
+    style="width: {{reportCanvasWidth}}px; height: {{reportCanvasHeight}}px;"></canvas>
+</view>

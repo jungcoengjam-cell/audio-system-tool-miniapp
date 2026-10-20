@@ -1,0 +1,7 @@
+{
+  "schema": "repair7-current-contract-v1",
+  "rationale": "Approved portrait layout markup adds single-rod clear, per-rod validation, and text-distinguishable fixture states; keep this current snapshot separate from the historical UI manifest.",
+  "approvedExpandedWxmlSha256": {
+    "pages/dmx-layout/dmx-layout.wxml": "9cf15b5d90ce081d1395c5aa6e7294c1bb4a1951588e3d941d7e8a755d9a0a62"
+  }
+}

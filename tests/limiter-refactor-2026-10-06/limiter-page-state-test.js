@@ -429,16 +429,29 @@ function testFavoriteRenderingAcrossInvalidResult() {
     assert.equal(page.data.calculationState, 'invalid', 'four parallel TS-803C speakers exceed the documented TC-2350B load range')
     assert.equal(page.data.currentFavorite, false, 'an invalid result never displays another configuration as the current favorite')
     const records = require('../../utils/records')
-    assert.equal(records.getRecordByPayload(originalPayload).favorite, true, 'invalidating the current result does not delete the saved favorite')
+    assert.equal(records.getFavoriteByPayload(originalPayload)?.favorite, true,
+      'invalidating the current result keeps the separate saved favorite')
+    assert.equal(records.getRecordByPayload(originalPayload), null,
+      'saving a favorite does not create or depend on a project record')
+    assert.equal(context.storage.get('audioTool.records.v1')?.length || 0, 0,
+      'the favorite remains isolated from project-record storage')
+    assert.equal(context.storage.get('audioTool.favorites.v1')?.length, 1,
+      'the saved configuration remains in the favorites store')
 
     stepCount(page, -1)
     stepCount(page, -1)
     pick(page, 'wiringIndex', 1)
     assert.equal(page.data.calculationState, 'valid', 'the explicitly selected two-speaker series load is a different valid signature')
     assert.equal(page.data.currentFavorite, false)
+    assert.equal(records.getFavoriteByPayload(page.getRecordPayload()), null,
+      'a different valid signature is not reported as the saved favorite')
+    assert.equal(records.getFavoriteByPayload(originalPayload)?.favorite, true,
+      'switching signatures does not remove the original favorite')
     stepCount(page, -1)
     assert.equal(page.data.hasValidResult, true)
     assert.equal(page.data.currentFavorite, true, 'returning to the original result signature restores its saved favorite state')
+    assert.equal(records.getFavoriteByPayload(page.getRecordPayload())?.favorite, true,
+      'returning to the original signature resolves to the saved favorite record')
   } finally { context.close() }
 }
 
@@ -573,15 +586,19 @@ function testProjectMetadataProjectionInPage() {
     const records = require('../../utils/records')
     const recordsKey = 'audioTool.records.v1'
     const payload = page.getRecordPayload()
+    const associatedProject = records.createProject('有效所属项目')
+    assert(associatedProject)
+    assert(records.addRecordToProject(payload, associatedProject.id, { name: '有效配置名', note: '有效备注' }))
     const orphanProject = records.createProject('孤立元数据项目')
     assert(orphanProject)
-    assert(records.addRecordToProject(payload, orphanProject.id, { name: '过期名称', note: '过期备注' }))
     const orphanRecords = storage.get(recordsKey)
     const orphanRecord = orphanRecords.find((record) => record.signature === JSON.stringify(['limiter', payload.preferences]))
     assert(orphanRecord)
-    orphanRecord.favorite = true
-    orphanRecord.projectIds = []
+    const seededRecordId = orphanRecord.id
+    const seededResultText = orphanRecord.resultText
+    assert.deepEqual(orphanRecord.projectIds, [associatedProject.id], 'the source remains a valid project-backed record')
     orphanRecord.projectMetadata = {
+      [associatedProject.id]: { name: '有效配置名', note: '有效备注', savedAt: Date.now() },
       [orphanProject.id]: { name: '孤立配置名', note: '不应预填', savedAt: Date.now() },
     }
     storage.set(recordsKey, orphanRecords)
@@ -593,7 +610,15 @@ function testProjectMetadataProjectionInPage() {
     assert.equal(page.data.projectConfigNote, '', 'unassociated project metadata cannot prefill a note')
     page.saveProjectConfiguration()
     assert.equal(modals.length, 0, 'orphaned metadata does not trigger an update confirmation')
-    assert.equal(records.getRecordByPayload(payload).projectMetadata[orphanProject.id].name, payload.title)
+    const savedRecord = records.getRecordByPayload(payload)
+    assert(savedRecord, 'saving to the selected project keeps the existing project record resolvable')
+    assert.equal(savedRecord.id, seededRecordId, 'saving to another project preserves the canonical record id')
+    assert.equal(savedRecord.signature, JSON.stringify(['limiter', payload.preferences]), 'saving preserves the parameter signature')
+    assert.equal(savedRecord.resultText, seededResultText, 'saving preserves the previously calculated result')
+    assert.deepEqual(savedRecord.projectIds, [associatedProject.id, orphanProject.id])
+    assert.equal(savedRecord.projectMetadata[associatedProject.id].name, '有效配置名', 'valid metadata for its existing project is retained')
+    assert.equal(savedRecord.projectMetadata[orphanProject.id].name, payload.title, 'saving adds canonical metadata for the selected project')
+    assert.equal(records.getFavoriteByPayload(payload), null, 'a project record is not fabricated as a standalone favorite')
     page.closeProjectSheet()
 
     const inheritedProject = records.createProject('原型元数据项目')
@@ -1304,7 +1329,8 @@ function testLimiterMenuAndExistingActionHaptics() {
     page.toggleCurrentFavorite()
     expectVibrations(context, 'medium')
     const payload = page.getRecordPayload()
-    assert.equal(records.getRecordByPayload(payload).favorite, true)
+    assert.equal(records.getFavoriteByPayload(payload)?.favorite, true, 'the favorite is stored independently')
+    assert.equal(records.getRecordByPayload(payload), null, 'favoriting alone does not create a project record')
 
     const project = records.createProject('震动反馈测试项目')
     assert(project)
@@ -1319,7 +1345,8 @@ function testLimiterMenuAndExistingActionHaptics() {
     expectVibrations(context, 'medium')
     assert.equal(page.data.projectStep, 'success')
     const saved = records.getRecordByPayload(payload)
-    assert.equal(saved.favorite, true, 'saving project metadata preserves the existing favorite')
+    assert.equal(saved.favorite, false, 'the project record does not absorb favorite state')
+    assert.equal(records.getFavoriteByPayload(payload)?.favorite, true, 'saving project metadata preserves the separate favorite')
     assert(saved.projectMetadata[project.id], 'the real project save action writes its project record')
 
     page.continueAfterProjectSave()
@@ -1340,7 +1367,8 @@ function testLimiterMenuAndExistingActionHaptics() {
     expectVibrations(context)
     assert.equal(page.data.calculationState, 'empty')
     const retained = records.getRecordByPayload(payload)
-    assert.equal(retained.favorite, true, 'confirming reset retains the saved favorite')
+    assert.equal(retained.favorite, false, 'confirming reset retains the project record without conflating favorites')
+    assert.equal(records.getFavoriteByPayload(payload)?.favorite, true, 'confirming reset retains the separate saved favorite')
     assert(retained.projectMetadata[project.id], 'confirming reset retains the saved project')
   } finally { context.close() }
 }

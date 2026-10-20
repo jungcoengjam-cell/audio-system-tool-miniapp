@@ -15,10 +15,12 @@ const FACTS = Object.freeze({
 
 function createPage(env = createDelayedEnvironment()) {
   env.wx.setStorageSync('audioTool.ledScreen.preferences', { unitKey: 'cabinetStandard' })
-  env.effects.storage.length = 0
   const page = env.loadPage('pages/led-screen/led-screen.js')
   page.onLoad()
   env.flushNextTicks()
+  page.onShow()
+  env.flushNextTicks()
+  env.effects.storage.length = 0
   return { env, page }
 }
 
@@ -73,6 +75,7 @@ function run() {
     {
       const { env, page } = createPage()
       page.generateReportImage()
+      env.flushNextTicks()
       assert.strictEqual(env.effects.loading.filter((entry) => entry.type === 'show').length, 1)
       page.onUnload()
       const disposedReportRevision = page.reportRevision
@@ -86,6 +89,7 @@ function run() {
         'unload must not write page data merely to make a visible flag look false')
       const priorDisposedPage = createPage()
       priorDisposedPage.page.generateReportImage()
+      priorDisposedPage.env.flushNextTicks()
       assert.strictEqual(priorDisposedPage.env.effects.loading.filter((entry) => entry.type === 'show').length, 1)
       assert.strictEqual(gate.disposeOperation(priorDisposedPage.page), true)
       priorDisposedPage.page.onUnload()
@@ -213,6 +217,7 @@ function run() {
       assert.strictEqual(env.effects.clipboard.at(-1), text)
       const manualResult = page.data.result
       page.generateReportImage()
+      env.flushNextTicks()
       assert.strictEqual(env.effects.loading.filter((entry) => entry.type === 'show').length, 1)
       page.onUnload()
       assert.strictEqual(env.effects.loading.filter((entry) => entry.type === 'hide').length, 1)

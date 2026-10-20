@@ -8,12 +8,11 @@ function getDraftProtocolPackageResources(packageFiles) {
   })
 }
 
-function evaluateDraftProtocolPackageGate(packageFiles, allowLocalTestOverride = false) {
+function evaluateDraftProtocolPackageGate(packageFiles) {
   const resources = getDraftProtocolPackageResources(packageFiles)
   return {
     resources,
-    allowed: resources.length === 0 || allowLocalTestOverride === true,
-    bypassed: resources.length > 0 && allowLocalTestOverride === true,
+    allowed: resources.length === 0,
   }
 }
 

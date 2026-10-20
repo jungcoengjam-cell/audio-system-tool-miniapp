@@ -1,3 +1,4 @@
 {
-  "navigationBarTitleText": "灯具地址码计算"
+  "navigationStyle": "custom",
+  "disableScroll": true
 }

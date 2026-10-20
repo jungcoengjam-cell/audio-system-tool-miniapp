@@ -1,0 +1,18 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),{launch,delay}=require('../dmx-ui-round3-2026-10-18/browser-driver.cjs')
+const out=path.join(__dirname,'evidence/header');fs.mkdirSync(out,{recursive:true})
+async function run(){const b=await launch(),results=[];const ev=s=>b.evaluate(s),d=m=>ev(`window.__dispatch(${JSON.stringify(m)})`),click=s=>ev(`document.querySelector(${JSON.stringify(s)}).click()`)
+try{for(const width of [320,390])for(const theme of ['light','dark']){
+ const height=width===320?568:844;await b.viewport(width,height,theme);await b.navigate({page:'layout',theme,fixture:'export-dense'});await delay(100)
+ await ev(`(()=>{const p=window.__lightingQa.page,l=JSON.parse(JSON.stringify(p._layout));p._fixtures.slice(0,40).forEach((f,i)=>l.positionsById[f.stableId]={rodId:l.internalRods[0].id,t:(i+1)/41});p._layout=l;p.saveLayoutOnly(l);p._activeRodId=l.internalRods[0].id;p.updateLayoutData();window.__before={revision:p._revision,writes:window.__lightingQa.events.writes.length,positions:JSON.stringify(l.positionsById),fixtures:JSON.stringify(p._fixtures),checks:JSON.stringify(p._scheme.checksById)}})()`)
+ await d('openPlacementPanel');await delay(250)
+ const geometry=await ev(`(()=>{const q=s=>document.querySelector(s),rect=n=>{const r=n.getBoundingClientRect();return{x:r.x,y:r.y,right:r.right,bottom:r.bottom,width:r.width,height:r.height}},n=q('.placement-card'),l=q('.fixture-selection-list'),g=q('.fixture-address-grid'),c=[...g.querySelectorAll('.fixture-address-chip')].slice(0,6);return{card:rect(n),list:rect(l),grid:rect(g),chips:c.map(rect),labels:c.map(x=>rect(x.querySelector('.fixture-chip-address'))),clear:rect(q('.placement-clear-button')),listScroll:l.scrollWidth,listWidth:l.clientWidth,footer:!!q('.placement-summary'),count:!!q('.placement-total')}})()`)
+ assert(!geometry.footer&&!geometry.count);assert(geometry.clear.height>=44);assert(geometry.clear.y<geometry.card.y+100);assert(geometry.card.right-geometry.clear.right>=12);assert(geometry.clear.x>geometry.card.x+geometry.card.width/2)
+ const left=geometry.chips[0].x-geometry.card.x,right=geometry.card.right-geometry.chips[5].right;assert(Math.abs(left-right)<=1,'grid side gutters symmetric '+JSON.stringify({left,right}));assert(geometry.chips[5].right<=geometry.list.right+.5);assert(geometry.listScroll<=geometry.listWidth+1)
+ geometry.chips.forEach((c,i)=>assert(Math.abs(c.x+c.width/2-(geometry.labels[i].x+geometry.labels[i].width/2))<=1,'label center '+i))
+ await b.screenshot(path.join(out,`${width}-${theme}.png`))
+ await click('.placement-clear-button');await ev('window.__answerModal(false)');assert(await ev('window.__lightingQa.events.writes.length===window.__before.writes'))
+ await click('.placement-clear-button');await ev('window.__answerModal(true)');await delay(100)
+ assert(await ev(`(()=>{const p=window.__lightingQa.page;return Object.keys(p._layout.positionsById).length===0&&JSON.stringify(p._fixtures)===window.__before.fixtures&&JSON.stringify(p._scheme.checksById)===window.__before.checks&&p._revision===window.__before.revision+1&&document.querySelector('.placement-clear-button').disabled})()`))
+ results.push({width,height,theme,geometry});console.log('PASS header clear and symmetric centered six-column grid '+width+' '+theme)
+ }}finally{fs.writeFileSync(path.join(out,'summary.json'),JSON.stringify({runAt:new Date().toISOString(),nativeRuntime:false,physicalDevice:false,results},null,2));await b.close()}}
+run().catch(e=>{console.error(e);process.exitCode=1})

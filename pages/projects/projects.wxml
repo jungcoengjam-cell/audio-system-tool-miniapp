@@ -1,95 +1,75 @@
-<scroll-view class="projects-scroll" scroll-y enhanced show-scrollbar="{{false}}">
-  <view class="projects-content">
-    <view class="page-header">
-      <view class="page-title">项目</view>
-    </view>
-
-    <view class="records-tabs">
-      <view
-        wx:for="{{recordTabs}}"
-        wx:key="*this"
-        class="records-tab {{index == recordTabIndex ? 'records-tab-active' : ''}}"
-        data-index="{{index}}"
-        bindtap="onRecordTabTap"
-      >{{item}}</view>
-    </view>
-
-    <view wx:if="{{workspaceError}}" class="workspace-error">
-      <view class="workspace-error-copy">
-        <view class="workspace-error-title">本地项目和收藏读取失败</view>
-        <view class="workspace-error-text">保留上次成功显示。请重试后再进行保存或项目操作。</view>
+<scroll-view class="home-scroll projects-scroll" scroll-y scroll-top="{{scrollTop}}" enhanced show-scrollbar="{{false}}">
+  <view class="home-page projects-content">
+    <view class="home-header home-main-header project-header">
+      <view class="home-title home-main-title">项目</view>
+      <view class="project-header-actions">
+        <button class="project-recovery-button" hover-class="project-control-pressed" bindtap="openRecovery">恢复 {{recoveryCount}}</button>
+        <button wx:if="{{tabIndex === 0}}" class="home-primary-button project-create-button" hover-class="project-control-pressed" bindtap="createProject">＋ 新建</button>
       </view>
-      <button class="record-action record-action-primary workspace-retry" bindtap="retryWorkspace">重试</button>
     </view>
 
-    <block wx:if="{{recordTabIndex == 1}}">
-      <view wx:if="{{displayRecords.length}}" class="record-list">
-        <view wx:for="{{displayRecords}}" wx:key="id" class="record-card record-card-{{item.theme}}">
-          <view class="record-heading">
-            <view class="record-module">{{item.moduleLabel}}</view>
-            <view class="record-time">{{item.timeText}}</view>
+    <view wx:if="{{workspaceError}}" class="home-panel project-error">
+      <view class="project-error-title">无法读取本地项目数据</view>
+      <view class="project-error-copy">{{workspaceError}}</view>
+      <button class="home-secondary-button" bindtap="retryWorkspace">重试</button>
+    </view>
+
+    <view class="project-tabs" role="tablist">
+      <view wx:for="{{tabs}}" wx:key="*this" class="project-tab {{tabIndex === index ? 'project-tab-active' : ''}}" hover-class="project-control-pressed" data-index="{{index}}" bindtap="onTabTap">{{item}}</view>
+    </view>
+
+    <view class="project-search home-panel">
+      <text class="project-search-icon">⌕</text>
+      <input value="{{searchText}}" placeholder="搜索项目或计算收藏" confirm-type="search" bindinput="onSearchInput" />
+      <button wx:if="{{searchText}}" class="project-search-clear" hover-class="project-control-pressed" catchtap="clearSearch">清除</button>
+    </view>
+
+    <block wx:if="{{tabIndex === 0}}">
+      <scroll-view class="project-filter-scroll" scroll-x show-scrollbar="{{false}}">
+        <view class="project-filter-row">
+          <view wx:for="{{projectFilters}}" wx:key="key" class="home-chip {{projectFilter === item.key ? 'home-chip-active' : ''}}" hover-class="home-chip-pressed" data-key="{{item.key}}" bindtap="onProjectFilterTap">{{item.label}}</view>
+        </view>
+      </scroll-view>
+      <view wx:if="{{lightingWarning}}" class="project-inline-warning">{{lightingWarning}}</view>
+      <view wx:if="{{projects.length}}" class="project-card-list">
+        <view wx:for="{{projects}}" wx:key="id" class="home-panel project-list-card" hover-class="home-pressed" data-id="{{item.id}}" bindtap="openProject">
+          <view class="project-card-top">
+            <view class="project-card-title">{{item.name}}</view>
+            <text class="project-card-chevron">›</text>
           </view>
-          <view class="record-title">{{item.title}}</view>
-          <view class="record-summary">{{item.summary}}</view>
-          <view class="record-trust">{{item.trustLabel}}</view>
-          <view wx:if="{{item.projectNames}}" class="record-project">已归入：{{item.projectNames}}</view>
-          <view class="record-actions">
-            <button class="record-action record-action-primary" data-id="{{item.id}}" bindtap="restoreRecord">重新打开</button>
-            <button class="record-action" data-id="{{item.id}}" bindtap="toggleRecordFavorite">{{item.favorite ? '取消收藏' : '收藏常用'}}</button>
-            <button wx:if="{{activeProject}}" class="record-action" data-id="{{item.id}}" bindtap="addRecordToActiveProject">加入当前项目</button>
-            <button class="record-action record-action-danger" data-id="{{item.id}}" bindtap="deleteRecord">删除</button>
-          </view>
+          <view wx:if="{{item.venueName}}" class="project-card-venue">{{item.venueName}}</view>
+          <view class="project-card-summary">{{item.contentText}}</view>
+          <view class="project-card-updated">更新于 {{item.timeText}}</view>
         </view>
       </view>
-      <view wx:elif="{{!workspaceError}}" class="records-empty">
-        <view class="records-empty-mark">★</view>
-        <view class="records-empty-title">还没有常用收藏</view>
-        <view class="records-empty-text">在计算结果页点击“收藏常用”，即可保存在这里。</view>
+      <view wx:elif="{{!workspaceError}}" class="home-empty-state home-panel">
+        <view class="home-empty-state-title">{{searchText || projectFilter !== 'all' ? '没有匹配的项目' : '还没有现场项目'}}</view>
+        <view class="home-empty-state-copy">{{searchText || projectFilter !== 'all' ? '调整搜索词或筛选条件。' : '新建项目后，可整理计算记录、线路和灯位方案。'}}</view>
       </view>
     </block>
 
     <block wx:else>
-      <view class="project-toolbar">
-        <view>
-          <view class="project-toolbar-title">现场项目</view>
+      <scroll-view class="project-filter-scroll" scroll-x show-scrollbar="{{false}}">
+        <view class="project-filter-row">
+          <view wx:for="{{favoriteModules}}" wx:key="key" class="home-chip {{favoriteFilter === item.key ? 'home-chip-active' : ''}}" hover-class="home-chip-pressed" data-key="{{item.key}}" bindtap="onFavoriteFilterTap">{{item.label}}</view>
         </view>
-        <button wx:if="{{!workspaceError}}" class="project-create" bindtap="createProject">＋ 新建</button>
-      </view>
-
-      <view wx:if="{{activeProject}}" class="active-project-strip">
-        <text class="active-project-label">当前项目</text>
-        <text class="active-project-name">{{activeProject.name}}</text>
-      </view>
-
-      <view wx:if="{{projects.length}}" class="project-list">
-        <view wx:for="{{projects}}" wx:key="id" class="project-card" data-id="{{item.id}}" bindtap="selectProject">
-          <view class="project-card-heading">
-            <view class="project-name">{{item.name}}</view>
-            <view wx:if="{{item.isActive}}" class="project-active-chip">当前</view>
+      </scroll-view>
+      <view wx:if="{{favorites.length}}" class="favorite-card-list">
+        <view wx:for="{{favorites}}" wx:key="id" class="home-panel favorite-list-card favorite-card-{{item.theme}}" hover-class="home-pressed" data-id="{{item.id}}" bindtap="openFavorite">
+          <view class="favorite-card-top">
+            <text class="favorite-module">{{item.moduleLabel}}</text>
+            <text class="favorite-card-time">{{item.timeText}}</text>
           </view>
-          <view class="project-meta">{{item.recordCount}} 条计算记录 · {{item.wiringLineCount}} 条线路 · 更新于 {{item.timeText}}</view>
-          <view wx:if="{{item.venueName || item.projectDate || item.engineer}}" class="project-detail-preview">
-            <text>{{item.venueName || '场地未填写'}}</text>
-            <text class="project-detail-preview-dot">·</text>
-            <text>{{item.projectDate || '日期未填写'}}</text>
-            <text wx:if="{{item.engineer}}" class="project-detail-preview-engineer">{{item.engineer}}</text>
-          </view>
-          <view class="project-primary-actions">
-            <button class="project-action project-action-primary" data-id="{{item.id}}" catchtap="openProjectWiring">布线</button>
-            <button class="project-action project-action-secondary" data-id="{{item.id}}" catchtap="openProjectReport">报告</button>
-          </view>
-          <view class="project-actions">
-            <button wx:if="{{!item.isActive}}" class="project-action" data-id="{{item.id}}" catchtap="activateProject">设为当前</button>
-            <button class="project-action project-action-danger" data-id="{{item.id}}" catchtap="deleteProject">删除项目</button>
-          </view>
+          <view class="favorite-card-title">{{item.title}}</view>
+          <view class="favorite-card-summary">{{item.summary}}</view>
+          <view class="favorite-card-footer">独立计算快照 · 点开查看参数和结果</view>
         </view>
       </view>
-
-      <view wx:elif="{{!workspaceError}}" class="records-empty records-empty-project">
-        <view class="records-empty-mark">＋</view>
-        <view class="records-empty-title">还没有现场项目</view>
-        <view class="records-empty-text">新建项目，整理线路和计算结果。</view>
+      <view wx:elif="{{!workspaceError}}" class="home-empty-state home-panel">
+        <view class="home-empty-state-title">{{searchText || favoriteFilter !== 'all' ? '没有匹配的收藏' : '还没有计算收藏'}}</view>
+        <view class="home-empty-state-copy">收藏的是计算结果和参数方案。你可以在工具结果页保存，之后独立查看或复制到项目。</view>
       </view>
     </block>
+    <view class="home-bottom-space"></view>
   </view>
 </scroll-view>

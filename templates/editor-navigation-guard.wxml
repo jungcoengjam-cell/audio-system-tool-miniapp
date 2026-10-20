@@ -1,0 +1,15 @@
+<page-container
+  wx:if="{{editorGuardSupported && editorSessionActive}}"
+  class="editor-navigation-guard"
+  show="{{editorGuardArmed}}"
+  position="bottom"
+  overlay="{{false}}"
+  duration="0"
+  z-index="1"
+  round="{{false}}"
+  close-on-slide-down="{{false}}"
+  custom-style="height:0;width:0;min-height:0;max-height:0;overflow:hidden;padding:0;margin:0;border:0;opacity:0;background:transparent;pointer-events:none;"
+  bind:beforeleave="onEditorNavigationBeforeLeave"
+  bind:afterleave="onEditorNavigationAfterLeave">
+  <view style="width:0;height:0;min-height:0;max-height:0;overflow:hidden;opacity:0;" />
+</page-container>

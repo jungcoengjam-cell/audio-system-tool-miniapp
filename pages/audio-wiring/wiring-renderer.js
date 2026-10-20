@@ -11,6 +11,9 @@ const DARK = {
   error: '#ff8b81', errorBackground: '#401d1b',
 }
 
+const { getSolderPhotoSpec } = require('./wiring-photos')
+const { getWiringGuide, getCompactWiringConditions } = require('./wiring-display')
+
 function themeFor(theme) {
   return theme === 'dark' ? DARK : LIGHT
 }
@@ -213,6 +216,7 @@ function horizontalWire(ctx, x1, x2, y, color, width, verticalTracks, allowedTra
 }
 
 function layoutFor(width, model, options = {}) {
+  if (options.layout === 'solder-wiring') return solderWiringLayout(width, model, options)
   const mode = options.viewMode === 'connectors' ? 'connectors' : 'wiring'
   const headerOffset = options.showTitle === false ? 24 : 0
   const supported = model && model.supported
@@ -297,11 +301,13 @@ function drawHeader(ctx, model, width, theme, origin, options = {}) {
       16, theme.text, 600, 'center')
   }
   const headerOffset = options.showTitle === false ? 24 : 0
-  const modeText = options.viewMode === 'connectors'
+  const modeText = options.layout === 'solder-wiring'
+    ? '焊接端功能示意 · 输出到输入'
+    : options.viewMode === 'connectors'
     ? `${options.face === 'solder' ? '焊接面' : '插接面'} · 线缆头示意`
     : '功能连线 · 抽象端子示意（非实体插座）'
   text(ctx, modeText, cx, origin.y + 47 - headerOffset, 12, theme.secondary, 400, 'center')
-  if (options.viewMode !== 'connectors') {
+  if (options.viewMode !== 'connectors' && options.layout !== 'solder-wiring') {
     text(ctx, '实心点汇接；交叉无点不连接', cx, origin.y + 62 - headerOffset, 10, theme.tertiary, 400, 'center')
   }
 }
@@ -310,9 +316,10 @@ function endpointHeading(ctx, endpoint, side, x, y, width, theme, origin) {
   const cx = origin.x + x + (width / 2)
   const direction = side === 'output' ? '输出端' : '输入端'
   const connector = endpoint.id === 'xlrBalanced' ? 'XLR'
-    : endpoint.id === 'trsBalanced' ? '6.35 TRS'
+    : endpoint.id === 'trsBalanced' ? '6.35 大三芯·平衡'
       : endpoint.id === 'terminalBalanced' ? '平衡端子'
-        : endpoint.id === 'stereo35' ? '3.5 TRS'
+        : endpoint.id === 'stereo35' ? '3.5 立体声'
+          : endpoint.id === 'stereo635' ? '6.35 大三芯·立体声'
           : endpoint.id === 'rcaStereo' ? '双 RCA'
             : endpoint.id === 'tsStereo' ? '双 TS'
               : endpoint.id === 'rcaMono' ? 'RCA' : '6.35 TS'
@@ -488,7 +495,7 @@ function drawFunctional(ctx, model, width, height, theme, origin, options = {}) 
 function pinFunctionColor(endpoint, pinNumber, theme) {
   if (endpoint.id === 'xlrBalanced') return pinNumber === '2' ? theme.positive : pinNumber === '3' ? theme.negative : theme.shield
   if (endpoint.id === 'trsBalanced') return pinNumber === 'T' ? theme.positive : pinNumber === 'R' ? theme.negative : theme.shield
-  if (endpoint.id === 'stereo35') return pinNumber === 'T' ? theme.left : pinNumber === 'R' ? theme.right : theme.shield
+  if (endpoint.id === 'stereo35' || endpoint.id === 'stereo635') return pinNumber === 'T' ? theme.left : pinNumber === 'R' ? theme.right : theme.shield
   if (endpoint.id === 'terminalBalanced') return pinNumber === '+' ? theme.positive : pinNumber === '−' ? theme.negative : theme.shield
   return pinNumber === 'S' || pinNumber === '外壳' ? theme.shield : theme.positive
 }
@@ -522,8 +529,10 @@ function drawPhonePlug(ctx, endpoint, x, y, width, theme, origin, face = 'mating
   const startY = origin.y + y + 30
   if (face === 'solder') {
     const fontSize = 12
-    const content = endpoint.id === 'stereo35'
-      ? ['T → L', 'R → R', 'S → L/R 共用回路']
+    const content = endpoint.id === 'stereo635'
+      ? ['T（L）→ 左声道', 'R（R）→ 右声道', 'S（G）→ 公共回路']
+      : endpoint.id === 'stereo35'
+      ? ['T（L）→ 左声道', 'R（R）→ 右声道', 'S（G）→ 公共回路']
       : endpoint.id === 'trsBalanced'
         ? ['T → +', 'R → −', 'S → 屏蔽']
         : endpoint.id === 'tsStereo'
@@ -561,7 +570,7 @@ function drawPhonePlug(ctx, endpoint, x, y, width, theme, origin, face = 'mating
     const plugWidth = Math.min(76, width - 14)
     const plugStart = cx - (plugWidth / 2)
     const tipWidth = plugWidth * 0.26
-    const hasRing = endpoint.id === 'trsBalanced' || endpoint.id === 'stereo35'
+    const hasRing = endpoint.id === 'trsBalanced' || endpoint.id === 'stereo35' || endpoint.id === 'stereo635'
     const ringWidth = hasRing ? plugWidth * 0.19 : 0
     const sleeveWidth = plugWidth - tipWidth - ringWidth
     const blockY = cy - 7
@@ -599,8 +608,9 @@ function drawTerminalView(ctx, endpoint, x, y, width, theme, origin) {
 
 function connectorHeaderLabel(endpoint, side, face) {
   if (endpoint.id === 'xlrBalanced') return `XLR线缆${endpoint.cableConnectorGender}`
-  if (endpoint.id === 'stereo35') return '3.5 TRS'
-  if (endpoint.id === 'trsBalanced') return '6.35 TRS'
+  if (endpoint.id === 'stereo35') return '3.5 立体声'
+  if (endpoint.id === 'trsBalanced') return '6.35 大三芯·平衡'
+  if (endpoint.id === 'stereo635') return '6.35 大三芯·立体声'
   if (endpoint.id === 'terminalBalanced') return '平衡功能端子'
   if (endpoint.id === 'rcaStereo') return '双RCA L/R'
   if (endpoint.id === 'tsStereo') return '双TS L/R'
@@ -624,7 +634,7 @@ function drawConnectorPanels(ctx, model, width, theme, origin, metrics, options)
       drawXlrHead(ctx, endpoint, x, y + 22, metrics.cardWidth, h - 22, options.face === 'solder' ? 'solder' : 'mating', theme, origin)
     } else if (endpoint.id === 'terminalBalanced') {
       drawTerminalView(ctx, endpoint, x, y + 22, metrics.cardWidth, theme, origin)
-    } else if (['trsBalanced', 'stereo35', 'tsMono', 'tsStereo'].includes(endpoint.id)) {
+    } else if (['trsBalanced', 'stereo35', 'stereo635', 'tsMono', 'tsStereo'].includes(endpoint.id)) {
       drawPhonePlug(ctx, endpoint, x, y + 22, metrics.cardWidth, theme, origin, options.face === 'solder' ? 'solder' : 'mating')
     } else if (endpoint.id === 'rcaMono' || endpoint.id === 'rcaStereo') {
       drawPhonePlug(ctx, endpoint, x, y + 22, metrics.cardWidth, theme, origin, options.face === 'solder' ? 'solder' : 'mating')
@@ -664,9 +674,662 @@ function drawConnectorMap(ctx, model, width, theme, origin, metrics, options) {
   }
 }
 
+function solderPinOrder(endpoint, pins) {
+  const basePreferred = endpoint.id === 'xlrBalanced' ? ['1', '2', '3']
+    : ['trsBalanced', 'stereo35', 'stereo635'].includes(endpoint.id) ? ['T', 'R', 'S']
+      : ['tsMono', 'tsStereo'].includes(endpoint.id) ? ['T', 'S']
+        : endpoint.id === 'terminalBalanced' ? ['+', '−', 'G']
+          : endpoint.id === 'rcaStereo' ? ['L中心', 'L外壳', 'R中心', 'R外壳']
+            : endpoint.id === 'rcaMono' ? ['中心针', '外壳'] : []
+  const preferred = endpoint.channelCount === 2
+    ? ['L', 'R'].flatMap((channel) => basePreferred.map((key) => `${channel}·${key}`))
+    : basePreferred
+  const rank = new Map(preferred.map((pin, index) => [pin, index]))
+  return [...pins].sort((a, b) => {
+    const aRank = rank.has(a.pin) ? rank.get(a.pin) : preferred.length
+    const bRank = rank.has(b.pin) ? rank.get(b.pin) : preferred.length
+    return aRank - bRank || String(a.pin).localeCompare(String(b.pin))
+  })
+}
+
+function solderPinRecords(model, side) {
+  const keyFor = (connection) => side === 'output' ? connection.fromPin : connection.toPin
+  const labelFor = (connection) => side === 'output' ? connection.fromLabel : connection.toLabel
+  const roleFor = (connection) => side === 'output' ? connection.fromRole : connection.toRole
+  const pins = new Map()
+  ;((model && model.connections) || []).forEach((connection) => {
+    const key = String(keyFor(connection) || '')
+    if (!key) return
+    if (!pins.has(key)) pins.set(key, { pin: key, label: labelFor(connection) || key, role: roleFor(connection), count: 0 })
+    pins.get(key).count += 1
+  })
+  ;((model && model.unconnectedPins) || []).filter((pin) => pin.side === side).forEach((pin) => {
+    const key = String(pin.pin || '')
+    if (!key || pins.has(key)) return
+    pins.set(key, { pin: key, label: pin.label || key, role: 'signal', count: 0, reason: pin.reason || '不连接' })
+  })
+  return solderPinOrder((model && model[side]) || {}, [...pins.values()])
+}
+
+function photoDestination(box, photoSpec) {
+  const crop = photoSpec && photoSpec.contentRect
+    ? photoSpec.contentRect : { x: 0, y: 0, width: photoSpec.width, height: photoSpec.height }
+  const scale = Math.min(box.size / crop.width, box.size / crop.height)
+  const width = crop.width * scale, height = crop.height * scale
+  return { x: box.x + ((box.size - width) / 2), y: box.y + ((box.size - height) / 2), width, height, crop, scale }
+}
+
+function photoPoint(destination, photoSpec, point) {
+  const { crop } = destination
+  return {
+    x: destination.x + (((point.x * photoSpec.width - crop.x) / crop.width) * destination.width),
+    y: destination.y + (((point.y * photoSpec.height - crop.y) / crop.height) * destination.height),
+  }
+}
+
+function routeDirectionFor(photoSpec, side, pinKey) {
+  const angle = Number(photoSpec && photoSpec.routeAngles && photoSpec.routeAngles[pinKey])
+  const resolvedAngle = Number.isFinite(angle) ? angle : side === 'output' ? 0 : 180
+  const radians = (resolvedAngle * Math.PI) / 180
+  return { x: Math.cos(radians), y: Math.sin(radians) }
+}
+
+function makeSolderEndpoint(model, side, width, theme, options) {
+  const endpoint = model && model[side]
+  const pins = solderPinRecords(model, side)
+  const isOutput = side === 'output'
+  const contentWidth = Math.max(120, width - (options.avoidRail ? 56 : 0))
+  const padding = 5
+  const gap = 12
+  const columnWidth = (contentWidth - (padding * 2) - gap) / 2
+  const x = isOutput ? padding : padding + columnWidth + gap
+  const centerX = x + (columnWidth / 2)
+  const photoSize = Number.isFinite(options.photoSize)
+    ? options.photoSize : Math.max(1, Math.min(128, columnWidth - 2))
+  const photoX = centerX - (photoSize / 2)
+  const photoY = Number.isFinite(options.photoCenterY)
+    ? options.photoCenterY - (photoSize / 2) : 38 + (photoSize / 2) + 6 - (photoSize / 2)
+  const anchors = new Map()
+  const photoSpec = getSolderPhotoSpec(endpoint)
+  const photo = photoSpec && options.photos && options.photos[photoSpec.key]
+  const isPhotoEndpoint = Boolean(photoSpec && photoSpec.pinPoints)
+  const isDualPhoto = isPhotoEndpoint && (endpoint.channelCount === 2 || ['rcaStereo', 'tsStereo'].includes(endpoint.id))
+  const photoBoxes = []
+  const basePinKey = (pin) => String(pin).replace(/^[LR]·/, '')
+  const channelForPin = (pin) => /^R(?:·|中心|外壳)/.test(String(pin)) ? 'R' : 'L'
+  const pinPointKey = (pin) => {
+    const basePin = basePinKey(pin)
+    if (endpoint && ['rcaMono', 'rcaStereo'].includes(endpoint.id)) {
+      return basePin === '中心针' || basePin.endsWith('中心') ? 'core'
+        : basePin === '外壳' || basePin.endsWith('外壳') ? 'shell' : ''
+    }
+    if (endpoint && ['tsMono', 'tsStereo'].includes(endpoint.id)) return basePin.endsWith('T') ? 'T' : 'S'
+    return basePin
+  }
+  if (isPhotoEndpoint) {
+    if (isDualPhoto) {
+      const size = Number.isFinite(options.dualSize) ? options.dualSize : photoSize
+      const top = Number.isFinite(options.dualTop) ? options.dualTop : 48
+      ;['L', 'R'].forEach((channel, index) => photoBoxes.push({
+        key: channel, x: centerX - (size / 2), y: top + (index * (size + 24)), size, photo,
+      }))
+    } else {
+      photoBoxes.push({ key: '', x: photoX, y: photoY, size: photoSize, photo })
+    }
+    pins.forEach((pin, pinIndex) => {
+      const channel = channelForPin(pin.pin)
+      const box = isDualPhoto ? photoBoxes.find((item) => item.key === channel) : photoBoxes[0]
+      const point = photoSpec.pinPoints[pinPointKey(pin.pin)]
+      if (!point) return
+      const destination = photoDestination(box, photoSpec)
+      const position = photoPoint(destination, photoSpec, point)
+      anchors.set(pin.pin, {
+        x: position.x, y: position.y,
+        color: roleColor(pin.role, theme), count: pin.count, photo: true, channel,
+        routeDirection: routeDirectionFor(photoSpec, side, pinPointKey(pin.pin)),
+        routeIndex: isDualPhoto ? pins.slice(0, pinIndex).filter((item) =>
+          channelForPin(item.pin) === channel).length : pinIndex,
+        photoRect: { x: destination.x, y: destination.y, width: destination.width, height: destination.height },
+      })
+    })
+  } else {
+    pins.forEach((pin, index) => {
+      if (isDualPhoto) {
+        const channel = String(pin.pin).startsWith('R') ? 'R' : 'L'
+        const box = photoBoxes.find((item) => item.key === channel)
+        const labelPoint = photoSpec.pinPoints[pinPointKey(pin.pin)]
+        if (!labelPoint || !box) return
+        const crop = photoSpec.contentRect
+        const scale = Math.min(box.size / crop.width, box.size / crop.height)
+        const destWidth = crop.width * scale, destHeight = crop.height * scale
+        const destX = box.x + ((box.size - destWidth) / 2), destY = box.y + ((box.size - destHeight) / 2)
+        anchors.set(pin.pin, { x: destX + ((((labelPoint.x * photoSpec.width) - crop.x) / crop.width) * destWidth),
+          y: destY + ((((labelPoint.y * photoSpec.height) - crop.y) / crop.height) * destHeight),
+          color: roleColor(pin.role, theme), count: pin.count, label: pin.label, channel,
+          routeDirection: routeDirectionFor(photoSpec, side, pinPointKey(pin.pin)) })
+        return
+      }
+      const rowGap = pins.length > 2 ? 23 : 29
+      const y = 81 + ((index - ((pins.length - 1) / 2)) * rowGap)
+      const label = pin.label || pin.pin
+      const chipWidth = Math.min(columnWidth - 16, Math.max(38, [...String(label)].length * 8 + 16))
+      const chipLeft = isOutput ? x + columnWidth - chipWidth - 5 : x + 5
+      anchors.set(pin.pin, { x: isOutput ? chipLeft + chipWidth : chipLeft, y,
+        color: roleColor(pin.role, theme), count: pin.count, label, chipWidth, chipCenter: chipLeft + (chipWidth / 2),
+        routeDirection: routeDirectionFor(photoSpec, side, pinPointKey(pin.pin)) })
+    })
+  }
+  photoBoxes.forEach((box) => {
+    if (photoSpec) box.destination = photoDestination(box, photoSpec)
+  })
+  return { endpoint, pins, side, x, centerX, columnWidth, photoSpec, photo, isPhotoEndpoint,
+    photoBoxes, photoX, photoY, photoSize, anchors, theme }
+}
+
+function distanceToPointSegment(point, start, end) {
+  const dx = end.x - start.x, dy = end.y - start.y
+  const length = (dx * dx) + (dy * dy)
+  const t = length ? Math.max(0, Math.min(1, (((point.x - start.x) * dx) + ((point.y - start.y) * dy)) / length)) : 0
+  return Math.hypot(point.x - start.x - (t * dx), point.y - start.y - (t * dy))
+}
+
+const ROUTE_HANDLE_LENGTHS = [12, 18, 26, 36, 48, 64, 84]
+const ROUTE_SAMPLE_STEPS = 96
+const ROUTE_PARALLEL_CLEARANCE = 4
+const ROUTE_PARALLEL_MIN_RUN = 6
+const solderGeometryCache = new WeakMap()
+
+function rotateDirection(direction, degrees) {
+  const angle = Math.atan2(direction.y, direction.x) + ((degrees * Math.PI) / 180)
+  return { x: Math.cos(angle), y: Math.sin(angle) }
+}
+
+function endpointDirection(anchor, side, branchOffset = 0) {
+  const direction = anchor.routeDirection || { x: side === 'output' ? 1 : -1, y: 0 }
+  return rotateDirection(direction, branchOffset)
+}
+
+function branchOffsets(connections, keyFor, halfSpread) {
+  const groups = new Map()
+  connections.forEach((connection, index) => {
+    const key = keyFor(connection)
+    if (!groups.has(key)) groups.set(key, [])
+    groups.get(key).push(index)
+  })
+  const offsets = new Map()
+  groups.forEach((indexes) => indexes.forEach((index, rank) => {
+    const spread = indexes.length > 1 ? (rank / (indexes.length - 1) * 2 - 1) * halfSpread : 0
+    offsets.set(index, spread)
+  }))
+  return offsets
+}
+
+function cubicPoint(from, control1, control2, to, t) {
+  const inverse = 1 - t
+  return [
+    (inverse ** 3 * from.x) + (3 * inverse ** 2 * t * control1[0]) +
+      (3 * inverse * t ** 2 * control2[0]) + (t ** 3 * to.x),
+    (inverse ** 3 * from.y) + (3 * inverse ** 2 * t * control1[1]) +
+      (3 * inverse * t ** 2 * control2[1]) + (t ** 3 * to.y),
+  ]
+}
+
+function cubicDerivative(curve, t) {
+  const inverse = 1 - t
+  const { from, control1, control2, to } = curve
+  return [
+    (3 * inverse * inverse * (control1[0] - from.x)) +
+      (6 * inverse * t * (control2[0] - control1[0])) +
+      (3 * t * t * (to.x - control2[0])),
+    (3 * inverse * inverse * (control1[1] - from.y)) +
+      (6 * inverse * t * (control2[1] - control1[1])) +
+      (3 * t * t * (to.y - control2[1])),
+  ]
+}
+
+function cubicCandidate(from, to, outDirection, inDirection, outLength, inLength) {
+  const control1 = [from.x + (outDirection.x * outLength), from.y + (outDirection.y * outLength)]
+  const control2 = [to.x + (inDirection.x * inLength), to.y + (inDirection.y * inLength)]
+  const points = []
+  let length = 0, leftBacktrack = 0
+  for (let step = 0; step <= ROUTE_SAMPLE_STEPS; step += 1) {
+    const point = cubicPoint(from, control1, control2, to, step / ROUTE_SAMPLE_STEPS)
+    if (points.length) {
+      const previous = points[points.length - 1]
+      length += Math.hypot(point[0] - previous[0], point[1] - previous[1])
+      if (point[0] < previous[0]) leftBacktrack += previous[0] - point[0]
+    }
+    points.push(point)
+  }
+  const cumulativeLengths = [0]
+  for (let index = 1; index < points.length; index += 1) {
+    const previous = points[index - 1], point = points[index]
+    cumulativeLengths.push(cumulativeLengths[index - 1] + Math.hypot(point[0] - previous[0], point[1] - previous[1]))
+  }
+  return { from, to, control1, control2, points, cumulativeLengths,
+    score: length + (2 * leftBacktrack) + (0.04 * (outLength + inLength)) }
+}
+
+function hasNearParallelRun(first, second, contacts) {
+  const firstPoints = first.points, secondPoints = second.points
+  const firstLengths = first.cumulativeLengths, secondLengths = second.cumulativeLengths
+  let run = 0, longest = 0
+  for (let index = 0; index < firstPoints.length - 1; index += 1) {
+    const a1 = firstPoints[index], a2 = firstPoints[index + 1]
+    const segmentLength = firstLengths[index + 1] - firstLengths[index]
+    const midpoint = { x: (a1[0] + a2[0]) / 2, y: (a1[1] + a2[1]) / 2 }
+    if (contacts.some((contact) => Math.hypot(midpoint.x - contact.x, midpoint.y - contact.y) <= 6)) {
+      run = 0
+      continue
+    }
+    const close = secondPoints.slice(1).some((b2, other) => {
+      const b1 = secondPoints[other]
+      const otherLength = secondLengths[other + 1] - secondLengths[other]
+      if (otherLength <= 0.001) return false
+      const dot = ((a2[0] - a1[0]) * (b2[0] - b1[0])) + ((a2[1] - a1[1]) * (b2[1] - b1[1]))
+      const cosine = Math.abs(dot) / (segmentLength * otherLength)
+      return cosine >= 0.965925826 && distanceToPointSegment(midpoint,
+        { x: b1[0], y: b1[1] }, { x: b2[0], y: b2[1] }) <= ROUTE_PARALLEL_CLEARANCE
+    })
+    run = close ? run + segmentLength : 0
+    longest = Math.max(longest, run)
+    if (longest >= ROUTE_PARALLEL_MIN_RUN) return true
+  }
+  return false
+}
+
+function angleDifferenceDegrees(first, second) {
+  const difference = Math.atan2(first.y, first.x) - Math.atan2(second.y, second.x)
+  const wrapped = ((difference + (3 * Math.PI)) % (2 * Math.PI)) - Math.PI
+  return Math.abs((wrapped * 180) / Math.PI)
+}
+
+function keepsSharedInputApproachesSeparate(route, inDirection, chosen) {
+  return chosen.every((item) => String(item.connection.toPin) !== String(route.connection.toPin) ||
+    String(item.connection.fromPin) === String(route.connection.fromPin) ||
+    angleDifferenceDegrees(item.inDirection, inDirection) >= 60 - 1e-6)
+}
+
+function selectSolderRoutes(connections, output, input, width, maxHeight) {
+  const sourceOffsets = branchOffsets(connections, (connection) => String(connection.fromPin), 15)
+  const targetOffsets = branchOffsets(connections, (connection) => String(connection.toPin), 35)
+  const contacts = [...output.anchors.values(), ...input.anchors.values()].filter((point) => point.photo)
+  const routes = connections.map((connection, index) => {
+    const from = output.anchors.get(String(connection.fromPin))
+    const to = input.anchors.get(String(connection.toPin))
+    if (!from || !to) return { connection, from, to, baseCurves: [], outDirection: null, inDirection: null }
+    const outDirection = endpointDirection(from, 'output', sourceOffsets.get(index) || 0)
+    const inDirection = endpointDirection(to, 'input', targetOffsets.get(index) || 0)
+    return { connection, from, to, outDirection, inDirection,
+      baseCurves: routeCandidates(from, to, outDirection, inDirection, output, input, width, maxHeight) }
+  })
+  const chosen = []
+  function tryCurves(route, curves, inDirection, index) {
+    for (const curve of curves) {
+      if (!keepsSharedInputApproachesSeparate(route, inDirection, chosen)) continue
+      if (chosen.some((item) => hasNearParallelRun(item.curve, curve, contacts) ||
+        hasNearParallelRun(curve, item.curve, contacts))) continue
+      chosen.push({ id: route.connection.id, connection: route.connection,
+        from: route.from, to: route.to, inDirection, curve, points: curve.points })
+      if (choose(index + 1)) return true
+      chosen.pop()
+    }
+    return false
+  }
+  function choose(index) {
+    if (index >= routes.length) return true
+    const route = routes[index]
+    if (!route.from || !route.to) return false
+    if (tryCurves(route, route.baseCurves, route.inDirection, index)) return true
+    const fallbackAngles = [-15, 15, -30, 30, -45, 45]
+    for (const angle of fallbackAngles) {
+      const outDirection = rotateDirection(route.outDirection, angle)
+      const inDirection = rotateDirection(route.inDirection, angle)
+      const fallbackCurves = routeCandidates(route.from, route.to, outDirection, inDirection,
+        output, input, width, maxHeight)
+      if (tryCurves(route, fallbackCurves, inDirection, index)) return true
+    }
+    return false
+  }
+  if (choose(0)) return { routes: chosen.slice(), error: '' }
+  return { routes: [], error: '没有找到清晰且完整的接线路径，请重新选择接口组合。' }
+}
+
+function pointPathDistance(point, points) {
+  let distance = Infinity
+  for (let index = 1; index < points.length; index += 1) {
+    distance = Math.min(distance, distanceToPointSegment(point,
+      { x: points[index - 1][0], y: points[index - 1][1] },
+      { x: points[index][0], y: points[index][1] }))
+  }
+  return distance
+}
+
+function curveInsideCanvas(curve, width, maxHeight) {
+  return curve.points.every(([x, y]) => x >= 2 && x <= width - 2 && y >= 38 && y <= maxHeight)
+}
+
+function curveClearsContacts(curve, from, to, output, input) {
+  const contacts = [...output.anchors.values(), ...input.anchors.values()]
+    .filter((point) => point.photo && point !== from && point !== to)
+  return contacts.every((point) => pointPathDistance(point, curve.points) >= 6)
+}
+
+function routeCandidates(from, to, outDirection, inDirection, output, input, width, maxHeight) {
+  const candidates = []
+  ROUTE_HANDLE_LENGTHS.forEach((outLength) => ROUTE_HANDLE_LENGTHS.forEach((inLength) => {
+    const curve = cubicCandidate(from, to, outDirection, inDirection, outLength, inLength)
+    if (curveInsideCanvas(curve, width, maxHeight) && curveClearsContacts(curve, from, to, output, input)) {
+      candidates.push(curve)
+    }
+  }))
+  return candidates.sort((a, b) => a.score - b.score)
+}
+
+
+function segmentIntersectionParameters(first, second, firstIndex, secondIndex) {
+  const p = first.points[firstIndex], pNext = first.points[firstIndex + 1]
+  const q = second.points[secondIndex], qNext = second.points[secondIndex + 1]
+  const rx = pNext[0] - p[0], ry = pNext[1] - p[1]
+  const sx = qNext[0] - q[0], sy = qNext[1] - q[1]
+  const denominator = (rx * sy) - (ry * sx)
+  if (Math.abs(denominator) < 1e-7) return null
+  const qpx = q[0] - p[0], qpy = q[1] - p[1]
+  const firstT = ((qpx * sy) - (qpy * sx)) / denominator
+  const secondT = ((qpx * ry) - (qpy * rx)) / denominator
+  if (firstT < -1e-6 || firstT > 1 + 1e-6 || secondT < -1e-6 || secondT > 1 + 1e-6) return null
+  const steps = first.points.length - 1
+  return {
+    firstT: (firstIndex + Math.max(0, Math.min(1, firstT))) / steps,
+    secondT: (secondIndex + Math.max(0, Math.min(1, secondT))) / steps,
+    point: [p[0] + (firstT * rx), p[1] + (firstT * ry)],
+  }
+}
+
+function parameterAtDistance(curve, start, distance, direction) {
+  const step = 1 / 512
+  let t = start, point = cubicPoint(curve.from, curve.control1, curve.control2, curve.to, t)
+  let traveled = 0
+  while ((direction < 0 ? t > 0 : t < 1) && traveled < distance) {
+    const nextT = Math.max(0, Math.min(1, t + (direction * step)))
+    const next = cubicPoint(curve.from, curve.control1, curve.control2, curve.to, nextT)
+    const segment = Math.hypot(next[0] - point[0], next[1] - point[1])
+    if (traveled + segment >= distance && segment > 0) {
+      const fraction = (distance - traveled) / segment
+      return t + ((nextT - t) * fraction)
+    }
+    traveled += segment
+    t = nextT
+    point = next
+  }
+  return t
+}
+
+function cubicSubsegment(curve, start, end) {
+  const from = cubicPoint(curve.from, curve.control1, curve.control2, curve.to, start)
+  const to = cubicPoint(curve.from, curve.control1, curve.control2, curve.to, end)
+  const startDerivative = cubicDerivative(curve, start)
+  const endDerivative = cubicDerivative(curve, end)
+  const delta = end - start
+  return {
+    from,
+    control1: [from[0] + (startDerivative[0] * delta / 3), from[1] + (startDerivative[1] * delta / 3)],
+    control2: [to[0] - (endDerivative[0] * delta / 3), to[1] - (endDerivative[1] * delta / 3)],
+    to,
+  }
+}
+
+function addCrossingGaps(routes) {
+  const intervals = routes.map(() => [])
+  routes.forEach((first, firstIndex) => {
+    routes.slice(firstIndex + 1).forEach((second, offset) => {
+      const secondIndex = firstIndex + 1 + offset
+      for (let firstStep = 0; firstStep < first.points.length - 1; firstStep += 1) {
+        for (let secondStep = 0; secondStep < second.points.length - 1; secondStep += 1) {
+          const intersection = segmentIntersectionParameters(first, second, firstStep, secondStep)
+          if (!intersection) continue
+          const contacts = [first.from, first.to, second.from, second.to]
+          if (contacts.some((point) => Math.hypot(point.x - intersection.point[0], point.y - intersection.point[1]) < 6)) continue
+          const start = parameterAtDistance(second.curve, intersection.secondT, 1.8, -1)
+          const end = parameterAtDistance(second.curve, intersection.secondT, 1.8, 1)
+          if (end - start > 1e-6) intervals[secondIndex].push([start, end])
+        }
+      }
+    })
+  })
+  routes.forEach((route, index) => {
+    const sorted = intervals[index].sort((a, b) => a[0] - b[0])
+    const merged = []
+    sorted.forEach(([start, end]) => {
+      const previous = merged[merged.length - 1]
+      if (previous && start <= previous[1]) previous[1] = Math.max(previous[1], end)
+      else merged.push([start, end])
+    })
+    const segments = []
+    let cursor = 0
+    merged.forEach(([start, end]) => {
+      if (start > cursor + 1e-5) segments.push(cubicSubsegment(route.curve, cursor, start))
+      cursor = Math.max(cursor, end)
+    })
+    if (cursor < 1 - 1e-5) segments.push(cubicSubsegment(route.curve, cursor, 1))
+    route.drawSegments = segments.length ? segments : [route.curve]
+  })
+}
+
+function solderWiringLayout(width, model, options = {}) {
+  const supported = Boolean(model && model.supported && Array.isArray(model.connections))
+  const hasDualPhoto = ['rcaStereo', 'tsStereo'].includes(model && model.output && model.output.id) ||
+    ['rcaStereo', 'tsStereo'].includes(model && model.input && model.input.id) ||
+    Boolean(model && (model.output && model.output.channelCount === 2 || model.input && model.input.channelCount === 2))
+  const contentWidth = Math.max(120, width - (options.avoidRail ? 56 : 0))
+  const columnWidth = (contentWidth - (5 * 2) - 12) / 2
+  const photoSize = Math.max(1, Math.min(128, columnWidth - 2))
+  const dualTop = 48
+  const sharedOptions = {
+    ...options,
+    photoSize,
+    dualSize: photoSize,
+    dualTop,
+    photoCenterY: hasDualPhoto ? dualTop + photoSize + 12 : 38 + (photoSize / 2) + 6,
+  }
+  const output = makeSolderEndpoint(model, 'output', width, themeFor(options.theme), sharedOptions)
+  const input = makeSolderEndpoint(model, 'input', width, themeFor(options.theme), sharedOptions)
+  const connections = supported ? model.connections : []
+  const photoBottom = [...output.photoBoxes, ...input.photoBoxes].reduce((bottom, box) => {
+    const destination = box.destination || { y: box.y, height: box.size }
+    return Math.max(bottom, destination.y + destination.height)
+  }, 0)
+  const cacheable = model && (typeof model === 'object' || typeof model === 'function')
+  let routeCache = cacheable ? solderGeometryCache.get(model) : null
+  if (!routeCache) {
+    routeCache = new Map()
+    if (cacheable) solderGeometryCache.set(model, routeCache)
+  }
+  const routeKey = `${width}:${options.avoidRail ? 1 : 0}`
+  let cachedGeometry = routeCache.get(routeKey)
+  if (!cachedGeometry) {
+    const routeSelection = selectSolderRoutes(connections, output, input, contentWidth, photoBottom + 100)
+    cachedGeometry = { curves: routeSelection.routes.map((route) => route.curve), error: routeSelection.error }
+    if (cacheable) routeCache.set(routeKey, cachedGeometry)
+  }
+  const routingError = cachedGeometry.error
+  const connectionAnchors = routingError ? [] : connections.map((connection, index) => {
+    const from = output.anchors.get(String(connection.fromPin))
+    const to = input.anchors.get(String(connection.toPin))
+    const curve = cachedGeometry.curves[index]
+    return { id: connection.id, connection, from, to, curve, points: curve.points }
+  })
+  addCrossingGaps(connectionAnchors)
+  const routeBottom = connectionAnchors.reduce((bottom, item) =>
+    Math.max(bottom, ...item.points.map((point) => point[1])), photoBottom)
+  const endpointDecorationBottom = [output, input].reduce((bottom, endpointLayout) => {
+    if (!endpointLayout.photoSpec || endpointLayout.photoSpec.kind !== 'terminal') return bottom
+    return (endpointLayout.photoBoxes || []).reduce((endpointBottom, box) => {
+      const destination = box.destination || photoDestination(box, endpointLayout.photoSpec)
+      return Math.max(endpointBottom, destination.y + destination.height + 15)
+    }, bottom)
+  }, 0)
+  const reasonLines = !supported && model
+    ? textLines(model.reason || '没有可用的接线方案。', Math.max(1, Math.floor((width - 20) / 12)), 8).length : 0
+  const height = Math.ceil(Math.max(routeBottom, endpointDecorationBottom)
+    + (reasonLines ? 24 + reasonLines * 17 : 0) + 12)
+  return { mode: 'solder-wiring', height, output, input, connectionAnchors, supported, routingError }
+}
+
+function drawSolderEndpoint(ctx, layout, theme, origin, paintBase = true, selectedPin, selectedColor) {
+  const { endpoint, pins, side, centerX, photoSpec, photo, photoX, photoY, photoSize, anchors } = layout
+  if (!endpoint) return
+  const basePinKey = (pin) => String(pin).replace(/^[LR]·/, '')
+  const channelForPin = (pin) => /^R(?:·|中心|外壳)/.test(String(pin)) ? 'R' : 'L'
+  if (paintBase) {
+    text(ctx, side === 'output' ? '输出端' : '输入端', origin.x + centerX, origin.y + 14, 11, theme.secondary, 600, 'center')
+    const endpointTitle = endpoint.id === 'xlrBalanced'
+      ? `XLR ${endpoint.cableConnectorGender || '接头'}${endpoint.channelCount === 2 ? ' ×2' : ''}`
+      : endpoint.id === 'tsMono' ? `6.35 TS·单声道${endpoint.channelCount === 2 ? ' ×2' : ''}`
+      : endpoint.id === 'trsBalanced' ? `6.35 大三芯·平衡${endpoint.channelCount === 2 ? ' ×2' : ''}`
+          : endpoint.id === 'stereo635' ? `6.35 大三芯·立体声${endpoint.channelCount === 2 ? ' ×2' : ''}`
+            : endpoint.id === 'stereo35' ? '3.5 立体声'
+              : endpoint.connectorType || endpoint.label || '接口'
+    text(ctx, endpointTitle, origin.x + centerX, origin.y + 29, 10, theme.text, 600, 'center')
+    if (photo && photoSpec) {
+      ;(layout.photoBoxes || []).forEach((box) => {
+        const destination = box.destination || photoDestination(box, photoSpec)
+        const image = box.photo || photo
+        const { crop, scale } = destination
+        ctx.save()
+        ctx.beginPath()
+        ctx.rect(origin.x + destination.x, origin.y + destination.y, destination.width, destination.height)
+        ctx.clip()
+        ctx.drawImage(image,
+          origin.x + destination.x - (crop.x * scale),
+          origin.y + destination.y - (crop.y * scale),
+          photoSpec.width * scale,
+          photoSpec.height * scale)
+        ctx.restore()
+        if (box.key) text(ctx, box.key, origin.x + centerX, origin.y + (endpoint.channelCount === 2 ? box.y - 4 : box.y + 11),
+          9, theme.secondary, 600, 'center')
+      })
+      if (photoSpec.kind === 'terminal') {
+        const box = layout.photoBoxes[layout.photoBoxes.length - 1]
+        const destination = box && box.destination
+        const captionY = destination ? destination.y + destination.height + 12 : 158
+        text(ctx, '示意顺序，按设备丝印', origin.x + centerX, origin.y + captionY, 8, theme.tertiary, 500, 'center')
+      }
+    } else {
+      const caption = endpoint.id === 'rcaStereo' || endpoint.id === 'tsStereo'
+        ? 'L / R 功能触点示意' : endpoint.id === 'trsBalanced' || endpoint.id === 'stereo35'
+          ? 'T / R / S · 位置依型号' : endpoint.id === 'tsMono'
+            ? 'T / S · 位置依型号' : '接线端功能示意 · 位置依型号'
+      roundedRect(ctx, origin.x + layout.x + 4, origin.y + 40, layout.columnWidth - 8, 104, 9, theme.card, theme.border)
+      text(ctx, caption, origin.x + centerX, origin.y + 54, 8, theme.tertiary, 400, 'center')
+    }
+    return
+  }
+  pins.forEach((pin) => {
+    const point = anchors.get(pin.pin)
+    if (!point) return
+    const px = origin.x + point.x, py = origin.y + point.y
+    const color = roleColor(pin.role, theme)
+    if (selectedPin !== undefined && String(pin.pin) === String(selectedPin)) {
+      circle(ctx, px, py, 5, null, selectedColor || color, 2)
+    }
+    if (!layout.isPhotoEndpoint) {
+      const label = pin.label || pin.pin
+      const chipWidth = point.chipWidth || Math.min(layout.columnWidth - 16, Math.max(38, [...String(label)].length * 8 + 16))
+      const chipCenter = Number.isFinite(point.chipCenter) ? origin.x + point.chipCenter
+        : (px + (side === 'output' ? -chipWidth / 2 : chipWidth / 2))
+      roundedRect(ctx, chipCenter - chipWidth / 2, py - 9, chipWidth, 18, 7, theme.background, color)
+      text(ctx, label, chipCenter, py + 3, 8, color, 600, 'center')
+      if (!pin.count) text(ctx, '悬空', chipCenter, py + 17, 7, theme.tertiary, 400, 'center')
+      return
+    }
+    circle(ctx, px, py, pin.count ? 3.1 : 2.5, pin.count ? color : theme.background, color, 1.2)
+    if (photoSpec && photoSpec.kind === 'terminal') {
+      const box = layout.photoBoxes.find((item) => item.key === channelForPin(pin.pin)) || layout.photoBoxes[0]
+      const basePin = basePinKey(pin.pin)
+      const label = photoSpec.labelPoints && photoSpec.labelPoints[basePin]
+      if (box && label) {
+        const labelPosition = photoPoint(box.destination || photoDestination(box, photoSpec), photoSpec, label)
+        const labelX = origin.x + labelPosition.x
+        const labelY = origin.y + labelPosition.y
+        roundedRect(ctx, labelX - 7, labelY - 7, 14, 14, 2, '#ffffff', null)
+        text(ctx, basePin, labelX, labelY + 3, 9, '#1d2329', 700, 'center')
+      }
+      return
+    }
+    const isRca = ['rcaMono', 'rcaStereo'].includes(layout.endpoint.id)
+    const basePin = basePinKey(pin.pin)
+    const basePinLabel = layout.endpoint.id === 'trsBalanced'
+      ? ({ T: '+', R: '−', S: 'G' }[basePin] || basePin)
+      : layout.endpoint.id === 'stereo635'
+        ? ({ T: 'L', R: 'R', S: 'G' }[basePin] || basePin)
+      : isRca
+      ? (basePin.includes('中心') ? '中心' : '壳') : basePin
+    const pinLabel = pin.count ? basePinLabel : `${basePinLabel} · 未接`
+    if (layout.endpoint.id === 'stereo35' && pin.pin === 'T' && !pin.count) {
+      roundedRect(ctx, px + 4, py - 7, 11, 11, 3, theme.background, null)
+      text(ctx, 'T', px + 9, py + 1, 7, theme.text, 600, 'center')
+      roundedRect(ctx, px - 11, py + 6, 22, 10, 3, theme.background, null)
+      text(ctx, '未接', px, py + 14, 6, theme.tertiary, 600, 'center')
+      return
+    }
+    if (isRca) {
+      const labelY = basePinLabel === '中心' ? py - 13 : py + 17
+      const labelWidth = Math.max(20, [...pinLabel].length * 4 + 4)
+      roundedRect(ctx, px - (labelWidth / 2), labelY - 8, labelWidth, 10, 3, theme.background, null)
+      text(ctx, pinLabel, px, labelY, 6, theme.text, 600, 'center')
+    } else {
+      const labelWidth = Math.max(12, [...pinLabel].length * (pin.count ? 6 : 4.5) + 4)
+      const labelX = px + (side === 'output' ? -8 : 8)
+      const labelAlign = side === 'output' ? 'right' : 'left'
+      roundedRect(ctx, labelX - (side === 'output' ? labelWidth : 0), py - 15, labelWidth, 10, 3, theme.background, null)
+      text(ctx, pinLabel, labelX, py - 7, pin.count ? 7 : 6, pin.count ? theme.text : theme.tertiary, 600, labelAlign)
+    }
+  })
+}
+
+function drawSolderWiring(ctx, model, width, theme, origin, metrics, options) {
+  drawSolderEndpoint(ctx, metrics.output, theme, origin, true)
+  drawSolderEndpoint(ctx, metrics.input, theme, origin, true)
+  const selectedItem = metrics.connectionAnchors.find((item) => item.id === options.selectedId) || null
+  const drawOrder = selectedItem
+    ? metrics.connectionAnchors.filter((item) => item !== selectedItem).concat(selectedItem)
+    : metrics.connectionAnchors
+  drawOrder.forEach((item) => {
+    const selected = item === selectedItem
+    ctx.beginPath()
+    ctx.setStrokeStyle(selectedItem && !selected ? theme.border : connectionColor(item.connection, theme))
+    ctx.setLineWidth(selected ? 5.8 : selectedItem ? 1.6 : 2.3)
+    ;(item.drawSegments || [item.curve]).forEach((segment) => {
+      ctx.moveTo(origin.x + segment.from[0], origin.y + segment.from[1])
+      ctx.bezierCurveTo(origin.x + segment.control1[0], origin.y + segment.control1[1],
+        origin.x + segment.control2[0], origin.y + segment.control2[1],
+        origin.x + segment.to[0], origin.y + segment.to[1])
+    })
+    ctx.stroke()
+  })
+  const selectedColor = selectedItem ? connectionColor(selectedItem.connection, theme) : undefined
+  drawSolderEndpoint(ctx, metrics.output, theme, origin, false,
+    selectedItem ? selectedItem.connection.fromPin : undefined, selectedColor)
+  drawSolderEndpoint(ctx, metrics.input, theme, origin, false,
+    selectedItem ? selectedItem.connection.toPin : undefined, selectedColor)
+  return metrics
+}
+
 function drawWiringDiagram(ctx, model, width, height, options = {}) {
   const origin = optionsWithOrigin(options)
   const theme = themeFor(options.theme)
+  if (options.layout === 'solder-wiring') {
+    ctx.setFillStyle(theme.background)
+    ctx.fillRect(origin.x, origin.y, width, height)
+    const metrics = layoutFor(width, model, options)
+    if (!model || !model.supported) {
+      drawHeader(ctx, model, width, theme, origin, { ...options, viewMode: 'connectors', face: 'solder' })
+      return drawUnsupported(ctx, model, width, height, theme, origin, options)
+    }
+    if (metrics.routingError) throw new Error(metrics.routingError)
+    return drawSolderWiring(ctx, model, width, theme, origin, metrics, options)
+  }
   const mode = options.viewMode === 'connectors' ? 'connectors' : 'wiring'
   ctx.setFillStyle(theme.background)
   ctx.fillRect(origin.x, origin.y, width, height)
@@ -690,6 +1353,21 @@ function getWiringHitAreas(model, width, height, options = {}) {
   if (!model || !model.supported) return []
   const metrics = layoutFor(width, model, options)
   const origin = optionsWithOrigin(options)
+  if (metrics.mode === 'solder-wiring') {
+    if (metrics.routingError) return []
+    return metrics.connectionAnchors.map((item) => {
+      const pathPoints = item.points.map(([x, y]) => [origin.x + x, origin.y + y])
+      const xs = pathPoints.map(([x]) => x), ys = pathPoints.map(([, y]) => y)
+      const left = Math.max(origin.x, Math.min(...xs) - 13)
+      const top = Math.max(origin.y, Math.min(...ys) - 13)
+      const right = Math.min(origin.x + width, Math.max(...xs) + 13)
+      const bottom = Math.min(origin.y + height, Math.max(...ys) + 13)
+      return {
+        id: item.id, pathPoints, radius: 13,
+        left, top, width: Math.max(0, right - left), height: Math.max(0, bottom - top),
+      }
+    })
+  }
   if (metrics.mode === 'connectors') {
     const rows = connectorRows(width, model, metrics)
     return rows.filter((row) => row.connection).map((row) => ({
@@ -743,6 +1421,39 @@ function buildReportLayout(width, model, options = {}) {
     const lines = reportLines(value, availableWidth, size)
     entries.push({ type: 'text', lines, x, y, size, color, weight, lineHeight: size + 4 })
     y += lines.length * (size + 4) + gap
+  }
+
+  if (options.compact === true) {
+    const diagramOptions = {
+      layout: 'solder-wiring', compact: true, selectedId, showTitle: false,
+    }
+    add('接线参考 · 焊接端示意', 16, 'text', 600, inset, contentWidth, 3)
+    if (typeof options.preferenceNotice === 'string' && options.preferenceNotice) {
+      add(options.preferenceNotice, 11, 'secondary', 500, inset, contentWidth, 2)
+    }
+    const reportEndpointLabel = (endpoint, side) => endpoint?.id === 'stereo35'
+      ? `3.5 mm 立体声${side}` : endpoint?.label || '未识别'
+    add(`输出端：${reportEndpointLabel(model?.output, '输出')}`, 12, 'text', 500, inset, contentWidth, 1)
+    add(`输入端：${reportEndpointLabel(model?.input, '输入')}`, 12, 'text', 500, inset, contentWidth, 2)
+    if (model && model.status && model.status !== 'ready') {
+      add(model.status === 'needs-choice' ? '需要确认接线条件' : '当前组合不支持', 12,
+        model.status === 'needs-choice' ? 'secondary' : 'error', 600, inset, contentWidth, 2)
+    }
+    const diagramHeight = getDiagramHeight(contentWidth, model, diagramOptions)
+    entries.push({ type: 'diagram', x: inset, y, width: contentWidth, height: diagramHeight, options: diagramOptions })
+    y += diagramHeight + 8
+    if (!model || !model.supported) {
+      add(model?.reason || '未生成连接对应关系。', 12, 'error', 500, inset, contentWidth, 2)
+    }
+    const wiringGuide = getWiringGuide(model)
+    if (wiringGuide) add(wiringGuide, 11, 'text', 500, inset, contentWidth, 2)
+    getCompactWiringConditions(model).forEach((condition) => add(condition,
+      10, 'secondary', 500, inset, contentWidth, 1))
+    y += 4
+    const footer = ['端口、针位以设备丝印和手册为准。']
+    entries.push({ type: 'footer', lines: footer, x: inset, y, size: 12, lineHeight: 16 })
+    y += footer.length * 16 + 12
+    return { scale, logicalWidth, logicalHeight: y, height: Math.ceil(y * scale), entries }
   }
 
   add('接线助手 · 接线方案', 16, 'text', 600, inset, contentWidth, 4)
@@ -809,7 +1520,7 @@ function drawWiringReport(ctx, model, width, height, options = {}) {
   layout.entries.forEach((entry) => {
     if (entry.type === 'diagram') {
       drawWiringDiagram(ctx, model, entry.width, entry.height, {
-        ...entry.options, theme: options.theme, x: entry.x, y: entry.y,
+        ...entry.options, theme: options.theme, photos: options.photos, x: entry.x, y: entry.y,
       })
       return
     }

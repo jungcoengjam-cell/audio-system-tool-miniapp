@@ -1,0 +1,80 @@
+<scroll-view class="home-scroll basis-detail-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+  <view class="home-page basis-detail-page">
+    <view wx:if="{{notFound}}" class="home-empty-state">
+      <view class="home-empty-title">暂时没有这项依据</view>
+      <view class="home-empty-copy">请从计算依据目录重新选择工具。</view>
+    </view>
+
+    <block wx:else>
+      <view class="basis-detail-heading">
+        <view class="basis-detail-heading-main">
+          <view class="basis-detail-icon-wrap"><image class="basis-detail-icon" src="{{basisTool.icon}}" mode="aspectFit" aria-hidden="true" /></view>
+          <view class="basis-detail-heading-copy">
+            <view class="basis-detail-kicker">{{basisTool.category}} · 计算依据</view>
+            <view class="basis-detail-title">{{basisTool.title}}</view>
+          </view>
+        </view>
+        <view class="basis-detail-subtitle">{{presentation.quick.purpose}}</view>
+      </view>
+
+      <view class="home-panel basis-section basis-figure-panel">
+        <view class="home-section-title"><text class="basis-section-index">01</text>计算示意</view>
+        <image class="basis-figure" src="{{presentation.figure.src}}" mode="widthFix" aria-label="{{presentation.figure.alt}}" />
+        <view class="basis-figure-caption">{{presentation.figure.caption}}</view>
+      </view>
+
+      <view class="home-panel basis-section basis-method-panel">
+        <view class="home-section-title"><text class="basis-section-index">02</text>关键计算关系</view>
+        <view class="basis-quick-method">{{presentation.quick.method}}</view>
+        <view class="basis-parameter-list">
+          <view wx:for="{{presentation.quick.parameters}}" wx:key="label" class="basis-parameter">
+            <view class="basis-parameter-label">{{item.label}}</view>
+            <view class="basis-parameter-value">{{item.value}}</view>
+          </view>
+        </view>
+      </view>
+
+      <view class="home-panel basis-section basis-source-panel">
+        <view class="basis-reference-block">
+          <view class="basis-reference-title">来源</view>
+          <view class="basis-reference-copy">{{presentation.quick.source}}</view>
+        </view>
+        <view class="basis-limit-block">
+          <view class="basis-reference-title">关键边界</view>
+          <view class="basis-reference-copy">{{presentation.quick.limit}}</view>
+        </view>
+      </view>
+
+      <button class="home-secondary-button basis-full-toggle" bindtap="toggleFullExplanation" hover-class="home-pressed" aria-expanded="{{showFullExplanation}}" aria-controls="basis-full-content">
+        {{showFullExplanation ? '收起完整计算说明' : '展开完整计算说明'}}
+      </button>
+
+      <view wx:if="{{showFullExplanation}}" id="basis-full-content" class="home-panel basis-section basis-full-panel">
+        <view class="home-section-title"><text class="basis-section-index">03</text>完整计算说明</view>
+        <view class="basis-full-field">
+          <view class="basis-full-label">计算用途</view>
+          <view class="basis-full-copy">{{presentation.completeExplanation.what}}</view>
+        </view>
+        <view class="basis-full-field">
+          <view class="basis-full-label">方法与公式</view>
+          <view class="basis-full-copy">{{presentation.completeExplanation.method}}</view>
+        </view>
+        <view class="basis-full-field">
+          <view class="basis-full-label">参数与单位</view>
+          <view class="basis-full-copy">{{presentation.completeExplanation.inputs}}</view>
+        </view>
+        <view class="basis-full-field">
+          <view class="basis-full-label">来源</view>
+          <view class="basis-full-copy">{{presentation.completeExplanation.sourceSummary}}</view>
+        </view>
+        <view class="basis-full-field basis-full-field-last">
+          <view class="basis-full-label">适用边界</view>
+          <view class="basis-full-copy">{{presentation.completeExplanation.limits}}</view>
+        </view>
+      </view>
+
+      <button wx:if="{{basisTool}}" class="home-primary-button basis-open-button" bindtap="openTool" hover-class="home-pressed">打开{{basisTool.title}}工具</button>
+      <view class="home-bottom-space"></view>
+    </block>
+  </view>
+</scroll-view>

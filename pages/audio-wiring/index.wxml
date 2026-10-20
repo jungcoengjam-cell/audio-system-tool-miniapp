@@ -1,29 +1,57 @@
-<view class="wiring-page">
+<view class="wiring-page page-root {{resultReportPreviewClosing ? 'result-report-preview-closing' : ''}}" style="{{resultReportPreviewStyle}}">
   <scroll-view class="wiring-scroll" scroll-y enhanced show-scrollbar="{{false}}">
     <view class="page-content">
-      <view wx:if="{{showRestoredHint}}" class="wiring-state-banner wiring-state-banner-restored">
-        上次接口已恢复，请核对本次设备；接线条件需重新确认。
-      </view>
-      <view wx:elif="{{!manualSelected.output && !manualSelected.input}}" class="wiring-state-banner">
-        当前为默认示例；正式制作前，请核对并选择实际两端接口。
-      </view>
-      <view wx:elif="{{!manualSelected.output}}" class="wiring-state-banner">
-        输入端已选为实际接口，请再确认实际输出端。
-      </view>
-      <view wx:elif="{{!manualSelected.input}}" class="wiring-state-banner">
-        输出端已选为实际接口，请再确认实际输入端。
-      </view>
       <view wx:if="{{wiringStorageWarning}}" class="wiring-storage-warning">{{wiringStorageWarning}}</view>
+      <include src="../../templates/result-record-actions.wxml" />
+      <view class="diagram-card">
+        <view class="diagram-body">
+          <view class="diagram-main">
+        <view class="diagram-heading">
+          <view class="diagram-title">接线图</view>
+        </view>
+            <view wx:if="{{supported}}" class="diagram-canvas-wrap" style="height:{{diagramCanvasHeight}}px;">
+              <canvas type="2d" id="wiringDiagramCanvas" class="diagram-canvas" style="height:{{diagramCanvasHeight}}px;" hidden="{{selectorVisible || resultReportPreviewVisible || projectDialogVisible || diagramError}}" bindtouchstart="onDiagramTouchStart" bindtouchend="onDiagramTouchEnd" bindtouchcancel="onDiagramTouchCancel"></canvas>
+              <view wx:if="{{diagramError}}" class="diagram-error" bindtap="retryDiagram">{{diagramError}} · 点按重试</view>
+            </view>
+            <view wx:elif="{{!hasBothEndpoints}}" class="unsupported-state">
+              <view class="unsupported-mark">↔</view>
+              <view class="unsupported-title">先选择两端接口</view>
+              <view class="unsupported-reason">请选择输出端和输入端，查看对应的焊接端接线图。</view>
+            </view>
+            <view wx:else class="unsupported-state">
+              <view class="unsupported-mark">↔</view>
+              <view class="unsupported-title">此组合暂未提供接法</view>
+              <view class="unsupported-reason">{{model.reason || '请重新选择两端接口。'}}</view>
+              <view class="unsupported-tip">请分别选择输出端与输入端，查看可用的接口和信号类型。</view>
+            </view>
+            <view wx:if="{{supported && wiringGuide}}" class="wiring-route-guide">{{wiringGuide}}</view>
+            <view wx:if="{{selectedConnection}}" class="selected-mapping">
+              <view class="selected-mapping-swatch" style="background:{{selectedConnection.color}};"></view>
+              <view class="selected-mapping-copy">
+                <view class="selected-mapping-title">已选 · {{selectedConnection.label}}</view>
+                <view class="selected-mapping-text">{{selectedConnection.mappingText}}</view>
+              </view>
+            </view>
+          </view>
+          <view class="wiring-action-rail" aria-label="方案操作">
+            <button class="action-button" aria-label="重置接线方案" disabled="{{!outputId && !inputId && !manualSelected.output && !manualSelected.input}}" bindtap="resetWiring"><view class="action-icon icon-reset"></view></button>
+            <button class="action-button" aria-label="分享接线方案图片" disabled="{{!supported || isGeneratingResultReport}}" bindtap="generateResultReportImage"><view class="action-icon icon-share"></view></button>
+            <button class="action-button" aria-label="收藏当前接线方案" aria-pressed="{{currentFavorite}}" disabled="{{!supported}}" bindtap="toggleCurrentFavorite"><view class="action-icon icon-bookmark {{currentFavorite ? 'icon-bookmark-active' : ''}}"></view></button>
+            <button class="action-button" aria-label="保存接线方案到项目" disabled="{{!supported}}" bindtap="saveToActiveProject"><view class="action-icon icon-folder"></view></button>
+          </view>
+        </view>
+      </view>
+
       <view class="endpoint-row">
         <view class="endpoint-card" data-side="output" bindtap="openEndpointSelector" hover-class="endpoint-card-pressed">
           <view class="endpoint-card-heading">输出端</view>
-          <view class="endpoint-selection-state">{{manualSelected.output ? '已选择' : '默认示例'}}</view>
-          <image class="endpoint-image" src="{{model.output.image}}" mode="aspectFit" lazy-load></image>
-          <view class="endpoint-device">{{model.output.connectorType}}</view>
-          <view class="endpoint-device-hint">常见于{{model.output.deviceLabel}}</view>
+          <view class="endpoint-selection-state">{{outputId ? (manualSelected.output ? '已选择' : '默认示例') : '未选择'}}</view>
+          <image wx:if="{{outputEndpoint.image}}" class="endpoint-image" src="{{outputEndpoint.image}}" mode="aspectFit" lazy-load></image>
+          <view class="endpoint-device">{{outputEndpoint.displayConnectorType || outputEndpoint.connectorType || '选择输出端接口'}}</view>
+          <view wx:if="{{outputEndpoint.deviceLabel}}" class="endpoint-device-hint">常见于{{outputEndpoint.deviceLabel}}</view>
           <view class="endpoint-meta-row">
             <view class="endpoint-meta">
-              <view class="endpoint-signal">{{outputSignalPortLabel}}</view>
+              <view class="endpoint-signal">{{outputSignalPortLabel || outputEndpoint.signalLabel}}</view>
               <view class="endpoint-signal-type">{{outputSignalTypeLabel}}</view>
             </view>
             <view class="endpoint-chevron">›</view>
@@ -31,153 +59,47 @@
         </view>
         <view class="endpoint-card" data-side="input" bindtap="openEndpointSelector" hover-class="endpoint-card-pressed">
           <view class="endpoint-card-heading">输入端</view>
-          <view class="endpoint-selection-state">{{manualSelected.input ? '已选择' : '默认示例'}}</view>
-          <image class="endpoint-image" src="{{model.input.image}}" mode="aspectFit" lazy-load></image>
-          <view class="endpoint-device">{{model.input.connectorType}}</view>
-          <view class="endpoint-device-hint">常见于{{model.input.deviceLabel}}</view>
+          <view class="endpoint-selection-state">{{inputId ? (manualSelected.input ? '已选择' : '默认示例') : '未选择'}}</view>
+          <image wx:if="{{inputEndpoint.image}}" class="endpoint-image" src="{{inputEndpoint.image}}" mode="aspectFit" lazy-load></image>
+          <view class="endpoint-device">{{inputEndpoint.displayConnectorType || inputEndpoint.connectorType || '选择输入端接口'}}</view>
+          <view wx:if="{{inputEndpoint.deviceLabel}}" class="endpoint-device-hint">常见于{{inputEndpoint.deviceLabel}}</view>
           <view class="endpoint-meta-row">
             <view class="endpoint-meta">
-              <view class="endpoint-signal">{{inputSignalPortLabel}}</view>
+              <view class="endpoint-signal">{{inputSignalPortLabel || inputEndpoint.signalLabel}}</view>
               <view class="endpoint-signal-type">{{inputSignalTypeLabel}}</view>
             </view>
             <view class="endpoint-chevron">›</view>
           </view>
         </view>
       </view>
-
-      <view class="diagram-card">
-        <view class="diagram-heading">
-          <view class="diagram-title">接线图</view>
-        </view>
-        <view wx:if="{{requirements.length}}" class="wiring-requirement-list">
-          <view wx:for="{{requirements}}" wx:for-item="requirement" wx:key="id" class="wiring-requirement">
-            <view class="wiring-requirement-title">{{requirement.title}}</view>
-            <view wx:if="{{requirement.hint}}" class="wiring-requirement-hint">{{requirement.hint}}</view>
-            <view wx:if="{{requirement.id === 'sourceChannel'}}" class="wiring-requirement-help">
-              此直连接法只保留 L 或 R 一路，另一声道不接。要保留左右两路内容，请使用能接收 L/R 的双路输入，或先通过播放设备/混音器合成为单声道；不能直接并接 L/R。
-            </view>
-            <view wx:if="{{requirement.id === 'outputMode'}}" class="wiring-requirement-help">
-              核对步骤：分别查两台设备的具体型号说明书，确认是 LINE OUT / LINE IN；查找平衡转非平衡接线说明，核对 pin 3、−/cold 与 shield/ground 的处理，并确认手册明确允许在输入端汇接。找不到明确许可时先不要接线，请联系设备厂家。
-              <button wx:if="{{requirement.value === 'coldReturn'}}" class="wiring-requirement-withdraw" data-requirement-id="{{requirement.id}}" bindtap="clearWiringRequirement">无法确认？撤回确认</button>
-            </view>
-            <view class="wiring-requirement-options">
-              <view wx:for="{{requirement.options}}" wx:for-item="option" wx:key="id" class="wiring-requirement-option {{requirement.value === option.id ? 'wiring-requirement-option-active' : ''}}" data-requirement-id="{{requirement.id}}" data-option-id="{{option.id}}" bindtap="selectWiringRequirement" hover-class="wiring-requirement-option-pressed" aria-pressed="{{requirement.value === option.id}}">
-                <view class="wiring-requirement-option-label">{{option.label}}</view>
-                <view wx:if="{{option.detail}}" class="wiring-requirement-option-detail">{{option.detail}}</view>
-                <view wx:if="{{requirement.value === option.id}}" class="wiring-requirement-check">✓</view>
-              </view>
-            </view>
-          </view>
-        </view>
-        <view wx:if="{{criticalNotes.length}}" class="wiring-critical-notes">
-          <view wx:for="{{criticalNotes}}" wx:key="index" class="wiring-critical-note">{{item}}</view>
-        </view>
-        <view wx:if="{{supported}}" class="segment-control">
-          <view class="segment-item {{viewMode === 'wiring' ? 'segment-item-active' : ''}}" data-mode="wiring" bindtap="selectViewMode">连线图</view>
-          <view class="segment-item {{viewMode === 'connectors' ? 'segment-item-active' : ''}}" data-mode="connectors" bindtap="selectViewMode">接头视角</view>
-        </view>
-        <view wx:if="{{viewMode === 'connectors' && supported}}" class="face-control">
-          <view class="face-control-label">针脚观察面</view>
-          <view class="face-control-options">
-            <view class="face-option {{face === 'mating' ? 'face-option-active' : ''}}" data-face="mating" bindtap="selectConnectorFace">插接面</view>
-            <view class="face-option {{face === 'solder' ? 'face-option-active' : ''}}" data-face="solder" bindtap="selectConnectorFace">焊接面</view>
-          </view>
-        </view>
-        <view wx:if="{{supported}}" class="diagram-canvas-wrap" style="height:{{diagramCanvasHeight}}px;">
-          <canvas type="2d" id="wiringDiagramCanvas" class="diagram-canvas" style="height:{{diagramCanvasHeight}}px;" hidden="{{selectorVisible || resultReportPreviewVisible || diagramError}}" bindtouchstart="onDiagramTouchStart" bindtouchend="onDiagramTouchEnd" bindtouchcancel="onDiagramTouchCancel"></canvas>
-          <view wx:if="{{diagramError}}" class="diagram-error" bindtap="retryDiagram">{{diagramError}} · 点按重试</view>
-        </view>
-        <view wx:elif="{{wiringStatus === 'needs-choice'}}" class="wiring-choice-pending">
-          <view class="wiring-choice-pending-copy">请核对两台设备说明书并确认上方接线条件后生成接线图。</view>
-        </view>
-        <view wx:else class="unsupported-state">
-          <view class="unsupported-mark">↔</view>
-          <view class="unsupported-title">此组合暂未提供接法</view>
-          <view class="unsupported-reason">{{model.reason}}</view>
-          <view class="unsupported-tip">请分别选择输出端与输入端，查看可用的接口和信号类型。</view>
-        </view>
-        <view wx:if="{{selectedConnection}}" class="selected-mapping">
-          <view class="selected-mapping-swatch" style="background:{{selectedConnection.color}};"></view>
-          <view class="selected-mapping-copy">
-            <view class="selected-mapping-title">{{selectedConnection.label}}</view>
-            <view class="selected-mapping-text">{{selectedConnection.mappingText}}</view>
-          </view>
-        </view>
-        <view wx:if="{{supported}}" class="diagram-footnote">按设备端子标识核对后再通电</view>
-      </view>
-
-      <view class="explanation-card">
-        <view class="explanation-toggle" bindtap="toggleExplanation" aria-expanded="{{explanationExpanded}}">
-          <view class="explanation-title">接线说明</view>
-          <view class="explanation-chevron {{explanationExpanded ? 'explanation-chevron-expanded' : ''}}">›</view>
-        </view>
-        <view wx:if="{{explanationExpanded}}" class="explanation-body">
-          <view class="explanation-section-title">适用条件</view>
-          <view class="explanation-text">{{model.cableSummary}}</view>
-          <view wx:for="{{noteItems}}" wx:key="index" class="explanation-note">{{item.text}}</view>
-          <view wx:if="{{sourceItems.length}}" class="explanation-section-title explanation-sources-title">资料来源</view>
-          <view wx:for="{{sourceItems}}" wx:key="index" class="source-row">
-            <view class="source-name">{{item.text}}</view>
-            <view wx:if="{{item.detail}}" class="source-detail">{{item.detail}}</view>
-          </view>
-        </view>
-      </view>
-      <view class="bottom-spacer"></view>
     </view>
   </scroll-view>
 
-  <view class="wiring-actions-safe-area">
-    <view class="result-output-actions wiring-actions">
-      <button class="result-image-button {{!supported || isGeneratingResultReport ? 'wiring-action-disabled' : ''}}" disabled="{{!supported || isGeneratingResultReport}}" bindtap="generateResultReportImage">
-        <view>{{isGeneratingResultReport ? '正在生成…' : '导出方案图片'}}</view>
-        <view class="result-image-button-note">按当前视角导出</view>
-      </button>
-      <button class="copy-result-button {{!supported ? 'wiring-action-disabled' : ''}}" disabled="{{!supported}}" bindtap="copyConnection">复制接法</button>
-    </view>
-  </view>
-
-  <view wx:if="{{selectorVisible}}" class="selector-mask" bindtap="closeEndpointSelector" catchtouchmove="preventTouchMove">
+  <view wx:if="{{selectorVisible}}" class="selector-mask {{selectorClosing ? 'selector-closing' : 'selector-opening'}}" bindtap="closeEndpointSelector" catchtouchmove="preventTouchMove">
     <view class="selector-panel" catchtap="stopTap">
       <view class="selector-header">
         <view class="selector-title">{{selectorTitle}}</view>
-        <button class="selector-close" bindtap="closeEndpointSelector">×</button>
-      </view>
-      <button wx:if="{{!selectorHelpVisible}}" class="selector-help-link" bindtap="openEndpointHelp">看不懂接口？查看识别说明</button>
-      <scroll-view wx:if="{{!selectorHelpVisible}}" class="selector-list" scroll-y enhanced show-scrollbar="{{false}}" style="height:55vh;">
-        <view wx:for="{{selectorOptions}}" wx:key="id" class="selector-row {{item.id === (selectorSide === 'input' ? inputId : outputId) ? 'selector-row-active' : ''}}" data-id="{{item.id}}" bindtap="selectEndpointOption">
-          <image class="selector-image" src="{{item.image}}" mode="aspectFit"></image>
-          <view class="selector-copy">
-            <view class="selector-label">{{item.label}}</view>
-            <view class="selector-signal">{{item.signalLabel}}</view>
-          </view>
-          <view class="selector-check">{{item.id === (selectorSide === 'input' ? inputId : outputId) ? '✓' : '›'}}</view>
+        <view class="selector-close" role="button" aria-label="关闭接口选择" bindtap="closeEndpointSelector">
+          <view class="selector-close-icon"></view>
         </view>
-      </scroll-view>
-      <view wx:else class="selector-help-panel">
-        <button class="selector-help-back" bindtap="closeEndpointHelp">‹ 返回接口列表</button>
-        <scroll-view class="selector-help-content" scroll-y enhanced show-scrollbar="{{false}}">
-          <view class="selector-help-title">先按设备说明书确认接口用途</view>
-          <view class="selector-help-section">
-            <view class="selector-help-heading">看方向和信号标识</view>
-            <view class="selector-help-text">OUT 通常表示输出端，IN 通常表示输入端；LINE 表示线路用途。还要核对设备的具体型号和端口标识，不能只凭插头或插孔外形判断。</view>
-          </view>
-          <view class="selector-help-section">
-            <view class="selector-help-heading">触点数量不等于信号类型</view>
-            <view class="selector-help-text">TS 有 T/S 两个触点，TRS 有 T/R/S 三个触点。TRS 可能用于平衡单声道，也可能用于立体声；仅看触点数量无法确认平衡方式或声道数。</view>
-          </view>
-          <view class="selector-help-section">
-            <view class="selector-help-heading">确认助手支持的范围</view>
-            <view class="selector-help-text">此处仅列出已建模的模拟音频接口组合。TRRS 耳麦、MIC 输入和数字接口不在范围内；不要用外形相近的选项代替。</view>
-          </view>
-          <view class="selector-help-section">
-            <view class="selector-help-heading">端子按功能丝印识别</view>
-            <view class="selector-help-text">平衡端子请查看设备上 +、−、G 的功能标识；不要按端子排列位置猜测。具体端口用途和端子位置以该型号说明书为准。</view>
-          </view>
-          <view class="selector-help-caution">仍无法从型号说明书确认时，先不要按猜测接线，请联系设备厂家。</view>
-        </scroll-view>
       </view>
+      <scroll-view class="selector-list" scroll-y enhanced show-scrollbar="{{false}}" style="height:55vh;">
+        <block wx:for="{{selectorOptions}}" wx:for-item="option" wx:key="id">
+        <view wx:if="{{option.groupStart}}" class="selector-group-title">{{option.groupTitle}}</view>
+        <view class="selector-row {{option.id === (selectorSide === 'input' ? inputId : outputId) ? 'selector-row-active' : ''}}" data-id="{{option.id}}" bindtap="selectEndpointOption">
+          <image class="selector-image" src="{{option.image}}" mode="aspectFit"></image>
+          <view class="selector-copy">
+            <view class="selector-label">{{option.selectorLabel || option.label}}</view>
+            <view class="selector-signal">{{option.selectorDetail || option.signalLabel}}</view>
+          </view>
+          <view class="selector-check">{{option.id === (selectorSide === 'input' ? inputId : outputId) ? '✓' : '›'}}</view>
+        </view>
+        </block>
+      </scroll-view>
     </view>
   </view>
 
   <include src="../../templates/result-report-preview.wxml" />
+  <include src="./wiring-overlays.wxml" />
+  <include src="../../templates/editor-navigation-guard.wxml" />
 </view>

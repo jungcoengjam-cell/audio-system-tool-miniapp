@@ -11,7 +11,6 @@ const names = [
   'module-led-screen-catalog.jpg',
   'module-limiter-catalog.jpg',
   'module-spl-catalog.jpg',
-  'module-venue-catalog.jpg',
 ]
 
 function applyWhiteMatte(data) {

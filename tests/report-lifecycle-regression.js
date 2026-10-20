@@ -6,6 +6,9 @@ const storage = new Map()
 const drawCallbacks = []
 const exportsQueue = []
 const toasts = []
+const ledSetDataCallbacks = []
+const modalRequests = []
+let navigateBackCount = 0
 let writeFailure = false
 let showLoadingCount = 0
 let hideLoadingCount = 0
@@ -16,6 +19,9 @@ function resetRuntime() {
   drawCallbacks.length = 0
   exportsQueue.length = 0
   toasts.length = 0
+  ledSetDataCallbacks.length = 0
+  modalRequests.length = 0
+  navigateBackCount = 0
   writeFailure = false
   showLoadingCount = 0
   hideLoadingCount = 0
@@ -35,6 +41,8 @@ function installRuntime() {
     },
     removeStorageSync: (key) => storage.delete(key),
     showToast: ({ title }) => toasts.push(title),
+    showModal: (options) => modalRequests.push(options),
+    navigateBack: () => { navigateBackCount += 1 },
     showLoading: () => { showLoadingCount += 1 },
     hideLoading: () => { hideLoadingCount += 1 },
     vibrateShort: () => {},
@@ -68,8 +76,24 @@ function loadLed() {
   resetRuntime()
   installRuntime()
   const led = fresh('pages/led-screen/led-screen.js')
+  led.setData = (changes, callback) => {
+    led.data = { ...led.data, ...changes }
+    if (callback) ledSetDataCallbacks.push(callback)
+  }
   led.onLoad()
+  led.onShow()
+  flushLedSetDataCallbacks()
   return led
+}
+
+function flushLedSetDataCallbacks() {
+  while (ledSetDataCallbacks.length) ledSetDataCallbacks.shift()()
+}
+
+function generateLedReport(led) {
+  const result = led.generateReportImage()
+  flushLedSetDataCallbacks()
+  return result
 }
 
 function completeCurrentExport(tempFilePath) {
@@ -95,12 +119,14 @@ function assertCachedReportReuse(reportPage, label, methodName = 'generateReport
 }
 
 function seedProject() {
-  storage.set('audioTool.storageSchemaVersion', 3)
+  storage.set('audioTool.storageSchemaVersion', 4)
   storage.set('audioTool.projects.v1', [{ id: 'p', name: 'P', createdAt: 1, updatedAt: 1 }])
   storage.set('audioTool.records.v1', [{
     id: 'r', module: 'limiter', title: 'R', summary: 'S', preferences: { speakerModel: 'S' },
     resultText: 'R', projectIds: ['p'], favorite: false, createdAt: 1, updatedAt: 1,
   }])
+  storage.set('audioTool.favorites.v1', [])
+  storage.set('audioTool.recovery.v1', [])
 }
 
 function loadProject() {
@@ -114,7 +140,7 @@ function loadProject() {
 
 function checkLedInitialCacheAndFailure() {
   const led = loadLed()
-  led.generateReportImage()
+  generateLedReport(led)
   assert.equal(led.data.isGeneratingReport, true)
   completeCurrentExport('temp://led-first.png')
   assert.equal(led.data.reportImagePath, 'temp://led-first.png')
@@ -128,13 +154,13 @@ function checkLedInitialCacheAndFailure() {
   led.cancelInputCalculation()
 
   const failedLed = loadLed()
-  failedLed.generateReportImage()
+  generateLedReport(failedLed)
   const toastCount = toasts.length
   completeCurrentExport()
   assert.equal(failedLed.data.isGeneratingReport, false)
   assert.equal(toasts.length, toastCount + 1)
   const retryShowCount = showLoadingCount
-  failedLed.generateReportImage()
+  generateLedReport(failedLed)
   assert.equal(showLoadingCount, retryShowCount + 1, 'LED失败后不能重试')
   completeCurrentExport('temp://led-retry.png')
   assert.equal(failedLed.data.reportImagePath, 'temp://led-retry.png')
@@ -142,20 +168,22 @@ function checkLedInitialCacheAndFailure() {
 
 function checkLedStaleCallbackAndNewLoading() {
   const drawPendingLed = loadLed()
-  drawPendingLed.generateReportImage()
+  generateLedReport(drawPendingLed)
   const oldDraw = drawCallbacks.shift()
   drawPendingLed.commitCalculatedState({ wallWidthText: '7' })
+  flushLedSetDataCallbacks()
   oldDraw()
   assert.equal(exportsQueue.length, 0, '来源变化后旧 draw 仍进入导出')
   assert.equal(drawPendingLed.data.reportImagePath, '')
   assert.equal(drawPendingLed.data.isGeneratingReport, false)
 
   const led = loadLed()
-  led.generateReportImage()
+  generateLedReport(led)
   drawCallbacks.shift()()
   const oldExport = exportsQueue.shift()
   led.commitCalculatedState({ wallWidthText: '7' })
-  led.generateReportImage()
+  flushLedSetDataCallbacks()
+  generateLedReport(led)
   assert.equal(led.data.isGeneratingReport, true)
   const newShowLoadingCount = showLoadingCount
   const newHideLoadingCount = hideLoadingCount
@@ -171,7 +199,7 @@ function checkLedStaleCallbackAndNewLoading() {
   assert.equal(led.data.isGeneratingReport, false)
 
   const inputLed = loadLed()
-  inputLed.generateReportImage()
+  generateLedReport(inputLed)
   drawCallbacks.shift()()
   const inputOldExport = exportsQueue.shift()
   const beforeInputHideCount = hideLoadingCount
@@ -255,52 +283,72 @@ function checkProjectSourceChangesInvalidateOldCallbacks() {
 function checkProjectsFavoriteStates() {
   resetRuntime()
   installRuntime()
-  storage.set('audioTool.storageSchemaVersion', 3)
-  storage.set('audioTool.projects.v1', [])
-  storage.set('audioTool.records.v1', [{
-    id: 'favorite', module: 'limiter', title: 'F', summary: 'S', preferences: { speakerModel: 'S' },
-    resultText: 'R', signature: JSON.stringify(['limiter', { speakerModel: 'S' }]),
-    projectIds: [], favorite: true, createdAt: 1, updatedAt: 1,
-  }])
-  const projects = fresh('pages/projects/projects.js')
-  projects.onShow()
-  projects.toggleRecordFavorite({ currentTarget: { dataset: { id: 'favorite' } } })
-  assert.deepEqual(storage.get('audioTool.records.v1'), [])
-  assert.equal(toasts.includes('保存失败，请检查本地存储'), false)
-
-  resetRuntime()
-  installRuntime()
-  storage.set('audioTool.storageSchemaVersion', 3)
-  storage.set('audioTool.projects.v1', [{ id: 'p', name: 'P', createdAt: 1, updatedAt: 1 }])
-  const projectRecord = {
-    id: 'favorite', module: 'limiter', title: 'F', summary: 'S', preferences: { speakerModel: 'S' },
-    resultText: 'R', signature: JSON.stringify(['limiter', { speakerModel: 'S' }]),
-    projectIds: ['p'], favorite: true, createdAt: 1, updatedAt: 1,
+  storage.set('audioTool.storageSchemaVersion', 4)
+  const project = { id: 'p', name: 'P', createdAt: 1, updatedAt: 1 }
+  const preferences = {
+    amplifierModel: 'KT-P21000', speakerModel: 'KF-D12F', count: '2', wiring: 'parallel',
+    mode: 'voltage', sensitivityVoltage: '1.4', highPassFrequency: '35',
   }
+  const projectRecord = {
+    id: 'record-one', module: 'limiter', title: '项目限幅记录', summary: '项目快照', preferences,
+    resultText: '项目计算结果', signature: JSON.stringify(['limiter', preferences]),
+    projectIds: ['p'], favorite: false, archived: false, createdAt: 1, updatedAt: 2,
+  }
+  const favorite = {
+    ...projectRecord, id: 'favorite-one', title: '独立常用快照', projectIds: [], favorite: true,
+    originProjectIds: ['p'],
+  }
+  storage.set('audioTool.projects.v1', [project])
   storage.set('audioTool.records.v1', [projectRecord])
-  const projectProjects = fresh('pages/projects/projects.js')
-  projectProjects.onShow()
-  projectProjects.toggleRecordFavorite({ currentTarget: { dataset: { id: 'favorite' } } })
-  assert.equal(storage.get('audioTool.records.v1')[0].favorite, false)
-  assert.deepEqual(storage.get('audioTool.records.v1')[0].projectIds, ['p'])
-  projectProjects.toggleRecordFavorite({ currentTarget: { dataset: { id: 'favorite' } } })
-  assert.equal(storage.get('audioTool.records.v1')[0].favorite, true)
+  storage.set('audioTool.favorites.v1', [favorite])
+  storage.set('audioTool.recovery.v1', [])
+  const favoriteDetail = fresh('pages/projects/favorite-detail.js')
+  favoriteDetail.onLoad({ id: favorite.id })
+  assert.equal(favoriteDetail.data.favorite.id, favorite.id)
+  assert.deepEqual(storage.get('audioTool.records.v1'), [projectRecord], '收藏详情读取不得改写项目记录')
+
+  favoriteDetail.removeCurrentFavorite()
+  assert.equal(modalRequests.length, 1)
+  modalRequests.shift().success({ confirm: false })
+  assert.deepEqual(storage.get('audioTool.favorites.v1'), [favorite], '取消移入恢复区应保留独立快照')
+  assert.deepEqual(storage.get('audioTool.records.v1'), [projectRecord], '取消管理操作应保留项目记录')
+  assert.equal(storage.get('audioTool.recovery.v1').length, 0)
+  assert.equal(navigateBackCount, 0)
+
+  favoriteDetail.removeCurrentFavorite()
+  modalRequests.shift().success({ confirm: true })
+  assert.deepEqual(storage.get('audioTool.favorites.v1'), [])
+  assert.deepEqual(storage.get('audioTool.records.v1'), [projectRecord], '移除收藏不得删除关联项目记录')
+  const recoveryFavorite = storage.get('audioTool.recovery.v1').find((entry) => entry.kind === 'favorite')
+  assert.equal(recoveryFavorite.targetId, favorite.id)
+  assert.deepEqual(recoveryFavorite.snapshot, favorite, '移入恢复区应保存完整收藏快照')
+  assert.equal(navigateBackCount, 1)
 
   resetRuntime()
   installRuntime()
-  storage.set('audioTool.storageSchemaVersion', 3)
-  storage.set('audioTool.projects.v1', [{ id: 'p', name: 'P', createdAt: 1, updatedAt: 1 }])
-  const failedRecord = { ...projectRecord }
-  storage.set('audioTool.records.v1', [failedRecord])
-  const failedProjects = fresh('pages/projects/projects.js')
-  failedProjects.onShow()
+  storage.set('audioTool.storageSchemaVersion', 4)
+  storage.set('audioTool.projects.v1', [project])
+  storage.set('audioTool.records.v1', [projectRecord])
+  storage.set('audioTool.favorites.v1', [favorite])
+  storage.set('audioTool.recovery.v1', [])
+  const failedFavoriteDetail = fresh('pages/projects/favorite-detail.js')
+  failedFavoriteDetail.onLoad({ id: favorite.id })
   writeFailure = true
-  failedProjects.toggleRecordFavorite({ currentTarget: { dataset: { id: 'favorite' } } })
+  failedFavoriteDetail.removeCurrentFavorite()
+  modalRequests.shift().success({ confirm: true })
   writeFailure = false
-  assert.deepEqual(storage.get('audioTool.records.v1'), [failedRecord])
-  assert.equal(toasts.includes('保存失败，请检查本地存储'), true)
-  failedProjects.toggleRecordFavorite({ currentTarget: { dataset: { id: 'favorite' } } })
-  assert.equal(storage.get('audioTool.records.v1')[0].favorite, false)
+  assert.deepEqual(storage.get('audioTool.favorites.v1'), [favorite], '恢复区写入失败时收藏仍保留')
+  assert.deepEqual(storage.get('audioTool.records.v1'), [projectRecord], '恢复区写入失败不能影响项目记录')
+  assert.deepEqual(storage.get('audioTool.recovery.v1'), [])
+  assert.equal(navigateBackCount, 0, '恢复区写入失败不能离开收藏详情')
+  assert.equal(toasts.includes('操作失败，请重试'), true)
+
+  failedFavoriteDetail.removeCurrentFavorite()
+  modalRequests.shift().success({ confirm: true })
+  assert.deepEqual(storage.get('audioTool.favorites.v1'), [], '存储恢复后允许重试移入恢复区')
+  assert.deepEqual(storage.get('audioTool.records.v1'), [projectRecord])
+  assert.equal(storage.get('audioTool.recovery.v1').length, 1)
+  assert.equal(navigateBackCount, 1)
 }
 
 try {

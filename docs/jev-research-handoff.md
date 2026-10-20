@@ -1,0 +1,14 @@
+# Historical Jev research handoff
+
+## Gain Structure Jev-Assisted QA Pilot — Handoff Status
+
+- One real development-time Jev engineering review completed. The API returned `jev-1.13.0` with 20 structured Noul judgments and probabilities, without prose explanation. Sol independently reviewed those signals. See the [factual dossier](../tests/p2-jev/gain-structure-pilot/FACTUAL-DOSSIER.md), [sent request](../tests/p2-jev/gain-structure-pilot/jev-engineering-review-final.request.json), [raw response](../tests/p2-jev/gain-structure-pilot/jev/engineering-review.raw.json), [execution record](../tests/p2-jev/gain-structure-pilot/jev/engineering-review.execution.json), and [Sol review](../tests/p2-jev/gain-structure-pilot/SOL-ENGINEERING-REVIEW.md).
+- The development-time [QA gap map](../tests/p2-jev/gain-structure-pilot/QA-GAP-MAP.md), [110-scenario candidate pool](../tests/p2-jev/gain-structure-pilot/CANDIDATE-POOL.json), and [15 failure-mechanism clusters](../tests/p2-jev/gain-structure-pilot/CLUSTER-REVIEW.md) are research artifacts. The [executable adversarial tests](../tests/p2-jev/gain-structure-pilot/gain-structure.adversarial.cjs) contain 35 checks. The latest [pre-fix result](../tests/p2-jev/gain-structure-pilot/runs/PRE-FIX-RECHECK-2026-09-26T06-52-09-011Z.json) is 29 pass / 6 fail. All six failures belong to one confirmed core-validation failure class: abnormal rated-power injection can yield a valid result with non-finite electrical outputs. This does not show that the current catalog or ordinary page paths naturally supply those abnormal values; Gain Structure production code has not been fixed.
+- The [pre-fix triage](../tests/p2-jev/gain-structure-pilot/PRE-FIX-TRIAGE.md) separates earlier test-oracle precision errors and one Canvas harness defect from product defects. The [offline mutation candidates](../tests/p2-jev/gain-structure-pilot/GS-13R-MUTATION-QA-OFFLINE.json) number 14; five became executable checks for the same failure class. The [artifact manifest](../tests/p2-jev/gain-structure-pilot/ARTIFACT-MANIFEST.json) indexes the pilot files. Unresolved human decisions remain documented in the pilot artifacts.
+- Independent Jev adversarial QA and Jev mutation/test-quality review remain **INCOMPLETE**. Later requests returned HTTP 403, `RBAC: access denied`; see the [QA execution records](../tests/p2-jev/gain-structure-pilot/jev/qa-raw/qa-01-diagnostic2.execution.json). No Jev answer was simulated or fabricated. The combined research failure-class yield, 1/15 = 6.7%, must not be attributed to Jev QA.
+
+Thread split after this handoff:
+
+- **Old thread:** historical Jev benchmark/research archive; closed after this handoff.
+- **New Jev thread:** Jev-assisted engineering review, adversarial QA, mutation QA, test-gap analysis, and test-quality review.
+- **Separate product thread:** new TuneBuddy features and production implementation.

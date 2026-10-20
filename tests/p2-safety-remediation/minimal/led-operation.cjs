@@ -50,6 +50,10 @@ function assertLedgerOutputBlocked(page, id) {
   assert.strictEqual(page.getRecordPayload(), null, `${id}: blocked operation exposed a record payload`)
 }
 
+function projectEvent(page, step, fields = {}) {
+  return { currentTarget: { dataset: { dialogRevision: page.data.projectDialogRevision, step, ...fields } } }
+}
+
 function runManualCompatibility() {
   const { env, page } = createPage('LED-001')
   assert(page.data.result, 'manual onLoad must keep its normal initial result')
@@ -68,6 +72,7 @@ function runManualCompatibility() {
     pitch: page.data.pitchOptions[page.data.pitchIndex].value,
   }, 'manual record payload must reflect displayed page values')
   page.generateReportImage()
+  env.flushNextTicks()
   assert(env.pending.draws.length === 1, 'manual report drawing should start')
   env.finishDraw(0)
   assert(env.pending.canvases.length === 1, 'manual report export should start')
@@ -75,11 +80,16 @@ function runManualCompatibility() {
   env.flushNextTicks()
   assert.strictEqual(page.data.reportImagePath, 'wxfile://manual-led-report.png', 'manual report image should remain available')
   page.saveToActiveProject()
-  assert.strictEqual(env.pending.modals.length, 1, 'manual save should keep its project-name prompt')
+  assert.strictEqual(page.data.projectDialogVisible, true, 'manual save should open the project sheet')
+  assert.strictEqual(page.openProjectCreateForm(projectEvent(page, 'select')), true)
+  page.onProjectNameInput({ ...projectEvent(page, 'create'), detail: { value: 'stale manual output' } })
+  const staleCreateEvent = projectEvent(page, 'create')
   page.beginStructuredOperation(inputsFor(CASE_FACTS['LED-001']))
-  env.answerModal(0, true, 'stale manual output')
+  env.flushNextTicks()
+  assert.strictEqual(page.createProjectFromForm(staleCreateEvent), false,
+    'a project-create response from the manual page revision must be rejected')
   assert.strictEqual((env.storage.get('audioTool.projects.v1') || []).length, 0,
-    'manual project prompt from an earlier operation must not commit after structured operation begins')
+    'a stale project-create response must not create a project after structured operation begins')
   assert.strictEqual(page.data.reportImagePath, '', 'starting a structured operation must invalidate the manual report cache')
   page.endOperation()
   assert(page.data.result, 'manual result should be available again after ending the operation')
@@ -87,6 +97,7 @@ function runManualCompatibility() {
   assert.strictEqual(page.data.result.dimensionText, initialResult.dimensionText, 'manual layout should be restored')
   const restoredResult = page.data.result
   page.generateReportImage()
+  env.flushNextTicks()
   assert(env.pending.draws.length === 1, 'manual report drawing should start')
   env.finishDraw(0)
   assert(env.pending.canvases.length === 1, 'manual report export should start')
@@ -175,9 +186,13 @@ function runLedCases() {
 
     const saveCandidate = page.getOperationSnapshot().fields.find((field) => field.key === 'wallWidthMeters')
     page.saveToActiveProject()
-    assert.strictEqual(env.pending.modals.length, 1, `${id}: valid operation should request a project name`)
+    assert.strictEqual(page.data.projectDialogVisible, true, `${id}: valid operation should open the project sheet`)
+    assert.strictEqual(page.openProjectCreateForm(projectEvent(page, 'select')), true)
+    page.onProjectNameInput({ ...projectEvent(page, 'create'), detail: { value: `${id} stale project` } })
+    const staleCreateEvent = projectEvent(page, 'create')
     page.setOperationCandidate(saveCandidate.key, Number(saveCandidate.value) + 0.25, saveCandidate.unit)
-    env.answerModal(0, true, `${id} stale project`)
+    assert.strictEqual(page.createProjectFromForm(staleCreateEvent), false,
+      `${id}: project creation from an invalidated operation must be rejected`)
     assert.strictEqual((env.storage.get('audioTool.projects.v1') || []).length, 0, `${id}: stale project prompt created a project`)
     assertLedgerOutputBlocked(page, `${id} stale project prompt`)
 

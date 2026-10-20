@@ -71,9 +71,6 @@ function projectProductDetail(detail) {
     note: detail.note,
     missingParameters: detail.missingParameters,
     modules: detail.modules,
-    profile: detail.profile
-      ? { roleText: detail.profile.roleText, source: detail.profile.source }
-      : detail.profile,
     source: detail.source,
     sourcePageText: detail.sourcePageText,
     reviewDate: detail.reviewDate,
@@ -247,7 +244,7 @@ Page({
     }
     this._dmxImportOpenedSignature = ''
     this.setData({ dmxImportVisible: false })
-    wx.navigateTo({ url: CALCULATOR_PATHS.dmxAddress })
+    wx.navigateTo({ url: `${CALCULATOR_PATHS.dmxAddress}?lightingCatalogImport=1` })
   },
 
   openDmxChannelGuide() {

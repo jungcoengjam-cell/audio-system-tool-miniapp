@@ -1,0 +1,1092 @@
+{
+  "name": "compact-first-screen-390-700-light",
+  "status": "passed",
+  "case": {
+    "name": "compact-first-screen-390-700-light",
+    "scenario": "ground",
+    "width": 390,
+    "height": 700,
+    "theme": "light",
+    "view": 0,
+    "capture": true
+  },
+  "report": {
+    "status": "passed",
+    "bridge": "Headless Chrome rendering production camera WXML with expanded production WXSS; production camera page JS supplies fixture state and production preview-renderer.js draws the actual 2D canvas.",
+    "limitations": "Browser bridge verifies source markup, computed browser layout, page-controller event dispatch, and Canvas 2D rendering; it is not the WeChat WXML/WXSS runtime, WeChat DevTools compile result, native share/photo permission flow, or a physical-device test.",
+    "caseName": "ground",
+    "sourceNote": "Production camera page initialized from its default preferences.",
+    "viewport": {
+      "width": 390,
+      "height": 700
+    },
+    "theme": "light",
+    "zoom": 1,
+    "result": {
+      "displayModel": "TV-6124HK",
+      "sceneMode": "ground",
+      "horizontalFov": 71,
+      "verticalFov": 42.7,
+      "aimAngleDegrees": -14.2,
+      "aimText": "向下 14.2°",
+      "distanceMeters": 4.83,
+      "depthMeters": 4,
+      "cameraHeightMeters": 2.3,
+      "mountType": "ptz",
+      "requiresInitialAim": false
+    },
+    "resultUpdating": false,
+    "canvas": {
+      "view": "plan",
+      "css": {
+        "width": 284.16,
+        "height": 161.19
+      },
+      "bitmap": {
+        "width": 568,
+        "height": 322
+      },
+      "topLeftPixel": [
+        16,
+        36,
+        58,
+        255
+      ],
+      "deepBlueBackdrop": true,
+      "textLabels": [
+        {
+          "text": "俯视 · 水平视场角 71°",
+          "x": 16,
+          "y": 20,
+          "align": "left",
+          "width": 142.13,
+          "left": 16,
+          "right": 158.13,
+          "font": "14px -apple-system, BlinkMacSystemFont, sans-serif"
+        }
+      ]
+    },
+    "fontMeasurements": {
+      "primaryValue": {
+        "fontSize": "30.16px",
+        "lineHeight": "33.176px",
+        "boxHeight": 33.17,
+        "boxWidth": 134.06
+      },
+      "previewFacts": null,
+      "legendItem": null,
+      "dimensionCaption": {
+        "fontSize": "14.56px",
+        "lineHeight": "19.656px",
+        "boxHeight": 19.66,
+        "boxWidth": 282.09
+      }
+    },
+    "layout": {
+      "pageRoot": {
+        "x": 0,
+        "y": 0,
+        "width": 390,
+        "height": 700,
+        "right": 390,
+        "bottom": 700
+      },
+      "scroll": {
+        "x": 0,
+        "y": 0,
+        "width": 390,
+        "height": 700,
+        "right": 390,
+        "bottom": 700
+      },
+      "scrollTop": 0,
+      "resultPane": {
+        "x": 16.63,
+        "y": 29.63,
+        "width": 356.75,
+        "height": 402.11,
+        "right": 373.38,
+        "bottom": 431.73
+      },
+      "result": {
+        "x": 16.63,
+        "y": 29.63,
+        "width": 304.75,
+        "height": 402.11,
+        "right": 321.38,
+        "bottom": 431.73
+      },
+      "rail": {
+        "x": 329.38,
+        "y": 29.63,
+        "width": 44,
+        "height": 188,
+        "right": 373.38,
+        "bottom": 217.63
+      },
+      "canvas": {
+        "x": 26.92,
+        "y": 128.64,
+        "width": 284.16,
+        "height": 161.19,
+        "right": 311.08,
+        "bottom": 289.83
+      },
+      "railButtons": [
+        {
+          "selector": "#cameraReset",
+          "box": {
+            "x": 329.38,
+            "y": 29.63,
+            "width": 44,
+            "height": 44,
+            "right": 373.38,
+            "bottom": 73.63
+          },
+          "disabled": false
+        },
+        {
+          "selector": "#cameraShare",
+          "box": {
+            "x": 329.38,
+            "y": 77.63,
+            "width": 44,
+            "height": 44,
+            "right": 373.38,
+            "bottom": 121.63
+          },
+          "disabled": false
+        },
+        {
+          "selector": "#cameraFavorite",
+          "box": {
+            "x": 329.38,
+            "y": 125.63,
+            "width": 44,
+            "height": 44,
+            "right": 373.38,
+            "bottom": 169.63
+          },
+          "disabled": false
+        },
+        {
+          "selector": "#cameraProject",
+          "box": {
+            "x": 329.38,
+            "y": 173.63,
+            "width": 44,
+            "height": 44,
+            "right": 373.38,
+            "bottom": 217.63
+          },
+          "disabled": false
+        }
+      ],
+      "dimensionCaption": {
+        "box": {
+          "x": 27.95,
+          "y": 292.42,
+          "width": 282.09,
+          "height": 19.66,
+          "right": 310.05,
+          "bottom": 312.08
+        },
+        "canvas": {
+          "x": 26.92,
+          "y": 128.64,
+          "width": 284.16,
+          "height": 161.19,
+          "right": 311.08,
+          "bottom": 289.83
+        },
+        "items": [
+          {
+            "text": "目标实际宽×深 6×4 m",
+            "box": {
+              "x": 27.95,
+              "y": 292.42,
+              "width": 282.09,
+              "height": 19.66,
+              "right": 310.05,
+              "bottom": 312.08
+            }
+          }
+        ]
+      },
+      "heroMeasurement": {
+        "captureSelector": "#cameraResultHero",
+        "measurements": {
+          "#cameraResultHero": 402.11,
+          "#cameraResultTail": 140.53
+        },
+        "storedHeroPlaceholderHeight": 403,
+        "storedTailPlaceholderHeight": 141,
+        "heroHeightMatches": true,
+        "tailHeightMatches": true
+      },
+      "resultPlaceholderStyle": "min-height:403px;",
+      "resultTailPlaceholderStyle": "height:141px;",
+      "inputCard": {
+        "x": 16.63,
+        "y": 436.92,
+        "width": 356.75,
+        "height": 349.53,
+        "right": 373.38,
+        "bottom": 786.45
+      },
+      "inputFirstScreen": {
+        "tabs": {
+          "x": 17.63,
+          "y": 437.92,
+          "width": 354.75,
+          "height": 53.31,
+          "right": 372.38,
+          "bottom": 491.23
+        },
+        "source": {
+          "x": 29.06,
+          "y": 545.02,
+          "width": 331.88,
+          "height": 50.22,
+          "right": 360.94,
+          "bottom": 595.23
+        },
+        "firstField": {
+          "x": 29.06,
+          "y": 603.55,
+          "width": 331.88,
+          "height": 68.16,
+          "right": 360.94,
+          "bottom": 671.7
+        }
+      },
+      "mainDistance": {
+        "value": {
+          "x": 27.97,
+          "y": 345.22,
+          "width": 134.06,
+          "height": 33.17,
+          "right": 162.03,
+          "bottom": 378.39
+        },
+        "note": {
+          "x": 22.81,
+          "y": 385.63,
+          "width": 292.38,
+          "height": 18.92,
+          "right": 315.19,
+          "bottom": 404.55
+        },
+        "summary": {
+          "x": 22.81,
+          "y": 54.38,
+          "width": 208.56,
+          "height": 17.56,
+          "right": 231.38,
+          "bottom": 71.94
+        },
+        "guidance": null,
+        "disclaimer": {
+          "x": 22.81,
+          "y": 406.63,
+          "width": 292.38,
+          "height": 18.92,
+          "right": 315.19,
+          "bottom": 425.55
+        },
+        "warning": null
+      },
+      "v2TouchTargets": {
+        "previewTabs": [
+          {
+            "x": 27.92,
+            "y": 79.64,
+            "width": 83,
+            "height": 44,
+            "right": 110.92,
+            "bottom": 123.64
+          },
+          {
+            "x": 110.92,
+            "y": 79.64,
+            "width": 83,
+            "height": 44,
+            "right": 193.92,
+            "bottom": 123.64
+          }
+        ],
+        "inputTabs": [
+          {
+            "x": 21.78,
+            "y": 442.08,
+            "width": 113.41,
+            "height": 44,
+            "right": 135.19,
+            "bottom": 486.08
+          },
+          {
+            "x": 138.3,
+            "y": 442.08,
+            "width": 113.41,
+            "height": 44,
+            "right": 251.7,
+            "bottom": 486.08
+          },
+          {
+            "x": 254.81,
+            "y": 442.08,
+            "width": 113.41,
+            "height": 44,
+            "right": 368.22,
+            "bottom": 486.08
+          }
+        ]
+      },
+      "v2CompactBreakdown": {
+        "heading": {
+          "x": 22.81,
+          "y": 35.81,
+          "width": 292.38,
+          "height": 36.13,
+          "right": 315.19,
+          "bottom": 71.94
+        },
+        "chart": {
+          "x": 22.81,
+          "y": 74.53,
+          "width": 292.38,
+          "height": 241.66,
+          "right": 315.19,
+          "bottom": 316.19
+        },
+        "viewTabs": {
+          "x": 26.92,
+          "y": 78.64,
+          "width": 168,
+          "height": 46,
+          "right": 194.92,
+          "bottom": 124.64
+        },
+        "canvas": {
+          "x": 26.92,
+          "y": 128.64,
+          "width": 284.16,
+          "height": 161.19,
+          "right": 311.08,
+          "bottom": 289.83
+        },
+        "dimensionCaption": {
+          "x": 27.95,
+          "y": 292.42,
+          "width": 282.09,
+          "height": 19.66,
+          "right": 310.05,
+          "bottom": 312.08
+        },
+        "miniLegend": null,
+        "primaryResults": {
+          "x": 22.81,
+          "y": 319.3,
+          "width": 292.38,
+          "height": 64.25,
+          "right": 315.19,
+          "bottom": 383.55
+        },
+        "primaryCards": [
+          {
+            "x": 22.81,
+            "y": 319.3,
+            "width": 144.38,
+            "height": 64.25,
+            "right": 167.19,
+            "bottom": 383.55
+          },
+          {
+            "x": 170.81,
+            "y": 319.3,
+            "width": 144.38,
+            "height": 64.25,
+            "right": 315.19,
+            "bottom": 383.55
+          }
+        ],
+        "aimGuidance": null,
+        "distanceReference": {
+          "x": 22.81,
+          "y": 385.63,
+          "width": 292.38,
+          "height": 18.92,
+          "right": 315.19,
+          "bottom": 404.55
+        },
+        "warning": null,
+        "disclaimer": {
+          "x": 22.81,
+          "y": 406.63,
+          "width": 292.38,
+          "height": 18.92,
+          "right": 315.19,
+          "bottom": 425.55
+        }
+      },
+      "actions": [
+        {
+          "text": "复制安装摘要",
+          "x": 16.64,
+          "y": 798.92,
+          "width": 173.36,
+          "height": 45.75,
+          "right": 190,
+          "bottom": 844.67
+        },
+        {
+          "text": "复制完整公式",
+          "x": 200,
+          "y": 798.92,
+          "width": 173.36,
+          "height": 45.75,
+          "right": 373.36,
+          "bottom": 844.67
+        }
+      ],
+      "copyActions": [
+        {
+          "id": "cameraCopySummary",
+          "text": "复制安装摘要",
+          "className": "copy-result-button",
+          "x": 16.64,
+          "y": 798.92,
+          "width": 173.36,
+          "height": 45.75,
+          "right": 190,
+          "bottom": 844.67
+        },
+        {
+          "id": "cameraCopyFull",
+          "text": "复制完整公式",
+          "className": "copy-result-button",
+          "x": 200,
+          "y": 798.92,
+          "width": 173.36,
+          "height": 45.75,
+          "right": 373.36,
+          "bottom": 844.67
+        }
+      ],
+      "detailsToggle": {
+        "x": 17.63,
+        "y": 856.06,
+        "width": 354.75,
+        "height": 72,
+        "right": 372.38,
+        "bottom": 928.06
+      },
+      "detailsVisible": false,
+      "inputPanels": [
+        "cameraInputPanelCamera"
+      ],
+      "inputTabs": [
+        {
+          "text": "相机与镜头",
+          "selected": "true",
+          "box": {
+            "x": 21.78,
+            "y": 442.08,
+            "width": 113.41,
+            "height": 44,
+            "right": 135.19,
+            "bottom": 486.08
+          }
+        },
+        {
+          "text": "目标区域",
+          "selected": "false",
+          "box": {
+            "x": 138.3,
+            "y": 442.08,
+            "width": 113.41,
+            "height": 44,
+            "right": 251.7,
+            "bottom": 486.08
+          }
+        },
+        {
+          "text": "安装设置",
+          "selected": "false",
+          "box": {
+            "x": 254.81,
+            "y": 442.08,
+            "width": 113.41,
+            "height": 44,
+            "right": 368.22,
+            "bottom": 486.08
+          }
+        }
+      ],
+      "previewTabs": [
+        {
+          "text": "俯视",
+          "selected": "true",
+          "box": {
+            "x": 27.92,
+            "y": 79.64,
+            "width": 83,
+            "height": 44,
+            "right": 110.92,
+            "bottom": 123.64
+          }
+        },
+        {
+          "text": "侧视",
+          "selected": "false",
+          "box": {
+            "x": 110.92,
+            "y": 79.64,
+            "width": 83,
+            "height": 44,
+            "right": 193.92,
+            "bottom": 123.64
+          }
+        }
+      ],
+      "scrollWidth": 390,
+      "viewportWidth": 390
+    },
+    "checks": [
+      {
+        "name": "production WXML source and include expansion loaded",
+        "passed": true,
+        "detail": {
+          "wxmlLength": 32193,
+          "styleLength": 40043
+        }
+      },
+      {
+        "name": "result is above the three-tab input form",
+        "passed": true,
+        "detail": {
+          "result": {
+            "x": 16.63,
+            "y": 29.63,
+            "width": 304.75,
+            "height": 402.11,
+            "right": 321.38,
+            "bottom": 431.73
+          },
+          "inputCard": {
+            "x": 16.63,
+            "y": 436.92,
+            "width": 356.75,
+            "height": 349.53,
+            "right": 373.38,
+            "bottom": 786.45
+          }
+        }
+      },
+      {
+        "name": "main diagram is a visible actual canvas with deep-blue renderer output",
+        "passed": true,
+        "detail": {
+          "view": "plan",
+          "css": {
+            "width": 284.16,
+            "height": 161.19
+          },
+          "bitmap": {
+            "width": 568,
+            "height": 322
+          },
+          "topLeftPixel": [
+            16,
+            36,
+            58,
+            255
+          ],
+          "deepBlueBackdrop": true,
+          "textLabels": [
+            {
+              "text": "俯视 · 水平视场角 71°",
+              "x": 16,
+              "y": 20,
+              "align": "left",
+              "width": 142.13,
+              "left": 16,
+              "right": 158.13,
+              "font": "14px -apple-system, BlinkMacSystemFont, sans-serif"
+            }
+          ]
+        }
+      },
+      {
+        "name": "production selector-query received actual Chrome result hero and action/detail-tail heights",
+        "passed": true,
+        "detail": {
+          "captureSelector": "#cameraResultHero",
+          "measurements": {
+            "#cameraResultHero": 402.11,
+            "#cameraResultTail": 140.53
+          },
+          "storedHeroPlaceholderHeight": 403,
+          "storedTailPlaceholderHeight": 141,
+          "heroHeightMatches": true,
+          "tailHeightMatches": true
+        }
+      },
+      {
+        "name": "diagram view tabs expose both views and exactly one selected tab",
+        "passed": true,
+        "detail": [
+          {
+            "text": "俯视",
+            "selected": "true",
+            "box": {
+              "x": 27.92,
+              "y": 79.64,
+              "width": 83,
+              "height": 44,
+              "right": 110.92,
+              "bottom": 123.64
+            }
+          },
+          {
+            "text": "侧视",
+            "selected": "false",
+            "box": {
+              "x": 110.92,
+              "y": 79.64,
+              "width": 83,
+              "height": 44,
+              "right": 193.92,
+              "bottom": 123.64
+            }
+          }
+        ]
+      },
+      {
+        "name": "input tabs expose exactly three panels and one visible panel",
+        "passed": true,
+        "detail": {
+          "tabs": [
+            {
+              "text": "相机与镜头",
+              "selected": "true",
+              "box": {
+                "x": 21.78,
+                "y": 442.08,
+                "width": 113.41,
+                "height": 44,
+                "right": 135.19,
+                "bottom": 486.08
+              }
+            },
+            {
+              "text": "目标区域",
+              "selected": "false",
+              "box": {
+                "x": 138.3,
+                "y": 442.08,
+                "width": 113.41,
+                "height": 44,
+                "right": 251.7,
+                "bottom": 486.08
+              }
+            },
+            {
+              "text": "安装设置",
+              "selected": "false",
+              "box": {
+                "x": 254.81,
+                "y": 442.08,
+                "width": 113.41,
+                "height": 44,
+                "right": 368.22,
+                "bottom": 486.08
+              }
+            }
+          ],
+          "panels": [
+            "cameraInputPanelCamera"
+          ]
+        }
+      },
+      {
+        "name": "derivation is initially folded when the fixture requests it",
+        "passed": true,
+        "detail": {
+          "calculationExpanded": false,
+          "detailsVisible": false
+        }
+      },
+      {
+        "name": "horizontal, vertical, and distance comparison derivations remain in production WXML",
+        "passed": true,
+        "detail": [
+          ".horizontal-geometry",
+          ".vertical-geometry",
+          ".distance-bars"
+        ]
+      },
+      {
+        "name": "camera WXSS has no horizontal viewport overflow",
+        "passed": true,
+        "detail": {
+          "scrollWidth": 390,
+          "viewportWidth": 390
+        }
+      },
+      {
+        "name": "all result actions retain a 44px minimum touch height",
+        "passed": true,
+        "detail": [
+          {
+            "text": "复制安装摘要",
+            "x": 16.64,
+            "y": 798.92,
+            "width": 173.36,
+            "height": 45.75,
+            "right": 190,
+            "bottom": 844.67
+          },
+          {
+            "text": "复制完整公式",
+            "x": 200,
+            "y": 798.92,
+            "width": 173.36,
+            "height": 45.75,
+            "right": 373.36,
+            "bottom": 844.67
+          }
+        ]
+      },
+      {
+        "name": "V2 result rail keeps reset/share/favorite/project as reachable 44px controls",
+        "passed": true,
+        "detail": {
+          "rail": {
+            "x": 329.38,
+            "y": 29.63,
+            "width": 44,
+            "height": 188,
+            "right": 373.38,
+            "bottom": 217.63
+          },
+          "pane": {
+            "x": 16.63,
+            "y": 29.63,
+            "width": 356.75,
+            "height": 402.11,
+            "right": 373.38,
+            "bottom": 431.73
+          },
+          "hero": {
+            "x": 16.63,
+            "y": 29.63,
+            "width": 304.75,
+            "height": 402.11,
+            "right": 321.38,
+            "bottom": 431.73
+          },
+          "buttons": [
+            {
+              "selector": "#cameraReset",
+              "box": {
+                "x": 329.38,
+                "y": 29.63,
+                "width": 44,
+                "height": 44,
+                "right": 373.38,
+                "bottom": 73.63
+              },
+              "disabled": false
+            },
+            {
+              "selector": "#cameraShare",
+              "box": {
+                "x": 329.38,
+                "y": 77.63,
+                "width": 44,
+                "height": 44,
+                "right": 373.38,
+                "bottom": 121.63
+              },
+              "disabled": false
+            },
+            {
+              "selector": "#cameraFavorite",
+              "box": {
+                "x": 329.38,
+                "y": 125.63,
+                "width": 44,
+                "height": 44,
+                "right": 373.38,
+                "bottom": 169.63
+              },
+              "disabled": false
+            },
+            {
+              "selector": "#cameraProject",
+              "box": {
+                "x": 329.38,
+                "y": 173.63,
+                "width": 44,
+                "height": 44,
+                "right": 373.38,
+                "bottom": 217.63
+              },
+              "disabled": false
+            }
+          ],
+          "flexDirection": "column",
+          "railFitsBesideHero": true
+        }
+      },
+      {
+        "name": "V2 view and input tabs keep their measured touch areas",
+        "passed": true,
+        "detail": {
+          "previewTabs": [
+            {
+              "x": 27.92,
+              "y": 79.64,
+              "width": 83,
+              "height": 44,
+              "right": 110.92,
+              "bottom": 123.64
+            },
+            {
+              "x": 110.92,
+              "y": 79.64,
+              "width": 83,
+              "height": 44,
+              "right": 193.92,
+              "bottom": 123.64
+            }
+          ],
+          "inputTabs": [
+            {
+              "x": 21.78,
+              "y": 442.08,
+              "width": 113.41,
+              "height": 44,
+              "right": 135.19,
+              "bottom": 486.08
+            },
+            {
+              "x": 138.3,
+              "y": 442.08,
+              "width": 113.41,
+              "height": 44,
+              "right": 251.7,
+              "bottom": 486.08
+            },
+            {
+              "x": 254.81,
+              "y": 442.08,
+              "width": 113.41,
+              "height": 44,
+              "right": 368.22,
+              "bottom": 486.08
+            }
+          ]
+        }
+      },
+      {
+        "name": "V2 copy actions remain secondary controls outside the primary rail",
+        "passed": true,
+        "detail": [
+          {
+            "id": "cameraCopySummary",
+            "text": "复制安装摘要",
+            "className": "copy-result-button",
+            "x": 16.64,
+            "y": 798.92,
+            "width": 173.36,
+            "height": 45.75,
+            "right": 190,
+            "bottom": 844.67
+          },
+          {
+            "id": "cameraCopyFull",
+            "text": "复制完整公式",
+            "className": "copy-result-button",
+            "x": 200,
+            "y": 798.92,
+            "width": 173.36,
+            "height": 45.75,
+            "right": 373.36,
+            "bottom": 844.67
+          }
+        ]
+      },
+      {
+        "name": "V2 width/depth/height dimensions are legible outside the canvas",
+        "passed": true,
+        "detail": {
+          "box": {
+            "x": 27.95,
+            "y": 292.42,
+            "width": 282.09,
+            "height": 19.66,
+            "right": 310.05,
+            "bottom": 312.08
+          },
+          "canvas": {
+            "x": 26.92,
+            "y": 128.64,
+            "width": 284.16,
+            "height": 161.19,
+            "right": 311.08,
+            "bottom": 289.83
+          },
+          "items": [
+            {
+              "text": "目标实际宽×深 6×4 m",
+              "box": {
+                "x": 27.95,
+                "y": 292.42,
+                "width": 282.09,
+                "height": 19.66,
+                "right": 310.05,
+                "bottom": 312.08
+              }
+            }
+          ]
+        }
+      },
+      {
+        "name": "V2 390px first screen exposes tabs and the first camera-source field without scrolling",
+        "passed": true,
+        "detail": {
+          "viewport": {
+            "width": 390,
+            "height": 700
+          },
+          "scrollTop": 0,
+          "hero": {
+            "x": 16.63,
+            "y": 29.63,
+            "width": 304.75,
+            "height": 402.11,
+            "right": 321.38,
+            "bottom": 431.73
+          },
+          "heroHeight": 402.109375,
+          "inputTabs": {
+            "x": 17.63,
+            "y": 437.92,
+            "width": 354.75,
+            "height": 53.31,
+            "right": 372.38,
+            "bottom": 491.23
+          },
+          "sourceSegment": {
+            "x": 29.06,
+            "y": 545.02,
+            "width": 331.88,
+            "height": 50.22,
+            "right": 360.94,
+            "bottom": 595.23
+          },
+          "firstCameraField": {
+            "x": 29.06,
+            "y": 603.55,
+            "width": 331.88,
+            "height": 68.16,
+            "right": 360.94,
+            "bottom": 671.7
+          }
+        }
+      },
+      {
+        "name": "V2 primary distance, definition, mount cue, and caveat remain readable in the first screen",
+        "passed": true,
+        "detail": {
+          "blocks": [
+            {
+              "text": "4.83 m",
+              "box": {
+                "x": 27.97,
+                "y": 345.22,
+                "width": 134.06,
+                "height": 33.17,
+                "right": 162.03,
+                "bottom": 378.39
+              },
+              "fontSize": "30.16px"
+            },
+            {
+              "text": "镜头中心至拍摄区实际前沿（水平）",
+              "box": {
+                "x": 22.81,
+                "y": 385.63,
+                "width": 292.38,
+                "height": 18.92,
+                "right": 315.19,
+                "bottom": 404.55
+              },
+              "fontSize": "14.56px"
+            },
+            {
+              "text": "双轴角度估算 · 未计遮挡/裁切 · 需实拍复核",
+              "box": {
+                "x": 22.81,
+                "y": 406.63,
+                "width": 292.38,
+                "height": 18.92,
+                "right": 315.19,
+                "bottom": 425.55
+              },
+              "fontSize": "14.56px"
+            }
+          ],
+          "mountType": "ptz",
+          "mountNeedle": "云台可调朝向",
+          "mountCueVisible": true,
+          "mountCueCandidates": [
+            {
+              "text": "地面区域 · 余量10% · 云台可调朝向",
+              "box": {
+                "x": 22.81,
+                "y": 54.38,
+                "width": 208.56,
+                "height": 17.56,
+                "right": 231.38,
+                "bottom": 71.94
+              }
+            }
+          ]
+        }
+      },
+      {
+        "name": "labels do not claim verified/actual scene coverage",
+        "passed": true,
+        "detail": {
+          "visibleText": false
+        }
+      }
+    ],
+    "failures": [],
+    "sourceHashes": {
+      "pages/camera/camera.js": "b6e45a5c9906261b0a518e71ae0bd0c464e106aeccee9222fc108425ac21ca28",
+      "pages/camera/camera.wxml": "18eebff896498642a1e7600eb90640d46b98d3c3b3148cbb58511f04a8aa2096",
+      "pages/camera/camera.wxss": "b4125786ac0a7d5d75ab926beb9e0222b6081bb2abc698c90cdbb0ebf9e8ccd8",
+      "pages/camera/preview-renderer.js": "6b23e160c9b61d76437f706b70b3c416368c4fe697d745ca775704a8231b9d93",
+      "app.wxss": "14e75494ff63bd53a3e6e53cebc5b225205c86c094f4b7506cf52fccfb4a1c6b",
+      "styles/theme-page-shared.wxss": "5731440f4677c604781b9919ac45e1a9430e67aeed34730565766d17beba988c",
+      "pages/common/operation-confirmation.wxml": "111ccd1ff05daf0280ad57917663b7fc658392b16ac8f0190dffb416cdc5d1f5",
+      "templates/result-report-preview.wxml": "211f7e0ce53e3596d42837ad19585d8082d8b6fa24f7808d630a66fd4f31bea9",
+      "utils/camera-fov.js": "e6cbec98ced62df9c15d7f911e1861ff31c13bfff4c8f5bdbbfbe5ab1cd95736",
+      "data/cameras.js": "4fe77428c0ee353918fa091cce8057d0c2a4dff4f2584207856f845ef774fcfd"
+    },
+    "styleSources": [
+      "/app.wxss",
+      "/pages/camera/camera.wxss"
+    ],
+    "expandedStyles": [
+      "/app.wxss",
+      "/pages/camera/camera.wxss",
+      "/styles/theme-page-shared.wxss"
+    ]
+  },
+  "screenshot": "C:\\Users\\wxx\\Documents\\Codex\\audio-system-tool-miniapp\\tests\\camera-refactor-2026-10-11\\evidence-v2\\diagnostic\\screenshots\\compact-first-screen-390-700-light.png"
+}

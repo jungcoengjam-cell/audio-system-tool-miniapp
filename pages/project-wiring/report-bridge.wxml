@@ -1,0 +1,11 @@
+<view class="report-bridge-page">
+  <view class="report-bridge-card">
+    <view class="report-bridge-title">正在生成项目线路原生图片</view>
+    <view class="report-bridge-copy">{{progressText}}</view>
+    <view class="report-bridge-copy">图片完成后会返回项目报告。</view>
+    <button class="report-bridge-cancel" bindtap="cancel">取消生成</button>
+  </view>
+  <canvas canvas-id="projectWiringReportBridgeCanvas" class="report-bridge-canvas"
+    width="{{canvasWidth}}" height="{{canvasHeight}}"
+    style="width: {{canvasWidth}}px; height: {{canvasHeight}}px;"></canvas>
+</view>

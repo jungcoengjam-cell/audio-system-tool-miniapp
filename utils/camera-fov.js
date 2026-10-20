@@ -1,3 +1,4 @@
+const { solveFramingDistance } = require('./camera-framing')
 const DEGREE = Math.PI / 180
 
 function round(value, digits = 1) {
@@ -245,7 +246,7 @@ function decorateHorizontalPlacement(fov, values) {
   }
 }
 
-function calculateHorizontalOnlyPlacement(fov, options = {}) {
+function calculateLegacyHorizontalOnlyPlacement(fov, options = {}) {
   if (!fov || !isAngle(fov.horizontalFov)) return null
   const sceneMode = options.sceneMode === 'plane' ? 'plane' : 'ground'
   const widthMeters = Number(options.widthMeters)
@@ -340,7 +341,7 @@ function calculateHorizontalOnlyPlacement(fov, options = {}) {
   })
 }
 
-function calculateGroundAreaPlacement(fov, options = {}) {
+function calculateLegacyGroundAreaPlacement(fov, options = {}) {
   if (!fov || !isAngle(fov.horizontalFov) || !isAngle(fov.verticalFov)) return null
   const widthMeters = Number(options.widthMeters)
   const depthMeters = Number(options.depthMeters)
@@ -415,7 +416,7 @@ function calculateGroundAreaPlacement(fov, options = {}) {
   })
 }
 
-function calculateVerticalPlanePlacement(fov, options = {}) {
+function calculateLegacyVerticalPlanePlacement(fov, options = {}) {
   if (!fov || !isAngle(fov.horizontalFov) || !isAngle(fov.verticalFov)) return null
   const widthMeters = Number(options.widthMeters)
   const heightMeters = Number(options.heightMeters)
@@ -495,6 +496,91 @@ function calculateVerticalPlanePlacement(fov, options = {}) {
     primaryDistanceLabel: '距目标平面',
     primaryDistanceMeters: round(distanceMeters, 2),
   })
+}
+
+// Version 2 applies total linear width/height allowance in the camera image
+// cross-section. Physical site depth and height remain untouched. Version 1
+// is retained solely to reopen pre-existing saved configurations verbatim.
+function calculateFramedPlacement(fov, options, sceneMode, horizontalOnly = false) {
+  if (!fov || !isAngle(fov.horizontalFov) || (!horizontalOnly && !isAngle(fov.verticalFov))) return null
+  const width = Number(options.widthMeters)
+  const ground = sceneMode === 'ground'
+  const depth = ground ? Number(options.depthMeters) : 0
+  const height = Number(ground ? options.subjectHeightMeters : options.heightMeters)
+  const bottom = ground ? 0 : Number(options.bottomHeightMeters)
+  const heightMode = options.heightMode === 'fixed' ? 'fixed' : 'auto'
+  const cameraHeight = heightMode === 'fixed' ? Number(options.cameraHeightMeters)
+    : ground ? Math.max(1.5, height + 0.5) : bottom + height / 2
+  const margin = Number(options.marginRatio)
+  const marginRatio = Number.isFinite(margin) && margin >= 0 && margin <= 0.5 ? margin : 0.1
+  if (![width, height, cameraHeight].every(positive) || (ground && !positive(depth))
+    || !Number.isFinite(bottom) || bottom < 0) return null
+  const framingOptions = { width, depth, bottom, top: bottom + height, cameraHeight, marginRatio }
+  const horizontal = solveFramingDistance(framingOptions, fov.horizontalFov)
+  const solved = horizontalOnly ? horizontal : horizontal
+    && solveFramingDistance(framingOptions, fov.horizontalFov, fov.verticalFov, horizontal.distance)
+  if (!solved || !horizontal) return null
+  const distance = solved.distance
+  const aim = describeAim(solved.pitchDegrees)
+  const axisDepth = distance * Math.cos(solved.pitchDegrees * DEGREE)
+    + (bottom + height / 2 - cameraHeight) * Math.sin(solved.pitchDegrees * DEGREE)
+  const values = {
+    sceneMode, sceneLabel: ground ? '地面区域' : '垂直平面',
+    framingVersion: 2, marginSpace: 'camera-normal',
+    worldDimensions: { width, depth, bottom, top: bottom + height, cameraHeight },
+    widthMeters: round(width, 2), cameraHeightMeters: round(cameraHeight, 2), heightMode,
+    heightBasis: heightMode === 'fixed' ? '按现场固定高度校核'
+      : ground ? '人物最高点 + 0.5 m 安装余量' : '镜头中心与目标中心等高',
+    // These are lengths in the camera-normal cross-section, not site sizes.
+    effectiveWidthMeters: round((solved.expanded.maxU - solved.expanded.minU) * axisDepth, 2),
+    effectiveHeightMeters: round((solved.expanded.maxV - solved.expanded.minV) * axisDepth, 2),
+    horizontalMinimumDistanceMeters: round(horizontal.distance, 2),
+    verticalMinimumDistanceMeters: round(distance, 2),
+    calculationDistanceMeters: distance, calculationAimAngleDegrees: solved.pitchDegrees,
+    calculationHorizontalFov: fov.horizontalFov,
+    calculationVerticalFov: horizontalOnly ? null : fov.verticalFov,
+    requiredHorizontalFov: solved.requiredHorizontalFov,
+    requiredVerticalFov: solved.requiredVerticalFov,
+    distanceConstraintText: horizontalOnly ? '仅水平参考，垂直未校核'
+      : describeDistanceConstraint(horizontal.distance, distance),
+    aimAngleDegrees: horizontalOnly ? null : round(solved.pitchDegrees, 1),
+    referenceAimAngleDegrees: solved.pitchDegrees,
+    aimDirection: aim.direction, tiltDegrees: aim.degrees, aimText: aim.text,
+    marginRatio,
+    framingBounds: { target: solved.target, expanded: solved.expanded, referenceDepthMeters: axisDepth },
+    primaryDistanceLabel: ground ? '距拍摄区前沿' : '距目标平面',
+    primaryDistanceMeters: round(distance, 2),
+    ...(ground ? {
+      depthMeters: round(depth, 2), subjectHeightMeters: round(height, 2),
+      effectiveDepthMeters: round(depth, 2), effectiveSubjectHeightMeters: round(height, 2),
+      depthMarginMeters: 0, cameraSetbackMeters: round(distance, 2),
+      distanceToCenterMeters: round(distance + depth / 2, 2),
+      distanceToFarEdgeMeters: round(distance + depth, 2),
+      effectiveNearDistanceMeters: round(distance, 2),
+    } : {
+      heightMeters: round(height, 2), bottomHeightMeters: round(bottom, 2),
+      targetCenterHeightMeters: round(bottom + height / 2, 2),
+      distanceMeters: round(distance, 2),
+      frameWidthMeters: round(2 * axisDepth * Math.tan(fov.horizontalFov * DEGREE / 2), 2),
+      frameHeightMeters: horizontalOnly ? null : round(2 * axisDepth * Math.tan(fov.verticalFov * DEGREE / 2), 2),
+    }),
+  }
+  return horizontalOnly ? decorateHorizontalPlacement(fov, values) : decoratePlacement(fov, values)
+}
+
+function calculateGroundAreaPlacement(fov, options = {}) {
+  return options.calculationVersion === 1 ? calculateLegacyGroundAreaPlacement(fov, options)
+    : calculateFramedPlacement(fov, options, 'ground')
+}
+
+function calculateVerticalPlanePlacement(fov, options = {}) {
+  return options.calculationVersion === 1 ? calculateLegacyVerticalPlanePlacement(fov, options)
+    : calculateFramedPlacement(fov, options, 'plane')
+}
+
+function calculateHorizontalOnlyPlacement(fov, options = {}) {
+  return options.calculationVersion === 1 ? calculateLegacyHorizontalOnlyPlacement(fov, options)
+    : calculateFramedPlacement(fov, options, options.sceneMode === 'plane' ? 'plane' : 'ground', true)
 }
 
 function getHorizontalCameraViews(camera) {

@@ -1,159 +1,169 @@
 <view class="page-root">
-  <scroll-view class="page-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+  <scroll-view class="page-scroll" aria-label="LED 大屏尺寸" scroll-y="{{!projectDialogVisible && !reportPreviewVisible && !reportPreviewClosing}}" enhanced show-scrollbar="{{false}}">
     <view class="page-content">
-      <view class="page-header"><view class="page-title">LED 大屏尺寸</view></view>
+      <view class="result-card">
+        <view class="action-rail" aria-label="方案操作">
+          <button class="action-button" aria-label="清空本次计算" bindtap="resetInputs"><view class="action-icon icon-reset"></view></button>
+          <button class="action-button" aria-label="分享结果图片" disabled="{{!result || inputPending || inputError || isGeneratingReport}}" bindtap="openSharePreview"><view class="action-icon icon-share"></view></button>
+          <button class="action-button" aria-label="收藏当前方案" aria-pressed="{{currentFavorite}}" disabled="{{!result || inputPending || inputError}}" bindtap="toggleCurrentFavorite"><view class="action-icon icon-bookmark {{currentFavorite ? 'icon-bookmark-active' : ''}}"></view></button>
+          <button class="action-button" aria-label="保存到项目" disabled="{{!result || inputPending || inputError}}" bindtap="openProjectSheet"><view class="action-icon icon-folder"></view></button>
+        </view>
+        <include src="../../templates/result-record-actions.wxml" />
+        <view wx:if="{{result}}" class="result-content">
+          <view class="result-main">
+            <view class="result-primary">
+              <view class="result-label">净屏尺寸</view>
+              <view class="screen-dimension">{{result.dimensionText}}</view>
+              <view class="screen-layout">{{result.columns}} 列 × {{result.rows}} 行 · 共 {{result.totalUnits}} 块</view>
+              <view class="screen-install-dimension">
+                <text>外框（含包边）</text>
+                <text>{{result.installedDimensionText}}</text>
+              </view>
+            </view>
+
+            <view class="diagram-card">
+              <view class="wall-width-label">墙体 {{wallWidthText}} × {{wallHeightText}} m</view>
+              <view class="diagram-stage" style="{{result.diagramStageStyle}}">
+                <view class="diagram-fit" style="{{result.diagramFitStyle}}">
+                  <view class="wall-diagram" style="{{result.wallDiagramStyle}}">
+                    <view class="screen-frame" style="{{result.frameStyle}}">
+                      <view class="screen-shape" style="{{result.screenStyle}}">
+                        <view wx:if="{{!result.diagramLabelsBelow}}" class="screen-shape-label">净屏</view>
+                      </view>
+                    </view>
+                  </view>
+                </view>
+              </view>
+              <view wx:if="{{result.diagramLabelsBelow}}" class="diagram-net-label">净屏</view>
+              <view class="diagram-legend">
+                <view><text class="legend-swatch legend-wall"></text><text>墙体</text></view>
+                <view><text class="legend-swatch legend-frame"></text><text>包边</text></view>
+                <view><text class="legend-swatch legend-screen"></text><text>净屏</text></view>
+              </view>
+            </view>
+          </view>
+
+          <view class="diagram-clearances" aria-label="安装余量">
+            <text>左 {{result.horizontalMarginMeters}} m</text>
+            <text>右 {{result.horizontalMarginMeters}} m</text>
+            <text>上 {{result.actualTopMarginMeters}} m</text>
+            <text>下 {{result.actualBottomMarginMeters}} m</text>
+          </view>
+
+          <view class="tertiary-grid">
+            <view class="tertiary-item"><view class="tertiary-value">{{result.resolutionText}}</view><view class="tertiary-label">估算分辨率</view></view>
+            <view class="tertiary-item"><view class="tertiary-value">{{result.pitchText}}</view><view class="tertiary-label">{{result.pitchModeLabel}}</view></view>
+            <view class="tertiary-item"><view class="tertiary-value">{{result.actualRatioText}}</view><view class="tertiary-label">实际比例 · 偏差 {{result.ratioDeviationText}}</view></view>
+          </view>
+          <view wx:if="{{result.ratioFallback}}" class="ratio-fallback-note">{{result.ratioFallbackText}}</view>
+
+          <view class="viewing-result viewing-result-{{result.statusKey}}">
+            <view class="viewing-heading">
+              <view class="viewing-title">观看距离校核</view>
+              <view class="viewing-actions">
+                <view class="viewing-status">{{result.statusLabel}}</view>
+                <view wx:if="{{result.statusKey !== 'fit'}}" class="viewing-details-toggle" bindtap="toggleViewingDetails">{{viewingDetailsExpanded ? '收起说明' : '查看说明'}}</view>
+              </view>
+            </view>
+            <view class="viewing-facts">
+              <view><text>最近观看</text><text>{{result.viewingDistanceMeters}} m</text></view>
+              <view><text>舒适距离</text><text>{{result.comfortableRangeText}}</text></view>
+            </view>
+            <view wx:if="{{result.viewingAssessmentText}}" class="viewing-note">{{result.viewingAssessmentText}}</view>
+            <view wx:if="{{viewingDetailsExpanded}}" class="viewing-details">{{result.viewingDetailsText}}</view>
+          </view>
+        </view>
+
+        <view wx:else class="empty-result">
+          <view wx:if="{{inputPending}}" class="empty-result-title">正在更新方案</view>
+          <view wx:elif="{{inputError}}" class="empty-result-title">请核对输入</view>
+          <view wx:else class="empty-result-title">填写安装条件后生成方案</view>
+          <view wx:if="{{inputPending}}" class="empty-result-copy">正在根据当前输入重新计算。</view>
+          <view wx:elif="{{inputError}}" class="empty-result-copy">{{inputError}}</view>
+          <view wx:else class="empty-result-copy">填写墙面尺寸和观看条件后自动计算。</view>
+        </view>
+      </view>
+
+      <include src="../common/operation-confirmation.wxml" />
 
       <view class="card input-card">
-        <view class="section-label">可安装墙面</view>
-        <view class="field-grid">
-          <view class="field {{fieldErrors.wallWidthText ? 'field-error' : ''}}">
-            <view class="field-label">墙体宽度</view>
-            <view class="input-wrap"><input type="digit" value="{{wallWidthText}}" data-field="wallWidthText" bindinput="onFieldInput" bindblur="onFieldBlur" /><text>m</text></view>
-            <view wx:if="{{fieldErrors.wallWidthText}}" class="field-error-text">{{fieldErrors.wallWidthText}}</view>
-          </view>
-          <view class="field {{fieldErrors.wallHeightText ? 'field-error' : ''}}">
-            <view class="field-label">墙体高度</view>
-            <view class="input-wrap"><input type="digit" value="{{wallHeightText}}" data-field="wallHeightText" bindinput="onFieldInput" bindblur="onFieldBlur" /><text>m</text></view>
-            <view wx:if="{{fieldErrors.wallHeightText}}" class="field-error-text">{{fieldErrors.wallHeightText}}</view>
-          </view>
-        </view>
-
-        <view class="field-grid compact-row reserve-row">
-          <view class="field {{fieldErrors.topReserveText ? 'field-error' : ''}}">
-            <view class="field-label">上方最小预留</view>
-            <view class="input-wrap"><input type="digit" value="{{topReserveText}}" data-field="topReserveText" bindinput="onFieldInput" bindblur="onFieldBlur" /><text>m</text></view>
-            <view wx:if="{{fieldErrors.topReserveText}}" class="field-error-text">{{fieldErrors.topReserveText}}</view>
-          </view>
-          <view class="field {{fieldErrors.bottomReserveText ? 'field-error' : ''}}">
-            <view class="field-label">下方最小预留</view>
-            <view class="input-wrap"><input type="digit" value="{{bottomReserveText}}" data-field="bottomReserveText" bindinput="onFieldInput" bindblur="onFieldBlur" /><text>m</text></view>
-            <view wx:if="{{fieldErrors.bottomReserveText}}" class="field-error-text">{{fieldErrors.bottomReserveText}}</view>
-          </view>
-          <view class="field {{fieldErrors.frameWidthText ? 'field-error' : ''}}">
-            <view class="field-label">包边（每边）</view>
-            <view class="input-wrap"><input type="digit" value="{{frameWidthText}}" data-field="frameWidthText" bindinput="onFieldInput" bindblur="onFieldBlur" /><text>cm</text></view>
-            <view wx:if="{{fieldErrors.frameWidthText}}" class="field-error-text">{{fieldErrors.frameWidthText}}</view>
-          </view>
-        </view>
-        <view class="section-divider"></view>
-        <view class="field-grid config-row">
-          <view class="field {{fieldErrors.aspectRatioIndex ? 'field-error' : ''}}">
-            <view class="field-label">目标比例</view>
-            <picker range="{{aspectRatioOptions}}" range-key="label" value="{{aspectRatioIndex}}" bindchange="onAspectRatioChange">
-              <view class="picker-value"><text>{{aspectRatioIndex >= 0 ? aspectRatioOptions[aspectRatioIndex].label : '请选择'}}</text><view class="picker-arrow">›</view></view>
-            </picker>
-            <view wx:if="{{fieldErrors.aspectRatioIndex}}" class="field-error-text">{{fieldErrors.aspectRatioIndex}}</view>
-          </view>
-          <view class="field {{fieldErrors.unitIndex ? 'field-error' : ''}}">
-            <view class="field-label">拼装单元</view>
-            <picker range="{{unitOptions}}" range-key="label" value="{{unitIndex}}" bindchange="onUnitChange">
-              <view class="picker-value"><text>{{unitIndex >= 0 ? unitOptions[unitIndex].label : '请选择'}}</text><view class="picker-arrow">›</view></view>
-            </picker>
-            <view wx:if="{{fieldErrors.unitIndex}}" class="field-error-text">{{fieldErrors.unitIndex}}</view>
+        <view class="input-section">
+          <view class="section-label">安装条件</view>
+          <view class="field-grid numeric-grid">
+            <view class="field {{fieldErrors.wallWidthText ? 'field-error' : ''}}">
+              <view class="field-label">墙体宽度</view>
+              <view class="input-wrap"><input type="digit" value="{{wallWidthText}}" data-field="wallWidthText" bindinput="onFieldInput" bindblur="onFieldBlur" /><text>m</text></view>
+              <view wx:if="{{fieldErrors.wallWidthText}}" class="field-error-text">{{fieldErrors.wallWidthText}}</view>
+            </view>
+            <view class="field {{fieldErrors.wallHeightText ? 'field-error' : ''}}">
+              <view class="field-label">墙体高度</view>
+              <view class="input-wrap"><input type="digit" value="{{wallHeightText}}" data-field="wallHeightText" bindinput="onFieldInput" bindblur="onFieldBlur" /><text>m</text></view>
+              <view wx:if="{{fieldErrors.wallHeightText}}" class="field-error-text">{{fieldErrors.wallHeightText}}</view>
+            </view>
+            <view class="field {{fieldErrors.viewingDistanceText ? 'field-error' : ''}}">
+              <view class="field-label">最近观看距离</view>
+              <view class="input-wrap"><input type="digit" value="{{viewingDistanceText}}" data-field="viewingDistanceText" bindinput="onFieldInput" bindblur="onFieldBlur" /><text>m</text></view>
+              <view wx:if="{{fieldErrors.viewingDistanceText}}" class="field-error-text">{{fieldErrors.viewingDistanceText}}</view>
+            </view>
+            <view class="field {{fieldErrors.topReserveText ? 'field-error' : ''}}">
+              <view class="field-label">上方最小预留</view>
+              <view class="input-wrap"><input type="digit" value="{{topReserveText}}" data-field="topReserveText" bindinput="onFieldInput" bindblur="onFieldBlur" /><text>m</text></view>
+              <view wx:if="{{fieldErrors.topReserveText}}" class="field-error-text">{{fieldErrors.topReserveText}}</view>
+            </view>
+            <view class="field {{fieldErrors.bottomReserveText ? 'field-error' : ''}}">
+              <view class="field-label">下方最小预留</view>
+              <view class="input-wrap"><input type="digit" value="{{bottomReserveText}}" data-field="bottomReserveText" bindinput="onFieldInput" bindblur="onFieldBlur" /><text>m</text></view>
+              <view wx:if="{{fieldErrors.bottomReserveText}}" class="field-error-text">{{fieldErrors.bottomReserveText}}</view>
+            </view>
+            <view class="field {{fieldErrors.frameWidthText ? 'field-error' : ''}}">
+              <view class="field-label">包边（每边）</view>
+              <view class="input-wrap"><input type="digit" value="{{frameWidthText}}" data-field="frameWidthText" bindinput="onFieldInput" bindblur="onFieldBlur" /><text>cm</text></view>
+              <view wx:if="{{fieldErrors.frameWidthText}}" class="field-error-text">{{fieldErrors.frameWidthText}}</view>
+            </view>
           </view>
         </view>
 
-        <view class="section-divider"></view>
-        <view class="section-label">观看条件</view>
-        <view class="field-grid compact-row">
-          <view class="field {{fieldErrors.viewingDistanceText ? 'field-error' : ''}}">
-            <view class="field-label">最近观看距离</view>
-            <view class="input-wrap"><input type="digit" value="{{viewingDistanceText}}" data-field="viewingDistanceText" bindinput="onFieldInput" bindblur="onFieldBlur" /><text>m</text></view>
-            <view wx:if="{{fieldErrors.viewingDistanceText}}" class="field-error-text">{{fieldErrors.viewingDistanceText}}</view>
-          </view>
-          <view class="field {{fieldErrors.pitchIndex ? 'field-error' : ''}}">
-            <view class="field-label">点间距</view>
-            <picker range="{{pitchOptions}}" range-key="label" value="{{pitchIndex}}" bindchange="onPitchChange">
-              <view class="picker-value"><text>{{pitchIndex >= 0 ? pitchOptions[pitchIndex].label : '请选择'}}</text><view class="picker-arrow">›</view></view>
-            </picker>
-            <view wx:if="{{fieldErrors.pitchIndex}}" class="field-error-text">{{fieldErrors.pitchIndex}}</view>
+        <view class="input-section input-section-last">
+          <view class="field-grid config-grid">
+            <view class="field {{fieldErrors.aspectRatioIndex ? 'field-error' : ''}}">
+              <view class="field-label">目标画面比例</view>
+              <picker range="{{aspectRatioOptions}}" range-key="label" value="{{aspectRatioIndex}}" bindchange="onAspectRatioChange">
+                <view class="picker-value"><text>{{aspectRatioIndex >= 0 ? aspectRatioOptions[aspectRatioIndex].label : '请选择比例'}}</text><view class="picker-arrow">›</view></view>
+              </picker>
+              <view wx:if="{{fieldErrors.aspectRatioIndex}}" class="field-error-text">{{fieldErrors.aspectRatioIndex}}</view>
+            </view>
+            <view class="field {{fieldErrors.pitchIndex ? 'field-error' : ''}}">
+              <view class="field-label">点间距</view>
+              <picker range="{{pitchOptions}}" range-key="label" value="{{pitchIndex}}" bindchange="onPitchChange">
+                <view class="picker-value"><text>{{pitchIndex >= 0 ? pitchOptions[pitchIndex].label : '请选择点间距'}}</text><view class="picker-arrow">›</view></view>
+              </picker>
+              <view wx:if="{{fieldErrors.pitchIndex}}" class="field-error-text">{{fieldErrors.pitchIndex}}</view>
+            </view>
+            <view class="field field-full unit-field {{fieldErrors.unitIndex ? 'field-error' : ''}}">
+              <view class="unit-picker-row">
+                <view class="field-label unit-field-label">拼装单元</view>
+                <picker class="unit-picker" range="{{unitOptions}}" range-key="label" value="{{unitIndex}}" bindchange="onUnitChange">
+                  <view class="picker-value"><text>{{unitIndex >= 0 ? unitOptions[unitIndex].label : '请选择拼装单元'}}</text><view class="picker-arrow">›</view></view>
+                </picker>
+              </view>
+              <view wx:if="{{fieldErrors.unitIndex}}" class="field-error-text">{{fieldErrors.unitIndex}}</view>
+            </view>
           </view>
         </view>
-        <view wx:if="{{inputPending}}" class="input-pending">更新中…</view>
+        <view wx:if="{{inputPending}}" class="input-pending">正在更新方案…</view>
+        <view wx:if="{{resetPersistenceError}}" class="reset-persist-error">
+          <text>清空状态暂未保存。</text><button bindtap="retryResetPersistence">重试</button>
+        </view>
         <view wx:if="{{inputError}}" class="warning-card">
           <view class="warning-title">暂时无法计算</view>
           <view class="warning-text">{{inputError}}</view>
           <view wx:if="{{inputSuggestion}}" class="warning-suggestion">{{inputSuggestion}}</view>
         </view>
       </view>
-
-      <include src="../common/operation-confirmation.wxml" />
-
-      <view wx:if="{{result}}" class="result-card">
-        <view class="result-heading">
-          <view><view class="result-label">推荐净屏</view><view class="result-subtitle">{{result.unitLabel}}</view></view>
-          <view class="status-chip">{{result.ratioText}}</view>
-        </view>
-        <view class="screen-dimension">{{result.dimensionText}}</view>
-        <view class="screen-layout">{{result.columns}} 列 × {{result.rows}} 行 · 共 {{result.totalUnits}} 块</view>
-        <view class="ratio-summary {{result.ratioFallback ? 'ratio-summary-fallback' : ''}}">{{result.ratioSummaryText}}</view>
-        <view wx:if="{{result.ratioFallback}}" class="ratio-fallback-note">{{result.ratioFallbackText}}</view>
-        <view class="screen-install-dimension"><view class="screen-install-label">安装外尺寸（含包边）</view><view class="screen-install-value">{{result.installedDimensionText}}</view></view>
-        <view class="metric-grid">
-          <view class="metric"><view class="metric-value">{{result.resolutionText}}</view><view class="metric-label">估算分辨率</view></view>
-          <view class="metric"><view class="metric-value">{{result.horizontalMarginText}}</view><view class="metric-label">左右余量</view></view>
-          <view class="metric"><view class="metric-value">{{result.verticalMarginText}}</view><view class="metric-label">上 / 下实际余量</view></view>
-        </view>
-        <view class="viewing-result viewing-result-{{result.statusKey}}">
-          <view class="viewing-heading"><view><view class="viewing-label">{{result.pitchModeLabel}}</view><view class="viewing-pitch">{{result.pitchText}}</view></view><view class="viewing-status">{{result.statusLabel}}</view></view>
-          <view class="viewing-line"><text>最近观看</text><text>{{result.viewingDistanceMeters}} m</text></view>
-          <view class="viewing-line"><text>舒适范围</text><text>{{result.comfortableRangeText}}</text></view>
-          <view wx:if="{{result.statusKey !== 'fit'}}" class="viewing-note">{{result.statusText}}</view>
-        </view>
-      </view>
-
-      <view wx:if="{{result}}" class="utility-action-row">
-        <view class="result-output-actions">
-          <button class="report-generate-button result-image-button" disabled="{{isGeneratingReport}}" bindtap="generateReportImage">{{isGeneratingReport ? '正在生成…' : '生成方案图片'}}</button>
-          <button class="report-copy-button copy-result-button" bindtap="copyResult">复制文字</button>
-        </view>
-        <view class="result-record-actions">
-          <button class="result-record-button {{currentFavorite ? 'result-record-button-active' : ''}}" bindtap="toggleCurrentFavorite">{{currentFavorite ? '★ 已收藏' : '☆ 收藏常用'}}</button>
-          <button class="result-record-button" bindtap="saveToActiveProject">选择项目保存</button>
-        </view>
-      </view>
-
-      <view wx:if="{{result}}" class="card diagram-card">
-        <view class="diagram-heading"><view class="card-title">墙面安装示意</view></view>
-        <view class="wall-width-label">墙宽 {{wallWidthText}} m</view>
-        <view class="diagram-stage">
-          <view class="diagram-fit" style="{{result.diagramFitStyle}}">
-            <view class="wall-diagram" style="{{result.wallDiagramStyle}}">
-              <view class="screen-frame" style="{{result.frameStyle}}">
-                <view class="screen-shape" style="{{result.screenStyle}}">
-                  <view wx:if="{{!result.diagramLabelsBelow}}" class="screen-shape-label">净屏 {{result.dimensionText}}</view>
-                </view>
-              </view>
-            </view>
-          </view>
-        </view>
-        <view wx:if="{{result.diagramLabelsBelow}}" class="diagram-offwall-label">净屏 {{result.dimensionText}}</view>
-        <view class="wall-height-label">墙高 {{wallHeightText}} m</view>
-        <view class="diagram-legend">
-          <view><text class="legend-swatch legend-wall"></text><text>墙体</text></view>
-          <view><text class="legend-swatch legend-frame"></text><text>包边</text></view>
-          <view><text class="legend-swatch legend-screen"></text><text>净屏</text></view>
-        </view>
-        <view class="diagram-summary"><text>左右各 {{result.horizontalMarginMeters}} m</text><text>包边 {{result.frameWidthCentimeters}} cm</text><text>上 {{result.actualTopMarginMeters}} m</text><text>下 {{result.actualBottomMarginMeters}} m</text></view>
-      </view>
     </view>
   </scroll-view>
 
   <canvas id="ledScreenReportCanvas" canvas-id="ledScreenReportCanvas" class="report-canvas-offscreen" width="{{reportCanvasWidth}}" height="{{reportCanvasHeight}}" style="width:{{reportCanvasWidth}}px;height:{{reportCanvasHeight}}px;"></canvas>
-
-  <view wx:if="{{reportPreviewVisible}}" class="report-preview-overlay" bindtap="closeReportPreview" catchtouchmove="preventTouchMove">
-    <view class="report-preview-sheet" catchtap="stopEvent">
-      <view class="report-preview-header">
-        <view><view class="report-preview-title">方案图片已生成</view></view>
-        <button class="report-close-button" bindtap="closeReportPreview">关闭</button>
-      </view>
-      <scroll-view class="report-preview-scroll" scroll-y enhanced show-scrollbar="{{false}}">
-        <image class="report-preview-image" src="{{reportImagePath}}" mode="widthFix" bindtap="previewReportImage"></image>
-      </scroll-view>
-      <view class="report-preview-actions">
-        <button class="report-share-button" bindtap="shareReportImage">转发图片</button>
-        <button class="report-save-button" bindtap="saveReportImage">保存到相册</button>
-      </view>
-    </view>
-  </view>
+  <include src="./led-overlays.wxml" />
+  <include src="../../templates/editor-navigation-guard.wxml" />
 </view>

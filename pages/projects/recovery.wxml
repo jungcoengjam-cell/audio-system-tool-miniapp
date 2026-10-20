@@ -1,0 +1,56 @@
+<scroll-view class="home-scroll recovery-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+  <view class="home-page recovery-page">
+    <view class="home-header home-header-stacked">
+      <view class="home-title">恢复区</view>
+      <view class="home-subtitle">已移除内容和中断编辑会一直保留，直到你选择恢复或放弃</view>
+    </view>
+    <view wx:if="{{error}}" class="home-panel recovery-error">
+      <view class="home-empty-state-title">{{error}}</view>
+      <button class="home-secondary-button" bindtap="retry">重试</button>
+    </view>
+
+    <view wx:if="{{recoveryEntries.length}}" class="recovery-section">
+      <view class="recovery-section-title">已移除内容</view>
+      <view wx:for="{{recoveryEntries}}" wx:key="id" class="home-panel recovery-card">
+        <view class="recovery-card-top">
+          <view class="recovery-type">{{item.kindLabel}}</view>
+          <view class="recovery-date">{{item.timeText}}</view>
+        </view>
+        <view class="recovery-card-title">{{item.title}}</view>
+        <view wx:if="{{item.summary}}" class="recovery-card-summary">{{item.summary}}</view>
+        <button class="home-secondary-button recovery-action" data-id="{{item.id}}" bindtap="restoreEntry">{{item.kind === 'legacy-recent' ? '选择项目并恢复' : '恢复'}}</button>
+      </view>
+    </view>
+
+    <view wx:if="{{sessions.length}}" class="recovery-section">
+      <view class="recovery-section-title">中断的编辑</view>
+      <view wx:for="{{sessions}}" wx:key="id" class="home-panel recovery-card">
+        <view class="recovery-type">{{item.moduleLabel}}</view>
+        <view class="recovery-card-title">{{item.title}}</view>
+        <view class="recovery-date">更新于 {{item.updatedText}}</view>
+        <view class="recovery-action-row">
+          <button wx:if="{{item.restoreOnly}}" class="home-primary-button" data-id="{{item.id}}" bindtap="completeSessionRestore">完成恢复</button>
+          <button wx:else class="home-primary-button" data-id="{{item.id}}" bindtap="resumeSession">继续编辑</button>
+          <button wx:if="{{!item.restoreOnly}}" class="home-secondary-button" data-id="{{item.id}}" bindtap="discardSession">放弃草稿</button>
+        </view>
+      </view>
+    </view>
+    <view wx:if="{{sessionError}}" class="recovery-warning">{{sessionError}}</view>
+
+    <view wx:if="{{backups.length}}" class="recovery-section">
+      <view class="recovery-section-title">迁移前原始备份</view>
+      <view wx:for="{{backups}}" wx:key="id" class="home-panel recovery-card">
+        <view class="recovery-card-title">{{item.title}}</view>
+        <view class="recovery-date">创建于 {{item.timeText}}</view>
+        <button class="home-secondary-button recovery-action" data-id="{{item.id}}" bindtap="restoreBackup">还原原始存储</button>
+      </view>
+    </view>
+    <view wx:if="{{backupError}}" class="recovery-warning">{{backupError}}</view>
+
+    <view wx:if="{{!error && !recoveryEntries.length && !sessions.length && !backups.length}}" class="home-empty-state home-panel">
+      <view class="home-empty-state-title">恢复区目前为空</view>
+      <view class="home-empty-state-copy">移除项目、记录或收藏时，应用会先保存可恢复副本。</view>
+    </view>
+    <view class="home-bottom-space"></view>
+  </view>
+</scroll-view>

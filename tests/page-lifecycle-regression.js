@@ -190,7 +190,6 @@ try {
     exec(callback) { queryCallbacks.push(callback) },
   })
   global.wx.getWindowInfo = () => ({ pixelRatio: 1 })
-  cameraPage.data.previewExpanded = true
   cameraPage._pageVisible = true
   cameraPage.drawPreview()
   assert.equal(queryCallbacks.length, 1)
@@ -210,35 +209,44 @@ try {
   queryCallbacks[2]([{ node: { getContext: () => rawCanvasContext }, width: 640, height: 500 }])
   assert(cameraPage._canvasCache)
 
-  const beforeCloseQueries = queryCallbacks.length
-  cameraPage.togglePreviewDetails()
-  cameraPage.togglePreviewDetails()
-  assert.equal(queryCallbacks.length, beforeCloseQueries + 1)
-  const beforeReopenStaleWrites = clearRectCount
-  queryCallbacks[2]([{ node: { getContext: () => rawCanvasContext }, width: 640, height: 500 }])
-  assert.equal(clearRectCount, beforeReopenStaleWrites)
-  queryCallbacks[3]([{ node: { getContext: () => rawCanvasContext }, width: 640, height: 500 }])
-  assert(cameraPage._canvasCache)
+  const beforeViewSwitchQueries = queryCallbacks.length
+  const beforePlanSwitchWrites = clearRectCount
+  assert.equal(cameraPage.data.previewViewOptions.length, 1,
+    'the approved camera preview exposes one spatial view')
+  cameraPage.onPreviewViewTap({ currentTarget: { dataset: { index: 1 } } })
+  assert.equal(cameraPage.data.previewViewIndex, 0, 'an out-of-range preview index is ignored')
+  assert.equal(queryCallbacks.length, beforeViewSwitchQueries)
+  assert.equal(clearRectCount, beforePlanSwitchWrites, 'an ignored preview index does not redraw the cached canvas')
+  const beforeElevationSwitchWrites = clearRectCount
+  cameraPage.onPreviewViewTap({ currentTarget: { dataset: { index: 0 } } })
+  assert.equal(cameraPage.data.previewViewIndex, 0)
+  assert.equal(queryCallbacks.length, beforeViewSwitchQueries)
+  assert.equal(clearRectCount, beforeElevationSwitchWrites, 'selecting the existing spatial view is a no-op')
   const beforeCacheReuseWrites = clearRectCount
   const beforeCacheReuseQueries = queryCallbacks.length
   cameraPage.drawPreview()
   assert.equal(queryCallbacks.length, beforeCacheReuseQueries)
   assert.equal(clearRectCount, beforeCacheReuseWrites + 1)
 
+  // A selector query queued immediately before unload cannot recreate or redraw the released canvas.
+  cameraPage.invalidatePreviewCanvas()
+  cameraPage.drawPreview()
+  assert.equal(queryCallbacks.length, beforeCacheReuseQueries + 1)
   const beforeUnloadCanvasWrites = clearRectCount
   cameraPage.onUnload()
   queryCallbacks[3]([{ node: { getContext: () => rawCanvasContext }, width: 640, height: 500 }])
   assert.equal(cameraPage._canvasCache, null)
   assert.equal(clearRectCount, beforeUnloadCanvasWrites)
 
-  // Index-page hide only bridges an actual reset to setData.
-  const indexPage = installPage('../pages/index/index')
+  // The index page's current onShow contract activates and persists the basis tab.
+  const primaryTabWrites = []
+  const indexPage = installPage('../pages/index/index', {
+    setStorageSync(key, value) { primaryTabWrites.push({ key, value }) },
+  })
   const indexSetDataCount = installSetData(indexPage)
-  indexPage.onHide()
-  assert.equal(indexSetDataCount(), 0)
-  indexPage.data.knowledgeItems[0].animationActive = true
-  indexPage.onHide()
-  assert.equal(indexSetDataCount(), 1)
+  indexPage.onShow()
+  assert.deepEqual(primaryTabWrites, [{ key: 'audioTool.primaryTab.v1', value: 'basis' }])
+  assert.equal(indexSetDataCount(), 0, 'basis-tab activation does not mutate page render data')
 
   console.log('page lifecycle regression PASS')
 } finally {

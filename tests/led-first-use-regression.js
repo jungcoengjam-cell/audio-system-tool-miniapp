@@ -88,6 +88,7 @@ function checkDebounceAndImmediateInvalidation() {
     assert.equal(page.data.currentFavorite, true)
 
     page.generateReportImage()
+    env.flushNextTicks()
     assert.equal(env.pending.draws.length, 1)
     env.finishDraw(0)
     assert.equal(env.pending.canvases.length, 1)
@@ -198,11 +199,17 @@ function checkRatioFallbackAndDiagramGeometry() {
     measureText: (text) => ({ width: String(text).length * 9 }),
   }, { get: (target, key) => key in target ? target[key] : () => {} })
   const report = require('../pages/led-screen/report')
-  report.drawLedScreenReport(context, report.buildLedScreenReportPayload(fallbackPage.getOutputState()))
-  assert(drawCalls.some((call) => call.text === '墙高 0.16 m' && call.x === 375 && call.y === 1101),
-    'short-wall height label should sit below the diagram, centered inside the report canvas')
-  assert(drawCalls.some((call) => call.text.startsWith('左右各 ') && call.x === 375 && call.y === 1127),
-    'moving the wall-height label must keep the margin summary in place')
+  const payload = report.buildLedScreenReportPayload(fallbackPage.getOutputState())
+  const layout = report.buildLedScreenReportLayout(context, payload)
+  report.drawLedScreenReport(context, payload, layout)
+  const diagram = layout.sections.find((section) => section.type === 'diagram')
+  const wallLabelY = diagram.y + diagram.wallLabelTop + 18
+  const diagramTop = diagram.y + diagram.wallLabelTop + diagram.wallLabelLines.length * 24 + 7
+  assert(drawCalls.some((call) => call.text === '墙体 0.32 × 0.16 m' && call.x === 375 && call.y === wallLabelY),
+    'short-wall dimensions should remain centered and visible above the diagram')
+  assert(wallLabelY < diagramTop, 'wall dimensions must not overlap the short-wall diagram')
+  assert(drawCalls.some((call) => call.text.startsWith('左右实际余量') && call.x === 72),
+    'the diagram should retain its horizontal margin summary below the drawing')
 
   const tall = createPage({
     wallWidthText: '1', wallHeightText: '20', topReserveText: '0.2', bottomReserveText: '0.2',
@@ -240,10 +247,43 @@ function checkPickerFallbackAndResponsiveGuidance() {
   assert(fs.readFileSync(pageSource, 'utf8').includes('INPUT_CALCULATION_DELAY = 160'))
 }
 
+function checkResetPersistenceAndVerifiedViewingEstimate() {
+  const { env, page } = createPage()
+  const numericFields = [
+    'wallWidthText', 'wallHeightText', 'topReserveText', 'bottomReserveText', 'frameWidthText', 'viewingDistanceText',
+  ]
+
+  assert.equal(page.resetInputs(), true)
+  assert.deepEqual(numericFields.map((field) => page.data[field]), ['', '', '', '', '', ''])
+  assert.equal(page.data.result, null)
+  assert.deepEqual([page.data.aspectRatioIndex, page.data.unitIndex, page.data.pitchIndex], [0, 0, 0])
+  const savedPreferences = env.wx.getStorageSync(preferenceKey)
+  assert.deepEqual(numericFields.map((field) => savedPreferences[field]), ['', '', '', '', '', ''],
+    'reset must persist all six blank numeric fields')
+
+  const reopened = createPage(savedPreferences).page
+  assert.deepEqual(numericFields.map((field) => reopened.data[field]), ['', '', '', '', '', ''],
+    'reopening after reset must preserve blank numeric fields')
+  assert.equal(reopened.data.result, null, 'blank reset values must not recreate the example result on load')
+  assert.deepEqual([reopened.data.aspectRatioIndex, reopened.data.unitIndex, reopened.data.pitchIndex], [0, 0, 0])
+
+  const sample = createPage()
+  input(sample.page, sample.env, 'viewingDistanceText', '2')
+  blur(sample.page, sample.env)
+  const result = sample.page.data.result
+  assert(result, 'the 6 × 3 m / 2 m viewing case should calculate')
+  assert.equal(result.dimensionText, '4.48 × 2.4 m')
+  assert.deepEqual([result.columns, result.rows, result.totalUnits], [14, 15, 210])
+  assert.equal(result.pixelPitch, 1.25)
+  assert.equal(result.statusKey, 'near')
+  assert.match(result.viewingAssessmentText, /低于.*舒适距离/)
+}
+
 checkDefaultAndCurrentSiteCopy()
 checkDebounceAndImmediateInvalidation()
 checkNumericValidationAndRecovery()
 checkCrossFieldErrorsAndRecovery()
 checkRatioFallbackAndDiagramGeometry()
 checkPickerFallbackAndResponsiveGuidance()
+checkResetPersistenceAndVerifiedViewingEstimate()
 console.log('LED first-use regression passed')

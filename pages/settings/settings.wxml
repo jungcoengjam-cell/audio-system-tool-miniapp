@@ -1,0 +1,46 @@
+<scroll-view class="home-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+  <view class="home-page settings-page">
+    <view class="home-header home-header-stacked">
+      <view class="home-title">设置</view>
+      <view class="home-subtitle">应用信息与本机工具偏好</view>
+    </view>
+
+    <view class="home-section-label">应用信息</view>
+    <view class="home-panel settings-info-panel">
+      <view class="settings-info-row"><text class="settings-info-label">小程序版本</text><text class="settings-info-value">{{appVersion}}</text></view>
+      <view class="home-divider"></view>
+      <view class="settings-info-row"><text class="settings-info-label">产品数据复核</text><text class="settings-info-value">{{productDataDate}}</text></view>
+    </view>
+
+    <view class="home-section-label">帮助与反馈</view>
+    <button class="home-row-button" open-type="feedback" hover-class="home-pressed" aria-label="提交问题反馈">
+      <view class="settings-row-copy"><view class="settings-row-title">问题反馈</view><view class="settings-row-subtitle">告诉我们使用中遇到的问题</view></view>
+      <view class="home-chevron" aria-hidden="true">›</view>
+    </button>
+
+    <view class="home-section-label">本机偏好</view>
+    <view class="settings-section-copy">工具显示</view>
+    <view class="settings-description">关闭开关即可隐藏工具页入口，已保存的数据保留。</view>
+    <view wx:if="{{visibilityError}}" class="settings-visibility-error">
+      <view>{{visibilityError}}</view>
+      <button size="mini" bindtap="refreshToolVisibility">重试</button>
+    </view>
+    <view class="home-panel settings-tools-panel">
+      <label wx:for="{{toolRows}}" wx:key="id" class="settings-tool-row">
+        <image class="settings-tool-icon" src="{{item.icon}}" mode="aspectFit" aria-hidden="true" />
+        <view class="settings-tool-copy">
+          <view class="settings-row-title">{{item.title}}</view>
+          <view class="settings-tool-state">{{item.visible ? '已显示' : '已隐藏'}}</view>
+        </view>
+        <switch checked="{{item.visible}}" disabled="{{!!visibilityError}}" color="#0066cc" data-id="{{item.id}}" bindchange="onToolVisibilityChange" aria-label="{{item.title}}显示在工具页" />
+      </label>
+    </view>
+    <view class="home-panel settings-reset-panel">
+      <view class="settings-row-title">恢复默认设置</view>
+      <view class="settings-row-subtitle">清除七个计算工具的上次输入，重新显示全部工具。</view>
+      <button class="home-secondary-button settings-reset-button" bindtap="resetPreferences" hover-class="home-pressed">恢复默认设置</button>
+    </view>
+    <view class="settings-footnote">项目、收藏、计算记录和产品资料保留。</view>
+    <view class="home-bottom-space"></view>
+  </view>
+</scroll-view>

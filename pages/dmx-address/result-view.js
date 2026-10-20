@@ -292,6 +292,7 @@ return view
 }
 
 module.exports = {
+CHANNEL_GUIDE_FIXTURE_MODELS,
 UNIVERSE_LABELS,
 FIXTURE_DETAIL_PAGE_SIZE,
 getFixtureProgressKey,

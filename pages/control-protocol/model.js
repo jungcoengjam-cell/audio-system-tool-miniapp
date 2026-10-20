@@ -98,6 +98,52 @@ function searchGallery(catalog, filters = {}) {
     })
 }
 
+function isValidReferenceManual(reference) {
+  return Boolean(reference
+    && hasText(reference.id)
+    && /^reference-[a-z0-9-]+$/.test(reference.id)
+    && hasText(reference.title)
+    && hasText(reference.categoryKey)
+    && hasText(reference.controllerModel)
+    && hasText(reference.sourceTitle)
+    && hasText(reference.documentVersion)
+    && /^[0-9A-F]{64}$/.test(reference.sourceSha256 || '')
+    && hasText(reference.publicUseBasis)
+    && reference.photo
+    && hasText(reference.photo.path)
+    && /^[0-9A-F]{64}$/.test(reference.photo.sha256 || '')
+    && reference.photo.publicUseBasis === reference.publicUseBasis
+    && reference.manual
+    && Array.isArray(reference.manual.transports)
+    && reference.manual.transports.length > 0)
+}
+
+function searchReferenceManuals(catalog, filters = {}) {
+  const category = filters.category || 'all'
+  const keyword = normalizeSearch(filters.keyword)
+  return list(catalog.referenceManuals)
+    .filter((reference) => getReferenceManualDetail(catalog, reference && reference.id) === reference
+      && (category === 'all' || reference.categoryKey === category))
+    .filter((reference) => {
+      if (!keyword) return true
+      return [reference.title, reference.categoryLabel, reference.controllerBrand,
+        reference.controllerModel, reference.deviceModel, ...list(reference.aliases)]
+        .some((field) => normalizeSearch(field).includes(keyword))
+    })
+    .map((reference) => ({
+      referenceId: reference.id,
+      title: reference.title,
+      photo: reference.photo && reference.photo.path
+        ? { path: reference.photo.path }
+        : null,
+    }))
+}
+
+function getReferenceManualDetail(catalog, referenceId) {
+  const reference = findUniqueById(catalog.referenceManuals, referenceId)
+  return isValidReferenceManual(reference) ? reference : null
+}
+
 function getAppearanceGroupDetail(catalog, appearanceGroupId) {
   const group = findUniqueById(catalog.appearanceGroups, appearanceGroupId)
   if (!group) return null
@@ -221,6 +267,8 @@ function resolveAppearanceGroupProtocol(catalog, appearanceGroupId) {
 
 module.exports = {
   searchGallery,
+  searchReferenceManuals,
+  getReferenceManualDetail,
   getAppearanceGroupDetail,
   getDevelopmentDraftPhotos,
   getDevelopmentDraftPhotosForAppearanceGroup,

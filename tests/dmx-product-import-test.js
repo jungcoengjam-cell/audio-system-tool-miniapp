@@ -111,7 +111,7 @@ try {
   let saved = storage.get(DMX_PREFERENCES_KEY)
   assert.equal(writes.length, 1, 'duplicate confirm does not write twice')
   assert.equal(routes.length, 1)
-  assert.equal(routes[0], '/pages/dmx-address/dmx-address')
+  assert.equal(routes[0], '/pages/dmx-address/dmx-address?lightingCatalogImport=1', 'successful imports explicitly identify their legacy preferences on the new workspace entry')
   assert.deepEqual(saved.groups[0], originalGroup, 'append preserves every prior group field')
   assert.equal(saved.groups[1].fixtureModel, multiModeFixture.model)
   assert.equal(saved.groups[1].channelCount, String(multiModeFixture.channelModes[1]))

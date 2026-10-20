@@ -122,7 +122,7 @@
       <view class="caution-text">{{article.caution}}</view>
     </view>
 
-    <button class="related-button" bindtap="openRelatedTool">
+    <button wx:if="{{article.relatedPath}}" class="related-button" bindtap="openRelatedTool">
       <text class="related-label">{{article.relatedLabel}}</text>
       <text class="related-arrow">›</text>
     </button>

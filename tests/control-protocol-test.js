@@ -3,14 +3,17 @@ const crypto = require('node:crypto')
 const fs = require('node:fs')
 const path = require('node:path')
 const { catalog: productionCatalog } = require('../pages/control-protocol/catalog')
-const { developmentSampleCatalog } = require('../pages/control-protocol/development-sample')
-const { developmentManual } = require('../pages/control-protocol/development-manual')
-const { developmentK100RManual } = require('../pages/control-protocol/development-k100r-manual')
-const { selectProtocolCatalog } = require('../pages/control-protocol/runtime-catalog')
+const { developmentSampleCatalog } = require('./fixtures/control-protocol/development-sample')
+const { developmentManual } = require('./fixtures/control-protocol/development-manual')
+const { developmentK100RManual } = require('./fixtures/control-protocol/development-k100r-manual')
+const { formalManual: formalSmartPlcF300Manual } = require('../pages/control-protocol/formal-smartplc-f300-manual')
+const { formalManual: formalKylinK100RManual } = require('../pages/control-protocol/formal-kylin-k100r-manual')
 const {
   getDevelopmentDraftPhotos,
   getDevelopmentDraftPhotosForAppearanceGroup,
+  getReferenceManualDetail,
   searchGallery,
+  searchReferenceManuals,
   resolveAppearanceGroupProtocol,
 } = require('../pages/control-protocol/model')
 const { evaluateDraftProtocolPackageGate } = require('./control-protocol-package-gate')
@@ -22,15 +25,99 @@ const emptyCatalog = {
   controllerVariants: [],
   sources: [],
   protocols: [],
+  referenceManuals: [],
 }
-assert.deepEqual(productionCatalog, emptyCatalog, '生产目录应为空，不得填入虚构设备、照片或协议')
-assert.equal(searchGallery(productionCatalog).length, 0, '空目录不应渲染虚构图库数据')
-assert.strictEqual(selectProtocolCatalog('develop'), developmentSampleCatalog,
-  '开发版应使用独立草稿样本目录')
-for (const envVersion of ['trial', 'release', '', 'unknown']) {
-  assert.strictEqual(selectProtocolCatalog(envVersion), productionCatalog,
-    `${envVersion || '未知'} 环境不得展示开发草稿`)
+const automaticCatalog = Object.fromEntries(Object.keys(emptyCatalog)
+  .filter((key) => key !== 'referenceManuals')
+  .map((key) => [key, productionCatalog[key]]))
+assert.deepEqual(automaticCatalog, Object.fromEntries(Object.keys(emptyCatalog)
+  .filter((key) => key !== 'referenceManuals')
+  .map((key) => [key, []])), '生产目录自动准入六个数组必须保持为空')
+assert.equal(productionCatalog.referenceManuals.length, 2, '生产目录只增加两条人工协议参考')
+assert.deepEqual(productionCatalog.referenceManuals.map((reference) => reference.id), [
+  'reference-smartplc-f300-01', 'reference-kylin-k100r-01',
+], '正式参考 ID 稳定且不使用开发草稿 ID')
+assert.equal(searchGallery(productionCatalog).length, 0, '新增参考不得进入自动控制卡图库')
+assert.equal(searchReferenceManuals(productionCatalog).length, 2, '两条人工参考应可搜索展示')
+assert.deepEqual(searchReferenceManuals(productionCatalog, { keyword: 'K100R' }).map((item) => item.referenceId),
+  ['reference-kylin-k100r-01'], '人工参考搜索支持控制卡型号别名')
+assert.deepEqual(searchReferenceManuals(productionCatalog, { keyword: 'SmartPLC-F300', category: 'led-power' })
+  .map((item) => item.referenceId), ['reference-smartplc-f300-01'], '人工参考可按标题/别名与类别组合筛选')
+assert.deepEqual(searchReferenceManuals(productionCatalog, { keyword: '麒麟', category: 'led-power' })
+  .map((item) => item.referenceId), ['reference-kylin-k100r-01'], '人工参考继续匹配品牌别名与类别')
+assert.deepEqual(searchReferenceManuals(productionCatalog, { category: 'audio' }), [], '类别筛选仅显示匹配参考')
+const compactReferenceItems = searchReferenceManuals(productionCatalog)
+assert.deepEqual(compactReferenceItems.map((item) => Object.keys(item).sort()), [
+  ['photo', 'referenceId', 'title'], ['photo', 'referenceId', 'title'],
+], '图库参考项只包含轻量展示字段')
+assert(compactReferenceItems.every((item) => item.photo === null
+  || JSON.stringify(Object.keys(item.photo).sort()) === JSON.stringify(['path'])),
+'图库参考照片只保留路径')
+const compactReferenceJson = JSON.stringify(compactReferenceItems)
+assert(Buffer.byteLength(compactReferenceJson, 'utf8') <= 1024, '图库参考列表 JSON 不得超过 1 KiB')
+assert(!/"(?:manual|commands|transports|reference)"\s*:/.test(compactReferenceJson),
+  '图库参考列表不得重复携带完整手册、命令或参考对象')
+
+const productionReferences = productionCatalog.referenceManuals
+assert.equal(productionReferences[0].controllerBrand, '未知', 'F300 未知品牌不能由目录推断')
+assert.equal(productionReferences[0].controllerFirmwareVersion, '未知', 'F300 固件版本保持未知')
+assert.equal(productionReferences[0].protocolVersion, '说明书未标注，未知', 'F300 协议版本保持未知')
+assert.equal(productionReferences[0].deviceModel, 'itC KZX（本次用户确认的样本柜）', 'F300 参考仅记录用户确认的样本柜')
+assert.equal(productionReferences[1].deviceModel, '未知', 'K100R 安装设备型号保持未知')
+assert.equal(productionReferences[1].controllerFirmwareVersion, '未知', 'K100R 固件版本保持未知')
+assert.equal(productionReferences[0].publicUseBasis, 'user-request-2026-10-05')
+assert.equal(productionReferences[1].publicUseBasis, 'user-request-2026-10-05')
+productionReferences.forEach((reference) => {
+  assert.equal(reference.photo.publicUseBasis, reference.publicUseBasis, '照片公开依据必须与所属参考一致')
+  assert.match(reference.photo.visualCheck, /主代理实际查看原图/)
+  assert.equal(reference.status, undefined, '人工参考不能伪造已审核状态')
+  assert.equal(reference.reviewerId, undefined, '人工参考不能伪造具名复核人')
+  assert.equal(reference.photo.authorizationConfirmed, undefined, '人工照片不能伪造来源核验标志')
+  assert.equal(reference.photo.redactionReviewed, undefined, '人工照片不能伪造脱敏审核标志')
+})
+assert.equal(getReferenceManualDetail(productionCatalog, 'missing-reference'), null, '未知参考 ID 必须阻断')
+assert.equal(getReferenceManualDetail({ ...productionCatalog, referenceManuals: [productionReferences[0], productionReferences[0]] },
+  productionReferences[0].id), null, '重复参考 ID 必须阻断')
+assert.equal(searchReferenceManuals({ ...productionCatalog, referenceManuals: [productionReferences[0], productionReferences[0]] }).length,
+  0, '重复参考 ID 不得作为可点击图库卡展示')
+const missingPublicationBasis = { ...productionReferences[0], photo: { ...productionReferences[0].photo, publicUseBasis: '' } }
+assert.equal(getReferenceManualDetail({ ...productionCatalog, referenceManuals: [missingPublicationBasis] }, missingPublicationBasis.id), null,
+  '缺失照片公开依据时参考必须失败关闭')
+const mismatchedPublicationBasis = { ...productionReferences[0], photo: { ...productionReferences[0].photo, publicUseBasis: 'different-basis' } }
+assert.equal(getReferenceManualDetail({ ...productionCatalog, referenceManuals: [mismatchedPublicationBasis] }, mismatchedPublicationBasis.id), null,
+  '不一致的照片公开依据必须失败关闭')
+
+function commandRows(manual) {
+  return manual.transports.flatMap((transport) => transport.commands.map((command) => ({
+    transport: transport.id,
+    id: command.id,
+    frame: command.frame,
+    sourceParagraph: command.sourceParagraph,
+    sourceLabel: command.sourceLabel,
+    copyable: command.copyable,
+  })))
 }
+assert.deepEqual(commandRows(formalSmartPlcF300Manual), commandRows(developmentManual),
+  'F300 正式参考保留 fixture 全部168条命令的传输、帧、ID、段落、原文标签和复制标记')
+assert.deepEqual(commandRows(formalKylinK100RManual), commandRows(developmentK100RManual),
+  'K100R 正式参考保留 fixture 全部36条命令的传输、帧、ID、段落、原文标签和复制标记')
+assert.equal(commandRows(formalSmartPlcF300Manual).length + commandRows(formalKylinK100RManual).length, 204,
+  '生产人工参考仅包含核对过的204条控制请求')
+assert.equal(formalSmartPlcF300Manual.sourceSha256, '3DEF2C2A5844F3D2D1424DE76B2BD77A6FFD13E6FD5322E9DF7F8F859CD0F6E4',
+  'F300 正式参考追溯到实际说明书原件哈希')
+assert.equal(formalKylinK100RManual.sourceSha256, 'FB90C408CD18559C8534EF3721A1F13B4B563DB0A94F2EA43E0B01EE362D1FBA',
+  'K100R 正式参考追溯到实际协议原件哈希')
+const formalPhotoFiles = [
+  ['smartplc-f300-reference.jpg', 'smartplc-f300-sample.jpg', '2F4EEDFE79FDF8D7334970D7A4A5827D05A33C475FA1B48E5B7F5186D6AD9960'],
+  ['kylin-k100r-reference.jpg', 'kylin-k100r-card-sample.jpg', 'B32D37BDE592DB722F9F20E5BD68C0AF562F6ADA06A840FC23C3D3CD0E4695CF'],
+]
+formalPhotoFiles.forEach(([formalName, fixtureName, expectedHash]) => {
+  const formalBytes = fs.readFileSync(path.join(__dirname, '../pages/control-protocol/assets', formalName))
+  const fixtureBytes = fs.readFileSync(path.join(__dirname, 'fixtures/control-protocol/draft-assets', fixtureName))
+  assert.deepEqual(formalBytes, fixtureBytes, formalName + ' 正式照片逐字节等于原样本照片')
+  assert.equal(crypto.createHash('sha256').update(formalBytes).digest('hex').toUpperCase(), expectedHash,
+    formalName + ' SHA-256 保持用户核验值')
+})
 const draftGallery = searchGallery(developmentSampleCatalog)
 assert.equal(draftGallery.length, 2, '开发版图库应展示两个相互独立的控制卡样本')
 assert.equal(draftGallery[0].group.title, 'SmartPLC-F300 控制卡', '图库主标题必须突出柜内控制卡型号')
@@ -166,7 +253,8 @@ assert.equal(developmentK100RManual.sourceSha256, 'FB90C408CD18559C8534EF3721A1F
 assert.equal(crypto.createHash('sha256').update(JSON.stringify(k100rCommands)).digest('hex').toUpperCase(), 'D00502DB2297C8C9AA1FB5E7CD2E8FB898CC4670B50919B48D80568796F98171',
   '36 条 K100R 控制请求的来源段落、标签、源帧及复制状态摘要')
 
-function capturePageInEnvironment(pageRelativePath, envVersion) {
+function capturePageInEnvironment(pageRelativePath, envVersion, injectedCatalog = null) {
+  const Module = require('node:module')
   const runtimePath = require.resolve('../pages/control-protocol/runtime-catalog')
   const pagePath = require.resolve(pageRelativePath)
   const priorRuntime = require.cache[runtimePath]
@@ -178,6 +266,13 @@ function capturePageInEnvironment(pageRelativePath, envVersion) {
     global.wx = { getAccountInfoSync: () => ({ miniProgram: { envVersion } }) }
     global.Page = (value) => { definition = value }
     delete require.cache[runtimePath]
+    if (injectedCatalog) {
+      const runtimeModule = new Module(runtimePath, module)
+      runtimeModule.filename = runtimePath
+      runtimeModule.paths = Module._nodeModulePaths(path.dirname(runtimePath))
+      runtimeModule.exports = { ...productionCatalogModule, catalog: injectedCatalog }
+      require.cache[runtimePath] = runtimeModule
+    }
     delete require.cache[pagePath]
     require(pagePath)
     return definition
@@ -192,41 +287,202 @@ function capturePageInEnvironment(pageRelativePath, envVersion) {
     else global.Page = priorPageApi
   }
 }
-const developmentIndexPage = capturePageInEnvironment('../pages/control-protocol/index', 'develop')
-const galleryState = {
-  ...developmentIndexPage,
-  data: { ...developmentIndexPage.data },
-  setData(patch, callback) { this.data = { ...this.data, ...patch }; if (callback) callback() },
+const productionCatalogModule = require('../pages/control-protocol/runtime-catalog')
+assert.deepEqual(productionCatalogModule.catalog, productionCatalog,
+  '生产 runtime catalog 必须直接使用含独立人工参考的正式目录')
+for (const envVersion of ['develop', 'trial', 'release', 'unknown']) {
+  const entryRoutes = []
+  global.wx = { redirectTo: (options) => entryRoutes.push(options) }
+  const formalEnvironmentPage = capturePageInEnvironment('../pages/control-protocol/index', envVersion)
+  const formalEnvironmentState = {
+    ...formalEnvironmentPage,
+    data: { ...formalEnvironmentPage.data },
+    setData(patch, callback) { this.data = { ...this.data, ...patch }; if (callback) callback() },
+  }
+  formalEnvironmentPage.onLoad.call(formalEnvironmentState)
+  assert.equal(entryRoutes[0].url, '/pages/control-protocol/detail', `${envVersion} entry redirects to the sole reader`)
+  assert.equal(formalEnvironmentState.data.items, undefined, `${envVersion} 入口不再维护第二份阅读器数据`)
+  delete global.wx
 }
-developmentIndexPage.onLoad.call(galleryState)
-assert.equal(galleryState.data.items.length, 2, '开发版图库显示 F300 和 K100R 两张独立卡片')
-assert.equal(galleryState.data.items[0].group.sampleStatusLabel, '柜内 F300 样本协议已验证 · 开发预览',
-  '开发版图库页面必须限定显示为柜内 F300 样本协议状态')
-assert.equal(galleryState.data.items[0].photo.id, 'draft-smartplc-f300-interior-photo',
-  '图库封面必须选取控制卡照片')
-assert.equal(galleryState.data.items[0].photo.status, 'draft',
-  '图库可见的开发样本图片必须保持 draft 状态')
-assert.equal(galleryState.data.items[1].group.title, '麒麟 Kylin K100R 控制卡', '第二张卡以可见控制卡品牌和型号命名')
-assert.equal(galleryState.data.items[1].photo.id, 'draft-kylin-k100r-card-photo', 'K100R 封面使用其自己的控制卡照片')
+for (const envVersion of ['develop', 'trial', 'release', 'unknown']) {
+  const effects = { navigation: [], clipboard: [], photoPreview: [], photoCopies: [], networkCalls: 0, storageCalls: 0, storage: {} }
+  global.wx = {
+    env: { USER_DATA_PATH: '/user-data' },
+    getFileSystemManager: () => ({ copyFile: (options) => { effects.photoCopies.push(options); options.success() } }),
+    navigateTo: (options) => effects.navigation.push(options),
+    redirectTo: (options) => effects.navigation.push(options),
+    setClipboardData: (options) => { effects.clipboard.push(options.data); if (options.success) options.success() },
+    previewImage: (options) => effects.photoPreview.push(options),
+    showToast: () => {},
+    request: () => { effects.networkCalls += 1 },
+    connectSocket: () => { effects.networkCalls += 1 },
+    sendSocketMessage: () => { effects.networkCalls += 1 },
+    getStorageSync: (key) => effects.storage[key],
+    setStorageSync: (key, value) => { effects.storageCalls += 1; effects.storage[key] = value },
+  }
+  const indexPage = capturePageInEnvironment('../pages/control-protocol/index', envVersion)
+  const indexState = {
+    ...indexPage,
+    data: { ...indexPage.data },
+    setData(patch, callback) { this.data = { ...this.data, ...patch }; if (callback) callback() },
+  }
+  indexPage.onLoad.call(indexState)
+  assert.match(effects.navigation[0].url, /^\/pages\/control-protocol\/detail$/,
+    `${envVersion} no-argument tool entry opens the sole reader`)
+  const detailPage = capturePageInEnvironment('../pages/control-protocol/detail', envVersion)
+  productionCatalog.referenceManuals.forEach((reference) => {
+    indexPage.onLoad.call(indexState, { referenceId: reference.id })
+    assert.match(effects.navigation.at(-1).url, new RegExp(`referenceId=${reference.id}`),
+      `${envVersion} routes by explicit reference ID`)
+    const detailState = {
+      ...detailPage,
+      data: { ...detailPage.data },
+      setData(patch) { this.data = { ...this.data, ...patch } },
+    }
+    detailPage.onLoad.call(detailState, { referenceId: reference.id })
+    assert.equal(detailState.data.reference.id, reference.id, `${envVersion} detail selects the requested reference`)
+    assert.equal(detailState.data.protocol, null, `${envVersion} manual reference remains outside strict protocol data`)
+    assert.equal(detailState.data.manual !== null, true, `${envVersion} detail loads neutral manual data`)
+    assert(detailState.data.manual.transports.some((transport) => transport.commands.length > 0),
+      `${envVersion} resolves full command data by reference ID`)
+    assert.equal(detailState.data.developmentManual, undefined, 'Page state uses the neutral manual property')
+    assert.equal(detailState.data.photos[0].path, reference.photo.path)
+    assert.equal(detailState.data.photos[0].angleLabel, reference.photo.angleLabel,
+      'Page preserves the source photo metadata without display decoration')
+    detailPage.copyManualCommand.call(detailState, {
+      currentTarget: { dataset: { commandId: detailState.data.commonManualCommands[0].id } },
+    })
+    assert.equal(effects.clipboard.at(-1), detailState.data.commonManualCommands[0].frame,
+      `${envVersion} copies only the selected reference command`)
+    detailPage.previewPhoto.call(detailState, {
+      currentTarget: { dataset: { path: reference.photo.path } },
+    })
+    assert.equal(effects.photoCopies.at(-1).srcPath, reference.photo.path.replace(/^\/+/, ''),
+      `${envVersion} copies the matching original photo bytes from the package asset`)
+    assert.equal(effects.photoPreview.at(-1).current, effects.photoCopies.at(-1).destPath,
+      `${envVersion} previews the local readable copy`)
+    assert(effects.photoPreview.at(-1).current.startsWith('/user-data/'))
+    assert.notEqual(effects.photoPreview.at(-1).current, reference.photo.path)
+    if (reference.id === 'reference-kylin-k100r-01') {
+      detailPage.selectManualTransport.call(detailState, { currentTarget: { dataset: { index: '1' } } })
+      assert(detailState.data.commonManualCommands.every((command) => !command.copyEnabled),
+        `${envVersion} blocks K100R UDP frames without a current MAC`)
+      const visibleUdpFrames = detailState.data.commonManualCommands.concat(detailState.data.selectedLoopCommands)
+        .map((command) => command.displayFrame)
+      assert(visibleUdpFrames.every((frame) => !frame.includes('66 88 31 F3 7F 1C')),
+        `${envVersion} never displays the source example MAC`)
+      const clipboardBeforeBlocked = effects.clipboard.length
+      detailPage.copyManualCommand.call(detailState, {
+        currentTarget: { dataset: { commandId: 'udp-relay-01-close' } },
+      })
+      assert.equal(effects.clipboard.length, clipboardBeforeBlocked, `${envVersion} blocks UDP copy with no MAC`)
+      detailPage.onDeviceMacInput.call(detailState, { detail: { value: 'A1:B2:C3:D4:E5:F6' } })
+      assert.equal(detailState.data.deviceMacValid, false, `${envVersion} rejects separated MAC input`)
+      detailPage.onDeviceMacInput.call(detailState, { detail: { value: 'A1B2C3D4E5F6' } })
+      const udpCommand = detailState.data.selectedLoopCommands.find((command) => command.id === 'udp-relay-01-close')
+      assert.equal(udpCommand.displayFrame, '43 53 52 59 A1 B2 C3 D4 E5 F6 31',
+        `${envVersion} replaces exactly six UDP address bytes`)
+      detailPage.copyManualCommand.call(detailState, {
+        currentTarget: { dataset: { commandId: 'udp-relay-01-close' } },
+      })
+      assert.equal(effects.clipboard.at(-1), udpCommand.displayFrame, `${envVersion} copies the corrected UDP frame`)
+      detailPage.clearDeviceMac.call(detailState)
+      assert(detailState.data.selectedLoopCommands.every((command) => !command.copyEnabled),
+        `${envVersion} blocks UDP copy again after clearing MAC`)
+      const clipboardAfterValidCopy = effects.clipboard.length
+      detailPage.copyManualCommand.call(detailState, {
+        currentTarget: { dataset: { commandId: 'udp-relay-01-close' } },
+      })
+      assert.equal(effects.clipboard.length, clipboardAfterValidCopy, `${envVersion} cannot copy after clearing MAC`)
+    }
+  })
+  assert.equal(effects.networkCalls, 0, `${envVersion} never sends or connects to a device`)
+  const remembered = effects.storage['controlProtocolViewerState.v1']
+  assert.equal(JSON.stringify(remembered).includes('deviceMac'), false, `${envVersion} never persists the entered MAC`)
+  assert.equal(JSON.stringify(remembered).includes('A1B2C3D4E5F6'), false, `${envVersion} never persists MAC bytes`)
+  delete global.wx
+}
+
+const invalidReferencePage = capturePageInEnvironment('../pages/control-protocol/detail', 'release')
+const invalidReferenceState = {
+  ...invalidReferencePage,
+  data: { ...invalidReferencePage.data },
+  setData(patch) { this.data = { ...this.data, ...patch } },
+}
+let invalidReferenceCopy = ''
+global.wx = { setClipboardData: ({ data }) => { invalidReferenceCopy = data } }
+invalidReferencePage.onLoad.call(invalidReferenceState, { referenceId: productionCatalog.referenceManuals[0].id })
+assert(invalidReferenceState.data.manual, 'valid reference loads before stale-state regression')
+invalidReferencePage.onLoad.call(invalidReferenceState, {
+  referenceId: 'missing-reference', appearanceGroupId: productionCatalog.referenceManuals[1].id,
+})
+assert.equal(invalidReferenceState.data.invalidGroup, true)
+assert.equal(invalidReferenceState.data.group, null)
+assert.equal(invalidReferenceState.data.reference, null)
+assert.equal(invalidReferenceState.data.manual, null, 'invalid ID clears a previously loaded manual')
+assert.equal(invalidReferenceState.data.protocol, null)
+assert.deepEqual(invalidReferenceState.data.photos, [])
+assert.equal(invalidReferenceState.data.manualTransport, null)
+invalidReferencePage.copyManualCommand.call(invalidReferenceState, {
+  currentTarget: { dataset: { commandId: 'rtu-write-01' } },
+})
+assert.equal(invalidReferenceCopy, '', 'invalid ID cannot copy a previously loaded command')
+invalidReferencePage.onLoad.call(invalidReferenceState, {
+  referenceId: '', appearanceGroupId: productionCatalog.referenceManuals[0].id,
+})
+assert.equal(invalidReferenceState.data.manual, null, 'empty reference ID cannot fall back to another route')
+delete global.wx
+const duplicateReferenceCatalog = {
+  ...productionCatalog,
+  referenceManuals: [...productionCatalog.referenceManuals, { ...productionCatalog.referenceManuals[0] }],
+}
+const duplicateReferencePage = capturePageInEnvironment(
+  '../pages/control-protocol/detail', 'release', duplicateReferenceCatalog,
+)
+const duplicateReferenceState = {
+  ...duplicateReferencePage,
+  data: { ...duplicateReferencePage.data },
+  setData(patch) { this.data = { ...this.data, ...patch } },
+}
+duplicateReferencePage.onLoad.call(duplicateReferenceState, { referenceId: productionCatalog.referenceManuals[0].id })
+assert.equal(duplicateReferenceState.data.manual, null, 'duplicate reference ID fails closed')
+
+const developmentIndexPage = capturePageInEnvironment(
+  '../pages/control-protocol/index', 'develop', developmentSampleCatalog,
+)
+const developmentEntryRoutes = []
+global.wx = { redirectTo: (options) => developmentEntryRoutes.push(options) }
+developmentIndexPage.onLoad.call({ data: { ...developmentIndexPage.data } })
+assert.deepEqual(developmentEntryRoutes, [{ url: '/pages/control-protocol/detail' }], '开发版旧工具入口直接打开唯一阅读器')
+delete global.wx
 assert.deepEqual(searchGallery(developmentSampleCatalog, { keyword: 'K100R' }).map((item) => item.group.id), ['draft-kylin-k100r-sample'],
   '按型号搜索只返回 K100R 卡片')
 assert.deepEqual(searchGallery(developmentSampleCatalog, { keyword: 'F300' }).map((item) => item.group.id), ['draft-smartplc-f300-sample'],
   'F300 搜索不会串到 K100R')
 const releaseIndexPage = capturePageInEnvironment('../pages/control-protocol/index', 'release')
+const releaseEntryRoutes = []
+global.wx = { redirectTo: (options) => releaseEntryRoutes.push(options) }
 const releaseGalleryState = {
   ...releaseIndexPage,
   data: { ...releaseIndexPage.data },
   setData(patch, callback) { this.data = { ...this.data, ...patch }; if (callback) callback() },
 }
 releaseIndexPage.onLoad.call(releaseGalleryState)
-assert.deepEqual(releaseGalleryState.data.items, [], '正式版实际图库页面不得显示开发草稿')
+assert.equal(releaseGalleryState.data.items, undefined, '正式版入口不维护第二套图库数据')
+assert.equal(releaseEntryRoutes[0].url, '/pages/control-protocol/detail', '正式版入口直接恢复唯一阅读器')
+delete global.wx
 
-const developmentDetailPage = capturePageInEnvironment('../pages/control-protocol/detail', 'develop')
+const developmentDetailPage = capturePageInEnvironment(
+  '../pages/control-protocol/detail', 'develop', developmentSampleCatalog,
+)
 let copiedText = null
 let previewRequest = null
 global.wx = {
   getAccountInfoSync: () => ({ miniProgram: { envVersion: 'develop' } }),
-  setClipboardData: ({ data }) => { copiedText = data },
+  env: { USER_DATA_PATH: '/user-data' },
+  getFileSystemManager: () => ({ copyFile: (options) => { options.success() } }),
+  setClipboardData: (options) => { copiedText = options.data; if (options.success) options.success() },
+  showToast: () => {},
   previewImage: (options) => { previewRequest = options },
 }
 const detailState = {
@@ -251,25 +507,29 @@ developmentSampleCatalog.photos = originalDevelopmentPhotos
 developmentSampleCatalog.sources = originalDevelopmentSources
 developmentDetailPage.onLoad.call(detailState, { appearanceGroupId: 'draft-smartplc-f300-sample' })
 assert.equal(detailState.data.photos.length, 1, '开发版详情页只显示柜内控制卡照片')
-assert.match(detailState.data.photos[0].displayAngle, /^开发预览照片（不参与正式协议准入）/,
-  '详情照片须区分开发预览与正式协议准入')
+assert.equal(detailState.data.photos[0].developmentOnly, true,
+  '开发照片保留数据层的 development-only 标记')
+assert.equal(detailState.data.photos[0].status, 'draft',
+  '开发照片保留数据层的 draft 状态')
+assert.equal(detailState.data.photos[0].angleLabel, 'SmartPLC-F300 控制卡外观与标签',
+  '详情保留原始照片角度元数据')
 assert.equal(detailState.data.protocol, null, '缺少映射/固件/复核数据时不得展示命令区')
-assert.ok(detailState.data.developmentManual, '开发版详情应展示单独的手册协议摘录')
+assert.ok(detailState.data.manual, '开发版详情应展示独立的静态手册协议摘录')
 assert.equal(detailState.data.selectedLoopLabel, '第1路', '默认定位第一路回路')
 assert.equal(detailState.data.manualTransport.id, 'rtu', 'F300 默认显示串口 RTU')
 assert.deepEqual(detailState.data.manualTransportTabs.map((tab) => [tab.label, tab.sourceIndex]), [
   ['串口协议（RS485）', 1], ['网络协议（TCP/IP）', 0],
 ], 'F300 标签按串口在左、网络在右显示，并保留手册源索引')
 assert.match(fs.readFileSync(path.join(__dirname, '../pages/control-protocol/detail.wxml'), 'utf8'),
-  /tab\.sourceIndex == manualTransportIndex/, '选中态应按手册源索引标记映射后的协议标签')
+  /tab\.id == manualTransport\.id/, '选中态应按传输ID标记映射后的协议标签')
 assert.match(fs.readFileSync(path.join(__dirname, '../pages/control-protocol/detail.wxml'), 'utf8'),
   /data-index="\{\{tab\.sourceIndex\}\}"/, '标签点击应传回协议手册中的源索引')
 assert.deepEqual(detailState.data.selectedLoopCommands.map((command) => command.label), ['第1路启动', '第1路关闭'],
   '默认串口应仅展示第1路的启动和关闭命令')
-assert.match(detailState.data.statusMessage, /用户确认这台 itC KZX 柜内 SmartPLC-F300 样本所用控制协议已验证且准确无误/,
-  '详情状态必须清楚表达用户确认协议已验证')
-developmentDetailPage.copyProtocol.call(detailState)
-assert.equal(copiedText, null, '尚未满足正式收录门槛时不得开放正式协议摘要复制')
+assert.match(detailState.data.statusMessage, /开发预览/,
+  '详情状态清楚说明当前是仅复制的开发预览')
+assert.match(detailState.data.group.manualMappingNote, /用户确认这台 itC KZX 柜内 SmartPLC-F300 样本所用控制协议已验证且准确无误/,
+  '底层样本映射仍保留用户确认的协议适用边界')
 const copyableManualCommand = developmentManual.transports[0].commands[0]
 developmentDetailPage.selectManualTransport.call(detailState, { currentTarget: { dataset: { index: '0' } } })
 assert.equal(detailState.data.manualTransport.id, 'tcp', '点击右侧网络标签应切到源索引0的 TCP')
@@ -357,18 +617,15 @@ developmentDetailPage.selectManualLoop.call(k100rDetailState, { detail: { value:
 assert.deepEqual(k100rDetailState.data.selectedLoopCommands.map((command) => command.label), ['第8路闭合', '第8路断开'], 'K100R 可定位第8路')
 assert.equal(k100rDetailState.data.selectedLoopCommands[0].frame, '32 05 00 07 FF 00 38 38', '第8路 RS485 帧来源准确')
 developmentDetailPage.previewPhoto.call(detailState, { currentTarget: { dataset: { path: detailState.data.photos[0].path } } })
-assert.deepEqual(previewRequest, {
-  current: detailState.data.photos[0].path,
-  urls: detailState.data.photos.map((photo) => photo.path),
-}, '点控制卡照片应调用原生预览并放大查看原图')
+assert(previewRequest.current.startsWith('/user-data/'), '原图先复制到本地再交给原生预览')
+assert.notEqual(previewRequest.current, detailState.data.photos[0].path, '原生预览不接收不支持的包内资源路径')
+assert(previewRequest.urls.every((photoPath) => photoPath.startsWith('/user-data/')),
+  '所有可滑动原图均映射为本地可读路径')
 detailState.data.protocol = {
-  copyText: 'formal summary',
   commands: [{ id: 'formal-command', value: 'formal frame' }],
 }
 developmentDetailPage.copyProtocolCommand.call(detailState, { currentTarget: { dataset: { commandId: 'formal-command' } } })
 assert.equal(copiedText, 'formal frame', '正式命令的紧凑复制控件应复制单条帧')
-developmentDetailPage.copyProtocol.call(detailState)
-assert.equal(copiedText, 'formal summary', '正式协议摘要复制仍保留既有摘要语义')
 detailState.data.protocol = null
 delete global.wx
 const releaseDetailPage = capturePageInEnvironment('../pages/control-protocol/detail', 'release')
@@ -379,10 +636,22 @@ const releaseDetailState = {
 }
 releaseDetailPage.onLoad.call(releaseDetailState, { appearanceGroupId: 'draft-smartplc-f300-sample' })
 assert.equal(releaseDetailState.data.group, null, '正式版详情页不得加载开发草稿记录')
-assert.equal(releaseDetailState.data.developmentManual, null, '正式/体验版不得加载开发手册摘录')
+assert.equal(releaseDetailState.data.manual, null, '未命中目录的正式详情不得加载开发手册摘录')
 releaseDetailPage.onLoad.call(releaseDetailState, { appearanceGroupId: 'draft-kylin-k100r-sample' })
 assert.equal(releaseDetailState.data.group, null, '正式版详情页不得加载 K100R 开发草稿')
-assert.equal(releaseDetailState.data.developmentManual, null, '正式版不得加载 K100R 开发协议摘录')
+assert.equal(releaseDetailState.data.manual, null, '正式版不得借用 K100R 开发协议摘录')
+const formalDevelopmentDetailPage = capturePageInEnvironment('../pages/control-protocol/detail', 'develop')
+const formalDevelopmentDetailState = {
+  ...formalDevelopmentDetailPage,
+  data: { ...formalDevelopmentDetailPage.data },
+  setData(patch) { this.data = { ...this.data, ...patch } },
+}
+formalDevelopmentDetailPage.onLoad.call(formalDevelopmentDetailState, {
+  appearanceGroupId: 'draft-smartplc-f300-sample',
+})
+assert.equal(formalDevelopmentDetailState.data.group, null, '未注入 fixture 的开发自动解析详情仍不创建外观组')
+assert.equal(formalDevelopmentDetailState.data.manual, null, '自动解析详情不得加载 fixture 手册摘录')
+assert.deepEqual(formalDevelopmentDetailState.data.photos, [], '真实开发详情页不得加载 fixture 照片')
 const trialDetailPage = capturePageInEnvironment('../pages/control-protocol/detail', 'trial')
 const trialDetailState = {
   ...trialDetailPage,
@@ -390,63 +659,97 @@ const trialDetailState = {
   setData(patch) { this.data = { ...this.data, ...patch } },
 }
 trialDetailPage.onLoad.call(trialDetailState, { appearanceGroupId: 'draft-smartplc-f300-sample' })
-assert.equal(trialDetailState.data.developmentManual, null, '体验版不得加载开发手册摘录')
+assert.equal(trialDetailState.data.manual, null, '体验版自动解析详情不得加载开发手册摘录')
 trialDetailPage.onLoad.call(trialDetailState, { appearanceGroupId: 'draft-kylin-k100r-sample' })
-assert.equal(trialDetailState.data.developmentManual, null, '体验版不得加载 K100R 开发协议摘录')
+assert.equal(trialDetailState.data.manual, null, '体验版不得加载 K100R 开发协议摘录')
 
 const detailTemplate = fs.readFileSync(path.join(__dirname, '../pages/control-protocol/detail.wxml'), 'utf8')
 const detailStyles = fs.readFileSync(path.join(__dirname, '../pages/control-protocol/detail.wxss'), 'utf8')
-assert(detailTemplate.includes('wx:if="{{protocol}}" class="protocol-card"'),
-  '命令与复制入口必须继续受已核验 protocol 状态控制')
-assert(detailTemplate.includes('wx:if="{{developmentManual}}" class="development-manual-card"')
-  && detailTemplate.indexOf('development-manual-card') < detailTemplate.indexOf('appearance-photos'),
-  '开发版协议摘录必须独立于正式目录协议，且显示在照片之前')
-assert(detailTemplate.includes('class="manual-copy-button"')
-  && !detailTemplate.includes('applicability-summary') && !detailTemplate.includes('manual-intro-line'))
-assert(!detailTemplate.includes('返回图库') && detailTemplate.includes('返回控制卡图库')
-  && !detailTemplate.includes('手册来源、版本与安全说明')
-  && !detailTemplate.includes('manual-source-block')
-  && !detailTemplate.includes('showManualInfo')
-  && !detailStyles.includes('.back-link') && !detailStyles.includes('.manual-source-block'),
-  '详情页隐藏多余返回按钮和手册来源说明，保留无效资料时的图库返回入口')
-assert(detailTemplate.includes('wx:if="{{group.sampleStatusLabel && !developmentManual}}" class="draft-material-card"'),
-  '详情应说明草稿资料版本、映射和传输线索都待核')
-assert(detailTemplate.includes('selectManualTransport') && detailTemplate.includes('selectManualLoop')
-  && detailTemplate.includes('toggleManualWrites') && detailTemplate.includes('wx:for-index="commandIndex"')
-          && detailTemplate.includes('其余控制请求（{{manualWriteCommands.length}}）')
-  && !detailTemplate.includes('读取请求') && !detailTemplate.includes('statusManualCommands')
-  && !detailTemplate.includes('environmentManualCommands') && !detailTemplate.includes('toggleManualStatus'),
-  '详情只提供控制写入请求导航，不呈现来源留档中的读取指令')
-assert(detailTemplate.includes('copyProtocolCommand') && detailTemplate.includes('bindtap="copyProtocol"'),
-  '正式协议命令应可紧凑复制，摘要入口仍保留原 copyProtocol 处理')
-assert(detailStyles.includes('.manual-command-frame{') && detailStyles.includes('.command-value{')
-  && (detailStyles.match(/font-size:28rpx/g) || []).length >= 2
-  && !detailStyles.includes('word-break:break-all')
-  && detailStyles.includes('min-width:44px') && detailStyles.includes('height:44px'),
-  '命令帧应缩小以容纳完整TCP请求，复制按钮保持44px触控区')
-assert(detailTemplate.includes('mode="widthFix"') && detailTemplate.includes('bindtap="previewPhoto"'),
-  '详情图片须完整显示并支持点图原生放大')
-assert(detailTemplate.includes('点图放大'), '详情图片应提示可放大查看')
-assert(detailTemplate.includes('请填写当前控制卡的有效 MAC，才能复制 UDP 指令'), 'UDP 需提示填写现场 MAC')
-const indexTemplate = fs.readFileSync(path.join(__dirname, '../pages/control-protocol/index.wxml'), 'utf8')
-const indexStyles = fs.readFileSync(path.join(__dirname, '../pages/control-protocol/index.wxss'), 'utf8')
-const indexConfig = JSON.parse(fs.readFileSync(path.join(__dirname, '../pages/control-protocol/index.json'), 'utf8'))
-assert.equal(indexConfig.navigationBarTitleText, '控制协议', '图库页面导航标题应与工具入口统一')
-assert(indexTemplate.includes('控制协议') && indexTemplate.includes('控制卡图库')
-  && !indexTemplate.includes('同一机柜外壳可能装有不同控制卡')
-  && indexTemplate.includes('class="gallery-image" src="{{item.photo.path}}" mode="aspectFit"')
-  && !indexTemplate.includes('gallery-photo-tag'),
-  '控制卡图库须以控制卡为识别对象、完整显示照片且不遮挡标签')
-assert(indexTemplate.includes('class="gallery-scroll" scroll-x')
-  && indexTemplate.includes('<view class="gallery-track">')
-  && indexStyles.includes('.gallery-track{display:flex;')
-  && indexStyles.includes('align-items:stretch')
-  && indexStyles.includes('flex:0 0 72vw')
-  && indexStyles.includes('.gallery-photo{display:flex;box-sizing:border-box;width:100%;height:520rpx;')
-  && indexStyles.includes('.gallery-image{display:block;width:100%;height:100%}')
-  && indexStyles.includes('.gallery-photo-missing{display:flex;width:100%;height:100%;')
-  && indexStyles.includes('flex-basis:76vw'),
-  '图库须保持单行横向滑动、卡片可露出下一张且照片在统一展示框内完整显示')
+const detailScript = fs.readFileSync(path.join(__dirname, '../pages/control-protocol/detail.js'), 'utf8')
+const detailConfig = JSON.parse(fs.readFileSync(path.join(__dirname, '../pages/control-protocol/detail.json'), 'utf8'))
+assert.equal(detailConfig.navigationBarTitleText, '控制协议', '唯一阅读器使用工具入口标题')
+assert(detailTemplate.includes('class="device-header"')
+  && detailTemplate.includes('class="transport-segment"')
+  && detailTemplate.includes('class="parameter-summary"')
+  && detailTemplate.includes('class="command-list"'),
+  '唯一阅读器保留设备、传输、参数和命令层级')
+assert(!detailTemplate.includes('info-sheet')
+  && !detailTemplate.includes('openInfoSheet')
+  && !detailScript.includes('openInfoSheet')
+  && !detailScript.includes('  copyProtocol() {')
+  && !detailTemplate.includes('class="info-')
+  && !detailTemplate.includes('{{reference.sourceTitle}}')
+  && !detailTemplate.includes('{{reference.documentVersion}}')
+  && !detailTemplate.includes('{{manual.safetyNote}}')
+  && !detailTemplate.includes('{{transport.note}}')
+  && !detailTemplate.includes('class="transport-note"')
+  && !detailTemplate.includes('class="read-only-note"')
+  && !detailTemplate.includes('class="material-status"')
+  && !detailTemplate.includes('class="directory-empty-copy"')
+  && !detailTemplate.includes('人工选择 · 不自动识别'),
+  '阅读器不显示资料 sheet 或冗余状态说明')
+assert(detailTemplate.includes('适用：{{scopeSummary}}')
+  && !detailTemplate.includes('适用范围：{{scopeSummary}}')
+  && !detailTemplate.includes('class="device-subline"'),
+  '主屏只保留简短适用边界，不显示副标题行')
+assert(detailTemplate.includes('data-index="{{tab.sourceIndex}}"')
+  && detailTemplate.includes('bindtap="selectManualTransport"')
+  && detailTemplate.includes('bindchange="selectManualLoop"')
+  && detailTemplate.includes('bindtap="toggleManualWrites"')
+  && detailTemplate.includes("showManualWrites ? '收起指令' : '其他指令'")
+  && detailTemplate.includes('（{{manualWriteCommands.length}}）'),
+  '所有真实控制写请求仍能通过传输、回路和展开状态查阅')
+assert(detailTemplate.includes('copyManualCommand') && detailTemplate.includes('copyProtocolCommand')
+  && detailTemplate.includes('previewDirectoryPhoto') && detailTemplate.includes('selectDevice')
+  && !detailTemplate.includes('class="directory-row {{item.selected ? \'directory-row-selected\' : \'\'}}" data-type')
+  && detailTemplate.includes('class="directory-list" style="height:{{directoryListHeight}}rpx"'),
+  '命令复制、目录选择和原生照片预览保持独立操作')
+assert(detailTemplate.includes('mode="aspectFit"') && detailTemplate.includes('bindtap="previewPhoto"')
+  && detailTemplate.includes('binderror="onPhotoError"')
+  && detailTemplate.includes('class="device-photo-touch" wx:if="{{mainPhoto && !mainPhoto.imageFailed}}" data-path="{{mainPhoto.path}}" bindtap="previewPhoto"')
+  && detailTemplate.includes('class="directory-photo-wrap" data-path="{{item.photoPath}}" bindtap="previewDirectoryPhoto"'),
+  '主图与目录照片使用原生预览并保留失败恢复态')
+assert(detailTemplate.includes('现场控制器 MAC 地址')
+  && detailTemplate.includes('placeholder="输入12位十六进制字符"')
+  && detailTemplate.includes('wx:if="{{deviceMacValid}}" class="mac-input-hint">{{deviceMacFormatted}}')
+  && !detailTemplate.includes('不保存') && !detailTemplate.includes('待填写')
+  && detailScript.includes("/^[0-9a-fA-F]{12}$/")
+  && detailScript.includes("transport.id !== 'udp'")
+  && detailScript.includes('bytes.splice(start, macBytes.length, ...macBytes)'),
+  'UDP MAC 输入、校验和六字节替换仍保持原有临时复制逻辑')
+assert(detailScript.includes('setStorageSync') === false
+  && detailScript.includes('wx.request') === false
+  && detailScript.includes('wx.connectSocket') === false
+  && detailScript.includes('wx.sendSocketMessage') === false,
+  '阅读器不直接访问网络或绕过 preferences 存储')
+assert(detailStyles.includes('.device-sheet{height:auto}')
+  && detailStyles.includes('max-height:50vh')
+  && !detailStyles.includes('.info-')
+  && !detailStyles.includes('.photo-info-')
+  && !detailStyles.includes('.hash-value')
+  && !detailStyles.includes('.copy-summary-button')
+  && !detailStyles.includes('.sheet-close')
+  && !detailStyles.includes('.read-only-note')
+  && !detailStyles.includes('.transport-note')
+  && !detailStyles.includes('.material-status')
+  && !detailStyles.includes('.directory-empty-copy')
+  && !detailStyles.includes('min-height:174rpx')
+  && detailStyles.includes('.command-label{') && detailStyles.includes('font-size:15px')
+  && detailStyles.includes('.command-frame{') && detailStyles.includes('font-size:14px')
+  && detailStyles.includes('word-break:break-all')
+  && detailStyles.includes('.directory-copy{min-width:0;min-height:44px;flex:1}')
+  && detailStyles.includes('.directory-select-control{display:flex;box-sizing:border-box;width:44px;min-width:44px;height:44px;')
+  && detailStyles.includes('.selected-check{display:flex;box-sizing:border-box;width:20px;height:20px;')
+  && detailStyles.includes('min-width:48px!important;max-width:48px;height:48px!important')
+  && !detailStyles.includes('.bottom-sheet button.sheet-close')
+  && detailStyles.includes('.bottom-sheet button.sheet-cancel{display:flex;box-sizing:border-box;width:100%!important')
+  && detailStyles.includes('.protocol-page .mac-input-row button.mac-clear{')
+  && detailStyles.includes('width:64px!important;min-width:64px!important'),
+  '窄屏保留自然换行、清晰字号、44px以上触控和内容高度目录')
+const indexScript = fs.readFileSync(path.join(__dirname, '../pages/control-protocol/index.js'), 'utf8')
+assert(indexScript.includes("wx.redirectTo({ url: query ? `${DETAIL_URL}?${query}` : DETAIL_URL })")
+  && indexScript.includes("['referenceId', 'appearanceGroupId']"),
+  '轻量入口默认恢复唯一阅读器，并兼容旧显式设备参数')
 
 const sourceCopyRoot = path.join(__dirname, '../docs/control-protocol-draft/source-copy')
 const expectedSourceHashes = [
@@ -461,6 +764,14 @@ expectedSourceHashes.forEach(([filename, expectedHash]) => {
   assert.equal(crypto.createHash('sha256').update(sourceBytes).digest('hex').toUpperCase(), expectedHash,
     `${filename} 本地来源副本哈希不匹配`)
 })
+;[
+  ['smartplc-f300-sample.jpg', '2F4EEDFE79FDF8D7334970D7A4A5827D05A33C475FA1B48E5B7F5186D6AD9960'],
+  ['kylin-k100r-card-sample.jpg', 'B32D37BDE592DB722F9F20E5BD68C0AF562F6ADA06A840FC23C3D3CD0E4695CF'],
+].forEach(([filename, expectedHash]) => {
+  const fixtureBytes = fs.readFileSync(path.join(__dirname, 'fixtures/control-protocol/draft-assets', filename))
+  assert.equal(crypto.createHash('sha256').update(fixtureBytes).digest('hex').toUpperCase(), expectedHash,
+    `${filename} fixture 与来源照片不一致`)
+})
 const packageDraftResources = [
   'pages/control-protocol/development-sample.js',
   'pages/control-protocol/development-manual.js',
@@ -468,13 +779,11 @@ const packageDraftResources = [
   'pages/control-protocol/draft-assets/smartplc-f300-sample.jpg',
   'pages/control-protocol/draft-assets/kylin-k100r-card-sample.jpg',
 ]
-assert.equal(fs.existsSync(path.join(__dirname, '../pages/control-protocol/draft-assets/itc-kzx-cabinet-front.png')), false,
+assert.equal(fs.existsSync(path.join(__dirname, 'fixtures/control-protocol/draft-assets/itc-kzx-cabinet-front.png')), false,
   '机柜正面照只留在 docs/source-copy，不进入小程序资源目录')
-assert.equal(evaluateDraftProtocolPackageGate([], false).allowed, true, '无草稿资源时发布门禁应允许通过')
-assert.equal(evaluateDraftProtocolPackageGate(packageDraftResources, false).allowed, false,
+assert.equal(evaluateDraftProtocolPackageGate([]).allowed, true, '无草稿资源时发布门禁应允许通过')
+assert.equal(evaluateDraftProtocolPackageGate(packageDraftResources).allowed, false,
   '普通发布检查必须拒绝含开发样本的包')
-assert.equal(evaluateDraftProtocolPackageGate(packageDraftResources, true).bypassed, true,
-  '显式本地样本回归标记只应绕过草稿资源这一项门禁')
 
 const reviewerId = 'fixture-reviewer'
 const mappingReviewerId = 'fixture-mapping-reviewer'
@@ -670,4 +979,4 @@ const duplicateGroupId = {
 assert.equal(resolveAppearanceGroupProtocol(duplicateGroupId, 'fixture-group').reason, 'unknown-appearance-group',
   '重复外观组 ID 必须拒绝自动解析')
 
-console.log('Control protocol auto-resolution checks passed (empty production catalog; fixture-only unique/ambiguous/photo/source/protocol gates).')
+console.log('Control protocol checks passed (six empty automatic arrays; two independent manual references; strict auto-resolution gates).')

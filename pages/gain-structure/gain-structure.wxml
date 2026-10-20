@@ -3,10 +3,10 @@
     <view class="action-rail" aria-label="结果操作">
       <button class="action-button" aria-label="重置本次计算" disabled="{{!canReset}}" bindtap="requestReset"><view class="action-icon icon-reset"></view></button>
       <button class="action-button" aria-label="分享结果图片" disabled="{{!hasValidResult}}" bindtap="openSharePreview"><view class="action-icon icon-share"><view class="icon-share-box"></view></view></button>
-      <button class="action-button" aria-label="收藏当前配置" aria-pressed="{{currentFavorite}}" disabled="{{!hasValidResult}}" bindtap="toggleCurrentFavorite"><view class="action-icon {{currentFavorite ? 'icon-bookmark-active' : 'icon-bookmark'}}"></view></button>
+      <button class="action-button" aria-label="收藏当前配置" aria-pressed="{{currentFavorite}}" disabled="{{!hasValidResult}}" bindtap="toggleCurrentFavorite"><view class="action-icon icon-bookmark {{currentFavorite ? 'icon-bookmark-active' : ''}}"></view></button>
       <button class="action-button" aria-label="保存到项目" disabled="{{!hasValidResult}}" bindtap="openProjectSheet"><view class="action-icon icon-folder"><view></view></view></button>
     </view>
-
+    <include src="../../templates/result-record-actions.wxml" />
     <view class="result-card result-card-{{calculationState}}" aria-live="polite">
       <view class="result-heading">
         <view wx:if="{{hasValidResult}}" class="status-chip status-chip-{{result.statusTone}}">{{result.statusLabel}}</view>
@@ -152,4 +152,5 @@
   </page-container>
   <view wx:if="{{!pageContainerSupported && (selectorVisible || shareSheetVisible || projectSheetVisible)}}" class="sheet-mask {{projectKeyboardActive ? 'project-keyboard-open' : ''}} {{shareSheetVisible ? 'share-preview-mask' : ''}}" catchtap="onPageContainerClickOverlay" catchtouchmove="preventTouchMove"><include src="./gain-overlays.wxml" /></view>
   <canvas id="resultReportCanvas" canvas-id="resultReportCanvas" class="result-report-canvas-offscreen" width="{{resultReportCanvasWidth}}" height="{{resultReportCanvasHeight}}" style="width:{{resultReportCanvasWidth}}px;height:{{resultReportCanvasHeight}}px;"></canvas>
+  <include src="../../templates/editor-navigation-guard.wxml" />
 </view>

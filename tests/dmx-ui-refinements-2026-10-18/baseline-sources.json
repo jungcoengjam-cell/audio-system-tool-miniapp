@@ -1,0 +1,165 @@
+{
+  "createdAt": "2026-10-18T05:44:39.121Z",
+  "files": {
+    "pages/dmx-address/channel-guide.js": {
+      "sha256": "3a7d4a131fa1fefd11fcd8a8bb64b375e669e3a6ce7bb7565e28e181a96b79f8",
+      "bytes": 5809
+    },
+    "pages/dmx-address/channel-guide.json": {
+      "sha256": "8545237716a168df1a07a9557797150d5e4319561a3c743f0c2febdb8a6e2ea1",
+      "bytes": 53
+    },
+    "pages/dmx-address/channel-guide.wxml": {
+      "sha256": "438ec6fe66adfb853ef4a5eaa23914b6737dd5c9de2e74ea323a9885ae0c3089",
+      "bytes": 2152
+    },
+    "pages/dmx-address/channel-guide.wxss": {
+      "sha256": "fa408551c8a3dcad6804cf1ee1e82b5dfe4dcc3a93683e59d1f01457155c8b55",
+      "bytes": 2735
+    },
+    "pages/dmx-address/dmx-address.js": {
+      "sha256": "8c5e8bbd8d2b676eeffba78ba53854733bd3b403f61519b12499a34038113501",
+      "bytes": 91584
+    },
+    "pages/dmx-address/dmx-address.json": {
+      "sha256": "27041e9bbf576a46ddf154516f63f0cc101c2c02ce6853781fae61a52fc9cd16",
+      "bytes": 59
+    },
+    "pages/dmx-address/dmx-address.wxml": {
+      "sha256": "c3a5c16d44e0f23cbaa232ab26e43952c64b78cde1829090327d1b430fc03709",
+      "bytes": 26422
+    },
+    "pages/dmx-address/dmx-address.wxss": {
+      "sha256": "f4b38c52065dbd8db206d8700c6b5214a4940736e65abff55e65024b2cf57a39",
+      "bytes": 27907
+    },
+    "pages/dmx-address/group-input.js": {
+      "sha256": "c7142ec84ecece7cbd12930029f91518552c13cad64cecc1d5666e0ffc8389cf",
+      "bytes": 3364
+    },
+    "pages/dmx-address/result-view.js": {
+      "sha256": "44ed19b4e8f2d413599c74d49508f77fd676308e929508ea97e0f734388f3c25",
+      "bytes": 9986
+    },
+    "pages/dmx-layout/dmx-layout.js": {
+      "sha256": "c0aeca257ad712afc2d2d5a27b44af2b7812dd4f5595b234eb956e9b97e6970f",
+      "bytes": 107
+    },
+    "pages/dmx-layout/dmx-layout.json": {
+      "sha256": "a829bb31c80795fc2b5b3972e968009a4c1c1d0ca6954b674a2894bb0efef877",
+      "bytes": 75
+    },
+    "pages/dmx-layout/dmx-layout.wxml": {
+      "sha256": "adf04a319f6d6f7b7747b8745f365eafa6f8f1238cab10f24323192c41d1d8c0",
+      "bytes": 15753
+    },
+    "pages/dmx-layout/dmx-layout.wxss": {
+      "sha256": "3f0ae5084536158451526b72469f752fb1217486208057b5e6322a5c633d21d9",
+      "bytes": 42717
+    },
+    "pages/dmx-layout/layout-canvas-adapter.js": {
+      "sha256": "fd674c176dd30b3f113d44e3f885705847077d5ef0aa5c183bee2ccdffa868e3",
+      "bytes": 3259
+    },
+    "pages/dmx-layout/layout-model.js": {
+      "sha256": "9e18a0bd64b360dda7d15f7982310aef302d8b0d3deb8bb46808fc782057a337",
+      "bytes": 21956
+    },
+    "pages/dmx-layout/layout-renderer.js": {
+      "sha256": "5024a9554f9101a3a129a2212b254ec5e662837214b2d251dcbf7f680739abed",
+      "bytes": 49104
+    },
+    "pages/dmx-layout/layout-storage.js": {
+      "sha256": "b8b5388580ef71178e824ea04ad1f8fd5f978f00760520fa262d61dd40508410",
+      "bytes": 4950
+    },
+    "pages/dmx-layout/lighting-workspace.js": {
+      "sha256": "51de657385d77edce2e850c49c576e3c87b9b8b3f88d34e765360d398b68c726",
+      "bytes": 37984
+    },
+    "pages/dmx-layout/page-factory.js": {
+      "sha256": "841c6c9a04861889745dcac71c12270585eaf67777e97d324201e02d704e47db",
+      "bytes": 90083
+    },
+    "pages/dmx-layout-landscape/dmx-layout-landscape.js": {
+      "sha256": "23a75c0959f0a8083daa09516f2c4f3113aecf0f7c510bff81edf5265d1aba56",
+      "bytes": 120
+    },
+    "pages/dmx-layout-landscape/dmx-layout-landscape.json": {
+      "sha256": "20e7e3a07389296807eeaa6fbeec7fc69595300be52cbbf1b5a30bd7f096a561",
+      "bytes": 118
+    },
+    "pages/dmx-layout-landscape/dmx-layout-landscape.wxml": {
+      "sha256": "adf04a319f6d6f7b7747b8745f365eafa6f8f1238cab10f24323192c41d1d8c0",
+      "bytes": 15753
+    },
+    "pages/dmx-layout-landscape/dmx-layout-landscape.wxss": {
+      "sha256": "8b763fbd35a374810275ad6f23510e68252a3fc41749138648942978e9ba61b9",
+      "bytes": 42713
+    },
+    "pages/dmx-address/data/stage-lighting-channels-extra.js": {
+      "sha256": "42111e32ec3bad73b7743327c83febf7b22be30b7711654b638d85b0ce578ef4",
+      "bytes": 30467
+    },
+    "pages/dmx-address/data/stage-lighting-channels-final-a.js": {
+      "sha256": "6b8941f5965effbd554b8fc0c4a2cb3ee3fb9a7f910d377ad7c2f174b2699047",
+      "bytes": 28794
+    },
+    "pages/dmx-address/data/stage-lighting-channels-final-b.js": {
+      "sha256": "286a379724c1686eb01d050081c36abc82843a3eb72b423f2182e23cbe18cf07",
+      "bytes": 40582
+    },
+    "pages/dmx-address/data/stage-lighting-channels.js": {
+      "sha256": "953700af812fba1829f3657c2bf28c5e5e87699df89e7983984681349aef429e",
+      "bytes": 89436
+    },
+    "pages/dmx-address/utils/dmx-channel-guide.js": {
+      "sha256": "b4c5b9d8d4e1385b87b48b8272f97b7fb12cb0bf0ebfc4491fd05aeddbcb0bd1",
+      "bytes": 4458
+    },
+    "utils/dmx-address.js": {
+      "sha256": "031eb5678ada8d6f852ee7c3c86e2edc61f8e0c9a5e9a00f75589cae790da03a",
+      "bytes": 11393
+    },
+    "utils/preferences.js": {
+      "sha256": "79219eb329ae89f2ceda227a9fb0339902faedc30d54e105e28ae84fe29e6a0b",
+      "bytes": 1486
+    },
+    "utils/records.js": {
+      "sha256": "6f18a9f4d0220cc89ba28677df36c33ec4b26532cc31e844c616b317f14407e8",
+      "bytes": 31867
+    },
+    "data/stage-lighting.js": {
+      "sha256": "092be2c2ecd19e2b5b505cfef6b106c98120023f10f38e5331ba4719906f223b",
+      "bytes": 39301
+    },
+    "project.config.json": {
+      "sha256": "f96682cfffdd4c6796352f69da4b8a3061692b9a0166f4fe2821df8e0d39f7fd",
+      "bytes": 2588
+    },
+    "app.json": {
+      "sha256": "f3ca14fcd5bb82b7938446697d20bef3138c6431b28a88f3d728c51a6aa96664",
+      "bytes": 2120
+    },
+    "app.wxss": {
+      "sha256": "14e75494ff63bd53a3e6e53cebc5b225205c86c094f4b7506cf52fccfb4a1c6b",
+      "bytes": 5927
+    },
+    "styles/theme-page-shared.wxss": {
+      "sha256": "5731440f4677c604781b9919ac45e1a9430e67aeed34730565766d17beba988c",
+      "bytes": 3722
+    },
+    "tests/package-reclaim/ui-resources.cjs": {
+      "sha256": "7cced0cb77410f92c4a17e89f94bdb9c8adfca717701f74ef9d525b73a3203cc",
+      "bytes": 31786
+    },
+    "tests/package-reclaim/ui-test-first.json": {
+      "sha256": "3d1f9595c7a59ff0da627384afcc12ebe87bba3205eb2b7f64bcd7af6cbda4f2",
+      "bytes": 1468
+    },
+    "tests/release-check.js": {
+      "sha256": "6769078341ba3f50b821de24568389efcc958cbe4922ff5858bdeffcb4549ec6",
+      "bytes": 358866
+    }
+  }
+}

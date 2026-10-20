@@ -6,7 +6,6 @@ const pageCases = [
   ['limiter', '../../pages/limiter/limiter'],
   ['spl', '../../pages/spl/spl'],
   ['cable', '../../pages/cable/cable'],
-  ['venue', '../../pages/venue/venue'],
   ['camera', '../../pages/camera/camera'],
   ['led-screen', '../../pages/led-screen/led-screen'],
   ['gain-structure', '../../pages/gain-structure/gain-structure'],

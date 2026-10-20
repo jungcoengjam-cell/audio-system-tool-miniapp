@@ -4,15 +4,19 @@ const path = require('path')
 
 const RECORDS_KEY = 'audioTool.records.v1'
 const PROJECTS_KEY = 'audioTool.projects.v1'
+const FAVORITES_KEY = 'audioTool.favorites.v1'
+const RECOVERY_KEY = 'audioTool.recovery.v1'
 const ACTIVE_KEY = 'audioTool.activeProject.v1'
 const SCHEMA_KEY = 'audioTool.storageSchemaVersion'
-const SCHEMA_VERSION = 3
+const SCHEMA_VERSION = 4
 const { amplifiers, speakers } = require('../data/equipment')
 const { calculateLimiter } = require('../utils/limiter')
 
 const storage = new Map([
   [RECORDS_KEY, []],
   [PROJECTS_KEY, []],
+  [FAVORITES_KEY, []],
+  [RECOVERY_KEY, []],
   [ACTIVE_KEY, ''],
   [SCHEMA_KEY, SCHEMA_VERSION],
 ])
@@ -20,6 +24,7 @@ const writeCounts = new Map()
 let failedWriteKey = ''
 let failedReadKey = ''
 let clipboardText = ''
+const navigatedUrls = []
 
 function clone(value) {
   return value === undefined ? undefined : JSON.parse(JSON.stringify(value))
@@ -37,6 +42,7 @@ global.wx = {
   },
   getStorageInfoSync() { return { currentSize: 1, limitSize: 100 } },
   setNavigationBarTitle() {},
+  navigateTo({ url }) { navigatedUrls.push(url) },
   setClipboardData({ data }) { clipboardText = data },
 }
 
@@ -165,9 +171,9 @@ assert.equal([...writeCounts.values()].reduce((sum, count) => sum + count, 0), n
   '非法元数据在读写前被拒绝')
 assert(records.addRecordToProject(payload, projectA.id, { name: '名'.repeat(60), note: '' }))
 assert(records.addRecordToProject(payload, projectA.id, { name: '有效名称', note: '注'.repeat(200) }))
-assert.equal(records.addRecordToProject({ ...payload, module: 'spl' }, projectA.id, {
+assert.equal(records.addRecordToProject({ ...payload, module: 'projectWiring' }, projectA.id, {
   name: '其他模块', note: '',
-}), null, '共享记录元数据只接受限幅器记录')
+}), null, '共享记录元数据仍拒绝未授权模块')
 
 const rollbackPayload = {
   ...payload,
@@ -205,18 +211,44 @@ assert.equal(records.getProjectRecords(projectC.id).some((record) => !record.pro
 
 const favoriteEnabled = records.toggleFavorite(payload)
 assert.equal(favoriteEnabled.favorite, true)
-assert.equal(favoriteEnabled.title, payload.title, '添加项目名称后收藏仍保留当前共享标题')
+assert.notEqual(favoriteEnabled.id, records.getRecordByPayload(payload).id, '收藏使用独立快照编号')
+assert.equal(favoriteEnabled.title, payload.title, '添加项目名称后收藏仍保留当前计算标题')
 assert.equal(favoriteEnabled.resultText, payload.resultText)
+assert.deepEqual(favoriteEnabled.projectIds, [])
+assert.deepEqual(favoriteEnabled.originProjectIds, [projectA.id, projectB.id, projectC.id], '收藏保留所有来源项目关系')
+assert.equal(favoriteEnabled.projectMetadata, undefined, '收藏不继承项目内可编辑名称和备注')
 let favoriteRecord = records.getRecordByPayload(payload)
+assert.equal(favoriteRecord.favorite, false, '收藏变化不改项目计算记录')
 assert.equal(favoriteRecord.projectMetadata[projectA.id].name, '有效名称')
 assert.equal(favoriteRecord.projectMetadata[projectB.id].name, 'B 项目配置')
-assert.equal(records.restoreRecord(favoriteRecord), '/pages/limiter/limiter')
-assert.deepEqual(storage.get('audioTool.limiter.preferences'), preferences,
-  '恢复记录写入的偏好对象与原参数字段顺序一致')
-assert.deepEqual(Object.keys(storage.get('audioTool.limiter.preferences')), [
+const limiterPreferenceKey = 'audioTool.limiter.preferences'
+const originalTemporaryPreferences = { amplifierModel: 'temporary', draft: '保留临时输入' }
+storage.set(limiterPreferenceKey, originalTemporaryPreferences)
+assert.equal(records.restoreRecord(favoriteEnabled), '/pages/limiter/limiter')
+assert.deepEqual(storage.get(limiterPreferenceKey), originalTemporaryPreferences,
+  '路由兼容助手不直接覆盖临时输入，工作副本由编辑上下文管理')
+const recordContext = require('../utils/result-record-context')
+const sessionId = recordContext.openRecordEditor(favoriteEnabled, 'favorite')
+assert.ok(sessionId)
+const editorPage = {
+  data: {},
+  setData(changes) { Object.assign(this.data, changes) },
+  getRecordPayload() { return favoriteEnabled },
+  getEditorPreferences() { return favoriteEnabled.preferences },
+}
+const session = recordContext.attachResultEditor(editorPage, 'limiter', { editorSessionId: sessionId })
+assert.equal(session.sourceKind, 'favorite')
+assert.equal(session.recordId, '')
+assert.deepEqual(Object.keys(session.preferences), [
   'amplifierModel', 'speakerModel', 'count', 'wiring', 'mode', 'sensitivityVoltage', 'highPassFrequency',
-], '恢复的七个字段顺序与当前限幅器页面记录契约一致')
-assert.equal(records.toggleFavoriteById(favoriteRecord.id).favorite, false)
+], '收藏工作副本保留当前限幅器参数字段顺序')
+assert.deepEqual(storage.get(limiterPreferenceKey), preferences)
+assert.equal(recordContext.discardResultEditor(editorPage), true)
+assert.deepEqual(storage.get(limiterPreferenceKey), originalTemporaryPreferences, '放弃工作副本后恢复临时输入')
+assert.deepEqual(records.getFavoriteByPayload(payload), favoriteEnabled, '载入和放弃不改收藏快照')
+assert.equal(records.toggleFavoriteById(favoriteEnabled.id), null)
+assert.equal(records.getFavoriteByPayload(payload), null)
+assert(records.getRecoveryEntries().some((entry) => entry.kind === 'favorite' && entry.targetId === favoriteEnabled.id))
 favoriteRecord = records.getRecordByPayload(payload)
 assert.equal(favoriteRecord.projectMetadata[projectA.id].name, '有效名称', '收藏开关不丢项目元数据')
 assert.equal(favoriteRecord.projectMetadata[projectB.id].name, 'B 项目配置')
@@ -497,7 +529,7 @@ const adversarialReport = projectReport.buildProjectReportPayload(projectPage.da
 const adversarialHeight = projectReport.calculateProjectReportHeight(adversarialReport)
 assert(adversarialHeight <= 4096, '12模块的最长配置名和199字符换行备注仍限制在4096px')
 assert(adversarialReport.omittedCount > 0, '超出画布预算时沿用omittedCount省略长图记录')
-assert.equal(adversarialReport.completedModuleCount, 12, '长图裁减不改完整报告的模块计数')
+assert.equal(adversarialReport.completedModuleCount, 0, '未知模块组不计入已完成活跃模块数')
 assert(adversarialReport.groups.flatMap((group) => group.records)
   .every((record) => record.projectNote === adversarialNote), '被保留的记录仍带有完整原始备注')
 assert(adversarialGroups.every((group) => group.records[0].projectNote === adversarialNote),
@@ -528,7 +560,7 @@ projected.title = '投影修改'
 projected.projectMetadata[projectA.id].name = '投影修改'
 projected.preferences.amplifierModel = '投影修改'
 projected.projectIds.push('投影修改')
-assert.equal(favoriteRecord.title, payload.title)
+assert.equal(favoriteRecord.title, '旧调用方标题', '收藏快照不再改写共享项目记录标题')
 assert.equal(favoriteRecord.projectMetadata[projectA.id].name, metadataBeforeProjection[projectA.id].name)
 assert.equal(favoriteRecord.preferences.amplifierModel, preferences.amplifierModel)
 assert(!favoriteRecord.projectIds.includes('投影修改'))
@@ -566,7 +598,7 @@ const unassociatedMetadataRecord = {
 assert.equal(records.getProjectRecordView(unassociatedMetadataRecord, 'legacy-project').title, '旧规范名称')
 const otherModuleMetadataRecord = {
   ...legacyRecord,
-  module: 'spl',
+  module: 'dmxAddress',
   projectMetadata: { 'legacy-project': { name: '其他工具名称', note: '其他工具备注', savedAt: 888 } },
 }
 assert.equal(records.getProjectRecordView(otherModuleMetadataRecord, 'legacy-project').title, '旧规范名称')
@@ -585,8 +617,8 @@ assert.equal(records.getProjectRecords(projectA.id).find((record) => record.id =
   payload.title, 'getProjectRecords继续返回原始共享记录语义')
 
 const legacyExtraPayload = {
-  module: 'spl',
-  title: '旧版声压记录',
+  module: 'camera',
+  title: '旧版其他模块记录',
   summary: '旧版摘要',
   resultText: '旧版结果',
   preferences: { legacy: true },
@@ -594,18 +626,32 @@ const legacyExtraPayload = {
 }
 const legacyExtraRecord = records.addRecordToProject(legacyExtraPayload, projectC.id)
 assert(legacyExtraRecord)
-assert.equal(records.toggleFavoriteById(legacyExtraRecord.id).favorite, true)
+const legacyExtraFavorite = records.toggleFavorite(legacyExtraPayload)
+assert(legacyExtraFavorite?.favorite)
+assert.notEqual(legacyExtraFavorite.id, legacyExtraRecord.id, '扩展记录的收藏也使用独立 ID')
+assert.deepEqual(legacyExtraFavorite.originProjectIds, [projectC.id])
 assert.equal(records.removeRecordFromProject(legacyExtraRecord.id, projectC.id), true)
-let retainedLegacyExtra = records.getRecords().find((record) => record.id === legacyExtraRecord.id)
-assert.deepEqual(retainedLegacyExtra.projectMetadata, legacyExtraPayload.projectMetadata,
-  '移除其他模块关联时保留既有 projectMetadata 扩展字段')
-records.addRecordToProject(legacyExtraPayload, projectC.id)
+assert.equal(records.getRecordById(legacyExtraRecord.id), null, '移除最后一个项目关联后活动记录退出列表')
+assert(records.getRecoveryEntries().some((entry) => entry.kind === 'record-project-link'
+  && entry.snapshot.id === legacyExtraRecord.id), '移除关联保留记录快照供恢复')
+const reattachedLegacyExtra = records.addRecordToProject(legacyExtraPayload, projectC.id)
+assert(reattachedLegacyExtra)
+assert.deepEqual(reattachedLegacyExtra.projectMetadata, legacyExtraPayload.projectMetadata,
+  '重新加入时保留其他模块的既有 projectMetadata 扩展字段')
 assert.equal(records.deleteProject(projectC.id), true)
-retainedLegacyExtra = records.getRecords().find((record) => record.id === legacyExtraRecord.id)
-assert(retainedLegacyExtra.favorite)
+let retainedLegacyExtra = records.getRecordById(reattachedLegacyExtra.id)
+assert.equal(retainedLegacyExtra.favorite, false, '项目计算记录不被收藏标记污染')
 assert.deepEqual(retainedLegacyExtra.projectMetadata, legacyExtraPayload.projectMetadata,
-  '删除项目时不清理其他模块的 legacy 扩展字段')
-assert.deepEqual(retainedLegacyExtra.projectIds, [])
+  '删除项目时保留其他模块的 legacy 扩展字段')
+assert.deepEqual(retainedLegacyExtra.projectIds, [projectC.id], '删除项目时暂存原记录关系')
+assert.equal(records.getProjects().some((item) => item.id === projectC.id), false)
+const legacyProjectRecovery = records.getRecoveryEntries().find((entry) => entry.kind === 'project'
+  && entry.targetId === projectC.id)
+assert(legacyProjectRecovery && records.restoreRecoveryEntry(legacyProjectRecovery.id))
+assert.equal(records.getRecordById(reattachedLegacyExtra.id).id, reattachedLegacyExtra.id)
+assert.deepEqual(records.getRecordById(reattachedLegacyExtra.id).projectMetadata, legacyExtraPayload.projectMetadata)
+assert.equal(records.getFavoriteByPayload(legacyExtraPayload).id, legacyExtraFavorite.id,
+  '恢复项目不影响独立收藏快照')
 
 delete require.cache[require.resolve('../utils/records')]
 const freshRecords = require('../utils/records')
@@ -632,27 +678,34 @@ assert.deepEqual(storage.get(PROJECTS_KEY), storageProjectsBeforeReadFailure)
 assert.equal(records.removeRecordFromProject(favoriteRecord.id, projectA.id), true)
 const afterRemovingA = records.getRecords().find((record) => record.id === favoriteRecord.id)
 assert.equal(afterRemovingA.favorite, false)
-assert.deepEqual(afterRemovingA.projectIds, [projectB.id])
+assert.deepEqual(new Set(afterRemovingA.projectIds), new Set([projectB.id, projectC.id]),
+  '移除 A 后保留其他项目的共享记录关联')
 assert(!Object.prototype.hasOwnProperty.call(afterRemovingA.projectMetadata, projectA.id))
 assert.equal(afterRemovingA.projectMetadata[projectB.id].name, 'B 项目配置')
-records.toggleFavoriteById(favoriteRecord.id)
+const retainedPayloadFavorite = records.toggleFavorite(payload)
+assert(retainedPayloadFavorite?.favorite)
 assert.equal(records.deleteProject(projectB.id), true)
 const afterDeletingB = records.getRecords().find((record) => record.id === favoriteRecord.id)
-assert(afterDeletingB.favorite, '删项目后已收藏记录继续保留')
-assert.deepEqual(afterDeletingB.projectIds, [])
-assert(!afterDeletingB.projectMetadata || !Object.keys(afterDeletingB.projectMetadata).length,
-  '删项目会清除该项目的元数据键')
+assert.equal(afterDeletingB.favorite, false, '项目记录不承载收藏状态')
+assert.deepEqual(new Set(afterDeletingB.projectIds), new Set([projectB.id, projectC.id]), '删项目时暂存关系供恢复')
+assert.equal(afterDeletingB.projectMetadata[projectB.id].name, 'B 项目配置')
+assert.equal(records.getProjects().some((item) => item.id === projectB.id), false)
+const projectBRecovery = records.getRecoveryEntries().find((entry) => entry.kind === 'project'
+  && entry.targetId === projectB.id)
+assert(projectBRecovery && records.restoreRecoveryEntry(projectBRecovery.id))
+assert.equal(records.getRecordById(favoriteRecord.id).projectMetadata[projectB.id].name,
+  'B 项目配置', '恢复项目后关联 metadata 与记录 ID 保持不变')
+assert.equal(records.getFavoriteByPayload(payload).id, retainedPayloadFavorite.id,
+  '独立收藏在删除和恢复项目时保持不变')
 
 assert.equal(records.STORAGE_SCHEMA_VERSION, SCHEMA_VERSION, '不升级存储 schema')
-assert.deepEqual([...storage.keys()].sort(), [ACTIVE_KEY, PROJECTS_KEY, RECORDS_KEY, SCHEMA_KEY,
-  'audioTool.limiter.preferences'].sort(), '不创建新的存储键')
+assert.deepEqual([...storage.keys()].sort(), [ACTIVE_KEY, FAVORITES_KEY, PROJECTS_KEY, RECORDS_KEY,
+  RECOVERY_KEY, SCHEMA_KEY, 'audioTool.dmxLightingWorkspace.v2', 'audioTool.limiter.preferences',
+  'audioTool.resultEditorSessions.v1'].sort(), '独立收藏、恢复和编辑上下文使用各自存储键')
 const projectMarkup = fs.readFileSync(path.resolve(__dirname, '../pages/records/project.wxml'), 'utf8')
-assert(projectMarkup.includes("record.hasProjectMetadata ? 'record-title-project-config'"),
-  '只有有效项目配置元数据标题使用专用换行样式类')
-assert(projectMarkup.includes('class="record-summary record-project-note">配置备注：{{record.projectNote}}'),
-  '项目备注行使用独立保留换行的样式类')
+assert(projectMarkup.includes('{{record.title}}'), '项目计算记录以项目投影标题呈现')
+assert(projectMarkup.includes('{{record.projectNote}}'), '项目记录仍呈现本项目配置备注')
 const projectStyles = fs.readFileSync(path.resolve(__dirname, '../pages/records/project.wxss'), 'utf8')
-assert(projectStyles.includes('.record-title-project-config,.record-project-note{min-width:0;word-break:break-all;overflow-wrap:anywhere}'))
-assert(projectStyles.includes('.record-project-note{white-space:pre-wrap'), '项目备注样式保留手动换行')
+assert(projectStyles.includes('.interior-item-subtitle'), '项目记录摘要和备注使用紧凑副标题样式')
 
 console.log('limiter project metadata tests passed')

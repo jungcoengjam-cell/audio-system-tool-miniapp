@@ -1,691 +1,207 @@
-<view class="page-root">
-<scroll-view class="page-scroll" scroll-y>
-<view class="page-content">
-<view class="page-header">
-<view class="page-title">灯具地址码计算</view>
-</view>
+<view class="page-root" style="--overlay-safe-top: {{overlaySafeTop}}px; --overlay-safe-bottom: {{overlaySafeBottom}}px; --overlay-max-height: {{overlayMaxHeight}}px; --overlay-center-top: {{overlayCenterTop}}px; --overlay-search-max-height: {{overlaySearchMaxHeight}}px; --overlay-search-sheet-height: {{overlaySearchSheetHeight}}px; --overlay-pending-max-height: {{overlayPendingMaxHeight}}px; --overlay-add-max-height: {{overlayAddMaxHeight}}px; --overlay-save-max-height: {{overlaySaveMaxHeight}}px; --overlay-guide-height: {{overlayGuideHeight}}px; --overlay-report-height: {{overlayReportHeight}}px; --overlay-save-list-max-height: {{overlaySaveListMaxHeight}}px;">
+  <view class="page-header" style="height: {{navigationHeight}}px; padding-top: {{statusBarHeight}}px;">
+    <view class="header-back" style="top: {{shareTop}}px;" bindtap="onHeaderBack" aria-label="返回">‹</view>
+    <view class="page-title" style="top: {{shareTop}}px;">灯具编址</view>
+  </view>
 
-<view class="workspace-switch" role="tablist">
-<view
-class="workspace-option {{activeWorkspace == 'config' ? 'workspace-option-active' : ''}}"
-data-workspace="config"
-bindtap="switchWorkspace"
-role="tab"
-aria-selected="{{activeWorkspace == 'config'}}"
-><text>01 编址配置</text></view>
-<view
-class="workspace-option {{activeWorkspace == 'plan' ? 'workspace-option-active' : ''}}"
-data-workspace="plan"
-bindtap="switchWorkspace"
-role="tab"
-aria-selected="{{activeWorkspace == 'plan'}}"
-aria-label="{{result && result.valid ? '02 地址方案，已就绪' : '02 地址方案'}}"
-><text>02 地址方案</text><text wx:if="{{result && result.valid}}" class="workspace-ready-mark" aria-hidden="true">✓</text></view>
-</view>
+  <scroll-view class="page-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+    <view class="page-content">
+      <view class="context-row">
+        <picker class="context-picker" mode="selector" range="{{contextRows}}" range-key="name" value="{{contextIndex}}" bindchange="onLightingContextChange">
+          <view class="context-selector"><text>{{contextName}}</text><text class="context-chevron">⌄</text></view>
+        </picker>
+        <view wx:if="{{currentContextTemporary}}" class="save-project-trigger" bindtap="onSaveNewProjectToggle">保存到项目</view>
+      </view>
 
-<view wx:if="{{activeWorkspace == 'config'}}" class="card groups-card workspace-panel">
-<view class="section-head">
-<view class="card-title">编址设置</view>
-<view class="group-count">{{groups.length}} / {{maximumGroups}}</view>
-</view>
+      <view class="setup-row">
+        <picker class="allocation-picker" mode="selector" range="{{allocationModeOptions}}" value="{{allocationModeIndex}}" bindchange="onAllocationModePickerChange">
+          <view class="setup-select">{{allocationModeOptions[allocationModeIndex]}}<text class="select-chevron">⌄</text></view>
+        </picker>
+        <text class="setup-divider">|</text>
+        <text class="setup-start-label">起始</text>
+        <view class="start-address-box"><text>A</text><input class="start-address-input" type="number" value="{{startAddressDisplay}}" data-key="startAddressText" data-gesture-ignore="true" bindinput="onBaseInput" bindblur="onFieldBlur" /></view>
+        <view class="add-group-button {{groups.length >= maximumGroups ? 'is-disabled' : ''}}" bindtap="addGroup">＋ 灯组</view>
+      </view>
 
-<view class="allocation-mode-switch">
-<view
-wx:for="{{allocationModeOptions}}"
-wx:for-item="modeText"
-wx:for-index="modeIndex"
-wx:key="modeText"
-class="allocation-mode-option {{allocationMode == (modeIndex == 0 ? 'auto' : 'manual') ? 'allocation-mode-option-active' : ''}}"
-data-mode="{{modeIndex == 0 ? 'auto' : 'manual'}}"
-bindtap="switchAllocationMode"
->{{modeText}}</view>
-</view>
+      <view class="occupancy-strip">
+        <picker class="occupancy-domain-picker" mode="selector" range="{{universeOptions}}" value="{{selectedUniverseIndex}}" bindchange="onSelectedUniverseChange">
+          <view class="occupancy-domain">{{selectedUniverseLabel}}域<text>⌄</text></view>
+        </picker>
+        <view class="occupancy-track"><view wx:for="{{selectedOccupancyUniverse.segments}}" wx:for-item="segment" wx:key="id" class="occupancy-segment" style="left: {{segment.leftPercent}}%; width: {{segment.widthPercent}}%; background-color: {{segment.color}};"></view></view>
+        <text class="occupancy-summary">已用 {{selectedOccupancyUniverse.occupiedText}} · 下一地址 {{nextAvailableAddress}}</text>
+      </view>
 
-<view class="start-address-row">
-<view class="start-address-copy">
-<view class="field-label">A 域起始地址</view>
-<view class="start-address-note">{{allocationMode == 'auto' ? '超出 512 自动进入下一域' : 'A 域从起始地址开始，B-D 域从 001 开始'}}</view>
-</view>
-<view class="input-shell start-address-input">
-<input
-class="number-input"
-type="number"
-value="{{startAddressText}}"
-data-key="startAddressText"
-bindinput="onBaseInput"
-bindblur="onFieldBlur"
-/>
-<text class="input-unit">/ 512</text>
-</view>
-</view>
+      <view wx:if="{{contextError}}" class="status-error"><text>{{contextError}}</text><view wx:if="{{saveRetryAvailable}}" class="status-retry" bindtap="retryUnsavedScheme">重试保存</view><view wx:else class="status-retry" bindtap="retryLightingWorkspace">重新读取</view></view>
+      <view wx:if="{{result && !result.valid && groups.length}}" class="validation-note">{{result.error}}</view>
 
-<view class="group-list-head">
-<view class="field-label">灯具分组</view>
-</view>
+      <view class="group-list">
+        <view wx:for="{{groupCards}}" wx:for-item="group" wx:for-index="groupIndex" wx:key="_lightingGroupId" class="group-swipe-wrap" bindtouchstart="onGroupTouchStart" bindtouchmove="onGroupTouchMove" bindtouchend="onGroupTouchEnd" bindtouchcancel="onGroupTouchCancel" data-index="{{groupIndex}}">
+          <view wx:if="{{swipedGroupIndex == groupIndex || (swipeDragIndex == groupIndex && swipeDragOffset < 0)}}" class="swipe-delete" data-index="{{groupIndex}}" catchtap="requestDeleteGroup">删除</view>
+          <view id="fixture-card-{{groupIndex}}" class="fixture-card {{swipedGroupIndex == groupIndex ? 'fixture-card-swiped' : ''}}" data-index="{{groupIndex}}" style="transform: translateX({{swipeDragIndex == groupIndex ? swipeDragOffset : (swipedGroupIndex == groupIndex ? -76 : 0)}}px); transition: {{swipeDragging && swipeDragIndex == groupIndex ? 'none' : 'transform .2s ease'}}; --group-color: {{group.color}}; --group-tint: {{group.chipTint}};" hover-class="fixture-card-pressed" hover-start-time="0" hover-stay-time="100">
+            <view class="fixture-card-main">
+              <view class="fixture-thumb" data-index="{{groupIndex}}" bindtap="openFloatingCard"><image class="fixture-sprite" src="/assets/lighting/fixture-types.png" mode="scaleToFill" style="transform: translateX({{group.spriteOffset}});" /></view>
+                <view class="fixture-description" data-index="{{groupIndex}}" bindtap="openModelPicker">
+                  <view class="fixture-identity"><text class="fixture-name">{{group.primaryName}}</text><text wx:if="{{group.modelName}}" class="fixture-model"> {{group.modelName}}</text></view>
+                <view wx:if="{{group.rangeText}}" class="fixture-range">{{group.rangeText}}</view>
+                <view wx:else class="fixture-range fixture-range-empty">地址待计算</view>
+              </view>
+              <view class="fixture-controls" data-gesture-ignore="true">
+                <view wx:if="{{group.fixtureSource == 'library' && group.channelModes.length}}" class="fixture-control-row" data-gesture-ignore="true">
+                  <text class="fixture-control-label" data-gesture-ignore="true">通道</text>
+                  <picker class="fixture-control-picker" mode="selector" range="{{group.channelModes}}" value="{{group.channelModeIndex}}" data-index="{{groupIndex}}" data-gesture-ignore="true" bindchange="onCardModeChange"><view class="fixture-control-box" data-gesture-ignore="true">{{group.channelCount}} CH<text class="select-chevron" data-gesture-ignore="true">⌄</text></view></picker>
+                </view>
+                <view wx:if="{{group.fixtureSource == 'library'}}" class="fixture-control-row" data-gesture-ignore="true">
+                  <text class="fixture-control-label" data-gesture-ignore="true">数量</text>
+                  <view class="quantity-box" data-gesture-ignore="true"><input type="number" value="{{group.fixtureCount}}" data-index="{{groupIndex}}" data-gesture-ignore="true" bindinput="onCardQuantityInput" bindblur="onCardQuantityBlur" /><text data-gesture-ignore="true">台</text></view>
+                </view>
+                <view wx:else class="legacy-readonly">历史灯具</view>
+              </view>
+            </view>
+            <view class="address-chips address-chips-preview" style="grid-template-columns: repeat({{group.cardChipColumns}}, minmax(0, 1fr));" data-index="{{groupIndex}}" bindtap="openFloatingCard">
+              <view wx:for="{{group.cardFixtureChips}}" wx:for-item="chip" wx:key="stableId" class="address-chip address-chip-preview {{chip.previewOverflow ? 'address-chip-overflow' : ''}}" style="--group-color: {{group.color}}; --group-tint: {{group.chipTint}};"><text wx:if="{{chip.previewOverflow}}" class="address-chip-preview-label"><text wx:for="{{chip.previewAddressCharacters}}" wx:for-item="character" wx:key="id" style="color: {{character.color}};">{{character.value}}</text></text><text wx:else class="address-chip-preview-label">{{chip.addressText}}</text></view>
+              <text wx:if="{{!group.fixtureChips.length && group.fixtureCountValue}}" class="chips-pending">地址生成后可逐台核对</text>
+            </view>
+          </view>
+        </view>
+        <view wx:if="{{!groupCards.length}}" class="empty-state">从灯具库选择型号，开始编址。</view>
+      </view>
 
-<view class="group-editor-grid group-summary-list">
-<view
-wx:for="{{groups}}"
-wx:for-item="group"
-wx:for-index="groupIndex"
-wx:key="id"
-class="group-editor-summary"
-role="button"
-data-index="{{groupIndex}}"
-bindtap="openGroupEditor"
-hover-class="group-editor-summary-pressed"
->
-<view class="group-summary-index">{{groupIndex + 1}}</view>
-<view class="group-summary-copy">
-<view class="group-summary-name">{{group.name || '未命名灯具组'}}</view>
-<view class="group-summary-meta">{{group.channelCount || '—'}} CH × {{group.fixtureCount || '—'}} 台<text wx:if="{{allocationMode == 'manual'}}"> · {{group.targetUniverse}}域</text></view>
-</view>
-<view class="group-summary-edit">编辑 <text>›</text></view>
-</view>
-</view>
+      <view wx:if="{{undoDeleteAvailable}}" class="undo-row"><text>{{undoDeleteText}}</text><view bindtap="undoDelete">撤销</view></view>
+      <view class="layout-entry" bindtap="openFixtureLayout"><view class="layout-entry-icon"><view class="layout-map-panel layout-map-left"></view><view class="layout-map-panel layout-map-middle"></view><view class="layout-map-panel layout-map-right"></view></view><text class="layout-entry-title">灯位图</text><text class="layout-entry-arrow">›</text></view>
+    </view>
+  </scroll-view>
 
-<view
-class="add-button"
-role="button"
-aria-label="批量添加灯具"
-bindtap="addGroup"
-hover-class="add-button-pressed"
-hover-start-time="0"
-hover-stay-time="90"
->
-<view class="add-button-copy"><text class="add-button-plus">＋</text><text>批量添加灯具</text></view>
-<text class="add-button-arrow">›</text>
-</view>
+  <view wx:if="{{showSaveNewProject}}" class="save-project-overlay main-modal-backdrop {{saveProjectClosing ? 'main-modal-closing' : ''}}" bindtap="onUserCloseSaveProjectDialog"></view>
+  <view wx:if="{{showSaveNewProject}}" class="save-project-sheet main-modal-bottom-sheet {{saveProjectClosing ? 'main-modal-card-closing' : ''}}">
+      <view class="sheet-title-row"><text>保存到项目</text><view class="sheet-dismiss" bindtap="onUserCloseSaveProjectDialog">完成</view></view>
+      <view wx:if="{{pendingProjectSaveId}}" class="save-retry-row"><text>上次保存未完成</text><view bindtap="retryProjectSave">重试</view></view>
+      <scroll-view wx:if="{{!showNewProjectNameInput && projectSaveRows.length}}" class="project-save-list" scroll-y enhanced show-scrollbar="{{false}}">
+        <view wx:for="{{projectSaveRows}}" wx:for-item="project" wx:key="id" class="project-save-row" data-project-id="{{project.id}}" catchtap="onSaveToExistingProject"><view><text class="project-save-name">{{project.name}}</text><text class="project-save-status">{{project.hasLighting ? '已有灯光方案' : '保存灯光方案'}}</text></view><text class="project-save-arrow">›</text></view>
+      </scroll-view>
+      <view wx:if="{{showNewProjectNameInput}}" class="new-project-inline">
+        <input class="project-name-input" data-gesture-ignore="true" value="{{newProjectName}}" maxlength="30" placeholder="新项目名称" bindinput="onProjectNameInput" confirm-type="done" />
+        <view class="save-project-submit {{projectSaveBusy ? 'is-disabled' : ''}}" bindtap="saveLightingAsNewProject">{{projectSaveBusy ? '保存中…' : '创建并保存'}}</view>
+      </view>
+      <view wx:if="{{projectSaveError}}" class="project-save-error">{{projectSaveError}}</view>
+      <view wx:if="{{!showNewProjectNameInput}}" class="new-project-entry" bindtap="onNewProjectNameEntry">＋ 新建项目</view>
+  </view>
 
-</view>
+  <view wx:if="{{fixtureSearchOpen || fixtureBatchOpen}}" class="fixture-search-overlay main-modal-backdrop {{fixturePickerClosing ? 'main-modal-closing' : ''}}" bindtap="onUserCloseFixturePicker"></view>
+  <view wx:if="{{fixtureSearchOpen || fixtureBatchOpen}}" class="fixture-search-sheet main-modal-bottom-sheet {{fixturePickerClosing ? 'main-modal-card-closing' : ''}}">
+      <view class="sheet-title-row"><text>{{fixtureBatchOpen ? '批量添加灯组' : (fixtureSearchGroupIndex < 0 ? '添加灯组' : '选择灯具型号')}}</text><view class="sheet-dismiss" bindtap="onUserCloseFixturePicker">完成</view></view>
+      <view class="fixture-search-box"><text class="search-glyph">⌕</text><input data-gesture-ignore="true" value="{{fixtureSearchKeyword}}" placeholder="搜索名称或型号" confirm-type="search" bindinput="onFixtureSearchInput" bindconfirm="flushFixtureSearch" /><view wx:if="{{fixtureSearchKeyword}}" class="search-clear" bindtap="clearFixtureSearch">清除</view></view>
+      <scroll-view class="fixture-category-scroll" scroll-x enhanced show-scrollbar="{{false}}"><view class="fixture-category-list"><view wx:for="{{fixtureSearchCategories}}" wx:key="label" class="fixture-category {{fixtureSearchCategory == item.label ? 'fixture-category-active' : ''}}" data-category="{{item.label}}" bindtap="selectFixtureCategory">{{item.label}}<text>{{item.count}}</text></view></view></scroll-view>
+      <view class="fixture-search-count">{{fixtureSearchTotal}} 款灯具<text wx:if="{{fixtureBatchOpen}}"> · 已选 {{batchSelectedItems.length}} 款 / {{batchSelectedTotal}} 台</text></view>
+      <scroll-view class="fixture-search-content-scroll" scroll-y enhanced show-scrollbar="{{false}}" style="height: {{fixtureSearchResultsHeight}}px;">
+      <view class="fixture-search-results">
+        <view wx:for="{{fixtureSearchResults}}" wx:for-item="fixture" wx:key="model" class="fixture-search-row {{fixture.model == fixtureSearchSelectedModel ? 'fixture-search-row-selected' : ''}}" data-model="{{fixture.model}}" bindtap="selectFixture"><view class="fixture-search-thumb"><image class="fixture-sprite" src="/assets/lighting/fixture-types.png" mode="scaleToFill" style="transform: translateX({{fixture.spriteOffset}});" /></view><view class="fixture-result-copy"><view class="fixture-result-identity"><text class="fixture-result-name">{{fixture.primaryName}}</text><text class="fixture-result-model">{{fixture.model}}</text></view><text class="fixture-result-modes">{{fixture.modeText}}</text></view><text wx:if="{{fixtureBatchOpen}}" class="batch-fixture-check">{{fixture.batchSelected ? '✓' : '+'}}</text><text wx:elif="{{fixture.model == fixtureSearchSelectedModel}}" class="fixture-search-check">✓</text></view>
+        <view wx:if="{{!fixtureSearchResults.length}}" class="fixture-search-empty">没有找到可编址灯具</view>
+      </view>
+      </scroll-view>
+      <view wx:if="{{fixtureBatchOpen && batchSelectedItems.length}}" class="batch-footer" style="height: {{fixtureBatchFooterHeight}}px;"><scroll-view class="batch-selected-list" style="height: {{batchSelectedListHeight}}px;" scroll-y enhanced show-scrollbar="{{false}}"><view wx:for="{{batchSelectedItems}}" wx:key="model" class="batch-selected-row"><text>{{item.model}}</text><view class="batch-quantity-control"><view data-model="{{item.model}}" data-delta="-1" catchtap="adjustBatchQuantity">−</view><text>{{item.quantity}}</text><view data-model="{{item.model}}" data-delta="1" catchtap="adjustBatchQuantity">＋</view></view></view></scroll-view><view class="batch-confirm" bindtap="confirmBatchAdd">添加 {{batchSelectedTotal}} 台</view></view>
+  </view>
 
-<view wx:if="{{activeWorkspace == 'config' && result && !result.valid}}" class="error-card workspace-error-card">
-<view class="error-title">暂时无法编址</view>
-<view class="error-text">{{result.error}}</view>
-</view>
+  <view wx:if="{{pendingChange}}" class="pending-overlay main-modal-backdrop {{pendingChangeClosing ? 'main-modal-closing' : ''}}" bindtap="onUserCancelPendingChange"></view>
+  <view wx:if="{{pendingChange && pendingChange.kind != 'add'}}" class="pending-sheet main-modal-bottom-sheet {{pendingChange.kind == 'delete' ? 'pending-sheet-delete' : ''}} {{pendingChangeClosing ? 'main-modal-card-closing' : ''}}">
+      <view class="sheet-title-row"><text>{{pendingChange.title}}</text><view class="sheet-dismiss" bindtap="onUserCancelPendingChange">取消</view></view>
+      <scroll-view class="pending-content-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+      <block wx:if="{{pendingChange.kind == 'delete'}}">
+      <view class="pending-delete-card" style="--group-color: {{pendingChange.deletePreview.color}}; --group-tint: {{pendingChange.deletePreview.chipTint}};">
+        <view class="fixture-thumb pending-delete-thumb"><image class="fixture-sprite" src="/assets/lighting/fixture-types.png" mode="scaleToFill" style="transform: translateX({{pendingChange.deletePreview.spriteOffset}});" /></view>
+        <view class="pending-delete-copy"><view class="pending-delete-identity"><text class="pending-delete-name">{{pendingChange.deletePreview.primaryName}}</text><text wx:if="{{pendingChange.deletePreview.modelName}}" class="pending-delete-model">{{pendingChange.deletePreview.modelName}}</text></view><text class="pending-delete-quantity">删除 {{pendingChange.deletePreview.fixtureCountValue}} 台</text></view>
+        <view class="pending-delete-range"><text>原地址</text><text>{{pendingChange.deletePreview.universeText}} {{pendingChange.deletePreview.rangeText}}</text><text class="pending-delete-remove-label">整组移除</text></view>
+      </view>
+      <view class="pending-delete-risks">
+        <text wx:if="{{pendingChange.deleteSummary.checkedCount}}">将移除 {{pendingChange.deleteSummary.checkedCount}} 个已核对标记</text>
+        <text wx:if="{{pendingChange.deleteSummary.placedCount}}">{{pendingChange.deleteSummary.placedCount}} 台已上杆，将一并移除灯位</text>
+        <text wx:if="{{pendingChange.invalidatedCheckCount}}">剩余灯组地址变化将使 {{pendingChange.invalidatedCheckCount}} 个核对标记失效</text>
+        <text wx:if="{{!pendingChange.deleteSummary.checkedCount && !pendingChange.deleteSummary.placedCount && !pendingChange.invalidatedCheckCount}}">该组暂无已核对或已上杆灯具</text>
+        <text>删除后可在短时间内撤销</text>
+      </view>
+      <view class="pending-delete-groups-title">剩余灯组地址调整</view>
+      <view wx:if="{{pendingChange.remainingAffectedGroups.length}}" class="pending-delete-groups">
+        <view wx:for="{{pendingChange.remainingAffectedGroups}}" wx:for-item="item" wx:key="id" class="pending-delete-group-row" style="--group-color: {{item.color}}; --group-tint: {{item.chipTint}};">
+          <view class="pending-delete-group-name"><text>{{item.primaryName}}</text><text wx:if="{{item.modelName}}">{{item.modelName}}</text></view>
+          <view class="pending-delete-addresses"><view class="pending-delete-address"><text>原 {{item.beforeUniverse}}</text><text>{{item.beforeRange}}</text></view><text class="pending-delete-address-arrow">→</text><view class="pending-delete-address"><text>新 {{item.afterUniverse}}</text><text>{{item.afterRange}}</text></view></view>
+          <view class="pending-affected-meta">{{item.afterCount}} 台 · 地址变化 {{item.changedCount}} 台 · 核对失效 {{item.invalidatedCheckCount}} 个</view>
+        </view>
+      </view>
+      <view wx:elif="{{pendingChange.remainingGroupCount > 0}}" class="pending-delete-empty">其余灯组地址保持不变</view>
+      <view wx:else class="pending-delete-empty">删除后当前方案将没有灯具</view>
+      <view class="effect-next pending-delete-next"><text>下一可用地址</text><text>{{pendingChange.beforeNext}} → {{pendingChange.afterNext}}</text></view>
+      <view wx:if="{{pendingChange.removedFixtures.length}}" class="pending-removed-list pending-delete-details">
+        <view class="pending-removed-disclosure" bindtap="toggleRemovedDetails"><text>移除明细 · {{pendingChange.removedFixtureCount}} 台（已上杆 {{pendingChange.removedPlacedCount}} 台）</text><text>{{removedDetailsExpanded ? '收起' : '展开'}}</text></view>
+        <view wx:if="{{removedDetailsExpanded}}"><view wx:for="{{pendingChange.removedFixtures}}" wx:for-item="item" wx:key="stableId" class="pending-removed-row"><text>{{item.addressText}} · {{item.groupName}} {{item.fixtureIndex}}</text><text>{{item.placementText}}</text></view></view>
+      </view>
+      <view wx:if="{{pendingChange.error}}" class="pending-error">{{pendingChange.error}}</view>
+      </block>
+      <block wx:else>
+      <view wx:if="{{pendingChange.fixtureName || pendingChange.fixtureModel}}" class="pending-model">{{pendingChange.fixtureName}} <text>{{pendingChange.fixtureModel}}</text></view>
+      <view wx:if="{{pendingChange.allocationModeLabel}}" class="pending-mode-value">编址方式：{{pendingChange.allocationModeLabel}}</view>
+      <view wx:if="{{pendingChange.groupIndex >= 0}}" class="pending-fields"><view wx:if="{{pendingChange.channelModes.length > 1}}" class="pending-field"><text>通道模式</text><picker mode="selector" range="{{pendingChange.channelModes}}" value="{{pendingChange.channelModeIndex}}" data-gesture-ignore="true" bindchange="onPendingModeChange"><view class="pending-picker" data-gesture-ignore="true">{{pendingChange.channelCount}} CH<text>⌄</text></view></picker></view><view class="pending-field"><text>灯具数量</text><view class="quantity-box" data-gesture-ignore="true"><input class="pending-quantity" type="number" value="{{pendingChange.quantityText}}" data-index="{{pendingChange.groupIndex}}" data-gesture-ignore="true" bindinput="onPendingQuantityInput" bindblur="onPendingQuantityBlur" /><text data-gesture-ignore="true">台</text></view></view></view>
+      <view class="effect-preview"><view><text>原范围</text><text class="effect-range">{{pendingChange.beforeRange}}</text></view><text class="effect-arrow">→</text><view><text>调整后</text><text class="effect-range">{{pendingChange.afterRange}}</text></view></view>
+      <view class="effect-next"><text>下一可用地址</text><text>{{pendingChange.beforeNext}} → {{pendingChange.afterNext}}</text></view>
+      <view wx:if="{{pendingChange.affectedGroups.length}}" class="pending-affected-list"><view wx:for="{{pendingChange.affectedGroups}}" wx:for-item="item" wx:key="id" class="pending-affected-row"><view class="pending-affected-name">{{item.name}} · {{item.beforeUniverse}} {{item.beforeRange}} → {{item.afterUniverse}} {{item.afterRange}}</view><view class="pending-affected-meta">{{item.beforeCount}} 台 → {{item.afterCount}} 台<text wx:if="{{item.removedCount}}"> · 移除 {{item.removedCount}} 台</text><text wx:if="{{item.addedCount}}"> · 新增 {{item.addedCount}} 台</text><text wx:if="{{item.changedCount}}"> · 地址变化 {{item.changedCount}} 台</text><text wx:if="{{item.invalidatedCheckCount}}"> · {{item.invalidatedCheckCount}} 个已核对标记将失效</text></view></view></view>
+      <view wx:if="{{pendingChange.removedFixtures.length}}" class="pending-removed-list"><view class="pending-removed-title">将移除的灯具（{{pendingChange.removedFixtureCount}} 台，已放置 {{pendingChange.removedPlacedCount}} 台）</view><view wx:for="{{pendingChange.removedFixtures}}" wx:for-item="item" wx:key="stableId" class="pending-removed-row"><text>{{item.addressText}} · {{item.groupName}} {{item.fixtureIndex}}</text><text>{{item.placementText}}</text></view></view>
+      <view wx:if="{{pendingChange.error}}" class="pending-error">{{pendingChange.error}}</view>
+      </block>
+      </scroll-view>
+      <view class="pending-confirm {{!pendingChange.valid ? 'is-disabled' : ''}}" bindtap="confirmPendingChange">{{pendingChange.kind == 'delete' ? '确认删除并重编址' : '确认'}}</view>
+  </view>
 
-<view wx:if="{{activeWorkspace == 'plan'}}" class="workspace-panel">
-<view wx:if="{{result && !result.valid}}" class="error-card workspace-error-card">
-<view class="error-title">暂时无法编址</view>
-<view class="error-text">{{result.error}}</view>
-<button class="error-return-button" data-workspace="config" bindtap="switchWorkspace">返回编址配置</button>
-</view>
+  <view wx:if="{{pendingChange && pendingChange.kind == 'add'}}" class="add-confirm-sheet main-modal-center-sheet {{pendingChangeClosing ? 'main-modal-card-closing' : ''}}" style="--group-color: {{pendingChange.addPreview.color}}; --group-tint: {{pendingChange.addPreview.chipTint}};">
+    <view class="add-confirm-header"><view class="add-confirm-reselect" bindtap="reselectPendingFixture">‹ 重新选择</view><text>添加灯组</text><view class="add-confirm-header-spacer"></view></view>
+    <scroll-view class="add-confirm-content-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+    <view class="add-confirm-product">
+      <view class="fixture-thumb add-confirm-thumb"><image class="fixture-sprite" src="/assets/lighting/fixture-types.png" mode="scaleToFill" style="transform: translateX({{pendingChange.addPreview.spriteOffset}});" /></view>
+      <view class="fixture-description add-confirm-description"><view class="fixture-identity"><text class="fixture-name">{{pendingChange.addPreview.primaryName}}</text><text class="fixture-model">{{pendingChange.addPreview.modelName}}</text></view><view class="fixture-range">{{pendingChange.addPreview.rangeText}}</view></view>
+      <view class="fixture-controls add-confirm-controls" data-gesture-ignore="true">
+        <view class="fixture-control-row"><text class="fixture-control-label">通道</text><picker wx:if="{{pendingChange.channelModes.length > 1}}" class="fixture-control-picker" mode="selector" range="{{pendingChange.channelModes}}" value="{{pendingChange.channelModeIndex}}" data-index="{{pendingChange.groupIndex}}" data-gesture-ignore="true" bindchange="onPendingModeChange"><view class="fixture-control-box" data-gesture-ignore="true">{{pendingChange.channelCount}} CH<text class="select-chevron">⌄</text></view></picker><view wx:else class="fixture-control-box">{{pendingChange.channelCount}} CH</view></view>
+        <view class="fixture-control-row"><text class="fixture-control-label">数量</text><view class="quantity-box" data-gesture-ignore="true"><input type="number" value="{{pendingChange.quantityText}}" data-index="{{pendingChange.groupIndex}}" data-gesture-ignore="true" bindinput="onPendingQuantityInput" bindblur="onPendingQuantityBlur" /><text data-gesture-ignore="true">台</text></view></view>
+      </view>
+    </view>
+    <view wx:if="{{pendingChange.addPreview.fixtureChips.length}}" class="add-preview-chip-list"><view class="add-preview-chips"><view wx:for="{{pendingChange.addPreview.fixtureChips}}" wx:for-item="chip" wx:key="stableId" class="address-chip" style="--group-color: {{pendingChange.addPreview.color}}; --group-tint: {{pendingChange.addPreview.chipTint}};">{{chip.addressText}}</view></view></view>
+    <view class="add-preview-total">{{pendingChange.addPreview.fixtureCountValue}} 台 · 占用 {{pendingChange.addPreview.totalChannels}} 通道</view>
+    <view wx:if="{{pendingChange.error}}" class="pending-error">{{pendingChange.error}}</view>
+    </scroll-view>
+    <view class="pending-confirm {{!pendingChange.valid ? 'is-disabled' : ''}}" bindtap="confirmPendingChange">添加灯组</view>
+  </view>
 
-<block wx:if="{{result && result.valid}}">
-<view class="result-card">
-<view class="result-top">
-<view class="result-title">地址码</view>
-<view class="result-top-meta">
-<view class="result-mode-badge">{{result.modeText}}</view>
-<view class="result-count">{{result.totalGroups}} 组 · {{result.totalFixtures}} 台</view>
-</view>
-</view>
+  <view wx:if="{{floatingVisible && floatingGroup}}" class="floating-backdrop" bindtap="closeFloatingCard"></view>
+  <view wx:if="{{floatingVisible && floatingGroup}}" class="floating-card {{floatingSwipeDragging ? 'floating-card-gesture-dragging' : ''}}" style="{{floatingStyle}}; transform: translateX({{floatingSwipeOffset}}px); --group-color: {{floatingGroup.color}}; --group-tint: {{floatingGroup.chipTint}};" bindtouchstart="onFloatingTouchStart" bindtouchmove="onFloatingTouchMove" bindtouchend="onFloatingTouchEnd" bindtouchcancel="onFloatingTouchCancel">
+      <view class="fixture-card-main floating-card-main">
+        <view class="fixture-thumb"><image class="fixture-sprite" src="/assets/lighting/fixture-types.png" mode="scaleToFill" style="transform: translateX({{floatingGroup.spriteOffset}});" /></view>
+        <view class="fixture-description">
+          <view class="fixture-identity"><text class="fixture-name">{{floatingGroup.primaryName}}</text><text wx:if="{{floatingGroup.modelName}}" class="fixture-model">{{floatingGroup.modelName}}</text></view>
+          <view class="fixture-range">{{floatingGroup.rangeText || '地址待计算'}}</view>
+        </view>
+        <view class="fixture-controls" data-gesture-ignore="true">
+          <view wx:if="{{floatingGroup.fixtureSource == 'library' && floatingGroup.channelModes.length}}" class="fixture-control-row" data-gesture-ignore="true">
+            <text class="fixture-control-label" data-gesture-ignore="true">通道</text>
+            <picker class="fixture-control-picker" mode="selector" range="{{floatingGroup.channelModes}}" value="{{floatingGroup.channelModeIndex}}" data-index="{{floatingGroup.groupIndex}}" data-gesture-ignore="true" bindchange="onCardModeChange"><view class="fixture-control-box" data-gesture-ignore="true">{{floatingGroup.channelCount}} CH<text class="select-chevron" data-gesture-ignore="true">⌄</text></view></picker>
+          </view>
+          <view wx:if="{{floatingGroup.fixtureSource == 'library'}}" class="fixture-control-row" data-gesture-ignore="true">
+            <text class="fixture-control-label" data-gesture-ignore="true">数量</text>
+            <view class="quantity-box" data-gesture-ignore="true"><input type="number" value="{{floatingGroup.fixtureCount}}" data-index="{{floatingGroup.groupIndex}}" data-gesture-ignore="true" bindinput="onCardQuantityInput" bindblur="onCardQuantityBlur" /><text data-gesture-ignore="true">台</text></view>
+          </view>
+          <view wx:else class="legacy-readonly">历史灯具</view>
+        </view>
+      </view>
+      <view class="floating-check-count">✓ {{floatingGroup.checkedCount}} / {{floatingGroup.fixtureCountValue}}</view>
+      <view wx:if="{{floatingGroup.hasChannelGuide}}" class="floating-card-meta">长按地址查看通道资料</view>
+      <scroll-view class="floating-chip-scroll" data-gesture-ignore="true" scroll-y enhanced show-scrollbar="{{false}}"><view class="address-chips floating-chips" data-gesture-ignore="true"><view wx:for="{{floatingGroup.fixtureChips}}" wx:for-item="chip" wx:key="stableId" class="address-chip {{chip.checked ? 'address-chip-checked' : ''}}" style="--group-color: {{floatingGroup.color}}; --group-tint: {{floatingGroup.chipTint}};" data-stable-id="{{chip.stableId}}" data-global-index="{{chip.globalIndex}}" data-gesture-ignore="true" bindtap="toggleFixtureCheck" catchlongpress="openFixtureChannelGuide"><text data-gesture-ignore="true">{{chip.addressText}}</text><text wx:if="{{chip.checked}}" class="chip-check" data-gesture-ignore="true">✓</text></view></view></scroll-view>
+  </view>
 
-<view class="result-next-note"><text class="result-next-label">{{result.nextMetricLabel}}</text><text class="result-next-value">{{result.nextText}}</text></view>
+  <view wx:if="{{fixtureChannelGuide}}" class="fixture-channel-guide-overlay main-modal-backdrop {{fixtureChannelGuideClosing ? 'main-modal-closing' : ''}}" catchtap="onUserCloseFixtureChannelGuide" catchtouchmove="stopPropagation">
+    <view class="fixture-channel-guide-sheet main-modal-panel {{fixtureChannelGuideClosing ? 'main-modal-card-closing' : ''}}" catchtap="stopPropagation">
+      <view class="fixture-channel-guide-head"><view class="fixture-channel-guide-copy"><view class="fixture-channel-guide-title">灯具通道速查</view><view class="fixture-channel-guide-meta">{{fixtureChannelGuide.model}} · {{fixtureChannelGuide.modeLabel}} · {{fixtureChannelGuide.actualRangeText}}</view></view><view class="sheet-dismiss" bindtap="onUserCloseFixtureChannelGuide">完成</view></view>
+      <scroll-view class="fixture-channel-guide-scroll" scroll-y enhanced show-scrollbar="{{false}}" catchtouchmove="stopPropagation"><view class="fixture-channel-guide-list"><view wx:for="{{fixtureChannelGuide.channels}}" wx:key="channel" class="fixture-channel-guide-row"><view class="fixture-channel-guide-row-head"><text class="fixture-channel-guide-number">CH{{item.channel}}</text><text class="fixture-channel-guide-address">{{item.actualAddress}}</text><view wx:if="{{item.ranges.length}}" class="fixture-channel-guide-expand {{fixtureChannelGuideDetail && fixtureChannelGuideDetail.channel == item.channel ? 'fixture-channel-guide-expand-selected' : ''}}" data-channel-index="{{index}}" bindtap="selectFixtureChannelGuideDetail">{{fixtureChannelGuideDetail && fixtureChannelGuideDetail.channel == item.channel ? '查看中' : '数值'}}</view></view><view class="fixture-channel-guide-name">{{item.name}}</view><view class="fixture-channel-guide-summary">{{item.summary}}</view></view></view></scroll-view>
+      <view wx:if="{{fixtureChannelGuideDetail}}" class="fixture-channel-guide-detail"><view class="fixture-channel-guide-detail-head"><view class="fixture-channel-guide-detail-copy"><view class="fixture-channel-guide-detail-title">CH{{fixtureChannelGuideDetail.channel}} · {{fixtureChannelGuideDetail.actualAddress}}</view><view class="fixture-channel-guide-detail-name">功能：{{fixtureChannelGuideDetail.name}}</view></view><view class="fixture-channel-guide-detail-close" bindtap="closeFixtureChannelGuideDetail">关闭</view></view><scroll-view class="fixture-channel-guide-detail-ranges" scroll-y enhanced show-scrollbar="{{false}}" catchtouchmove="stopPropagation"><view wx:for="{{fixtureChannelGuideDetail.ranges}}" wx:for-item="range" wx:key="range" class="fixture-channel-guide-detail-range"><text>{{range.range}}</text><text>{{range.description}}</text></view></scroll-view></view>
+      <view class="fixture-channel-guide-source">来源：{{fixtureChannelGuide.source}} · {{fixtureChannelGuide.sourcePageText}} · {{fixtureChannelGuide.verificationStatus}}</view>
+    </view>
+  </view>
 
-<view class="result-domain-section">
-<view class="result-view-switch">
-<view
-class="result-view-option {{result.viewMode == 'universe' ? 'result-view-option-active' : ''}}"
-data-mode="universe"
-bindtap="switchResultView"
->按域查看</view>
-<view
-class="result-view-option {{result.viewMode == 'group' ? 'result-view-option-active' : ''}}"
-data-mode="group"
-bindtap="switchResultView"
->按灯具组查看</view>
-</view>
-
-<block wx:if="{{result.viewMode == 'universe'}}">
-<view class="universe-tabs">
-<view
-wx:for="{{result.universes}}"
-wx:key="label"
-class="universe-tab {{item.selected ? 'universe-tab-active' : ''}}"
-data-label="{{item.label}}"
-bindtap="selectUniverse"
->
-<view class="universe-tab-label">{{item.label}} 域</view>
-<view class="universe-tab-meta">{{item.usageText}}</view>
-<view class="universe-tab-track">
-<view class="universe-tab-progress" style="width: {{item.usagePercent}}%;"></view>
-</view>
-</view>
-</view>
-
-<view class="selected-universe">
-<view wx:if="{{result.selectedUniverse.groupRanges.length}}" class="universe-group-table">
-<view class="universe-group-row universe-group-head">
-<view>灯具组</view>
-<view>数量</view>
-<view>域内范围</view>
-</view>
-<view
-wx:for="{{result.selectedUniverse.groupRanges}}"
-wx:key="id"
-class="universe-group-row"
->
-<view class="universe-group-name">
-<view>{{item.name}}</view>
-<text>{{item.channelCount}} CH/台</text>
-</view>
-<view>{{item.fixtureCount}} 台</view>
-<view class="universe-group-range">{{item.rangeText}}</view>
-</view>
-</view>
-
-<view wx:else class="universe-empty">
-当前域没有已分配灯具，可继续从系统给出的“下一可用地址”编址。
-</view>
-
-<view
-wx:if="{{result.selectedUniverse.hasFixtures}}"
-class="universe-detail-toggle"
-role="button"
-aria-label="逐台核对本域，地址已设置 {{result.selectedUniverse.checkedCount}} / {{result.selectedUniverse.fixtureCount}} 台"
-bindtap="toggleUniverseDetails"
->
-<text class="detail-toggle-label">核对本域</text>
-<view class="detail-toggle-trailing"><text>地址已设置 {{result.selectedUniverse.checkedCount}} / {{result.selectedUniverse.fixtureCount}}</text><text class="detail-toggle-arrow">›</text></view>
-</view>
-</view>
-</block>
-
-<block wx:else>
-<scroll-view class="group-result-tabs" scroll-x enhanced show-scrollbar="{{false}}">
-<view class="group-result-tab-list">
-<view
-wx:for="{{result.groupViews}}"
-wx:key="id"
-class="group-result-tab {{item.selected ? 'group-result-tab-active' : ''}}"
-data-id="{{item.id}}"
-bindtap="selectGroup"
->
-<view class="group-result-tab-index">第 {{item.number}} 组</view>
-<view class="group-result-tab-name">{{item.name}}</view>
-<view class="group-result-tab-meta">{{item.fixtureCount}} 台 · {{item.channelCount}} CH</view>
-</view>
-</view>
-</scroll-view>
-
-<view class="selected-universe selected-group">
-<view class="selected-group-address">
-<view class="selected-group-address-label">地址范围</view>
-<view class="selected-group-address-value">{{result.selectedGroup.rangeText}}</view>
-</view>
-
-<view
-wx:if="{{result.selectedGroup.hasFixtures}}"
-class="universe-detail-toggle"
-role="button"
-aria-label="逐台核对本组，地址已设置 {{result.selectedGroup.checkedCount}} / {{result.selectedGroup.fixtureCount}} 台"
-bindtap="toggleGroupDetails"
->
-<text class="detail-toggle-label">核对本组</text>
-<view class="detail-toggle-trailing"><text>地址已设置 {{result.selectedGroup.checkedCount}} / {{result.selectedGroup.fixtureCount}}</text><text class="detail-toggle-arrow">›</text></view>
-</view>
-</view>
-</block>
-</view>
-
-<view wx:if="{{result.warnings.length}}" class="result-warnings">
-<view wx:for="{{result.warnings}}" wx:key="*this" class="result-warning">• {{item}}</view>
-</view>
-</view>
-
-<view class="dmx-solution-actions">
-<view class="dmx-solution-actions-head">
-<view class="dmx-solution-actions-title">方案操作</view>
-</view>
-<view
-class="dmx-layout-entry-button"
-role="button"
-aria-label="打开灯具位置图"
-bindtap="openFixtureLayout"
-hover-class="dmx-layout-entry-button-pressed"
-hover-start-time="0"
-hover-stay-time="90"
->
-<view class="dmx-layout-entry-icon">图</view>
-<view class="dmx-layout-entry-copy">
-<view class="dmx-layout-entry-title">灯具位置图</view>
-</view>
-<text class="dmx-layout-entry-arrow">›</text>
-</view>
-</view>
-<view class="utility-action-row">
-<view class="result-output-actions">
-<button class="result-image-button" disabled="{{isGeneratingResultReport}}" bindtap="generateResultReportImage">{{isGeneratingResultReport ? '正在生成…' : '生成地址方案图'}}</button>
-<button class="copy-result-button" bindtap="copyResult">复制完整地址表</button>
-</view>
-<view class="result-record-actions">
-<button class="result-record-button {{currentFavorite ? 'result-record-button-active' : ''}}" bindtap="toggleCurrentFavorite">{{currentFavorite ? '★ 已收藏' : '☆ 收藏常用'}}</button>
-<button class="result-record-button" bindtap="saveToActiveProject">选择项目保存</button>
-</view>
-</view>
-</block>
-</view>
-
-</view>
-
-<view
-wx:if="{{result && result.valid && result.viewMode == 'universe' && result.selectedUniverse.expanded}}"
-class="universe-detail-overlay"
-bindtap="toggleUniverseDetails"
->
-<view class="universe-detail-sheet" catchtap="stopPropagation">
-<view class="universe-detail-handle"></view>
-<view class="universe-detail-head">
-<view class="universe-detail-copy">
-<view class="universe-detail-title">{{result.selectedUniverse.label}} 域逐台地址</view>
-<view class="universe-detail-summary">
-<text class="universe-detail-progress-text">
-地址已设置 {{result.selectedUniverse.checkedCount}} / {{result.selectedUniverse.fixtureCount}}
-</text>
-</view>
-</view>
-<view class="universe-detail-actions">
-<view
-class="fixture-progress-clear {{result.selectedUniverse.checkedCount ? '' : 'fixture-progress-clear-disabled'}}"
-bindtap="clearVisibleFixtureSelections"
->清空地址标记</view>
-<view class="universe-detail-close" bindtap="toggleUniverseDetails">×</view>
-</view>
-</view>
-<view class="fixture-progress-track">
-<view
-class="fixture-progress-fill"
-style="width: {{result.selectedUniverse.checkedPercent}}%;"
-></view>
-</view>
-<view class="fixture-progress-hint">点按卡片标记地址已设置，再次点按取消。</view>
-<scroll-view
-class="universe-detail-scroll"
-scroll-y
-enhanced
-show-scrollbar="{{false}}"
-lower-threshold="120"
-bindscrolltolower="loadMoreFixtureDetails"
->
-<view class="universe-fixture-group-list">
-<view
-wx:for="{{result.selectedUniverse.detailGroups}}"
-wx:for-item="fixtureGroup"
-wx:key="id"
-class="universe-fixture-group"
-style="--gb: {{fixtureGroup.softColor}}; --gs: {{fixtureGroup.borderColor}};"
->
-<view class="universe-fixture-group-head">
-<view class="universe-fixture-group-copy">
-<view
-class="universe-fixture-group-badge"
-style="background: {{fixtureGroup.accentColor}};"
->第 {{fixtureGroup.number}} 组</view>
-<view class="universe-fixture-group-name">{{fixtureGroup.name}}</view>
-</view>
-<view class="universe-fixture-group-meta">
-地址已设置 {{fixtureGroup.checkedCount}} / {{fixtureGroup.fixtureCount}} · {{fixtureGroup.channelCount}} CH
-</view>
-</view>
-<view class="universe-fixture-list">
-<view
-wx:for="{{fixtureGroup.fixtures}}"
-wx:for-item="fixture"
-wx:key="globalIndex"
-class="universe-fixture-row universe-fixture-row-grouped {{fixture.selected ? 'universe-fixture-row-selected' : ''}}"
-data-progress-key="{{fixture.progressKey}}"
-bindtap="toggleFixtureSelection"
->
-<view class="universe-fixture-row-head">
-<view class="universe-fixture-name">第 {{fixture.fixtureIndex}} 台</view>
-<view class="fixture-selection-check {{fixture.selected ? 'fixture-selection-check-active' : ''}}">
-{{fixture.selected ? '✓' : ''}}
-</view>
-</view>
-<view class="universe-fixture-body">
-<view class="universe-fixture-address">
-<view>{{fixture.addressText}}</view>
-<text>至 {{fixture.endAddressText}}</text>
-</view>
-<view wx:if="{{fixture.channelGuideAvailable}}" class="fixture-channel-guide-button" data-global-index="{{fixture.globalIndex}}" catchtap="openFixtureChannelGuide">通道</view>
-</view>
-</view>
-</view>
-</view>
-</view>
-<view wx:if="{{result.selectedUniverse.hasMoreFixtures}}" class="fixture-load-more">
-已显示 {{result.selectedUniverse.visibleFixtureCount}} / {{result.selectedUniverse.fixtureCount}}，继续上滑加载
-</view>
-</scroll-view>
-</view>
-</view>
-
-<view
-wx:if="{{result && result.valid && result.viewMode == 'group' && result.selectedGroup.expanded}}"
-class="universe-detail-overlay"
-bindtap="toggleGroupDetails"
->
-<view class="universe-detail-sheet" catchtap="stopPropagation">
-<view class="universe-detail-handle"></view>
-<view class="universe-detail-head">
-<view class="universe-detail-copy">
-<view class="universe-detail-title">第 {{result.selectedGroup.number}} 组逐台地址</view>
-<view class="universe-detail-summary">
-<text class="universe-detail-progress-text">
-地址已设置 {{result.selectedGroup.checkedCount}} / {{result.selectedGroup.fixtureCount}}
-</text>
-</view>
-</view>
-<view class="universe-detail-actions">
-<view
-class="fixture-progress-clear {{result.selectedGroup.checkedCount ? '' : 'fixture-progress-clear-disabled'}}"
-bindtap="clearVisibleFixtureSelections"
->清空地址标记</view>
-<view class="universe-detail-close" bindtap="toggleGroupDetails">×</view>
-</view>
-</view>
-<view class="fixture-progress-track">
-<view
-class="fixture-progress-fill"
-style="width: {{result.selectedGroup.checkedPercent}}%;"
-></view>
-</view>
-<view class="fixture-progress-hint">点按卡片标记地址已设置，再次点按取消。</view>
-<scroll-view
-class="universe-detail-scroll"
-scroll-y
-enhanced
-show-scrollbar="{{false}}"
-lower-threshold="120"
-bindscrolltolower="loadMoreFixtureDetails"
->
-<view class="universe-fixture-list">
-<view
-wx:for="{{result.selectedGroup.displayFixtures}}"
-wx:for-item="fixture"
-wx:key="globalIndex"
-class="universe-fixture-row {{fixture.selected ? 'universe-fixture-row-selected' : ''}}"
-data-progress-key="{{fixture.progressKey}}"
-bindtap="toggleFixtureSelection"
->
-<view class="universe-fixture-row-head">
-<view class="universe-fixture-name">第 {{fixture.fixtureIndex}} 台</view>
-<view class="fixture-selection-check {{fixture.selected ? 'fixture-selection-check-active' : ''}}">
-{{fixture.selected ? '✓' : ''}}
-</view>
-</view>
-<view class="universe-fixture-body">
-<view class="universe-fixture-address">
-<view>{{fixture.addressText}}</view>
-<text>至 {{fixture.endAddressText}}</text>
-</view>
-<view wx:if="{{fixture.channelGuideAvailable}}" class="fixture-channel-guide-button" data-global-index="{{fixture.globalIndex}}" catchtap="openFixtureChannelGuide">通道</view>
-</view>
-</view>
-</view>
-<view wx:if="{{result.selectedGroup.hasMoreFixtures}}" class="fixture-load-more">
-已显示 {{result.selectedGroup.visibleFixtureCount}} / {{result.selectedGroup.fixtureCount}}，继续上滑加载
-</view>
-</scroll-view>
-</view>
-</view>
-
-<view wx:if="{{fixtureChannelGuide}}" class="fixture-channel-guide-overlay" catchtap="closeFixtureChannelGuide">
-<view class="fixture-channel-guide-sheet" catchtap="stopPropagation">
-<view class="fixture-channel-guide-head">
-<view class="fixture-channel-guide-copy">
-<view class="fixture-channel-guide-title">灯具通道速查</view>
-<view class="fixture-channel-guide-meta">{{fixtureChannelGuide.model}} · {{fixtureChannelGuide.modeLabel}} · {{fixtureChannelGuide.actualRangeText}}</view>
-</view>
-<view class="fixture-channel-guide-close" bindtap="closeFixtureChannelGuide">×</view>
-</view>
-<scroll-view class="fixture-channel-guide-scroll" scroll-y enhanced show-scrollbar="{{false}}">
-<view class="fixture-channel-guide-list">
-<view wx:for="{{fixtureChannelGuide.channels}}" wx:key="channel" class="fixture-channel-guide-row">
-<view class="fixture-channel-guide-row-head">
-<text class="fixture-channel-guide-number">CH{{item.channel}}</text>
-<text class="fixture-channel-guide-address">{{item.actualAddress}}</text>
-<view wx:if="{{item.ranges.length}}" class="fixture-channel-guide-expand {{fixtureChannelGuideDetail && fixtureChannelGuideDetail.channel == item.channel ? 'fixture-channel-guide-expand-selected' : ''}}" data-channel-index="{{index}}" bindtap="selectFixtureChannelGuideDetail">{{fixtureChannelGuideDetail && fixtureChannelGuideDetail.channel == item.channel ? '查看中' : '数值'}}</view>
-</view>
-<view class="fixture-channel-guide-name">{{item.name}}</view>
-<view class="fixture-channel-guide-summary">{{item.summary}}</view>
-</view>
-</view>
-</scroll-view>
-<view wx:if="{{fixtureChannelGuideDetail}}" class="fixture-channel-guide-detail">
-<view class="fixture-channel-guide-detail-head">
-<view class="fixture-channel-guide-detail-copy">
-<view class="fixture-channel-guide-detail-title">CH{{fixtureChannelGuideDetail.channel}} · {{fixtureChannelGuideDetail.actualAddress}}</view>
-<view class="fixture-channel-guide-detail-name">功能：{{fixtureChannelGuideDetail.name}}</view>
-</view>
-<view class="fixture-channel-guide-detail-close" bindtap="closeFixtureChannelGuideDetail">关闭</view>
-</view>
-<scroll-view class="fixture-channel-guide-detail-ranges" scroll-y enhanced show-scrollbar="{{false}}">
-<view wx:for="{{fixtureChannelGuideDetail.ranges}}" wx:for-item="range" wx:key="range" class="fixture-channel-guide-detail-range"><text>{{range.range}}</text><text>{{range.description}}</text></view>
-</scroll-view>
-</view>
-<view class="fixture-channel-guide-source">来源：{{fixtureChannelGuide.source}} · {{fixtureChannelGuide.sourcePageText}} · {{fixtureChannelGuide.verificationStatus}}</view>
-</view>
-</view>
-
-<view wx:if="{{groupEditorOpen}}" class="group-editor-overlay" bindtap="closeGroupEditor" catchtouchmove="preventTouchMove">
-<view class="group-editor-sheet" catchtap="stopPropagation">
-<view class="group-editor-sheet-head">
-<view class="group-editor-sheet-title">编辑第 {{groupEditorIndex + 1}} 组</view>
-<view class="group-editor-close" role="button" bindtap="closeGroupEditor">×</view>
-</view>
-<scroll-view class="group-editor-scroll" scroll-y enhanced>
-<view class="group-editor-source-switch">
-<view
-class="group-editor-source-option {{groups[groupEditorIndex].fixtureSource == 'library' ? 'group-editor-source-option-active' : ''}}"
-data-index="{{groupEditorIndex}}"
-data-source="library"
-bindtap="switchFixtureSource"
->库内</view>
-<view
-class="group-editor-source-option {{groups[groupEditorIndex].fixtureSource == 'custom' ? 'group-editor-source-option-active' : ''}}"
-data-index="{{groupEditorIndex}}"
-data-source="custom"
-bindtap="switchFixtureSource"
->自定义</view>
-</view>
-
-<view class="group-editor-field">
-<view class="group-editor-field-label">灯具</view>
-<view
-wx:if="{{groups[groupEditorIndex].fixtureSource == 'library'}}"
-class="group-editor-fixture-select"
-data-index="{{groupEditorIndex}}"
-bindtap="openFixtureSearch"
-hover-class="group-editor-fixture-select-pressed"
->
-<view class="group-editor-fixture-copy">
-<view class="group-editor-fixture-model">{{groups[groupEditorIndex].fixtureModel || '选择灯具型号'}}</view>
-<view class="group-editor-fixture-name">{{groups[groupEditorIndex].fixtureName || '点击选择库内灯具'}}</view>
-</view>
-<text class="group-editor-arrow">›</text>
-</view>
-<input
-wx:else
-class="group-editor-custom-input"
-value="{{groups[groupEditorIndex].name}}"
-maxlength="20"
-placeholder="输入自定义灯具名称"
-data-index="{{groupEditorIndex}}"
-data-field="name"
-bindinput="onGroupInput"
-bindblur="onFieldBlur"
-/>
-</view>
-
-<view class="group-editor-input-row">
-<view class="group-editor-field">
-<view class="group-editor-field-label">通道数</view>
-<picker
-wx:if="{{groups[groupEditorIndex].fixtureSource == 'library' && groups[groupEditorIndex].channelModes.length}}"
-class="channel-mode-picker"
-mode="selector"
-range="{{groups[groupEditorIndex].channelModes}}"
-value="{{groups[groupEditorIndex].channelModeIndex}}"
-data-index="{{groupEditorIndex}}"
-bindchange="onChannelModeChange"
->
-<view class="group-editor-input-shell group-editor-picker-shell">
-<text>{{groups[groupEditorIndex].channelCount}} CH</text>
-<text class="group-editor-arrow">›</text>
-</view>
-</picker>
-<view wx:else class="group-editor-input-shell">
-<input
-class="group-editor-number-input"
-type="number"
-value="{{groups[groupEditorIndex].channelCount}}"
-data-index="{{groupEditorIndex}}"
-data-field="channelCount"
-bindinput="onGroupInput"
-bindblur="onFieldBlur"
-/>
-<text>CH</text>
-</view>
-</view>
-<view class="group-editor-field">
-<view class="group-editor-field-label">数量</view>
-<view class="group-editor-input-shell">
-<input
-class="group-editor-number-input"
-type="number"
-value="{{groups[groupEditorIndex].fixtureCount}}"
-data-index="{{groupEditorIndex}}"
-data-field="fixtureCount"
-bindinput="onGroupInput"
-bindblur="onFieldBlur"
-/>
-<text>台</text>
-</view>
-</view>
-</view>
-
-<view wx:if="{{allocationMode == 'manual'}}" class="group-editor-field">
-<view class="group-editor-field-label">目标信号域</view>
-<picker
-class="universe-picker"
-mode="selector"
-range="{{universeOptions}}"
-value="{{groups[groupEditorIndex].targetUniverseIndex}}"
-data-index="{{groupEditorIndex}}"
-bindchange="onGroupUniverseChange"
->
-<view class="group-editor-input-shell group-editor-picker-shell">
-<text>{{groups[groupEditorIndex].targetUniverse}} 域</text>
-<text class="group-editor-arrow">›</text>
-</view>
-</picker>
-</view>
-
-<view class="group-editor-actions">
-<view
-class="group-editor-delete"
-data-index="{{groupEditorIndex}}"
-bindtap="removeGroupFromEditor"
->删除本组</view>
-<button class="group-editor-done" bindtap="finishGroupEditor">完成</button>
-</view>
-</scroll-view>
-</view>
-</view>
-
-<view wx:if="{{fixtureSearchOpen || fixtureBatchOpen}}" class="fixture-search-overlay {{fixtureBatchOpen ? 'fixture-batch-overlay' : ''}}" bindtap="closeFixturePicker">
-<view class="fixture-search-sheet {{fixtureBatchOpen ? 'fixture-batch-sheet' : ''}}" catchtap="stopPropagation">
-<view class="fixture-search-head">
-<view class="fixture-search-title">{{fixtureBatchOpen ? '批量添加灯具' : '选择灯具型号'}}</view>
-<view class="fixture-search-close" bindtap="closeFixturePicker">×</view>
-</view>
-<view class="fixture-search-box">
-<view class="fixture-search-icon">⌕</view>
-<input
-class="fixture-search-input"
-value="{{fixtureSearchKeyword}}"
-placeholder="输入型号或灯具名称"
-focus
-bindinput="onFixtureSearchInput"
-bindconfirm="flushFixtureSearch"
-/>
-</view>
-<scroll-view class="fixture-category-scroll" scroll-x enhanced show-scrollbar="{{false}}">
-<view class="fixture-category-list">
-<view
-wx:for="{{fixtureSearchCategories}}"
-wx:key="label"
-class="fixture-category-chip {{item.label === fixtureSearchCategory ? 'fixture-category-chip-active' : ''}}"
-data-category="{{item.label}}"
-bindtap="selectFixtureCategory"
-hover-class="fixture-category-chip-pressed"
-hover-start-time="0"
-hover-stay-time="90"
->
-<text>{{item.label}}</text>
-<text class="fixture-category-count">{{item.count}}</text>
-</view>
-</view>
-</scroll-view>
-<view wx:if="{{fixtureBatchOpen}}" class="fixture-search-count">匹配 {{fixtureSearchTotal}} 款 · 已选 {{batchSelectedItems.length}} 款 / {{batchSelectedTotal}} 台</view>
-<view wx:else class="fixture-search-count">匹配 {{fixtureSearchTotal}} 款 · 当前显示 {{fixtureSearchResults.length}} 款</view>
-<scroll-view class="fixture-search-results {{fixtureBatchOpen ? 'fixture-batch-results' : ''}}" scroll-y enhanced show-scrollbar="{{false}}">
-<view
-wx:for="{{fixtureSearchResults}}"
-wx:key="model"
-class="fixture-search-row {{item.batchSelected || item.model === fixtureSearchSelectedModel ? 'fixture-search-row-selected' : ''}}"
-data-model="{{item.model}}"
-bindtap="selectFixture"
-hover-class="fixture-search-row-pressed"
-hover-start-time="0"
-hover-stay-time="90"
->
-<view class="fixture-search-row-main">
-<view class="fixture-search-model">{{item.model}}</view>
-<view class="fixture-search-name">{{item.name}}</view>
-</view>
-<view class="fixture-search-modes">{{item.modeText}}</view>
-<view wx:if="{{fixtureBatchOpen}}" class="batch-fixture-check {{item.batchSelected ? 'batch-fixture-check-active' : ''}}">{{item.batchSelected ? '✓' : '+'}}</view>
-<view wx:elif="{{item.model === fixtureSearchSelectedModel}}" class="fixture-search-check">✓</view>
-</view>
-<view wx:if="{{!fixtureSearchResults.length}}" class="fixture-search-empty">没有找到匹配的可编址灯具</view>
-</scroll-view>
-<view wx:if="{{fixtureBatchOpen && batchSelectedItems.length}}" class="batch-selected-list">
-<view class="batch-selected-title">已选灯具</view>
-<view wx:for="{{batchSelectedItems}}" wx:key="model" class="batch-selected-row">
-<view class="batch-selected-copy"><text>{{item.model}}</text><text>{{item.quantity}} 台</text></view>
-<view class="batch-quantity-control">
-<view class="batch-quantity-button" data-model="{{item.model}}" data-delta="-1" bindtap="adjustBatchQuantity">−</view>
-<text>{{item.quantity}}</text>
-<view class="batch-quantity-button" data-model="{{item.model}}" data-delta="1" bindtap="adjustBatchQuantity">＋</view>
-</view>
-</view>
-</view>
-<view wx:if="{{fixtureBatchOpen}}" class="batch-search-footer">
-<view class="batch-custom-entry" role="button" bindtap="openCustomGroupFromBatch">添加自定义灯具</view>
-<button class="batch-confirm-button" disabled="{{!batchSelectedItems.length}}" bindtap="confirmBatchAdd">确认添加 {{batchSelectedTotal}} 台</button>
-</view>
-</view>
-</view>
-</scroll-view>
-
-<canvas id="resultReportCanvas" canvas-id="resultReportCanvas" class="result-report-canvas-offscreen" width="{{resultReportCanvasWidth}}" height="{{resultReportCanvasHeight}}" style="width:{{resultReportCanvasWidth}}px;height:{{resultReportCanvasHeight}}px;"></canvas>
-
-<view wx:if="{{resultReportPreviewVisible}}" class="result-report-preview-overlay" bindtap="closeResultReportPreview" catchtouchmove="preventTouchMove">
-<view class="result-report-preview-sheet" catchtap="stopTap">
-<view class="result-report-preview-header">
-<view class="result-report-preview-title">地址方案图已生成</view>
-<button class="result-report-preview-close" bindtap="closeResultReportPreview">关闭</button>
-</view>
-<scroll-view class="result-report-preview-scroll" scroll-y enhanced show-scrollbar="{{false}}">
-<image class="result-report-preview-image" src="{{resultReportImagePath}}" mode="widthFix" bindtap="previewResultReportImage"></image>
-</scroll-view>
-<view class="result-report-preview-actions">
-<button class="result-report-preview-action result-report-preview-action-primary" bindtap="shareResultReportImage">转发图片</button>
-<button class="result-report-preview-action result-report-preview-action-secondary" bindtap="saveResultReportImage">保存到相册</button>
-</view>
-</view>
-</view>
+  <view wx:if="{{resultReportPreviewVisible}}" class="result-report-preview-overlay main-modal-backdrop {{resultReportPreviewClosing ? 'main-modal-closing' : ''}}" bindtap="onUserCloseResultReportPreview" catchtouchmove="stopPropagation">
+    <view class="result-report-preview-sheet main-modal-panel {{resultReportPreviewClosing ? 'main-modal-card-closing' : ''}}" catchtap="stopTap"><view class="result-report-preview-header"><view class="result-report-preview-title">地址方案图已生成</view><button class="result-report-preview-close" bindtap="onUserCloseResultReportPreview">关闭</button></view><scroll-view class="result-report-preview-scroll" scroll-y enhanced show-scrollbar="{{false}}"><image class="result-report-preview-image" src="{{resultReportImagePath}}" mode="widthFix" bindtap="previewResultReportImage"></image></scroll-view><view class="result-report-preview-actions"><button class="result-report-preview-action result-report-preview-action-primary" bindtap="shareResultReportImage">转发图片</button><button class="result-report-preview-action result-report-preview-action-secondary" bindtap="saveResultReportImage">保存到相册</button></view></view>
+  </view>
 </view>

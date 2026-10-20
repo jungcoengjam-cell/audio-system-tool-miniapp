@@ -31,8 +31,19 @@ const CONNECTOR_OPTIONS = [
   { id: 'custom', label: '自定义接头' },
 ]
 
+const DEVICE_OPTIONS = [
+  { id: 'receiver', label: '接收机' },
+  { id: 'mixer', label: '调音台' },
+  { id: 'processor', label: '处理器' },
+  { id: 'amplifier', label: '功放' },
+  { id: 'speaker', label: '音箱' },
+  { id: 'custom', label: '自定义' },
+]
+
 const STATUS_IDS = new Set(STATUS_OPTIONS.map((option) => option.id))
 const BUILD_IDS = new Set(BUILD_OPTIONS.map((option) => option.id))
+const DEVICE_IDS = new Set(DEVICE_OPTIONS.map((option) => option.id))
+const DEVICE_REFERENCE_FIELDS = ['fromDeviceId', 'toDeviceId']
 const CABLE_LABELS = Object.fromEntries(CABLE_OPTIONS.map(({ id, label }) => [id, label]))
 const CONNECTOR_LABELS = Object.fromEntries(CONNECTOR_OPTIONS.map(({ id, label }) => [id, label]))
 const STATUS_LABELS = Object.fromEntries(STATUS_OPTIONS.map(({ id, label }) => [id, label]))
@@ -42,6 +53,7 @@ const MAX_BATCH = 32
 const MAX_LENGTH_METERS = 1000000
 const MAX_LENGTH_TEXT = 24
 let lineIdCounter = 0
+let deviceIdCounter = 0
 
 function emptySchedule() {
   return { version: 1, revision: 0, nextNumber: 1, lines: [] }
@@ -78,7 +90,61 @@ function normalizeSchedule(value) {
   const revision = Number.isSafeInteger(value.revision) && value.revision >= 0 ? value.revision : 0
   const nextNumber = Number.isSafeInteger(value.nextNumber) && value.nextNumber > 0 ? value.nextNumber : 1
   const lines = Array.isArray(value.lines) ? value.lines.map((line) => normalizeLine(line)).filter(Boolean) : []
-  return { version: 1, revision, nextNumber, lines }
+  const schedule = { version: 1, revision, nextNumber, lines }
+  if (Object.prototype.hasOwnProperty.call(value, 'devices')) {
+    schedule.devices = Array.isArray(value.devices) ? value.devices.map((device) => {
+      const normalized = {
+        id: asText(device && device.id, 100),
+        type: asText(device && device.type, 20),
+        name: asText(device && device.name, 100),
+      }
+      if (device && typeof device.autoName === 'boolean') normalized.autoName = device.autoName
+      return normalized
+    }) : []
+  }
+  return schedule
+}
+
+function validateLineDeviceReferences(line, deviceIds) {
+  for (const field of DEVICE_REFERENCE_FIELDS) {
+    if (line[field] === undefined) continue
+    if (typeof line[field] !== 'string' || !line[field].trim() || line[field].length > 100
+      || !deviceIds.has(line[field].trim())) return '线路引用的设备不存在，请重新选择设备'
+  }
+  return ''
+}
+
+function validateDistinctDeviceReferences(line) {
+  const fromId = line && typeof line.fromDeviceId === 'string' ? line.fromDeviceId.trim() : ''
+  const toId = line && typeof line.toDeviceId === 'string' ? line.toDeviceId.trim() : ''
+  return fromId && toId && fromId === toId
+    ? '\u6765\u6e90\u8bbe\u5907\u548c\u53bb\u5411\u8bbe\u5907\u4e0d\u80fd\u76f8\u540c\uff0c\u8bf7\u91cd\u65b0\u9009\u62e9'
+    : ''
+}
+
+function validateDeviceData(schedule) {
+  if (!schedule || typeof schedule !== 'object') return ''
+  const devices = Object.prototype.hasOwnProperty.call(schedule, 'devices') ? schedule.devices : []
+  if (!Array.isArray(devices)) return '项目设备资料格式异常'
+  const ids = new Set()
+  for (const device of devices) {
+    if (!device || typeof device !== 'object' || Array.isArray(device)
+      || ![3, 4].includes(Object.keys(device).length)
+      || Object.keys(device).some((key) => !['id', 'type', 'name', 'autoName'].includes(key))
+      || typeof device.id !== 'string' || !device.id || device.id.length > 100 || device.id !== device.id.trim()
+      || typeof device.name !== 'string' || !device.name || device.name.length > 100 || device.name !== device.name.trim()
+      || !DEVICE_IDS.has(device.type) || ids.has(device.id)) return '项目设备资料格式异常'
+    if (Object.prototype.hasOwnProperty.call(device, 'autoName') && typeof device.autoName !== 'boolean') {
+      return '设备名称来源标记格式异常'
+    }
+    ids.add(device.id)
+  }
+  for (const line of Array.isArray(schedule.lines) ? schedule.lines : []) {
+    if (!line || typeof line !== 'object') continue
+    const error = validateLineDeviceReferences(line, ids)
+    if (error) return error
+  }
+  return ''
 }
 
 function normalizeLine(input) {
@@ -103,6 +169,9 @@ function normalizeLine(input) {
     status: STATUS_IDS.has(input.status) ? input.status : 'pending',
     notes: asText(input.notes, 300),
   }
+  DEVICE_REFERENCE_FIELDS.forEach((field) => {
+    if (input[field] !== undefined) line[field] = asText(input[field], 100)
+  })
   if (!line.id || !line.code || !line.fromDevice || !line.fromPort || !line.toDevice || !line.toPort) return null
   if (!validLengthText(line.lengthText)) return null
   return line
@@ -114,6 +183,16 @@ function makeLineId(lines) {
   do {
     lineIdCounter += 1
     id = `wire-${Date.now().toString(36)}-${lineIdCounter.toString(36)}`
+  } while (used.has(id))
+  return id
+}
+
+function makeDeviceId(devices) {
+  const used = new Set(devices.map((device) => device.id))
+  let id
+  do {
+    deviceIdCounter += 1
+    id = `device-${Date.now().toString(36)}-${deviceIdCounter.toString(36)}`
   } while (used.has(id))
   return id
 }
@@ -141,6 +220,133 @@ function failSchedule(schedule, error) {
   return baseScheduleResult(normalizeSchedule(schedule), false, error)
 }
 
+function copyScheduleForDeletion(scheduleValue) {
+  if (!scheduleValue || typeof scheduleValue !== 'object' || Array.isArray(scheduleValue)) {
+    return normalizeSchedule(scheduleValue)
+  }
+  const copy = { ...scheduleValue }
+  if (Array.isArray(scheduleValue.devices)) {
+    copy.devices = scheduleValue.devices.map((device) => (
+      device && typeof device === 'object' && !Array.isArray(device) ? { ...device } : device
+    ))
+  }
+  if (Array.isArray(scheduleValue.lines)) {
+    copy.lines = scheduleValue.lines.map((line) => (
+      line && typeof line === 'object' && !Array.isArray(line) ? { ...line } : line
+    ))
+  }
+  return copy
+}
+
+function failDeletion(scheduleValue, error) {
+  return { ok: false, schedule: copyScheduleForDeletion(scheduleValue), error }
+}
+
+function validStableId(value) {
+  return typeof value === 'string' && value.length > 0 && value.length <= 100 && value === value.trim()
+}
+
+function validDeletionSchedule(scheduleValue) {
+  if (!scheduleValue || typeof scheduleValue !== 'object' || Array.isArray(scheduleValue)
+    || scheduleValue.version !== 1 || !Number.isSafeInteger(scheduleValue.revision) || scheduleValue.revision < 0
+    || !Number.isSafeInteger(scheduleValue.nextNumber) || scheduleValue.nextNumber < 1
+    || !Array.isArray(scheduleValue.lines) || scheduleValue.lines.length > MAX_LINES) {
+    return '项目布线数据格式异常，请刷新后重试'
+  }
+  const deviceDataError = validateDeviceData(scheduleValue)
+  if (deviceDataError) return deviceDataError
+  const deviceIds = new Set((Array.isArray(scheduleValue.devices) ? scheduleValue.devices : [])
+    .map((device) => device.id))
+  const lineIds = new Set()
+  for (const line of scheduleValue.lines) {
+    if (!line || typeof line !== 'object' || Array.isArray(line) || !validStableId(line.id) || lineIds.has(line.id)) {
+      return '布线记录编号异常，请刷新后重试'
+    }
+    for (const field of DEVICE_REFERENCE_FIELDS) {
+      if (line[field] !== undefined && (!validStableId(line[field]) || !deviceIds.has(line[field]))) {
+        return '布线记录引用的设备异常，请刷新后重试'
+      }
+    }
+    lineIds.add(line.id)
+  }
+  return ''
+}
+
+function hasOnlyCommandKeys(command, keys) {
+  return Object.keys(command).every((key) => keys.includes(key))
+    && keys.every((key) => Object.prototype.hasOwnProperty.call(command, key))
+}
+
+function uniqueStableIds(ids) {
+  if (!Array.isArray(ids) || ids.length > MAX_LINES) return false
+  const seen = new Set()
+  for (const id of ids) {
+    if (!validStableId(id) || seen.has(id)) return false
+    seen.add(id)
+  }
+  return true
+}
+
+function applyDeletionChange(scheduleValue, command) {
+  const scheduleError = validDeletionSchedule(scheduleValue)
+  if (scheduleError) return failDeletion(scheduleValue, scheduleError)
+  if (scheduleValue.revision >= Number.MAX_SAFE_INTEGER) {
+    return failDeletion(scheduleValue, '布线版本已达上限，无法继续修改')
+  }
+
+  if (command.type === 'delete-device') {
+    if (!hasOnlyCommandKeys(command, ['type', 'id', 'deleteConnectedLines', 'expectedLineIds'])
+      || !validStableId(command.id) || typeof command.deleteConnectedLines !== 'boolean'
+      || !uniqueStableIds(command.expectedLineIds)) {
+      return failDeletion(scheduleValue, '设备删除参数无效，请刷新后重试')
+    }
+    const devices = Array.isArray(scheduleValue.devices) ? scheduleValue.devices : []
+    if (!devices.some((device) => device.id === command.id)) {
+      return failDeletion(scheduleValue, '找不到该设备，请刷新后重试')
+    }
+    const connectedLines = scheduleValue.lines.filter((line) => (
+      line.fromDeviceId === command.id || line.toDeviceId === command.id
+    ))
+    const connectedIds = connectedLines.map((line) => line.id)
+    const expectedIds = new Set(command.expectedLineIds)
+    if ((connectedLines.length > 0 && command.deleteConnectedLines !== true)
+      || expectedIds.size !== connectedIds.length
+      || connectedIds.some((id) => !expectedIds.has(id))) {
+      return failDeletion(scheduleValue, '设备关联线路已变化，请刷新后重新确认')
+    }
+    const connectedIdSet = new Set(connectedIds)
+    return {
+      ok: true,
+      schedule: {
+        ...scheduleValue,
+        revision: scheduleValue.revision + 1,
+        devices: devices.filter((device) => device.id !== command.id),
+        lines: scheduleValue.lines.filter((line) => !connectedIdSet.has(line.id)),
+      },
+      deviceIds: [command.id],
+      lineIds: connectedIds,
+    }
+  }
+
+  if (!hasOnlyCommandKeys(command, ['type', 'ids']) || !uniqueStableIds(command.ids) || command.ids.length < 1) {
+    return failDeletion(scheduleValue, '线路删除参数无效，请刷新后重试')
+  }
+  const lineIds = new Set(scheduleValue.lines.map((line) => line.id))
+  if (command.ids.some((id) => !lineIds.has(id))) {
+    return failDeletion(scheduleValue, '找不到要删除的线路，请刷新后重试')
+  }
+  const deleteIds = new Set(command.ids)
+  return {
+    ok: true,
+    schedule: {
+      ...scheduleValue,
+      revision: scheduleValue.revision + 1,
+      lines: scheduleValue.lines.filter((line) => !deleteIds.has(line.id)),
+    },
+    lineIds: command.ids.slice(),
+  }
+}
+
 function validateLine(line) {
   if (!line.fromDevice || !line.fromPort || !line.toDevice || !line.toPort) return '请填写线路两端的设备和端口'
   if (!BUILD_IDS.has(line.buildType)) return '请选择有效的制作方式'
@@ -155,9 +361,133 @@ function uniqueCode(code, lines, exceptId) {
   return !lines.some((line) => line.id !== exceptId && line.code.trim().toLowerCase() === normalizedCode)
 }
 
+function applyDeviceRename(scheduleValue, command) {
+  const schedule = normalizeSchedule(scheduleValue)
+  const scheduleError = validDeletionSchedule(scheduleValue)
+  if (scheduleError) return failSchedule(schedule, scheduleError)
+  if (schedule.revision >= Number.MAX_SAFE_INTEGER) {
+    return failSchedule(schedule, '\u9879\u76ee\u4fee\u6539\u7248\u672c\u5df2\u8fbe\u5230\u4e0a\u9650\uff0c\u8bf7\u5237\u65b0\u540e\u91cd\u8bd5')
+  }
+  if (!hasOnlyCommandKeys(command, ['type', 'id', 'name'])) {
+    return failSchedule(schedule, '\u8bbe\u5907\u540d\u79f0\u4fee\u6539\u53c2\u6570\u65e0\u6548')
+  }
+  const id = asText(command.id, 100)
+  const name = typeof command.name === 'string' ? command.name.trim() : ''
+  if (!id || id !== command.id || !name || name.length > 100) {
+    return failSchedule(schedule, '\u8bf7\u8f93\u5165\u6709\u6548\u7684\u8bbe\u5907\u540d\u79f0')
+  }
+  const devices = schedule.devices || []
+  if (!devices.some((device) => device.id === id)) {
+    return failSchedule(schedule, '\u627e\u4e0d\u5230\u8be5\u8bbe\u5907\uff0c\u8bf7\u5237\u65b0\u540e\u91cd\u8bd5')
+  }
+  const renamedDevices = devices.map((device) => device.id === id
+    ? { ...device, name, autoName: false }
+    : { ...device })
+  const lines = schedule.lines.map((line) => {
+    const updated = { ...line }
+    if (line.fromDeviceId === id) updated.fromDevice = name
+    if (line.toDeviceId === id) updated.toDevice = name
+    return updated
+  })
+  return baseScheduleResult({
+    ...schedule,
+    revision: schedule.revision + 1,
+    devices: renamedDevices,
+    lines,
+  }, true)
+}
+
+function legacyNameFromKey(value) {
+  if (typeof value !== 'string' || !value.startsWith('legacy:') || value.length > 700) return null
+  const encoded = value.slice('legacy:'.length)
+  let name
+  try { name = JSON.parse(encoded) } catch (error) { return null }
+  if (typeof name !== 'string' || JSON.stringify(name) !== encoded || !name || name !== name.trim()
+    || name.length > 100) return null
+  return name
+}
+
+function failLegacyDeviceRename(scheduleValue, error) {
+  return { ok: false, schedule: copyScheduleForDeletion(scheduleValue), error }
+}
+
+function applyLegacyDeviceRename(scheduleValue, command) {
+  if (!scheduleValue || typeof scheduleValue !== 'object' || Array.isArray(scheduleValue)) {
+    return failLegacyDeviceRename(scheduleValue, '\u5386\u53f2\u7ebf\u8def\u8d44\u6599\u5f02\u5e38\uff0c\u8bf7\u5237\u65b0\u540e\u91cd\u8bd5')
+  }
+  const scheduleError = validDeletionSchedule(scheduleValue)
+  if (scheduleError) return failLegacyDeviceRename(scheduleValue, scheduleError)
+  if (scheduleValue.revision >= Number.MAX_SAFE_INTEGER) {
+    return failLegacyDeviceRename(scheduleValue, '\u9879\u76ee\u4fee\u6539\u7248\u672c\u5df2\u8fbe\u4e0a\u9650\uff0c\u8bf7\u5237\u65b0\u540e\u91cd\u8bd5')
+  }
+  if (!hasOnlyCommandKeys(command, ['type', 'legacyKey', 'name'])) {
+    return failLegacyDeviceRename(scheduleValue, '\u5386\u53f2\u8bbe\u5907\u91cd\u547d\u540d\u53c2\u6570\u65e0\u6548')
+  }
+  const legacyName = legacyNameFromKey(command.legacyKey)
+  const name = typeof command.name === 'string' ? command.name.trim() : ''
+  if (!legacyName) {
+    return failLegacyDeviceRename(scheduleValue, '\u8be5\u5386\u53f2\u8bbe\u5907\u7f3a\u5c11\u660e\u786e\u540d\u79f0\uff0c\u8bf7\u5148\u8865\u5168\u7ebf\u8def\u8bbe\u5907\u540d')
+  }
+  if (!name || name.length > 100) {
+    return failLegacyDeviceRename(scheduleValue, '\u8bf7\u8f93\u5165\u6709\u6548\u7684\u8bbe\u5907\u540d\u79f0')
+  }
+
+  const normalized = normalizeSchedule(scheduleValue)
+  if (normalized.lines.length !== scheduleValue.lines.length) {
+    return failLegacyDeviceRename(scheduleValue, '\u5386\u53f2\u7ebf\u8def\u8d44\u6599\u5f02\u5e38\uff0c\u8bf7\u5237\u65b0\u540e\u91cd\u8bd5')
+  }
+  const matching = normalized.lines.map((line) => ({
+    from: line.fromDeviceId === undefined && line.fromDevice === legacyName,
+    to: line.toDeviceId === undefined && line.toDevice === legacyName,
+  }))
+  if (!matching.some(({ from, to }) => from || to)) {
+    return failLegacyDeviceRename(scheduleValue, '\u627e\u4e0d\u5230\u8be5\u5386\u53f2\u8bbe\u5907\uff0c\u8bf7\u5237\u65b0\u540e\u91cd\u8bd5')
+  }
+  if (matching.some(({ from, to }) => from && to)) {
+    return failLegacyDeviceRename(scheduleValue, '\u6765\u6e90\u8bbe\u5907\u548c\u53bb\u5411\u8bbe\u5907\u76f8\u540c\uff0c\u65e0\u6cd5\u4e3a\u540c\u4e00\u5386\u53f2\u8bbe\u5907\u5efa\u7acb\u7a33\u5b9a\u5f15\u7528')
+  }
+
+  const devices = (Array.isArray(scheduleValue.devices) ? scheduleValue.devices : []).map((device) => ({ ...device }))
+  const device = { id: makeDeviceId(devices), type: 'custom', name, autoName: false }
+  const lines = scheduleValue.lines.map((line, index) => {
+    const updated = { ...line }
+    if (matching[index].from) {
+      updated.fromDevice = name
+      updated.fromDeviceId = device.id
+    }
+    if (matching[index].to) {
+      updated.toDevice = name
+      updated.toDeviceId = device.id
+    }
+    return updated
+  })
+  devices.push(device)
+  const nextSchedule = { ...scheduleValue, revision: scheduleValue.revision + 1, devices, lines }
+  const nextError = validDeletionSchedule(nextSchedule)
+  if (nextError) return failLegacyDeviceRename(scheduleValue, nextError)
+  return {
+    ok: true,
+    schedule: nextSchedule,
+    deviceIds: [device.id],
+    legacyEndpointCount: matching.reduce((count, item) => count + Number(item.from) + Number(item.to), 0),
+  }
+}
+
 function applyScheduleChange(scheduleValue, command) {
   const schedule = normalizeSchedule(scheduleValue)
+  if (command && typeof command === 'object' && !Array.isArray(command) && command.type === 'rename-device') {
+    return applyDeviceRename(scheduleValue, command)
+  }
+  if (command && typeof command === 'object' && !Array.isArray(command) && command.type === 'rename-legacy-device') {
+    return applyLegacyDeviceRename(scheduleValue, command)
+  }
+  if (command && typeof command === 'object' && !Array.isArray(command)
+    && (command.type === 'delete-device' || command.type === 'delete-lines')) {
+    return applyDeletionChange(scheduleValue, command)
+  }
   if (!command || typeof command !== 'object') return failSchedule(schedule, '无法识别这项布线操作')
+  const deviceDataError = validateDeviceData(scheduleValue)
+  if (deviceDataError) return failSchedule(schedule, deviceDataError)
   if (schedule.revision >= Number.MAX_SAFE_INTEGER || schedule.nextNumber >= Number.MAX_SAFE_INTEGER) {
     return failSchedule(schedule, '布线编号或版本已达到上限，无法继续修改')
   }
@@ -165,7 +495,46 @@ function applyScheduleChange(scheduleValue, command) {
   let nextNumber = schedule.nextNumber
   let changedIds = []
 
-  if (command.type === 'upsert') {
+  if (command.type === 'add-devices') {
+    if (!Array.isArray(command.devices) || command.devices.length < 1 || command.devices.length > MAX_BATCH) {
+      return failSchedule(schedule, '一次可新增 1 到 32 台设备')
+    }
+    const devices = (schedule.devices || []).map((device) => ({ ...device }))
+    const deviceIds = []
+    for (const input of command.devices) {
+      if (!input || typeof input !== 'object' || Array.isArray(input)
+        || Object.keys(input).some((key) => !['type', 'name', 'autoName'].includes(key))
+        || !DEVICE_IDS.has(input.type) || typeof input.name !== 'string'
+        || !input.name.trim() || input.name.trim().length > 100) return failSchedule(schedule, '请填写有效的设备类型和名称')
+      if (Object.prototype.hasOwnProperty.call(input, 'autoName') && typeof input.autoName !== 'boolean') {
+        return failSchedule(schedule, '\u8bbe\u5907\u540d\u79f0\u6765\u6e90\u6807\u8bb0\u683c\u5f0f\u5f02\u5e38')
+      }
+      const typeLabel = DEVICE_OPTIONS.find((option) => option.id === input.type)?.label
+      if (input.autoName === true && input.name.trim() !== typeLabel) {
+        return failSchedule(schedule, '\u81ea\u52a8\u8bbe\u5907\u540d\u79f0\u5fc5\u987b\u4e0e\u8bbe\u5907\u7c7b\u578b\u4e00\u81f4')
+      }
+      const device = { id: makeDeviceId(devices), type: input.type, name: input.name.trim() }
+      if (Object.prototype.hasOwnProperty.call(input, 'autoName')) device.autoName = input.autoName
+      devices.push(device)
+      deviceIds.push(device.id)
+    }
+    return { ok: true, schedule: { ...schedule, revision: schedule.revision + 1, devices }, deviceIds }
+  } else if (command.type === 'append-lines') {
+    if (!Array.isArray(command.lines) || command.lines.length < 1 || command.lines.length > MAX_BATCH) {
+      return failSchedule(schedule, '一次可批量新增 1 到 32 条线路')
+    }
+    if (lines.length + command.lines.length > MAX_LINES) return failSchedule(schedule, '项目最多可保存 200 条线路')
+    let candidateSchedule = schedule
+    for (const line of command.lines) {
+      if (!line || typeof line !== 'object' || Array.isArray(line)) return failSchedule(schedule, '批量线路资料无效')
+      if (line.id !== undefined && line.id !== null && line.id !== '') return failSchedule(schedule, '批量新增不能带已有线路编号')
+      const result = applyScheduleChange({ ...candidateSchedule, revision: schedule.revision }, { type: 'upsert', line })
+      if (!result.ok) return failSchedule(schedule, result.error)
+      candidateSchedule = result.schedule
+      changedIds.push(...result.lineIds)
+    }
+    return baseScheduleResult(candidateSchedule, true, '', changedIds)
+  } else if (command.type === 'upsert') {
     const input = command.line
     if (!input || typeof input !== 'object' || Array.isArray(input)) return failSchedule(schedule, '线路资料无效')
     const index = input.id ? lines.findIndex((line) => line.id === input.id) : -1
@@ -190,6 +559,13 @@ function applyScheduleChange(scheduleValue, command) {
       status: input.status === undefined ? (previous?.status || 'pending') : input.status,
       notes: asText(input.notes === undefined ? previous?.notes : input.notes, 300),
     }
+    DEVICE_REFERENCE_FIELDS.forEach((field) => {
+      if (Object.prototype.hasOwnProperty.call(input, field) && input[field] === null) delete candidate[field]
+    })
+    const referenceError = validateLineDeviceReferences(candidate, new Set((schedule.devices || []).map((device) => device.id)))
+    if (referenceError) return failSchedule(schedule, referenceError)
+    const distinctDeviceError = validateDistinctDeviceReferences(candidate)
+    if (distinctDeviceError) return failSchedule(schedule, distinctDeviceError)
     if (!BUILD_IDS.has(candidate.buildType)) return failSchedule(schedule, '请选择有效的制作方式')
     if (!['balanced', 'unbalanced', 'speaker', 'custom'].includes(candidate.cableType)) {
       return failSchedule(schedule, '请选择有效的线材类型')
@@ -225,10 +601,12 @@ function applyScheduleChange(scheduleValue, command) {
     if (!lines.some((line) => line.id === id)) return failSchedule(schedule, '找不到这条线路，请刷新后重试')
     const remaining = lines.filter((line) => line.id !== id)
     changedIds = [id]
-    const updated = { version: 1, revision: schedule.revision + 1, nextNumber, lines: remaining }
+    const updated = { ...schedule, revision: schedule.revision + 1, nextNumber, lines: remaining }
     return baseScheduleResult(updated, true, '', changedIds)
   } else if (command.type === 'duplicate') {
     const source = lines.find((line) => line.id === asText(command.id, 100))
+    const distinctDeviceError = validateDistinctDeviceReferences(source)
+    if (distinctDeviceError) return failSchedule(schedule, distinctDeviceError)
     if (!source) return failSchedule(schedule, '找不到这条线路，请刷新后重试')
     if (lines.length >= MAX_LINES) return failSchedule(schedule, '项目最多可保存 200 条线路')
     const allocation = allocateCode(schedule, lines)
@@ -279,6 +657,10 @@ function applyScheduleChange(scheduleValue, command) {
         toPort: `${toPrefix}${toStart + index}`,
         status: 'pending',
       }
+      const referenceError = validateLineDeviceReferences(candidate, new Set((schedule.devices || []).map((device) => device.id)))
+      if (referenceError) return failSchedule(schedule, referenceError)
+      const distinctDeviceError = validateDistinctDeviceReferences(candidate)
+      if (distinctDeviceError) return failSchedule(schedule, distinctDeviceError)
       if (!BUILD_IDS.has(candidate.buildType)) return failSchedule(schedule, '请选择有效的制作方式')
       if (!['balanced', 'unbalanced', 'speaker', 'custom'].includes(candidate.cableType)) {
         return failSchedule(schedule, '请选择有效的线材类型')
@@ -296,7 +678,7 @@ function applyScheduleChange(scheduleValue, command) {
     return failSchedule(schedule, '无法识别这项布线操作')
   }
 
-  const updated = { version: 1, revision: schedule.revision + 1, nextNumber, lines }
+  const updated = { ...schedule, revision: schedule.revision + 1, nextNumber, lines }
   return baseScheduleResult(updated, true, '', changedIds)
 }
 
@@ -468,6 +850,7 @@ module.exports = {
   BUILD_OPTIONS,
   CABLE_OPTIONS,
   CONNECTOR_OPTIONS,
+  DEVICE_OPTIONS,
   MAX_BATCH,
   MAX_LENGTH_METERS,
   MAX_LENGTH_TEXT,
@@ -478,4 +861,5 @@ module.exports = {
   buildScheduleText,
   emptySchedule,
   normalizeSchedule,
+  validateDeviceData,
 }

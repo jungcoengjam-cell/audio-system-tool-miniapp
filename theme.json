@@ -14,7 +14,9 @@
     "toolsIcon": "assets/tabbar/tools.png",
     "toolsSelectedIcon": "assets/tabbar/tools-selected.png",
     "projectsIcon": "assets/tabbar/projects.png",
-    "projectsSelectedIcon": "assets/tabbar/projects-selected.png"
+    "projectsSelectedIcon": "assets/tabbar/projects-selected.png",
+    "basisIcon": "assets/home/basis-tab.png",
+    "basisSelectedIcon": "assets/home/basis-tab-selected.png"
   },
   "dark": {
     "navBgColor": "#1c1c1e",
@@ -26,6 +28,8 @@
     "toolsSelectedIcon": "assets/tabbar/tools-selected.png",
     "projectsIcon": "assets/tabbar/projects.png",
     "projectsSelectedIcon": "assets/tabbar/projects-selected.png",
+    "basisIcon": "assets/home/basis-tab.png",
+    "basisSelectedIcon": "assets/home/basis-tab-selected.png",
     "pageBgColor": "#000000",
     "pageTextColor": "#ffffff",
     "tabBgColor": "#1c1c1e",

@@ -1,0 +1,18 @@
+@import "../../styles/homepage.wxss";
+
+.recovery-scroll{height:100vh;background:var(--theme-page-bg)}
+.recovery-page{padding-bottom:calc(32rpx + env(safe-area-inset-bottom))}
+.recovery-section{margin-top:22rpx}
+.recovery-section-title{margin:0 4rpx 11rpx;color:var(--theme-text);font-size:16px;font-weight:650}
+.recovery-card{margin-top:11rpx;padding:18rpx;border-radius:20rpx}
+.recovery-card-top,.recovery-action-row{display:flex;align-items:center;justify-content:space-between;gap:10rpx}
+.recovery-type{color:var(--theme-accent-text);font-size:13px;font-weight:650}
+.recovery-date{margin-top:5rpx;color:var(--theme-text-tertiary);font-size:12px;line-height:1.4}
+.recovery-card-top .recovery-date{margin:0;white-space:nowrap}
+.recovery-card-title{margin-top:8rpx;color:var(--theme-text);font-size:15px;font-weight:650;line-height:1.4;overflow-wrap:anywhere}
+.recovery-card-summary{margin-top:6rpx;color:var(--theme-text-secondary);font-size:14px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}
+.recovery-action{margin:12rpx 0 0}
+.recovery-action-row{margin-top:12rpx}
+.recovery-action-row button{min-width:0;flex:1;margin:0}
+.recovery-warning,.recovery-error{margin-top:12rpx;padding:18rpx;color:var(--theme-danger);font-size:14px;line-height:1.45}
+@media(max-width:340px){.recovery-card-summary{font-size:14px}.recovery-date{font-size:12px}}

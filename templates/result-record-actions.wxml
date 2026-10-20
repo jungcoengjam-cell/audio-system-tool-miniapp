@@ -1,4 +1,11 @@
-<view class="result-record-actions">
-          <button class="result-record-button {{currentFavorite ? 'result-record-button-active' : ''}}" bindtap="toggleCurrentFavorite">{{currentFavorite ? '★ 已收藏' : '☆ 收藏常用'}}</button>
-          <button class="result-record-button" bindtap="saveToActiveProject">选择项目保存</button>
-        </view>
+<view wx:if="{{editorSessionActive}}" class="result-record-actions editor-result-record-actions" style="display:flex;flex-direction:column;align-items:stretch;padding-right:52px;box-sizing:border-box;">
+  <view class="editor-result-record-context" style="display:flex;flex-direction:column;align-items:flex-start;align-self:stretch;">
+    <text>{{editorSourceLabel}}</text>
+    <text>{{editorDirty ? '有未保存更改' : '已保存状态'}}</text>
+  </view>
+  <view class="editor-result-record-controls" style="display:flex;align-self:stretch;">
+    <button class="result-record-button" bindtap="saveEditorContext">保存</button>
+    <button class="result-record-button" data-save-as="true" bindtap="saveEditorContext">另存为</button>
+    <button class="result-record-button" bindtap="leaveEditorContext">退出编辑</button>
+  </view>
+</view>

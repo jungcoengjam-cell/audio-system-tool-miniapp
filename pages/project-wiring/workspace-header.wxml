@@ -1,0 +1,9 @@
+<view class="workspace-nav" style="{{navigationStyle}}">
+  <button hover-class="workspace-pressed" hover-stay-time="80" class="workspace-icon-button workspace-back" style="{{navigationControlStyle}}" aria-label="返回" disabled="{{saving || projectCreating}}" catchtap="requestPageBack"><text>‹</text></button>
+  <view class="workspace-title" style="{{navigationControlStyle}}">通道与线缆</view>
+</view>
+<view class="workspace-project-row">
+  <button hover-class="workspace-pressed" hover-stay-time="80" class="workspace-text-button workspace-new" aria-label="新建项目" disabled="{{saving || projectCreating}}" catchtap="requestNewProject"><text class="workspace-new-plus">+</text><text>新建</text></button>
+  <button hover-class="workspace-pressed" hover-stay-time="80" class="workspace-project-button" disabled="{{saving || projectCreating}}" catchtap="requestProjectPicker"><view class="workspace-project-title-unit"><text class="workspace-project-name">{{project ? project.name : '选择项目'}}</text><text class="workspace-project-chevron">⌄</text></view></button>
+  <button hover-class="workspace-pressed" hover-stay-time="80" class="workspace-icon-button workspace-project-share" aria-label="分享项目接线图" disabled="{{!project || !lineCount || loading || saving}}" catchtap="shareProject"><view class="workspace-share-icon icon-share"></view></button>
+</view>

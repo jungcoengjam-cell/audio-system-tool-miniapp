@@ -4,9 +4,45 @@
   "expandedWxmlSha256": {
     "pages/dmx-layout/dmx-layout.wxml": "c2d8afa55ba09dc9cc7455f3e4921b6053251e4a8f8f5db685fa9231ad94be6b",
     "pages/dmx-layout-landscape/dmx-layout-landscape.wxml": "40fab3d8a201abb1423731d04f55621fd2a3a3fb565b732043b7fcc49f1356c5",
-    "pages/cable/cable.wxml": "696c2209341ad306fc204507825098b4e372c8267639ab52dd7bd3bbfb88e0bc",
+    "pages/cable/cable.wxml": "8418c2d62824ca5478eb4e472c9da4e0b3e6a75a405d2356cf62267f9609b9fb",
     "pages/gain-structure/gain-structure.wxml": "2274609baae95eeac19b5065cf7ffbbb317828a1e1762803e5b4542542859871",
-    "pages/spl/spl.wxml": "5e8073a30f147dc64dc44e00e965678740d72c61e1e42f46c0083a2cdf258cf5",
-    "pages/venue/venue.wxml": "921a875449e2f7b7627b42958f08c1273668089eddaeea7b30dc034eb348750d"
+    "pages/spl/spl.wxml": "5e8073a30f147dc64dc44e00e965678740d72c61e1e42f46c0083a2cdf258cf5"
+  },
+  "approvedSplRefactorExpandedWxmlSha256": "03a2e6a30ef2f2631cb0c0073fcd614bfe0fba5b33ccbe8d70025b6e52e016b9",
+  "approvedDmxLightingRefactorExpandedWxmlSha256": {
+    "pages/dmx-layout/dmx-layout.wxml": "70e8242826fc2e15e7fbe6d51a6b5dd23973584ecc4e8a5ff98f23169929ca03",
+    "pages/dmx-layout-landscape/dmx-layout-landscape.wxml": "70e8242826fc2e15e7fbe6d51a6b5dd23973584ecc4e8a5ff98f23169929ca03"
+  },
+  "approvedDmxCanvas2DNativeFixExpandedWxmlSha256": {
+    "pages/dmx-layout/dmx-layout.wxml": "adf04a319f6d6f7b7747b8745f365eafa6f8f1238cab10f24323192c41d1d8c0",
+    "pages/dmx-layout-landscape/dmx-layout-landscape.wxml": "adf04a319f6d6f7b7747b8745f365eafa6f8f1238cab10f24323192c41d1d8c0"
+  },
+  "approvedDmxDiagramUiRefinementExpandedWxmlSha256": {
+    "pages/dmx-layout/dmx-layout.wxml": "b9a71dcafac8a2ff6b58ab41e0407fc8985aeb7cda3075c92360d8d110ed9248",
+    "pages/dmx-layout-landscape/dmx-layout-landscape.wxml": "b9a71dcafac8a2ff6b58ab41e0407fc8985aeb7cda3075c92360d8d110ed9248"
+  },
+  "approvedDmxRoundThreeExpandedWxmlSha256": {
+    "pages/dmx-layout/dmx-layout.wxml": "235e77d5252d00dd66f5e22d7bc92da2637d0d4cc5f825fed5508638ba673638",
+    "pages/dmx-layout-landscape/dmx-layout-landscape.wxml": "235e77d5252d00dd66f5e22d7bc92da2637d0d4cc5f825fed5508638ba673638"
+  },
+  "approvedDmxPortraitOnlyExpandedWxmlSha256": {
+    "pages/dmx-layout/dmx-layout.wxml": "628132a9cbbb6b0adb4732963a3c6282e2b6a15cd6078c6f631d0e7103eb6b47",
+    "pages/dmx-layout-landscape/dmx-layout-landscape.wxml": "628132a9cbbb6b0adb4732963a3c6282e2b6a15cd6078c6f631d0e7103eb6b47"
+  },
+  "approvedDmxPlacementPanelExpandedWxmlSha256": {
+    "pages/dmx-layout/dmx-layout.wxml": "88b35e4bfb35e2a06e67dd309649e6d8f3df03dfbbe7e3868ee34cd994b97036",
+    "pages/dmx-layout-landscape/dmx-layout-landscape.wxml": "88b35e4bfb35e2a06e67dd309649e6d8f3df03dfbbe7e3868ee34cd994b97036"
+  },
+  "approvedDmxBatchSelectionExpandedWxmlSha256": {
+    "pages/dmx-layout/dmx-layout.wxml": "8761f254e6b843230c14a08f9a4c72a9b55ab79770f50794c8c0f6d2b14fbe9f",
+    "pages/dmx-layout-landscape/dmx-layout-landscape.wxml": "8761f254e6b843230c14a08f9a4c72a9b55ab79770f50794c8c0f6d2b14fbe9f"
+  },
+  "approvedDmxPanelSizingExpandedWxmlSha256": {
+    "pages/dmx-layout/dmx-layout.wxml": "6c585b60dc95ac2c4a75c48d04516dc29230ee2c38b3e4421358afec16dc0841",
+    "pages/dmx-layout-landscape/dmx-layout-landscape.wxml": "6c585b60dc95ac2c4a75c48d04516dc29230ee2c38b3e4421358afec16dc0841"
+  },
+  "approvedDmxPlacementHeaderExpandedWxmlSha256": {
+    "pages/dmx-layout/dmx-layout.wxml": "3daa584c0c3197af5396fb70dc1619ddcce40770807aa2acd630aad2b2e462d8",
+    "pages/dmx-layout-landscape/dmx-layout-landscape.wxml": "3daa584c0c3197af5396fb70dc1619ddcce40770807aa2acd630aad2b2e462d8"
   }
 }

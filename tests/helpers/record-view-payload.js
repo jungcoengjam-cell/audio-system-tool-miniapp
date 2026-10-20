@@ -30,19 +30,38 @@ for (let index = 0; index < count; index += 1) {
   const result = calculateDmxAddressPlan(preferences)
   if (result.error) throw new Error(result.error)
   dmxPage._calculationResult = { ...result, valid: true }
-  if (!records.saveRecord({ module: 'dmxAddress', preferences,
-    title: `500 fixtures plan ${index}`, summary: `${result.startText} - ${result.endText}`,
+  const payload = { module: 'dmxAddress', preferences,
+    title: '500 fixtures plan ' + index, summary: result.startText + ' - ' + result.endText,
     resultText: dmxPage.getResultText(),
-  }, { favorite: true, projectId: project.id })) throw new Error('saveRecord failed')
+  }
+  if (!records.addRecordToProject(payload, project.id)) throw new Error('addRecordToProject failed')
+  if (!records.saveFavoriteSnapshot(payload)) throw new Error('saveFavoriteSnapshot failed')
 }
 const bytes = (value) => Buffer.byteLength(JSON.stringify(value))
 const storedBytes = bytes(records.getRecords())
 require(path.join(root, 'pages/records/project'))
 page.onLoad({ id: project.id })
+const projectRecords = records.getProjectRecords(project.id)
+const groupedProjectRecordCount = page.data.recordGroups
+  .reduce((total, group) => total + (Array.isArray(group.records) ? group.records.length : 0), 0)
+if (projectRecords.length !== count
+  || page.data.project?.recordCount !== count
+  || page.data.records.length !== count
+  || groupedProjectRecordCount !== count) {
+  throw new Error(`Project record fixture is incomplete: ${projectRecords.length}/${page.data.records.length}/${groupedProjectRecordCount}/${count}`)
+}
 const projectViewBytes = bytes(page.lastPatch)
 const clipboard = page.getProjectReportText()
 if (!clipboard.includes('500') || !clipboard.includes('#200')) throw new Error('Full report content is missing')
 require(path.join(root, 'pages/projects/projects'))
 page.onShow()
+const projectIndex = page.data.projects.find((item) => item.id === project.id)
+const favoriteCount = records.getFavorites().length
+if (favoriteCount !== count || page.data.favorites.length !== count
+  || page._allFavorites.length !== count || projectIndex?.recordCount !== count) {
+  throw new Error(`Favorite/project index fixture is incomplete: ${favoriteCount}/${page.data.favorites.length}/${projectIndex?.recordCount}/${count}`)
+}
 console.log(JSON.stringify({ records: count, fixturesPerRecord: 500, storedBytes,
+  projectRecordCount: projectRecords.length, groupedProjectRecordCount,
+  favoriteCount, projectIndexRecordCount: projectIndex.recordCount,
   projectViewBytes, favoritesViewBytes: bytes(page.lastPatch), textReportBytes: Buffer.byteLength(clipboard) }))

@@ -1,0 +1,10 @@
+const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto'),assert=require('node:assert/strict')
+const root=path.resolve(__dirname,'../..'),read=p=>JSON.parse(fs.readFileSync(path.join(__dirname,p),'utf8')),hash=p=>crypto.createHash('sha256').update(fs.readFileSync(path.join(root,p))).digest('hex')
+const audit=read('evidence/source/audit.json'),reg=read('evidence/regressions/summary.json'),compile=read('evidence/compile/compile.json'),browser=read('evidence/browser/summary.json'),release=read('evidence/release-check/summary.json'),calc=read('evidence/calculation-equivalence.json')
+assert(audit.protectedUnchanged&&!audit.failures.length);for(const [p,r]of Object.entries(audit.files))assert.equal(hash(p),r.sha256,'Audit source drift '+p)
+for(const [p,h]of Object.entries(reg.sources))assert.equal(hash(p),h,'Regression source drift '+p)
+for(const [p,h]of Object.entries(compile.sources))assert.equal(hash(p),h,'Compiled source drift '+p)
+assert(compile.results.every(r=>r.exitCode===0));assert(browser.results.length===2&&browser.results.every(r=>r.passed));assert(calc.passed)
+const failures=reg.results.filter(r=>r.exitCode!==0);assert(failures.every(r=>r.file==='tests/report-lifecycle-regression.js'),'Unexpected related regression failure')
+const final={runAt:new Date().toISOString(),productionFiles:audit.allowedProduction.map(p=>({path:p,sha256:hash(p)})),protectedFilesUnchanged:audit.protectedCount,regressions:{total:reg.results.length,passed:reg.results.length-failures.length,failures},actualTouchProfiles:browser.results.length,calculationCases:calc.cases+calc.workspaceCases,officialSourceCompile:true,releasePassed:release.passed,releaseFailure:'Package 4530.4 KiB exceeds 2650 KiB limit',sharedExternalChanges:audit.sharedExternalChanges,nativeRuntime:'NOT RUN - user acceptance',physicalDevice:'NOT RUN - user acceptance'}
+fs.writeFileSync(path.join(__dirname,'evidence/final.json'),JSON.stringify(final,null,2));console.log(JSON.stringify(final,null,2))

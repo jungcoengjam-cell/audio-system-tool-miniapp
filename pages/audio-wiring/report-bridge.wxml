@@ -1,0 +1,11 @@
+<view class="report-bridge-page">
+  <view class="report-bridge-card">
+    <view class="report-bridge-title">正在生成接线原生图片</view>
+    <view class="report-bridge-copy">{{progressText}}</view>
+    <view class="report-bridge-copy">图片完成后会返回项目报告。</view>
+    <button class="report-bridge-cancel" bindtap="cancel">取消生成</button>
+  </view>
+  <canvas canvas-id="audioWiringReportBridgeCanvas" class="report-bridge-canvas"
+    width="{{canvasWidth || 720}}" height="{{canvasHeight || 1200}}"
+    style="width: {{canvasWidth || 720}}px; height: {{canvasHeight || 1200}}px;"></canvas>
+</view>

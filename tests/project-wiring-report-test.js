@@ -266,18 +266,80 @@ const appConfig = JSON.parse(fs.readFileSync(path.join(root, 'app.json'), 'utf8'
 assert.ok((appConfig.subPackages || []).some((item) => item.root === 'pages/project-wiring'
   && item.pages.includes('index')), '布线页注册为独立分包入口')
 const projectPage = fs.readFileSync(path.join(root, 'pages/records/project.wxml'), 'utf8')
-assert.ok(projectPage.includes('class="project-wiring-card"') && projectPage.includes('bindtap="openProjectWiring"'))
-assert.ok(projectPage.includes('{{project.wiringLineCount}} 条线路') && projectPage.includes('{{project.wiringPendingCount}} 条待核对'))
+function findViewBlock(source, className) {
+  const opening = [...source.matchAll(/<view\b([^>]*)>/g)].find((match) => {
+    const classAttribute = /\bclass="([^"]+)"/.exec(match[1])
+    return classAttribute && classAttribute[1].split(/\s+/).includes(className)
+  })
+  assert.ok(opening, `应存在 ${className} 区域`)
+  const tags = /<\/?view\b[^>]*>/g
+  tags.lastIndex = opening.index
+  let depth = 0
+  let match
+  while ((match = tags.exec(source))) {
+    if (/^<\/view\b/.test(match[0])) depth -= 1
+    else if (!/\/\s*>$/.test(match[0])) depth += 1
+    if (depth === 0) return source.slice(opening.index, tags.lastIndex)
+  }
+  assert.fail(`未找到 ${className} 区域的结束标签`)
+}
+function findButton(source, handler) {
+  return [...source.matchAll(/<button\b([^>]*)>([\s\S]*?)<\/button>/g)]
+    .map((match) => ({ attributes: match[1], content: match[2] }))
+    .find((button) => {
+      const binding = /\bbindtap="([^"]+)"/.exec(button.attributes)
+      return binding && binding[1] === handler
+    })
+}
+function buttonAriaLabel(button) {
+  const label = /\baria-label="([^"]+)"/.exec(button.attributes)
+  return label && label[1]
+}
+const heroBlock = findViewBlock(projectPage, 'interior-hero')
+const moduleButton = findButton(heroBlock, 'openAddProjectModule')
+assert.strictEqual(moduleButton, undefined, '项目详情hero不显示添加模块按钮')
+const wiringStart = projectPage.indexOf('wx:if="{{showWiring}}"')
+const wiringEnd = projectPage.indexOf('wx:if="{{showLighting}}"', wiringStart)
+const wiringSection = projectPage.slice(wiringStart, wiringEnd)
+assert.ok(wiringStart >= 0 && wiringEnd > wiringStart, '项目页应保留线路内容区')
+const wiringButton = findButton(wiringSection, 'openProjectWiring')
+assert.strictEqual(wiringButton, undefined, '项目详情线路区不显示添加/管理线路按钮')
+const wiringLoop = /<view\b(?=[^>]*\bwx:for="\{\{wiringLines\}\}")[^>]*>/.exec(wiringSection)
+assert.ok(wiringLoop, '已有线路必须以循环行渲染')
+assert.match(wiringLoop[0], /\bwx:key="id"/, '线路循环必须使用稳定线路 ID')
+const wiringRowTags = /<\/?view\b[^>]*>/g
+wiringRowTags.lastIndex = wiringLoop.index + wiringLoop[0].length
+let wiringRowDepth = 1
+let wiringRowEnd = -1
+let wiringTag
+while ((wiringTag = wiringRowTags.exec(wiringSection))) {
+  if (/^<\/view\b/.test(wiringTag[0])) wiringRowDepth -= 1
+  else if (!/\/\s*>$/.test(wiringTag[0])) wiringRowDepth += 1
+  if (wiringRowDepth === 0) {
+    wiringRowEnd = wiringRowTags.lastIndex
+    break
+  }
+}
+assert.ok(wiringRowEnd > 0, '线路循环行必须有完整内容节点')
+const wiringLoopBlock = wiringSection.slice(wiringLoop.index, wiringRowEnd)
+assert.match(wiringLoopBlock,
+  /data-id="\{\{item\.id\}\}" bindtap="openProjectWiring"/,
+  '循环线路行内的稳定 ID 内容节点仍可进入布线页')
+assert.ok(wiringSection.includes('{{wiringLines.length}} 条'), '线路区计数应绑定当前可见行数')
+assert.ok(projectPage.includes('wx:elif="{{projectTypeEmpty}}"')
+  && projectPage.includes('这个项目还没有内容'), '空项目保留清楚的空状态')
 const detailController = fs.readFileSync(path.join(root, 'pages/records/project.js'), 'utf8')
 assert.match(detailController, /const \{ wiringSchedule, \.\.\.projectViewFields \} = project/)
 assert.match(detailController, /wiringLineCount: wiringSummary\.lineCount/)
 assert.match(detailController, /wiringPendingCount: wiringSummary\.pendingCount/)
 assert.match(detailController, /url: `\/pages\/project-wiring\/index\?id=\$\{encodeURIComponent\(this\.projectId\)\}`/)
+assert.match(detailController, /wiringCount = Number\(project\.wiringLineCount\) \|\| 0/)
+assert.match(detailController, /独立收藏不会删除/)
+assert.match(detailController, /deleteProject\(projectId\)/)
 const projectsController = fs.readFileSync(path.join(root, 'pages/projects/projects.js'), 'utf8')
-assert.match(projectsController, /const \{ wiringSchedule, \.\.\.fields \} = project/)
-assert.match(projectsController, /activeProject: activeProject \? projectViewFields\(activeProject\) : null/)
-assert.ok(fs.readFileSync(path.join(root, 'pages/projects/projects.js'), 'utf8')
-  .includes('项目及其布线资料会被删除'))
+assert.match(projectsController, /function projectLines\(project\)[\s\S]*?Array\.isArray\(lines\) \? lines\.length : 0/)
+assert.match(projectsController, /const wiringCount = projectLines\(project\)/)
+assert.match(projectsController, /wiringCount \? `\$\{wiringCount\} 条线路` : ''/)
 
 const mockProject = {
   id: 'project-200-lines',
@@ -296,20 +358,44 @@ const mockProject = {
     })),
   },
 }
+const otherProject = {
+  id: 'project-active-b', name: '另一个活动项目', createdAt: 1001, updatedAt: 2001,
+  wiringSchedule: { version: 1, revision: 0, nextNumber: 1, lines: [] },
+}
+const emptyProject = {
+  id: 'project-empty-wiring', name: '尚无线缆的项目', createdAt: 1002, updatedAt: 2002,
+  wiringSchedule: { version: 1, revision: 0, nextNumber: 1, lines: [] },
+}
+let workspaceProjects = [mockProject, otherProject]
+let activeProjectSnapshot = mockProject
+let snapshotReads = 0
+let setActiveProjectCalls = 0
+const storageMutationCalls = []
+const trackMutation = (name, result) => (...args) => {
+  storageMutationCalls.push({ name, args })
+  return result
+}
 const recordsMock = {
   MODULES: {},
-  getWorkspaceSnapshot: () => ({ projects: [mockProject], records: [], activeProject: mockProject }),
+  getWorkspaceSnapshot: () => {
+    snapshotReads += 1
+    return { ok: true, projects: workspaceProjects, records: [], favorites: [], recoveryEntries: [], activeProject: activeProjectSnapshot }
+  },
   getStorageHealth: () => ({ warning: false, text: '保存在本机', percent: 1 }),
-  prepareProjectModule: () => '',
-  removeRecordFromProject: () => false,
-  restoreRecord: () => '',
-  setActiveProject: () => true,
-  updateProject: () => true,
-  addRecordToProject: () => false,
-  createProject: () => null,
-  deleteProject: () => true,
-  removeRecord: () => false,
-  toggleFavoriteById: () => false,
+  prepareProjectModule: trackMutation('prepareProjectModule', ''),
+  removeRecordFromProject: trackMutation('removeRecordFromProject', false),
+  restoreRecord: trackMutation('restoreRecord', ''),
+  setActiveProject: (...args) => {
+    setActiveProjectCalls += 1
+    storageMutationCalls.push({ name: 'setActiveProject', args })
+    return true
+  },
+  updateProject: trackMutation('updateProject', true),
+  addRecordToProject: trackMutation('addRecordToProject', false),
+  createProject: trackMutation('createProject', null),
+  deleteProject: trackMutation('deleteProject', true),
+  removeRecord: trackMutation('removeRecord', false),
+  toggleFavoriteById: trackMutation('toggleFavoriteById', false),
 }
 const previousPage = global.Page
 const previousWx = global.wx
@@ -320,12 +406,20 @@ global.Page = (definition) => { pageDefinition = definition }
 global.wx = {
   setNavigationBarTitle: () => {},
   navigateTo: ({ url }) => { global.__projectWiringRoute = url },
+  showActionSheet: (options) => { global.__projectActionSheet = options },
+  getStorageSync: () => undefined,
+  setStorageSync: () => {},
+  removeStorageSync: () => {},
   getSystemInfoSync: () => ({ theme: 'light' }),
   getAppBaseInfo: () => ({ theme: 'light' }),
 }
 Module._load = function loadPageDependencies(request, parent, isMain) {
   if (request === '../../utils/records' && parent && parent.filename === currentPageFile) {
     return recordsMock
+  }
+  if (request === '../dmx-layout/lighting-workspace' && parent
+    && parent.filename === path.join(root, 'pages/records/project.js')) {
+    return { readLightingWorkspace: () => ({ ok: true, scheme: null, revision: 0 }), calculateScheme: () => null }
   }
   return originalLoad.call(this, request, parent, isMain)
 }
@@ -349,9 +443,11 @@ try {
   const projectsPageRuntime = capturePage('pages/projects/projects.js')
   projectsPageRuntime.onShow()
   assert.strictEqual(projectsPageRuntime.data.projects[0].id, mockProject.id)
-  assert.strictEqual(projectsPageRuntime.data.activeProject.id, mockProject.id)
+  assert.strictEqual(projectsPageRuntime.data.projects[0].wiringCount, 200)
+  assert.ok(projectsPageRuntime.data.projects[0].contentText.includes('200 条线路'))
   assert.ok(!Object.prototype.hasOwnProperty.call(projectsPageRuntime.data.projects[0], 'wiringSchedule'))
-  assert.ok(!Object.prototype.hasOwnProperty.call(projectsPageRuntime.data.activeProject, 'wiringSchedule'))
+  assert.ok(!Object.prototype.hasOwnProperty.call(projectsPageRuntime.data, 'activeProject'),
+    '项目列表不冒充详情页的活动项目选择状态')
   assert.ok(!JSON.stringify(projectsPageRuntime.lastSetData).includes('wiringSchedule'),
     '项目首页 setData 不下发 200 条线路全文')
 
@@ -360,12 +456,55 @@ try {
   assert.strictEqual(projectDetailRuntime.data.records.length, 0, '项目可以没有计算记录')
   assert.strictEqual(projectDetailRuntime.data.project.wiringLineCount, 200)
   assert.strictEqual(projectDetailRuntime.data.project.wiringPendingCount, 133)
+  assert.strictEqual(projectDetailRuntime.data.showWiring, true, '已有线路会进入线路内容区')
+  assert.strictEqual(projectDetailRuntime.data.wiringLines.length, 200, '线路区展示完整的当前行数')
   assert.ok(!Object.prototype.hasOwnProperty.call(projectDetailRuntime.data.project, 'wiringSchedule'))
   assert.ok(!JSON.stringify(projectDetailRuntime.lastSetData).includes('wiringSchedule'),
     '项目详情 setData 只下发布线摘要')
+  activeProjectSnapshot = otherProject
+  const firstOnShowReads = snapshotReads
+  projectDetailRuntime.onShow()
+  assert.strictEqual(snapshotReads, firstOnShowReads, 'onLoad 后首次 onShow 只消费初始化标记')
+  const beforeExistingEntry = storageMutationCalls.length
   projectDetailRuntime.openProjectWiring()
   assert.strictEqual(global.__projectWiringRoute,
-    '/pages/project-wiring/index?id=project-200-lines', '0 计算记录的项目可带 id 进入布线页')
+    '/pages/project-wiring/index?id=project-200-lines', '已有线路项目使用当前项目 id 进入布线页')
+  assert.strictEqual(activeProjectSnapshot.id, otherProject.id, '打开布线页不偷偷切换活动项目')
+  assert.strictEqual(setActiveProjectCalls, 0, '导航布线页不调用设置活动项目')
+  assert.strictEqual(storageMutationCalls.length, beforeExistingEntry, '已有线路导航不写入记录或项目存储')
+
+  const readsBeforeReturn = snapshotReads
+  const mutationsBeforeReturn = storageMutationCalls.length
+  mockProject.wiringSchedule.lines.push(makeLine(201))
+  mockProject.wiringSchedule.revision += 1
+  projectDetailRuntime.onShow()
+  assert.strictEqual(snapshotReads, readsBeforeReturn + 1, '从布线页返回后刷新一次项目快照')
+  assert.strictEqual(projectDetailRuntime.data.wiringLines.length, 201, '返回后显示新保存的线路')
+  assert.strictEqual(projectDetailRuntime.data.project.wiringLineCount, 201)
+  assert.strictEqual(projectDetailRuntime.data.project.wiringPendingCount, 134)
+  assert.strictEqual(projectDetailRuntime.data.records.length, 0, '线路返回刷新不生成重复计算记录')
+  assert.strictEqual(activeProjectSnapshot.id, otherProject.id, '返回线路页仍保持原活动项目')
+  assert.strictEqual(storageMutationCalls.length, mutationsBeforeReturn, '返回刷新不触发详情页存储写入')
+
+  workspaceProjects = [emptyProject, otherProject]
+  activeProjectSnapshot = otherProject
+  const emptyDetailRuntime = capturePage('pages/records/project.js')
+  emptyDetailRuntime.onLoad({ id: emptyProject.id })
+  assert.strictEqual(emptyDetailRuntime.data.records.length, 0)
+  assert.strictEqual(emptyDetailRuntime.data.showWiring, false, '零线路项目显示空态而非线路列表')
+  assert.strictEqual(emptyDetailRuntime.data.projectTypeEmpty, true, '零内容项目进入项目空状态')
+  const activeBeforeAdd = activeProjectSnapshot.id
+  const setActiveBeforeAdd = setActiveProjectCalls
+  const mutationsBeforeEmptyEntry = storageMutationCalls.length
+  emptyDetailRuntime.openAddProjectModule()
+  assert.ok(global.__projectActionSheet, '添加模块入口打开现有模块操作菜单')
+  assert.ok(global.__projectActionSheet.itemList.includes('通道与线缆'), '模块菜单包含线路入口')
+  global.__projectActionSheet.success({ tapIndex: 1 })
+  assert.strictEqual(global.__projectWiringRoute,
+    '/pages/project-wiring/index?id=project-empty-wiring', '空项目可经添加模块菜单进入线路页')
+  assert.strictEqual(activeProjectSnapshot.id, activeBeforeAdd, '空项目布线入口不切换活动项目')
+  assert.strictEqual(setActiveProjectCalls, setActiveBeforeAdd, '空项目布线入口不修改活动项目状态')
+  assert.strictEqual(storageMutationCalls.length, mutationsBeforeEmptyEntry, '打开空项目线路入口不写入记录或项目存储')
 } finally {
   Module._load = originalLoad
   if (previousPage === undefined) delete global.Page
@@ -373,6 +512,7 @@ try {
   if (previousWx === undefined) delete global.wx
   else global.wx = previousWx
   delete global.__projectWiringRoute
+  delete global.__projectActionSheet
   delete require.cache[currentPageFile]
   const reportPath = path.join(root, 'pages/records/project-report.js')
   delete require.cache[reportPath]

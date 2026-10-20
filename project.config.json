@@ -15,16 +15,17 @@
       { "type": "file", "value": "assets/home/module-limiter.jpg" },
       { "type": "file", "value": "assets/home/module-spl.jpg" },
       { "type": "file", "value": "assets/home/module-cable.jpg" },
-      { "type": "file", "value": "assets/home/module-venue.jpg" },
       { "type": "file", "value": "assets/home/module-camera.jpg" },
       { "type": "file", "value": "assets/home/module-gain-structure.jpg" },
       { "type": "file", "value": "assets/home/module-cable-catalog.jpg" },
       { "type": "file", "value": "assets/home/module-limiter-catalog.jpg" },
       { "type": "file", "value": "assets/home/module-spl-catalog.jpg" },
-      { "type": "file", "value": "assets/home/module-venue-catalog.jpg" },
       { "type": "file", "value": "assets/home/module-dmx-address.jpg" },
+      { "type": "file", "value": "assets/home/issue-audio-silent.png" },
+      { "type": "file", "value": "assets/home/issue-lighting-control.png" },
       { "type": "folder", "value": "docs" },
       { "type": "folder", "value": "tests" },
+      { "type": "folder", "value": "tmp" },
       { "type": "file", "value": "AGENTS.md" },
       { "type": "file", "value": "CHANGELOG.md" },
       { "type": "file", "value": "DESIGN.md" },
@@ -33,20 +34,7 @@
       { "type": "file", "value": "UI_RULES_README.md" },
       { "type": "file", "value": "VERSION" }
     ],
-    "include": [
-      {
-        "type": "file",
-        "value": "utils/venue-plan.js"
-      },
-      {
-        "type": "file",
-        "value": "utils/venue-discussion.js"
-      },
-      {
-        "type": "file",
-        "value": "utils/venue-discussion-plan.js"
-      }
-    ]
+    "include": []
   },
   "setting": {
     "coverView": true,
@@ -72,7 +60,8 @@
     "swc": false,
     "disableSWC": true,
     "disableUseStrict": false,
-    "useCompilerPlugins": false
+    "useCompilerPlugins": false,
+    "ignoreUploadUnusedFiles": true
   },
   "condition": {},
   "editorSetting": {

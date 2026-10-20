@@ -1,168 +1,183 @@
 <view class="page-root">
-<scroll-view class="page-scroll" scroll-y>
-  <view class="page-content">
-    <view class="page-header">
-      <view class="page-title">声压级估算</view>
-    </view>
-
-    <view class="section-label">估算条件</view>
-    <view class="card settings-card">
-
-      <view class="field speaker-field">
-        <view class="field-label">音箱型号</view>
-        <view class="picker-value equipment-value" bindtap="openSpeakerSelector">
-          <view>
-            <view class="equipment-model">{{selectedSpeaker.model}}</view>
-            <view class="equipment-category">{{selectedSpeaker.category}}</view>
+  <view class="page-scroll">
+    <view class="page-content">
+      <view class="result-pane">
+        <view class="result-card result-card-tabs">
+          <view class="result-tabs" role="tablist" aria-label="声压级结果分类">
+            <view id="splTabResult" class="result-tab {{resultTab === 'spl' ? 'result-tab-active' : ''}} {{!canUseResultActions || isCalculationPending ? 'result-tab-disabled' : ''}}" role="tab" aria-selected="{{resultTab === 'spl'}}" aria-disabled="{{!canUseResultActions || isCalculationPending}}" aria-controls="splPanelResult" data-tab="spl" bindtap="onResultTabTap">声压级</view>
+            <view id="splTabDistance" class="result-tab {{resultTab === 'distance' ? 'result-tab-active' : ''}} {{!canUseResultActions || isCalculationPending ? 'result-tab-disabled' : ''}}" role="tab" aria-selected="{{resultTab === 'distance'}}" aria-disabled="{{!canUseResultActions || isCalculationPending}}" aria-controls="splPanelDistance" data-tab="distance" bindtap="onResultTabTap">不同距离</view>
+            <view id="splTabReference" class="result-tab {{resultTab === 'reference' ? 'result-tab-active' : ''}} {{!canUseResultActions || isCalculationPending ? 'result-tab-disabled' : ''}}" role="tab" aria-selected="{{resultTab === 'reference'}}" aria-disabled="{{!canUseResultActions || isCalculationPending}}" aria-controls="splPanelReference" data-tab="reference" bindtap="onResultTabTap">参考</view>
           </view>
-          <text class="picker-arrow">›</text>
-        </view>
-      </view>
 
-      <view class="field-grid compact-grid {{showSummationMode ? 'parameter-grid' : ''}}">
-        <view class="field field-half">
-          <view class="field-label">音箱数量</view>
-          <picker range="{{counts}}" value="{{countIndex}}" data-field="countIndex" bindchange="onPickerChange">
-            <view class="picker-value">{{counts[countIndex]}} 只<text class="picker-arrow">›</text></view>
-          </picker>
-        </view>
-        <view wx:if="{{showSummationMode}}" class="field field-half">
-          <view class="field-label">叠加方式</view>
-          <picker range="{{summationModes}}" range-key="label" value="{{summationModeIndex}}" data-field="summationModeIndex" bindchange="onPickerChange">
-            <view class="picker-value">{{summationModes[summationModeIndex].shortLabel}}<text class="picker-arrow">›</text></view>
-          </picker>
-        </view>
-        <view class="field field-half">
-          <view class="field-label">测量距离</view>
-          <view class="distance-input-wrap">
-            <input
-              class="distance-input {{distanceError ? 'distance-input-error' : ''}}"
-              type="digit"
-              value="{{distanceText}}"
-              placeholder="1–1000"
-              bindinput="onDistanceInput"
-              bindblur="onDistanceBlur"
-            />
-            <view class="distance-unit">m</view>
+          <view class="result-body">
+            <view class="action-rail" aria-label="结果操作">
+              <button id="splReset" class="action-button" aria-label="清空输入" disabled="{{!canReset || isResetPending}}" bindtap="requestReset"><view class="action-icon icon-reset"></view></button>
+              <button id="splShare" class="action-button" aria-label="生成并分享结果图片" disabled="{{!canUseResultActions || isGeneratingResultReport || isCheckingResultReportCache}}" bindtap="openSharePreview"><view class="action-icon icon-share"></view></button>
+              <button id="splFavorite" class="action-button" aria-label="收藏当前估算" aria-pressed="{{currentFavorite}}" disabled="{{!canUseResultActions}}" bindtap="toggleCurrentFavorite"><view class="action-icon icon-bookmark {{currentFavorite ? 'icon-bookmark-active' : ''}}"></view></button>
+              <button id="splProject" class="action-button" aria-label="选择项目保存" disabled="{{!canUseResultActions}}" bindtap="openProjectSheet"><view class="action-icon icon-folder"></view></button>
+            </view>
+            <include src="../../templates/result-record-actions.wxml" />
+
+          <view wx:if="{{isCalculationPending}}" id="splPanelResult" class="result-tab-panel result-state" role="tabpanel" aria-labelledby="splTabResult" aria-live="polite" aria-busy="true">
+            <view class="result-label">当前距离理论声压级</view>
+            <view class="spl-value">—<text class="spl-unit"> dB SPL</text></view>
+            <view class="result-subtitle">参数变化后正在重新计算</view>
           </view>
-          <view wx:if="{{distanceError}}" class="field-error">{{distanceError}}</view>
+          <view wx:elif="{{!result}}" id="splPanelResult" class="result-tab-panel result-state" role="tabpanel" aria-labelledby="splTabResult" aria-live="polite">
+            <view class="result-label">当前距离理论声压级</view>
+            <view class="spl-value">—<text class="spl-unit"> dB SPL</text></view>
+            <view class="result-subtitle">{{distanceError || '请选择音箱型号、数量并输入距离。'}}</view>
+          </view>
+
+          <view wx:elif="{{resultTab === 'spl'}}" id="splPanelResult" class="result-tab-panel result-tab-spl" role="tabpanel" aria-labelledby="splTabResult">
+            <view class="result-spl-core">
+              <view class="result-primary result-primary-home">
+                <view class="result-label">当前距离理论声压级</view>
+                <view class="result-model">{{result.model}}</view>
+                <view class="result-condition">{{result.speakerCount}} 只 · {{result.distanceMeters}} m · {{result.speakerCount == 1 ? '单只基准' : result.summationModeShortLabel}}</view>
+                <view class="spl-value">{{result.selectedSpl}}<text class="spl-unit"> dB SPL</text></view>
+                <view class="result-hero-caption">自由场理论估算，非现场实测</view>
+              </view>
+
+              <view class="result-grid result-grid-home">
+                <view class="metric">
+                  <view class="metric-value">{{result.oneMeterSpl}} dB SPL</view>
+                  <view class="metric-label">{{result.speakerCount}} 只 · 1 m 理论值</view>
+                </view>
+                <view class="metric">
+                  <view class="metric-value">{{result.totalRatedPower}} W</view>
+                  <view class="metric-label">总额定功率</view>
+                </view>
+                <view class="metric">
+                  <view class="metric-value">{{result.sensitivityDb}} dB</view>
+                  <view class="metric-label">说明书灵敏度 @ 1W/1m</view>
+                </view>
+                <view class="metric">
+                  <view class="metric-value">+{{result.summationGainDb}} dB</view>
+                  <view class="metric-label">本次叠加增益</view>
+                </view>
+              </view>
+            </view>
+          </view>
+
+          <view wx:elif="{{resultTab === 'distance'}}" id="splPanelDistance" class="result-tab-panel result-tab-distance" role="tabpanel" aria-labelledby="splTabDistance">
+            <view class="distance-tab-main">
+              <view class="distance-tab-condition">{{result.model}} · {{result.speakerCount}} 只 · {{result.speakerCount == 1 ? '单只基准' : result.summationModeShortLabel}} · 自由场</view>
+              <view class="distance-list">
+                <view wx:for="{{result.distanceRows}}" wx:key="distanceMeters" class="distance-row {{item.isSelected ? 'distance-row-active' : ''}}">
+                  <view class="distance-row-head">
+                    <view class="distance-value">{{item.distanceMeters}} m</view>
+                    <view wx:if="{{item.isSelected}}" class="distance-current">当前</view>
+                  </view>
+                  <view class="distance-result">
+                    <view class="distance-spl">{{item.spl}}<text> dB SPL</text></view>
+                  </view>
+                </view>
+              </view>
+            </view>
+            <view wx:if="{{result.speakerCount > 1}}" class="distance-mode-note">单只音箱在此距离的理论声压级为 {{result.singleSelectedSpl}} dB SPL；{{result.summationModeDescription}}</view>
+            <view wx:else class="distance-mode-note">单只基准，叠加增益为 +0 dB；每增加一倍距离，理论声压级降低约 6 dB。</view>
+          </view>
+
+          <view wx:elif="{{resultTab === 'reference'}}" id="splPanelReference" class="result-tab-panel result-tab-reference" role="tabpanel" aria-labelledby="splTabReference">
+            <view class="reference-tab-core">
+              <view class="reference-tab-condition">当前 {{result.selectedSpl}} dB SPL · {{result.distanceMeters}} m</view>
+              <view class="reference-tab-main">
+                <view class="reference-tab-item">
+                  <view class="reference-heading">
+                    <view class="reference-copy"><view class="reference-title">{{result.humanReference.title}}</view></view>
+                    <view class="reference-chip">{{result.humanReference.level}}</view>
+                  </view>
+                  <view class="reference-description">{{result.humanReference.description}}</view>
+                </view>
+                <view class="reference-tab-item">
+                  <view class="reference-heading">
+                    <view class="reference-copy"><view class="reference-title">{{result.meetingReference.title}}</view></view>
+                    <view class="reference-chip">{{result.meetingReference.level}}</view>
+                  </view>
+                  <view class="reference-description">{{result.meetingReference.description}}</view>
+                </view>
+              </view>
+            </view>
+            <view class="reference-tab-footer">
+              <view class="meeting-text">仅比较最大声压级数值，不代表工程验收结论。</view>
+              <view class="reference-scale">
+                <view>约 60 dB：日常交谈</view>
+                <view>约 80 dB：明显偏响</view>
+                <view>约 100 dB：高声压扩声</view>
+              </view>
+              <view class="result-trust">
+                <view class="result-trust-badge">自由场理论估算</view>
+                <view class="result-trust-text">按说明书灵敏度、额定功率与自由场距离衰减估算；该数值不是现场实测声压级。</view>
+              </view>
+            </view>
+          </view>
+          </view>
         </view>
       </view>
 
-      <view wx:if="{{showSummationMode}}" class="summation-hint">{{summationModes[summationModeIndex].description}}</view>
+      <view class="card settings-card">
+        <view class="field speaker-field">
+          <view class="field-label">型号</view>
+          <view class="picker-value equipment-value" bindtap="openSpeakerSelector">
+            <view wx:if="{{selectedSpeaker}}">
+              <view class="equipment-model">{{selectedSpeaker.model}}</view>
+            </view>
+            <view wx:else class="equipment-placeholder">请选择音箱型号</view>
+            <text class="picker-arrow">›</text>
+          </view>
+        </view>
+
+        <view class="field-grid compact-grid {{showSummationMode ? 'parameter-grid' : ''}}">
+          <view class="field field-half">
+            <view class="field-label">音箱数量</view>
+            <picker range="{{countPickerOptions}}" value="{{countIndex + 1}}" bindchange="onCountPickerChange">
+              <view class="picker-value">{{countIndex >= 0 ? counts[countIndex] + ' 只' : '请选择数量'}}<text class="picker-arrow">›</text></view>
+            </picker>
+          </view>
+          <view wx:if="{{showSummationMode}}" class="field field-half">
+            <view class="field-label">叠加方式</view>
+            <picker range="{{summationModes}}" range-key="label" value="{{summationModeIndex}}" data-field="summationModeIndex" bindchange="onPickerChange">
+              <view class="picker-value">{{summationModes[summationModeIndex].shortLabel}}<text class="picker-arrow">›</text></view>
+            </picker>
+          </view>
+          <view class="field field-half">
+            <view class="field-label">测量距离</view>
+            <view class="distance-input-wrap">
+              <input
+                class="distance-input {{distanceError ? 'distance-input-error' : ''}}"
+                type="digit"
+                value="{{distanceText}}"
+                placeholder="1–1000"
+                bindinput="onDistanceInput"
+                bindblur="onDistanceBlur"
+              />
+              <view class="distance-unit">m</view>
+            </view>
+            <view wx:if="{{distanceError}}" class="field-error">{{distanceError}}</view>
+          </view>
+        </view>
+        <view wx:if="{{resetError}}" class="field-error reset-error" role="alert">{{resetError}}</view>
+      </view>
+
     </view>
-
-    <view wx:if="{{result}}" class="result-card">
-      <view class="result-heading">
-        <view>
-          <view class="result-label">{{result.distanceMeters}} m 理论声压级</view>
-          <view class="result-title">{{result.model}} · {{result.speakerCount}} 只同型号音箱</view>
-        </view>
-        <view class="status-chip">{{result.speakerCount == 1 ? '单只基准' : result.summationModeShortLabel}}</view>
-      </view>
-
-      <view class="spl-value">{{result.selectedSpl}}<text class="spl-unit"> dB SPL</text></view>
-      <view class="result-grid">
-        <view class="metric">
-          <view class="metric-value">{{result.sensitivityDb}} dB</view>
-          <view class="metric-label">灵敏度 @ 1W/1m</view>
-        </view>
-        <view class="metric">
-          <view class="metric-value">{{result.totalRatedPower}} W</view>
-          <view class="metric-label">总额定功率（{{result.speakerCount}} 只）</view>
-        </view>
-        <view class="metric">
-          <view class="metric-value">+{{result.summationGainDb}} dB</view>
-          <view class="metric-label">本次叠加增益</view>
-        </view>
-        <view class="metric">
-          <view class="metric-value">{{result.oneMeterSpl}} dB SPL</view>
-          <view class="metric-label">{{result.speakerCount}} 只音箱在额定功率下 1 m 理论声压级</view>
-        </view>
-      </view>
-      <view wx:if="{{result.speakerCount > 1}}" class="result-note">单只音箱在此距离的理论声压级为 {{result.singleSelectedSpl}} dB SPL；{{result.summationModeDescription}}</view>
-      <view class="result-trust">
-        <view class="result-trust-badge">自由场理论估算</view>
-        <view class="result-trust-text">按说明书灵敏度、额定功率与自由场距离衰减估算；该数值不是现场实测声压级。</view>
-      </view>
-    </view>
-
-    <view wx:if="{{result}}" class="utility-action-row result-actions-after-main">
-        <view class="result-output-actions">
-          <button class="result-image-button" disabled="{{isGeneratingResultReport}}" bindtap="generateResultReportImage">{{isGeneratingResultReport ? '正在生成…' : '生成结果图片'}}</button>
-          <button class="copy-result-button" bindtap="copyResult">复制文字</button>
-        </view>
-        <include src="../../templates/result-record-actions.wxml" />
-    </view>
-
-    <view wx:if="{{result}}" class="reference-card">
-      <view class="reference-heading">
-        <view class="reference-copy">
-          <view class="reference-title">{{result.humanReference.title}}；{{result.meetingReference.title}}</view>
-        </view>
-        <view class="reference-chip">{{result.humanReference.level}}</view>
-      </view>
-      <view class="meeting-text">仅比较最大声压级数值，不代表工程验收结论。</view>
-      <view class="reference-scale">约 60 dB：日常交谈　·　约 80 dB：明显偏响　·　约 100 dB：高声压扩声</view>
-    </view>
-
-    <view wx:if="{{result}}" class="card distance-card">
-      <view class="distance-heading">
-        <view>
-          <view class="card-title distance-title">不同距离声压级</view>
-          <view wx:if="{{result.speakerCount == 1}}" class="distance-source">每增加一倍距离，理论声压级降低约 6 dB</view>
-        </view>
-        <view class="distance-tag">{{result.speakerCount}} 只 · 自由场</view>
-      </view>
-
-      <view class="distance-table">
-        <view wx:for="{{result.distanceRows}}" wx:key="distanceMeters" class="distance-row {{item.isSelected ? 'distance-row-active' : ''}}">
-          <view class="distance-value">{{item.distanceMeters}} m</view>
-          <view class="distance-spl">{{item.spl}}<text> dB SPL</text></view>
-          <view wx:if="{{item.isSelected}}" class="distance-current">当前</view>
-        </view>
-      </view>
-    </view>
-
   </view>
 
   <view wx:if="{{selectorVisible}}" class="selector-mask" catchtap="closeSpeakerSelector">
     <view class="selector-panel" catchtap="stopTap">
       <view class="selector-header">
         <view class="selector-title">选择音箱型号</view>
-        <view class="selector-close" catchtap="closeSpeakerSelector">×</view>
+        <button class="selector-close" aria-label="关闭" catchtap="closeSpeakerSelector">×</button>
       </view>
-
-      <input
-        class="selector-search"
-        value="{{selectorKeyword}}"
-        placeholder="输入型号关键词，例如 TS-803、KF-D"
-        confirm-type="search"
-        bindinput="onSelectorInput"
-      />
-
-      <scroll-view class="category-scroll" scroll-x>
+      <input class="selector-search" value="{{selectorKeyword}}" placeholder="输入型号关键词，例如 TS-803、KF-D" confirm-type="search" bindinput="onSelectorInput" />
+      <scroll-view class="category-scroll" scroll-x enhanced show-scrollbar="{{false}}">
         <view class="category-list">
-          <view
-            wx:for="{{speakerCategories}}"
-            wx:key="label"
-            class="category-chip {{index == selectorCategoryIndex ? 'category-chip-active' : ''}}"
-            data-index="{{index}}"
-            catchtap="onSelectorCategoryTap"
-          >{{item.label}}</view>
+          <view wx:for="{{speakerCategories}}" wx:key="label" class="category-chip {{index == selectorCategoryIndex ? 'category-chip-active' : ''}}" data-index="{{index}}" catchtap="onSelectorCategoryTap">{{item.label}}</view>
         </view>
       </scroll-view>
-
       <view class="selector-count">共 {{selectorTotalCount}} 个已录入灵敏度的型号</view>
-
-      <scroll-view class="selector-list" scroll-y bindscrolltolower="appendSelectorItems">
-        <view
-          wx:for="{{selectorItems}}"
-          wx:key="model"
-          class="selector-row"
-          data-index="{{item.index}}"
-          catchtap="selectSpeaker"
-        >
+      <scroll-view class="selector-list" scroll-y enhanced show-scrollbar="{{false}}" bindscrolltolower="appendSelectorItems">
+        <view wx:for="{{selectorItems}}" wx:key="model" class="selector-row" data-index="{{item.index}}" catchtap="selectSpeaker">
           <view class="selector-row-copy">
             <view class="selector-model">{{item.model}}</view>
             <view class="selector-meta">{{item.sensitivityDb}} dB @ 1W/1m · {{item.category}}</view>
@@ -172,14 +187,96 @@
             <view class="selector-row-arrow">›</view>
           </view>
         </view>
-
-        <view wx:if="{{selectorItems.length == 0}}" class="selector-empty">
-          没有匹配型号，请换一个关键词或选择“全部”分类。
-        </view>
+        <view wx:if="{{selectorItems.length == 0}}" class="selector-empty">没有匹配型号，请换一个关键词或选择“全部”分类。</view>
       </scroll-view>
     </view>
   </view>
-</scroll-view>
 
-<include src="../../templates/result-report-preview.wxml" />
+  <view wx:if="{{shareSheetVisible}}" class="spl-overlay {{shareSheetClosing ? 'spl-closing' : ''}}" bindtap="closeSharePreview">
+    <view id="splSharePanel" class="spl-sheet share-panel {{shareSheetClosing ? 'spl-sheet-closing' : ''}}" catchtap="stopTap">
+      <view id="splShareHeader" class="sheet-header">
+        <view>
+          <view class="sheet-title">结果图片预览</view>
+          <view class="sheet-subtitle">完整预览，点击图片可查看原图</view>
+        </view>
+        <button class="sheet-close" aria-label="关闭预览" bindtap="closeSharePreview">×</button>
+      </view>
+      <view wx:if="{{isGeneratingResultReport || isCheckingResultReportCache}}" class="share-state" role="status">
+        <view class="loading-dot"></view>
+        <text>{{isCheckingResultReportCache ? '正在检查图片缓存…' : '正在生成结果图片…'}}</text>
+      </view>
+      <view wx:elif="{{resultReportPreviewVisible && resultReportImagePath && !resultReportError}}" id="splShareImageFrame" class="share-image-frame" style="{{shareImageFrameStyle}}">
+        <image class="share-image" src="{{resultReportImagePath}}" mode="aspectFit" style="{{shareImageStyle}}" aria-label="声压级结果图片" bindload="onResultReportImageLoad" bindtap="previewResultReportImage"></image>
+      </view>
+      <view wx:else class="share-state share-error" role="alert">
+        <text>{{resultReportError || '图片暂未生成，请重试。'}}</text>
+        <button class="share-retry" disabled="{{isGeneratingResultReport || isCheckingResultReportCache || isCalculationPending}}" bindtap="retryResultReport">重新生成</button>
+      </view>
+      <view id="splShareActions" class="share-actions">
+        <button class="share-action share-action-primary" disabled="{{!resultReportImagePath || isGeneratingResultReport || isCheckingResultReportCache || isCalculationPending}}" bindtap="shareResultReportImage">转发图片</button>
+        <button class="share-action" disabled="{{!resultReportImagePath || isGeneratingResultReport || isCheckingResultReportCache || isCalculationPending}}" bindtap="saveResultReportImage">保存到相册</button>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{projectSheetVisible}}" class="spl-overlay project-overlay {{projectKeyboardActive ? 'project-keyboard-open' : ''}} {{projectSheetClosing ? 'spl-closing' : ''}}">
+    <view class="spl-sheet project-panel {{projectKeyboardActive ? 'project-keyboard-open' : ''}} {{projectSheetClosing ? 'spl-sheet-closing' : ''}}" style="{{projectKeyboardPanelStyle}}" catchtap="stopTap">
+      <view class="sheet-header">
+        <view class="sheet-title">{{projectStep === 'create' ? '新建项目' : projectStep === 'details' ? '配置名称与备注' : projectStep === 'success' ? '保存完成' : '保存到项目'}}</view>
+        <button class="sheet-close" aria-label="关闭保存面板" disabled="{{isSavingProject}}" bindtap="closeProjectSheet">×</button>
+      </view>
+
+      <scroll-view wx:if="{{projectStep === 'select'}}" class="project-sheet-body" scroll-y enhanced show-scrollbar="{{false}}">
+        <input class="project-search" data-project-field="projectSearch" data-project-revision="{{projectRevision}}" data-project-episode="{{projectKeyboardEpisode}}" adjust-position="{{false}}" value="{{projectSearch}}" placeholder="搜索项目" confirm-type="search" bindfocus="onProjectInputFocus" bindblur="onProjectInputBlur" bindkeyboardheightchange="onProjectKeyboardHeightChange" bindinput="onProjectSearch" />
+        <view wx:if="{{projectLoadState === 'loading'}}" class="project-state">正在读取项目…</view>
+        <view wx:elif="{{projectLoadState === 'error'}}" class="project-state project-state-error"><text>{{projectError}}</text><button class="share-retry" bindtap="refreshProjects">重试</button></view>
+        <view wx:elif="{{projectItems.length === 0 && projectSearch}}" class="project-state">没有匹配项目。</view>
+        <view wx:elif="{{projectItems.length === 0}}" class="project-state">还没有项目，可新建项目保存当前结果。</view>
+        <view wx:if="{{projectSaveError}}" class="form-error" role="alert">{{projectSaveError}}</view>
+        <view wx:if="{{projectItems.length}}" class="project-list">
+          <button wx:for="{{projectItems}}" wx:key="id" class="project-row {{projectTargetId === item.id ? 'project-row-selected' : ''}}" data-id="{{item.id}}" aria-pressed="{{projectTargetId === item.id}}" bindtap="chooseProject">
+            <text>{{item.name}}</text><text class="field-arrow">›</text>
+          </button>
+        </view>
+      </scroll-view>
+
+      <scroll-view wx:elif="{{projectStep === 'create'}}" class="project-sheet-body project-create-body" scroll-y enhanced show-scrollbar="{{false}}">
+        <text class="field-label">项目名称（最多 30 个字符）</text>
+        <input class="project-search project-name-input" data-project-field="newProjectName" data-project-revision="{{projectRevision}}" data-project-episode="{{projectKeyboardEpisode}}" adjust-position="{{false}}" maxlength="30" value="{{newProjectName}}" placeholder="请输入项目名称" confirm-type="done" bindfocus="onProjectInputFocus" bindblur="onProjectInputBlur" bindkeyboardheightchange="onProjectKeyboardHeightChange" bindinput="onNewProjectNameInput" />
+        <text wx:if="{{projectNameError}}" class="form-error" role="alert">{{projectNameError}}</text>
+      </scroll-view>
+
+      <scroll-view wx:elif="{{projectStep === 'details'}}" class="project-sheet-body project-details-body" scroll-y enhanced show-scrollbar="{{false}}">
+        <view class="project-target"><text class="project-target-label">保存到</text><text class="project-target-name">{{projectTargetName}}</text><button class="text-action" bindtap="backToProjectList">更换项目</button></view>
+        <text class="field-label">配置名称（最多 60 个字符）</text>
+        <input class="project-search project-config-name" data-project-field="projectConfigName" data-project-revision="{{projectRevision}}" data-project-episode="{{projectKeyboardEpisode}}" adjust-position="{{false}}" maxlength="60" value="{{projectConfigName}}" placeholder="输入配置名称" confirm-type="done" bindfocus="onProjectInputFocus" bindblur="onProjectInputBlur" bindkeyboardheightchange="onProjectKeyboardHeightChange" bindinput="onProjectConfigNameInput" />
+        <text wx:if="{{projectConfigNameError}}" class="form-error" role="alert">{{projectConfigNameError}}</text>
+        <text class="field-label project-note-label">备注（可选，最多 200 个字符）</text>
+        <textarea class="project-note" data-project-field="projectConfigNote" data-project-revision="{{projectRevision}}" data-project-episode="{{projectKeyboardEpisode}}" adjust-position="{{false}}" maxlength="200" value="{{projectConfigNote}}" placeholder="补充说明" bindfocus="onProjectInputFocus" bindblur="onProjectInputBlur" bindkeyboardheightchange="onProjectKeyboardHeightChange" bindinput="onProjectConfigNoteInput" />
+        <view class="project-preview"><text class="preview-title">当前配置预览</text><text class="project-preview-title">{{projectPreview.title}}</text><text class="project-preview-summary">{{projectPreview.summary}}</text><text class="project-preview-result">{{projectPreview.resultText}}</text></view>
+        <text wx:if="{{projectNoteError}}" class="form-error" role="alert">{{projectNoteError}}</text>
+        <text wx:if="{{projectSaveError}}" class="form-error" role="alert">{{projectSaveError}}</text>
+      </scroll-view>
+
+      <scroll-view wx:elif="{{projectStep === 'success'}}" class="project-sheet-body project-success-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+        <view class="project-success"><text class="success-title">已保存到项目</text><text class="success-project">{{savedProjectName}}</text><text class="saved-config-name">{{savedConfigName}}</text><text class="saved-at">{{savedAtText}}</text></view>
+      </scroll-view>
+
+      <view wx:if="{{projectStep === 'select'}}" class="project-footer">
+        <button class="share-action share-action-primary" disabled="{{isSavingProject || projectLoadState !== 'ready'}}" bindtap="beginNewProject">新建项目</button>
+      </view>
+      <view wx:elif="{{projectStep === 'create'}}" class="project-footer">
+        <button class="share-action" disabled="{{isSavingProject}}" bindtap="backToProjectList">返回</button><button class="share-action share-action-primary" disabled="{{isSavingProject}}" bindtap="createProjectFromForm">创建项目</button>
+      </view>
+      <view wx:elif="{{projectStep === 'details'}}" class="project-footer">
+        <button class="share-action" disabled="{{isSavingProject}}" bindtap="backToProjectList">返回</button><button class="share-action share-action-primary" disabled="{{isSavingProject}}" bindtap="saveProjectConfiguration">{{isSavingProject ? '正在保存…' : '确认保存'}}</button>
+      </view>
+      <view wx:else class="project-footer">
+        <button class="share-action" bindtap="continueAfterProjectSave">继续添加配置</button><button class="share-action share-action-primary" bindtap="closeProjectSheet">返回计算</button>
+      </view>
+    </view>
+  </view>
+
+  <canvas id="resultReportCanvas" canvas-id="resultReportCanvas" class="result-report-canvas-offscreen" width="{{resultReportCanvasWidth}}" height="{{resultReportCanvasHeight}}" style="width:{{resultReportCanvasWidth}}px;height:{{resultReportCanvasHeight}}px;"></canvas>
+  <include src="../../templates/editor-navigation-guard.wxml" />
 </view>

@@ -2,9 +2,11 @@ const assert = require('assert/strict')
 
 const RECORDS_KEY = 'audioTool.records.v1'
 const PROJECTS_KEY = 'audioTool.projects.v1'
+const FAVORITES_KEY = 'audioTool.favorites.v1'
+const RECOVERY_KEY = 'audioTool.recovery.v1'
 const ACTIVE_KEY = 'audioTool.activeProject.v1'
 const SCHEMA_KEY = 'audioTool.storageSchemaVersion'
-const SCHEMA_VERSION = 3
+const SCHEMA_VERSION = 4
 const ACTION_LIMIT = 6
 const ACTION_CREATE = String.fromCodePoint(0x65b0, 0x5efa, 0x9879, 0x76ee, 0x5e76, 0x4fdd, 0x5b58)
 const ACTION_NEXT = String.fromCodePoint(0x4e0b, 0x4e00, 0x9875, 0x9879, 0x76ee)
@@ -57,6 +59,8 @@ function setup(projectNames = [], activeName = '') {
   const projects = projectNames.map((name, index) => projectFixture(`project-${index + 1}`, name, 5000 - index))
   storage.set(RECORDS_KEY, [])
   storage.set(PROJECTS_KEY, projects)
+  storage.set(FAVORITES_KEY, [])
+  storage.set(RECOVERY_KEY, [])
   storage.set(ACTIVE_KEY, projects.find((project) => project.name === activeName)?.id || '')
   storage.set(SCHEMA_KEY, SCHEMA_VERSION)
 
@@ -132,7 +136,7 @@ function projectByName(name) {
   return records.getProjects().find((project) => project.name === name)
 }
 
-function checkSelectsRestoredProjectWithoutChangingActive() {
+function checkSelectsNamedProjectWithoutChangingLegacyKey() {
   setup(['A Current', 'B Restored'], 'A Current')
   const a = projectByName('A Current')
   const b = projectByName('B Restored')
@@ -141,6 +145,8 @@ function checkSelectsRestoredProjectWithoutChangingActive() {
   const priorWrites = writeCount()
 
   actions.addPageToActiveProject(page)
+  assert(actionSheets[0].itemList.includes('A Current'), 'the project list shows its name without a current-project marker')
+  assert.equal(actionSheets[0].itemList.some((item) => item.includes('（当前）')), false)
   chooseProject(actionSheets[0], 'B Restored')
   const confirmation = modals[0]
   assert.equal(confirmation.title, CONFIRM_TITLE)
@@ -149,11 +155,12 @@ function checkSelectsRestoredProjectWithoutChangingActive() {
 
   assert.equal(records.getProjectRecords(a.id).some((record) => record.title === 'Limiter current'), false)
   assert.equal(records.getProjectRecords(b.id).some((record) => record.title === 'Limiter current'), true)
-  assert.equal(records.getActiveProject().id, a.id, 'saving into a restored project must leave the global current project alone')
+  assert.equal(storage.get(ACTIVE_KEY), a.id, 'saving into a restored project preserves the historical key unchanged')
+  assert.equal(writeCounts.get(ACTIVE_KEY) || 0, 0, 'project selection never writes the legacy key')
   assert.equal(writeCount(), priorWrites + 1, 'one selected save writes one record snapshot')
 }
 
-function checkExplicitlySelectsCurrentProject() {
+function checkExplicitlySelectsNamedProject() {
   setup(['A Current', 'B Other'], 'A Current')
   const a = projectByName('A Current')
   const page = makePage()
@@ -193,8 +200,10 @@ function checkNoProjectCreateAndCancelPaths() {
   assert.equal(actionSheets.length, 0)
   assert.equal(modals.length, 1, 'an empty workspace should open the new-project prompt')
   confirmLatestModal(true, 'New Project')
-  const created = records.getActiveProject()
-  assert(created, 'creating a project keeps createProject current-project semantics')
+  const created = projectByName('New Project')
+  assert(created, 'the new project is available as an explicit save target')
+  assert.equal(storage.get(ACTIVE_KEY), '', 'creating a project leaves the legacy active-project key untouched')
+  assert.equal(writeCounts.get(ACTIVE_KEY) || 0, 0, 'creating a project never writes the legacy key')
   assert.equal(modals.length, 2, 'the created target is confirmed by its full name before saving')
   assert(modals[1].content.includes(created.name))
   confirmLatestModal(true)
@@ -216,8 +225,11 @@ function checkCanCreateAlongsideExistingProjects() {
   assert(chooser.itemList.includes(ACTION_CREATE), 'an existing workspace must offer explicit project creation')
   chooser.success({ tapIndex: chooser.itemList.indexOf(ACTION_CREATE) })
   confirmLatestModal(true, 'New Project')
-  const created = records.getActiveProject()
-  assert.equal(created.name, 'New Project', 'creating a project keeps its existing current-project behavior')
+  const created = projectByName('New Project')
+  assert.equal(created.name, 'New Project', 'creating a project makes the named project available as a save target')
+  assert.equal(storage.get(ACTIVE_KEY), projectByName('Existing Project').id,
+    'creating beside existing projects preserves the historical key')
+  assert.equal(writeCounts.get(ACTIVE_KEY) || 0, 0, 'creating beside existing projects never writes the legacy key')
   assert(modals[modals.length - 1].content.includes(created.name))
   confirmLatestModal(true)
   assert.equal(records.getProjectRecords(created.id).length, 1)
@@ -322,8 +334,8 @@ function checkVisibilityInputAndRepeatGuards() {
   assert.equal(writeCount(), 0)
 }
 
-checkSelectsRestoredProjectWithoutChangingActive()
-checkExplicitlySelectsCurrentProject()
+checkSelectsNamedProjectWithoutChangingLegacyKey()
+checkExplicitlySelectsNamedProject()
 checkCancelAndLateCallbacksCannotSave()
 checkNoProjectCreateAndCancelPaths()
 checkCanCreateAlongsideExistingProjects()

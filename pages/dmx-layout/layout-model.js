@@ -289,6 +289,186 @@ const sideNoteY = !landscape && showSideNote ? y : null
 return { titleX: landscape ? 20 : 42, titleY: landscape ? 30 : 52, subtitleY: landscape ? 50 : 82, legendTop, legendStep, overflowY, sideNoteY, noteY: landscape ? null : y + (sideNoteY ? 28 : 0) }
 }
 
+const APRON_DIRECTIONS = ['bottom', 'right', 'top', 'left']
+
+function normalizeApronDirection(value) {
+  return APRON_DIRECTIONS.includes(value) ? value : 'bottom'
+}
+
+function normalizeLayoutRods(rods = []) {
+  if (!Array.isArray(rods)) return []
+  return rods.map((rod, index) => ({
+    ...(rod && typeof rod === 'object' ? rod : {}),
+    id: String(rod?.id || `rod-${index + 1}`),
+    distance: Number(rod?.distance),
+  })).filter((rod) => Number.isFinite(rod.distance) && rod.distance > 0)
+}
+
+function createDefaultStageLayout(stageWidthText = '12', stageDepthText = '8', createId = null) {
+  const width = parsePositive(stageWidthText, 12)
+  const depth = parsePositive(stageDepthText, 8)
+  const id = typeof createId === 'function' ? createId : (kind, index) => `${kind}-${index + 1}`
+  return {
+    stageWidthText: String(stageWidthText || width),
+    stageDepthText: String(stageDepthText || depth),
+    apronDirection: 'bottom',
+    internalRods: [
+      { id: id('internal', 0), distance: Number((depth * .8).toFixed(1)) },
+      { id: id('internal', 1), distance: Number((depth * .5).toFixed(1)) },
+      { id: id('internal', 2), distance: Number((depth * .2).toFixed(1)) },
+    ],
+    frontRods: [{ id: id('front', 0), distance: Number(Math.max(1, depth * .35).toFixed(1)) }],
+    positionsById: {},
+  }
+}
+
+function createStageGeometry(layout = {}, canvasWidth = CANVAS_WIDTH, canvasHeight = CANVAS_HEIGHT) {
+  const widthMeters = parsePositive(layout.stageWidthText, 12)
+  const depthMeters = parsePositive(layout.stageDepthText, 8)
+  const apronDirection = normalizeApronDirection(layout.apronDirection)
+  const horizontalApron = apronDirection === 'top' || apronDirection === 'bottom'
+  const internalRods = normalizeLayoutRods(layout.internalRods)
+  const frontRods = normalizeLayoutRods(layout.frontRods)
+  const legacySideRods = normalizeLayoutRods(layout.legacySideRods)
+  const frontExtent = frontRods.length
+    ? Math.max(...frontRods.map((rod) => rod.distance)) + 1.35
+    : 1.4
+  const sideExtent = legacySideRods.length ? Math.max(...legacySideRods.map((rod) => rod.distance)) + .25 : 0
+  const outerWidth = widthMeters + sideExtent * 2 + (horizontalApron ? 0 : frontExtent)
+  const outerHeight = depthMeters + (horizontalApron ? frontExtent : 0)
+  const margin = Math.max(44, Math.min(74, Math.round(Math.min(canvasWidth, canvasHeight) * .075)))
+  const availableWidth = Math.max(100, canvasWidth - margin * 2)
+  const availableHeight = Math.max(100, canvasHeight - margin * 2)
+  const scale = Math.max(.001, Math.min(availableWidth / outerWidth, availableHeight / outerHeight))
+  const extraX = Math.max(0, (availableWidth - outerWidth * scale) / 2)
+  const extraY = Math.max(0, (availableHeight - outerHeight * scale) / 2)
+  const stageLeft = margin + extraX + sideExtent * scale + (apronDirection === 'left' ? frontExtent * scale : 0)
+  const stageTop = margin + extraY + (apronDirection === 'top' ? frontExtent * scale : 0)
+  const stage = { left: stageLeft, top: stageTop, width: widthMeters * scale, height: depthMeters * scale }
+  const apron = apronDirection === 'bottom'
+    ? { x1: stage.left, y1: stage.top + stage.height, x2: stage.left + stage.width, y2: stage.top + stage.height }
+    : apronDirection === 'top'
+      ? { x1: stage.left, y1: stage.top, x2: stage.left + stage.width, y2: stage.top }
+      : apronDirection === 'left'
+        ? { x1: stage.left, y1: stage.top, x2: stage.left, y2: stage.top + stage.height }
+        : { x1: stage.left + stage.width, y1: stage.top, x2: stage.left + stage.width, y2: stage.top + stage.height }
+  const rods = []
+  internalRods.forEach((rod, index) => {
+    const distance = Math.min(rod.distance, apronDirection === 'top' || apronDirection === 'bottom' ? depthMeters : widthMeters)
+    const line = horizontalApron
+      ? { x1: stage.left, x2: stage.left + stage.width, y1: apronDirection === 'bottom' ? stage.top + stage.height - distance * scale : stage.top + distance * scale, y2: apronDirection === 'bottom' ? stage.top + stage.height - distance * scale : stage.top + distance * scale }
+      : { x1: apronDirection === 'left' ? stage.left + distance * scale : stage.left + stage.width - distance * scale, x2: apronDirection === 'left' ? stage.left + distance * scale : stage.left + stage.width - distance * scale, y1: stage.top, y2: stage.top + stage.height }
+    rods.push({ ...line, id: rod.id, type: 'internal', index, distance: rod.distance, label: `灯杆${index + 1}` })
+  })
+  frontRods.forEach((rod, index) => {
+    const line = horizontalApron
+      ? { x1: stage.left, x2: stage.left + stage.width, y1: apronDirection === 'bottom' ? stage.top + stage.height + rod.distance * scale : stage.top - rod.distance * scale, y2: apronDirection === 'bottom' ? stage.top + stage.height + rod.distance * scale : stage.top - rod.distance * scale }
+      : { x1: apronDirection === 'right' ? stage.left + stage.width + rod.distance * scale : stage.left - rod.distance * scale, x2: apronDirection === 'right' ? stage.left + stage.width + rod.distance * scale : stage.left - rod.distance * scale, y1: stage.top, y2: stage.top + stage.height }
+    rods.push({ ...line, id: rod.id, type: 'front', index, distance: rod.distance, label: `面光杆${index + 1}` })
+  })
+  legacySideRods.forEach((rod, index) => {
+    const x = rod.side === 'right' ? stage.left + stage.width + rod.distance * scale : stage.left - rod.distance * scale
+    const startT = clamp(Number(rod.startT), 0, 1)
+    const endT = clamp(Number(rod.endT), startT, 1)
+    rods.push({
+      x1: x,
+      x2: x,
+      y1: stage.top + startT * stage.height,
+      y2: stage.top + endT * stage.height,
+      id: rod.id,
+      type: 'legacy-side',
+      index,
+      side: rod.side,
+      positionIndex: rod.positionIndex,
+      distance: rod.distance,
+      startT,
+      endT,
+      label: `${rod.side === 'left' ? '左' : '右'}侧光${Number(rod.positionIndex) + 1}`,
+    })
+  })
+  const audienceOffset = (frontRods.length ? Math.max(...frontRods.map((rod) => rod.distance)) : .3) + 1.6
+  const audience = horizontalApron
+    ? { x: stage.left + stage.width / 2, y: apronDirection === 'bottom' ? stage.top + stage.height + audienceOffset * scale : stage.top - audienceOffset * scale }
+    : { x: apronDirection === 'right' ? stage.left + stage.width + audienceOffset * scale : stage.left - audienceOffset * scale, y: stage.top + stage.height / 2 }
+  const labelNames = { top: '台口方向 · 上', right: '台口方向 · 右', bottom: '台口方向 · 下', left: '台口方向 · 左' }
+  const apronLabel = horizontalApron
+    ? { x: stage.left + stage.width / 2, y: apronDirection === 'bottom' ? stage.top + stage.height + 20 : stage.top - 12 }
+    : { x: apronDirection === 'right' ? stage.left + stage.width + 20 : stage.left - 20, y: stage.top + stage.height / 2 }
+  return {
+    canvasWidth,
+    canvasHeight,
+    widthMeters,
+    depthMeters,
+    pixelsPerMeter: scale,
+    apronDirection,
+    apronLabel: { ...apronLabel, text: '台口' },
+    audience: { ...audience, text: '观众区' },
+    directionText: labelNames[apronDirection],
+    stage,
+    rods,
+    bounds: { left: 0, top: 0, width: canvasWidth, height: canvasHeight },
+  }
+}
+
+function pointOnRod(rod, t) {
+  const rawProgress = clamp(Number(t) || 0, 0, 1)
+  const interval = Number(rod?.endT) - Number(rod?.startT)
+  const progress = rod?.type === 'legacy-side' && interval > 0
+    ? clamp((rawProgress - Number(rod.startT)) / interval, 0, 1)
+    : rawProgress
+  return { x: rod.x1 + (rod.x2 - rod.x1) * progress, y: rod.y1 + (rod.y2 - rod.y1) * progress }
+}
+
+function layoutFixturePoint(geometry, rod, position = {}) {
+  if (position.legacyPoint && geometry?.stage) {
+    return {
+      x: geometry.stage.left + Number(position.legacyPoint.x) * geometry.stage.width,
+      y: geometry.stage.top + Number(position.legacyPoint.y) * geometry.stage.height,
+    }
+  }
+  return pointOnRod(rod, position.t)
+}
+
+function projectPointToRod(rod, point) {
+  const dx = rod.x2 - rod.x1
+  const dy = rod.y2 - rod.y1
+  const lengthSquared = dx * dx + dy * dy
+  if (!lengthSquared) return 0
+  const progress = clamp(((point.x - rod.x1) * dx + (point.y - rod.y1) * dy) / lengthSquared, 0, 1)
+  if (rod?.type === 'legacy-side') return Number(rod.startT) + progress * (Number(rod.endT) - Number(rod.startT))
+  return progress
+}
+
+function transformViewPoint(point, view = {}) {
+  const scale = Number.isFinite(view.s) && view.s > 0 ? view.s : 1
+  return { x: point.x * scale + (Number(view.x) || 0), y: point.y * scale + (Number(view.y) || 0) }
+}
+
+function transformViewPointInverse(point, view = {}) {
+  const scale = Number.isFinite(view.s) && view.s > 0 ? view.s : 1
+  return { x: (point.x - (Number(view.x) || 0)) / scale, y: (point.y - (Number(view.y) || 0)) / scale }
+}
+
+function zoomViewAt(view = {}, nextScale, anchor = { x: 0, y: 0 }, minScale = .55, maxScale = 4) {
+  const oldScale = Number.isFinite(view.s) && view.s > 0 ? view.s : 1
+  const scale = clamp(Number(nextScale) || oldScale, minScale, maxScale)
+  const logical = transformViewPointInverse(anchor, { ...view, s: oldScale })
+  return { s: scale, x: anchor.x - logical.x * scale, y: anchor.y - logical.y * scale }
+}
+
+function getSceneBounds(geometry) {
+  if (!geometry || !Array.isArray(geometry.rods)) return { left: 0, top: 0, right: 0, bottom: 0, width: 0, height: 0 }
+  const xs = [geometry.stage.left, geometry.stage.left + geometry.stage.width]
+  const ys = [geometry.stage.top, geometry.stage.top + geometry.stage.height]
+  geometry.rods.forEach((rod) => { xs.push(rod.x1, rod.x2); ys.push(rod.y1, rod.y2) })
+  const pad = 52
+  const left = Math.min(...xs) - pad
+  const top = Math.min(...ys) - pad
+  const right = Math.max(...xs) + pad
+  const bottom = Math.max(...ys) + pad
+  return { left, top, right, bottom, width: right - left, height: bottom - top }
+}
+
 module.exports = {
 CANVAS_WIDTH,
 CANVAS_HEIGHT,
@@ -316,4 +496,16 @@ parsePositive,
 stageRect,
 renderMetrics,
 shorten,
+APRON_DIRECTIONS,
+normalizeApronDirection,
+normalizeLayoutRods,
+createDefaultStageLayout,
+createStageGeometry,
+pointOnRod,
+layoutFixturePoint,
+projectPointToRod,
+transformViewPoint,
+transformViewPointInverse,
+zoomViewAt,
+getSceneBounds,
 }

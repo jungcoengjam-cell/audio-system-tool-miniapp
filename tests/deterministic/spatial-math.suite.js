@@ -5,10 +5,6 @@ const { cameras } = require('../../data/cameras')
 const { assertCompletePlacementCoverage, evaluatePlacementCoverage } = require('../helpers/camera-coverage-reference')
 const { calculateLedScreenPlan, LED_UNIT_SPECS, chooseRecommendedPitch, evaluateViewingDistance } = require('../../utils/led-screen')
 const { calculateDmxAddressPlan, MAX_GROUPS, MAX_TOTAL_FIXTURES } = require('../../utils/dmx-address')
-const { calculateVenueEstimate } = require('../../utils/venue')
-const { calculateDiscussionEstimate } = require('../../utils/venue-discussion')
-const { calculatePagNagReview } = require('../../utils/venue-pag-nag')
-const { calculatePathDistanceMeters, calculateArrivalDifferenceMs, buildVenueHandoffReview } = require('../../utils/venue-handoff')
 
 const rad = (degrees) => degrees * Math.PI / 180
 
@@ -444,65 +440,5 @@ module.exports = ({ test, assert, close, finiteTree }) => {
     ])
   }, { classification: 'implementation bug', basis: 'DMX limits exported by utils/dmx-address.js: 20 groups, 200 per group, 500 total and 512 channels per universe' })
 
-  test('venue estimate and discussion estimate produce finite coordinates inside the room', () => {
-    const venue = calculateVenueEstimate({ lengthMeters: 12, widthMeters: 8, heightMeters: 4, firstListeningDistanceMeters: 3, lastListeningDistanceMeters: 11, listeningWidthMeters: 7, layout: 'short', standardClassKey: 'conference', gradeKey: 'II' })
-    const discussion = calculateDiscussionEstimate({ lengthMeters: 10, widthMeters: 8, heightMeters: 3, tableShape: 'round', tableDiameterMeters: 3, participantCount: 12, audioMode: 'voiceLift', installationCondition: 'flat', standardClassKey: 'conference', gradeKey: 'II' })
-    finite(venue, finiteTree)
-    finite(discussion, finiteTree)
-    assert.equal(venue.error, undefined)
-    assert.equal(discussion.error, undefined)
-    assert(venue.mainSpeakerPositions.every((speaker) => speaker.widthMeters >= 0 && speaker.widthMeters <= 8 && speaker.depthMeters >= 0 && speaker.depthMeters <= 12))
-    assert(discussion.speakerPositions.every((speaker) => speaker.widthMeters >= 0 && speaker.widthMeters <= 8 && speaker.depthMeters >= 0 && speaker.depthMeters <= 10))
-    assert(calculateVenueEstimate({ lengthMeters: Infinity, widthMeters: 8, heightMeters: 4 }).error)
-    assert(calculateDiscussionEstimate({ lengthMeters: 10, widthMeters: 8, heightMeters: 3, participantCount: 12, tableShape: 'round', tableDiameterMeters: 3 }).speakerPositions)
-  }, { classification: 'implementation bug', basis: 'venue geometry outputs speaker coordinates in metres bounded by room width and length' })
 
-  test('handoff path length and arrival time use three-dimensional metres and seconds-to-milliseconds conversion', () => {
-    close(calculatePathDistanceMeters({ point: { widthMeters: 3, depthMeters: 4 }, source: { widthMeters: 0, depthMeters: 0 }, speakerCenterHeightMeters: 4, earHeightMeters: 1 }), Math.sqrt(34))
-    close(calculateArrivalDifferenceMs({ upstreamDistanceMeters: 10, fillDistanceMeters: 5, speedOfSoundMetersPerSecond: 343 }), 5000 / 343)
-    close(calculateArrivalDifferenceMs({ upstreamDistanceMeters: 5, fillDistanceMeters: 10, speedOfSoundMetersPerSecond: 343 }), -5000 / 343)
-    assert.equal(calculatePathDistanceMeters({ point: {}, source: {} }), null)
-    assert.equal(calculateArrivalDifferenceMs({ upstreamDistanceMeters: -1, fillDistanceMeters: 1 }), null)
-  }, { classification: 'implementation bug', basis: 'Euclidean path in metres; arrival delta is distance difference divided by 343 m/s and multiplied by 1000 ms/s' })
-
-  test('venue handoff review marks a known common coverage point and keeps finite timing', () => {
-    const result = buildVenueHandoffReview({
-      speakerCenterHeightMeters: 2.5, earHeightMeters: 1.2, listeningSideMarginMeters: 0,
-      listeningWidthMeters: 4,
-      sources: [
-        { id: 'main', label: 'main', type: 'main', widthMeters: 2, depthMeters: 0, aimDepthMeters: 0, coverageDeg: 120, verticalCoverageDeg: 120, aimYawDeg: 0, aimDownDeg: 0 },
-        { id: 'fill', label: 'fill', type: 'fill', widthMeters: 2, depthMeters: 4, aimDepthMeters: 6, coverageDeg: 120, verticalCoverageDeg: 120, aimYawDeg: 0, aimDownDeg: 0 },
-      ],
-    })
-    finite(result, finiteTree)
-    assert.equal(result.groups.length, 1)
-    assert.equal(result.groups[0].totalPointCount, 3)
-    assert.equal(result.groups[0].commonPointCount, 3)
-    assert(result.groups[0].points.every((point) => Number.isFinite(point.arrivalDifferenceMsRaw)))
-  }, { classification: 'implementation bug', basis: 'handoff review samples the common listening region and reports finite acoustic arrival differences' })
-
-  test('PAG/NAG single-speaker reference matches independent logarithmic arithmetic and scales by microphone count', () => {
-    const input = { ds: 0.2, d0: 10, dn: 1, d1: 7.9075912893876845, d2: 2.3853720883753127, nom: 1 }
-    const result = calculatePagNagReview(input)
-    finite(result, finiteTree)
-    close(result.pagDb, 20 * Math.log10((input.d1 * input.d0) / (input.d2 * input.ds)) - 6)
-    close(result.nagDb, 20 * Math.log10(input.d0 / input.dn))
-    close(result.marginDb, result.pagDb - result.nagDb)
-    const twoMics = calculatePagNagReview({ ...input, nom: 2 })
-    close(result.pagDb - twoMics.pagDb, 10 * Math.log10(2))
-    close(result.nagDb, twoMics.nagDb)
-    assert.equal(calculatePagNagReview({ ...input, ds: 0 }).field, 'ds')
-  }, { classification: 'implementation bug', basis: 'PAG=20log10(d1*d0/(d2*ds))-10log10(NOM)-6; NAG=20log10(d0/dn)' })
-
-  test('PAG/NAG multiple-speaker geometry and distance scaling preserve finite acoustic result', () => {
-    const input = { speakerMode: 'multiple', ds: 1, d0: 10, dn: 4, d1: 5, d2: 5, nom: 2 }
-    const result = calculatePagNagReview(input)
-    finite(result, finiteTree)
-    assert.equal(result.basis, 'omnidirectional-multiple-speakers')
-    const scaled = calculatePagNagReview({ ...input, ds: 10, d0: 100, dn: 40, d1: 50, d2: 50 })
-    finite(scaled, finiteTree)
-    close(scaled.pagDb, result.pagDb)
-    close(scaled.nagDb, result.nagDb)
-    assert.equal(calculatePagNagReview({ ...input, speakerMode: 'multiple', d2: 100 }).errorKind, 'inconsistent')
-  }, { classification: 'implementation bug', basis: 'PAG/NAG logarithmic distance ratios are invariant under common distance scaling; multiple-speaker geometry has its own consistency rule' })
 }

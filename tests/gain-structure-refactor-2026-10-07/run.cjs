@@ -649,22 +649,55 @@ test('project selection, create, frozen save, deletion/rename recheck, write err
   const context = bootPage({ preferences: restoredValidPreferences }, recordsOverride)
   try {
     const { page } = context
+    const selectProject = (id) => {
+      if (page.data.projectStep === 'details') {
+        if (page.data.projectTargetId === id) return true
+        page.backToProjectList()
+      }
+      return page.chooseProject({ currentTarget: { dataset: { id } } })
+    }
     const firstProject = records.createProject('演示项目')
     page.openProjectSheet()
     assert.strictEqual(page.data.projectLoadState, 'ready')
     assert.strictEqual(page.data.projectItems[0].id, firstProject.id)
-    page.chooseProject({ currentTarget: { dataset: { id: firstProject.id } } })
+    selectProject(firstProject.id)
+    assert.strictEqual(page.data.projectStep, 'details')
+    assert.strictEqual(page.data.projectConfigName, page._projectSnapshotForSave.payload.title)
+    const frozenPreviewText = page._projectSnapshotForSave.payload.resultText
+    assert.deepStrictEqual(page.data.projectPreview, {
+      title: page._projectSnapshotForSave.payload.title,
+      summary: page._projectSnapshotForSave.payload.summary,
+      resultText: frozenPreviewText.split(/\r?\n/)
+        .filter((line) => line.startsWith('功放额定输出输入点：')
+          || line.startsWith('衰减执行位置：'))
+        .join('\n'),
+    }, 'the compact dialog preview must use the frozen record payload')
+    page.onProjectConfigNameInput({ detail: { value: '舞台·演出预设' } })
+    page.onProjectConfigNoteInput({ detail: { value: '主扩配置，首场前复核' } })
     assert.strictEqual(page.saveProjectConfiguration(), true)
     assert.strictEqual(page.data.projectStep, 'success')
+    assert.strictEqual(page.data.savedProjectName, '演示项目')
+    assert.strictEqual(page.data.savedConfigName, '舞台·演出预设')
+    assert.match(page.data.savedAtText, /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/)
     assert.strictEqual(addCalls.length, 1)
-    assert.strictEqual(addCalls[0].length, 2, 'gain save must call the records API with exactly two arguments')
+    assert.strictEqual(addCalls[0].length, 3, 'gain save must pass metadata as the records API third argument')
     assert.strictEqual(addCalls[0][0].module, 'gainStructure')
+    assert.deepStrictEqual(addCalls[0][2], { name: '舞台·演出预设', note: '主扩配置，首场前复核' })
     assert.strictEqual(records.getProjectRecords(firstProject.id).length, 1)
+    assert.strictEqual(records.getProjectRecords(firstProject.id)[0].projectMetadata[firstProject.id].name, '舞台·演出预设')
     assert.strictEqual(page.saveProjectConfiguration(), false, 'repeated save must not add a duplicate record')
     page.closeProjectSheet()
 
     page.openProjectSheet()
-    page.chooseProject({ currentTarget: { dataset: { id: firstProject.id } } })
+    selectProject(firstProject.id)
+    assert.strictEqual(page.data.projectConfigName, '舞台·演出预设',
+      'existing project metadata should restore the configuration name')
+    assert.strictEqual(page.data.projectConfigNote, '主扩配置，首场前复核',
+      'existing project metadata should restore the note')
+    page.closeProjectSheet()
+
+    page.openProjectSheet()
+    selectProject(firstProject.id)
     const addCountBeforeChange = addCalls.length
     page.onTargetPeakTap({ currentTarget: { dataset: { index: 0 } } })
     assert.strictEqual(page.data.projectSheetVisible, false,
@@ -677,7 +710,7 @@ test('project selection, create, frozen save, deletion/rename recheck, write err
 
     const interruptedProject = records.createProject('读取期间输入变化')
     page.openProjectSheet()
-    page.chooseProject({ currentTarget: { dataset: { id: interruptedProject.id } } })
+    selectProject(interruptedProject.id)
     const addCountBeforeInterruptedRead = addCalls.length
     recordsOverride.beforeSnapshot = (...args) => {
       recordsOverride.beforeSnapshot = null
@@ -697,7 +730,7 @@ test('project selection, create, frozen save, deletion/rename recheck, write err
     assert.strictEqual(page.data.result.valid, true)
     assert.strictEqual(page.openProjectSheet(), true,
       'a fresh sheet should open immediately after the interrupted save is invalidated')
-    page.chooseProject({ currentTarget: { dataset: { id: interruptedProject.id } } })
+    selectProject(interruptedProject.id)
     assert.strictEqual(page.saveProjectConfiguration(), true,
       'the fresh current snapshot should save normally')
     assert.strictEqual(addCalls.length, addCountBeforeInterruptedRead + 1)
@@ -706,16 +739,22 @@ test('project selection, create, frozen save, deletion/rename recheck, write err
     const searchProjectA = records.createProject('Alpha Target')
     const searchProjectB = records.createProject('Beta Target')
     page.openProjectSheet()
-    page.chooseProject({ currentTarget: { dataset: { id: searchProjectA.id } } })
+    if (page.data.projectStep === 'details') page.backToProjectList()
+    page.onProjectSearch({ detail: { value: 'Alpha Target' } })
+    selectProject(searchProjectA.id)
+    assert.strictEqual(page.data.projectStep, 'details')
+    page.backToProjectList()
     const addCountBeforeSearch = addCalls.length
     page.onProjectSearch({ detail: { value: 'Beta Target' } })
     assert.deepStrictEqual(page.data.projectItems.map((item) => item.id), [searchProjectB.id])
-    assert.strictEqual(page.data.projectTargetId, '',
-      'searching away from a selected target must clear the hidden project')
+    assert.strictEqual(selectProject(searchProjectA.id), false,
+      'a project outside the visible search results must not open details')
+    assert.strictEqual(page.data.projectTargetId, '')
     assert.strictEqual(page.saveProjectConfiguration(), false,
       'a hidden project must not remain a valid save target')
     assert.strictEqual(addCalls.length, addCountBeforeSearch)
-    page.chooseProject({ currentTarget: { dataset: { id: searchProjectB.id } } })
+    selectProject(searchProjectB.id)
+    assert.strictEqual(page.data.projectStep, 'details')
     assert.strictEqual(page.saveProjectConfiguration(), true,
       'selecting the visible search result should permit saving')
     assert.strictEqual(addCalls.length, addCountBeforeSearch + 1)
@@ -723,7 +762,7 @@ test('project selection, create, frozen save, deletion/rename recheck, write err
 
     const renamedProject = records.createProject('待改名项目')
     page.openProjectSheet()
-    page.chooseProject({ currentTarget: { dataset: { id: renamedProject.id } } })
+    selectProject(renamedProject.id)
     records.updateProject(renamedProject.id, { name: '已改名项目' })
     assert.strictEqual(page.saveProjectConfiguration(), false)
     assert.strictEqual(page.data.projectTargetId, '')
@@ -732,7 +771,7 @@ test('project selection, create, frozen save, deletion/rename recheck, write err
 
     const deletedProject = records.createProject('待删除项目')
     page.openProjectSheet()
-    page.chooseProject({ currentTarget: { dataset: { id: deletedProject.id } } })
+    selectProject(deletedProject.id)
     records.deleteProject(deletedProject.id)
     assert.strictEqual(page.saveProjectConfiguration(), false)
     assert.strictEqual(page.data.projectTargetId, '')
@@ -744,19 +783,22 @@ test('project selection, create, frozen save, deletion/rename recheck, write err
     page.onNewProjectNameInput({ detail: { value: '新项目' } })
     assert.strictEqual(page.createProjectFromForm(), true)
     assert.strictEqual(page.data.projectTargetName, '新项目')
+    assert.strictEqual(page.data.projectStep, 'details',
+      'successfully creating a project should move directly to configuration details')
     assert.strictEqual(page.saveProjectConfiguration(), true)
     page.closeProjectSheet()
 
     recordsOverride.failAdd = true
     const failureProject = records.createProject('写入失败项目')
     page.openProjectSheet()
-    page.chooseProject({ currentTarget: { dataset: { id: failureProject.id } } })
+    selectProject(failureProject.id)
     assert.strictEqual(page.saveProjectConfiguration(), false)
     assert(page.data.projectSaveError.includes('保存失败'))
     assert.strictEqual(page.data.isSavingProject, false)
     page.closeProjectSheet()
 
     page.openProjectSheet()
+    if (page.data.projectStep === 'details') page.backToProjectList()
     const episode = page.data.projectKeyboardEpisode
     const focusEvent = { currentTarget: { dataset: { projectField: 'projectSearch', projectEpisode: episode } }, timeStamp: 100 }
     assert.strictEqual(page.onProjectInputFocus(focusEvent), true)

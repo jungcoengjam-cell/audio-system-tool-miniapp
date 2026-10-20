@@ -1,0 +1,173 @@
+{
+  "createdAt": "2026-10-18T12:55:32.267Z",
+  "files": {
+    "pages/dmx-address/channel-guide.js": {
+      "bytes": 5809,
+      "sha256": "3a7d4a131fa1fefd11fcd8a8bb64b375e669e3a6ce7bb7565e28e181a96b79f8"
+    },
+    "pages/dmx-address/channel-guide.json": {
+      "bytes": 53,
+      "sha256": "8545237716a168df1a07a9557797150d5e4319561a3c743f0c2febdb8a6e2ea1"
+    },
+    "pages/dmx-address/channel-guide.wxml": {
+      "bytes": 2152,
+      "sha256": "438ec6fe66adfb853ef4a5eaa23914b6737dd5c9de2e74ea323a9885ae0c3089"
+    },
+    "pages/dmx-address/channel-guide.wxss": {
+      "bytes": 2735,
+      "sha256": "fa408551c8a3dcad6804cf1ee1e82b5dfe4dcc3a93683e59d1f01457155c8b55"
+    },
+    "pages/dmx-address/dmx-address.js": {
+      "bytes": 120246,
+      "sha256": "9af519fecc19b2a3f92a5b02ab7905f4afb2043203ddb5c6dcf1bdf266822417"
+    },
+    "pages/dmx-address/dmx-address.json": {
+      "bytes": 59,
+      "sha256": "27041e9bbf576a46ddf154516f63f0cc101c2c02ce6853781fae61a52fc9cd16"
+    },
+    "pages/dmx-address/dmx-address.wxml": {
+      "bytes": 33010,
+      "sha256": "ca00bb3c58ed8a928dbe6f8f5eea364d270749891141ad1160851de025323863"
+    },
+    "pages/dmx-address/dmx-address.wxss": {
+      "bytes": 34168,
+      "sha256": "87a6b1f156eaec555e1cc47245b1fa4d9a201122d2458ec90f9aeac0034b4e83"
+    },
+    "pages/dmx-address/group-input.js": {
+      "bytes": 3364,
+      "sha256": "c7142ec84ecece7cbd12930029f91518552c13cad64cecc1d5666e0ffc8389cf"
+    },
+    "pages/dmx-address/result-view.js": {
+      "bytes": 9986,
+      "sha256": "44ed19b4e8f2d413599c74d49508f77fd676308e929508ea97e0f734388f3c25"
+    },
+    "pages/dmx-layout/dmx-layout.js": {
+      "bytes": 107,
+      "sha256": "c0aeca257ad712afc2d2d5a27b44af2b7812dd4f5595b234eb956e9b97e6970f"
+    },
+    "pages/dmx-layout/dmx-layout.json": {
+      "bytes": 108,
+      "sha256": "094a396012ef57255d28465b9f09f483918c4bd645091d48e025a0c8462705f1"
+    },
+    "pages/dmx-layout/dmx-layout.wxml": {
+      "bytes": 15074,
+      "sha256": "6c585b60dc95ac2c4a75c48d04516dc29230ee2c38b3e4421358afec16dc0841"
+    },
+    "pages/dmx-layout/dmx-layout.wxss": {
+      "bytes": 49803,
+      "sha256": "6aca736fb1be278ac2e3656b32d48d2ea55dbb28358539b6b7f14e643e304257"
+    },
+    "pages/dmx-layout/layout-canvas-adapter.js": {
+      "bytes": 3259,
+      "sha256": "fd674c176dd30b3f113d44e3f885705847077d5ef0aa5c183bee2ccdffa868e3"
+    },
+    "pages/dmx-layout/layout-model.js": {
+      "bytes": 21956,
+      "sha256": "9e18a0bd64b360dda7d15f7982310aef302d8b0d3deb8bb46808fc782057a337"
+    },
+    "pages/dmx-layout/layout-renderer.js": {
+      "bytes": 45188,
+      "sha256": "6fa24dab91791cf4c0c9cc1942b63b7dd721a810248ca97763cfa2622209e973"
+    },
+    "pages/dmx-layout/layout-storage.js": {
+      "bytes": 4950,
+      "sha256": "b8b5388580ef71178e824ea04ad1f8fd5f978f00760520fa262d61dd40508410"
+    },
+    "pages/dmx-layout/lighting-workspace.js": {
+      "bytes": 37984,
+      "sha256": "51de657385d77edce2e850c49c576e3c87b9b8b3f88d34e765360d398b68c726"
+    },
+    "pages/dmx-layout/page-factory.js": {
+      "bytes": 115709,
+      "sha256": "f9e38a828941cb6f3c16ed72a7d4d21ad8d467d1404770d16114e7db6b68f09b"
+    },
+    "pages/dmx-layout-landscape/dmx-layout-landscape.js": {
+      "bytes": 120,
+      "sha256": "23a75c0959f0a8083daa09516f2c4f3113aecf0f7c510bff81edf5265d1aba56"
+    },
+    "pages/dmx-layout-landscape/dmx-layout-landscape.json": {
+      "bytes": 118,
+      "sha256": "20e7e3a07389296807eeaa6fbeec7fc69595300be52cbbf1b5a30bd7f096a561"
+    },
+    "pages/dmx-layout-landscape/dmx-layout-landscape.wxml": {
+      "bytes": 15074,
+      "sha256": "6c585b60dc95ac2c4a75c48d04516dc29230ee2c38b3e4421358afec16dc0841"
+    },
+    "pages/dmx-layout-landscape/dmx-layout-landscape.wxss": {
+      "bytes": 49754,
+      "sha256": "10d3e1c1b8b09afbf1ab2789d3cc6789427f046e25c26f8b224715f657135a79"
+    },
+    "pages/dmx-address/data/stage-lighting-channels-extra.js": {
+      "bytes": 30467,
+      "sha256": "42111e32ec3bad73b7743327c83febf7b22be30b7711654b638d85b0ce578ef4"
+    },
+    "pages/dmx-address/data/stage-lighting-channels-final-a.js": {
+      "bytes": 28794,
+      "sha256": "6b8941f5965effbd554b8fc0c4a2cb3ee3fb9a7f910d377ad7c2f174b2699047"
+    },
+    "pages/dmx-address/data/stage-lighting-channels-final-b.js": {
+      "bytes": 40582,
+      "sha256": "286a379724c1686eb01d050081c36abc82843a3eb72b423f2182e23cbe18cf07"
+    },
+    "pages/dmx-address/data/stage-lighting-channels.js": {
+      "bytes": 89436,
+      "sha256": "953700af812fba1829f3657c2bf28c5e5e87699df89e7983984681349aef429e"
+    },
+    "pages/dmx-address/utils/dmx-channel-guide.js": {
+      "bytes": 4458,
+      "sha256": "b4c5b9d8d4e1385b87b48b8272f97b7fb12cb0bf0ebfc4491fd05aeddbcb0bd1"
+    },
+    "utils/dmx-address.js": {
+      "bytes": 11393,
+      "sha256": "031eb5678ada8d6f852ee7c3c86e2edc61f8e0c9a5e9a00f75589cae790da03a"
+    },
+    "utils/preferences.js": {
+      "bytes": 1486,
+      "sha256": "79219eb329ae89f2ceda227a9fb0339902faedc30d54e105e28ae84fe29e6a0b"
+    },
+    "utils/records.js": {
+      "bytes": 58571,
+      "sha256": "606e200e8f6161cb831815dc2ec43e623ecbf6c91fc39b62c1e6437cc699e1f5"
+    },
+    "data/stage-lighting.js": {
+      "bytes": 39301,
+      "sha256": "092be2c2ecd19e2b5b505cfef6b106c98120023f10f38e5331ba4719906f223b"
+    },
+    "project.config.json": {
+      "bytes": 2588,
+      "sha256": "f96682cfffdd4c6796352f69da4b8a3061692b9a0166f4fe2821df8e0d39f7fd"
+    },
+    "app.json": {
+      "bytes": 2265,
+      "sha256": "51e68fa47540b2155189bafa59946283c0458dcb06d70272a91f822c3a77aec7"
+    },
+    "app.wxss": {
+      "bytes": 5927,
+      "sha256": "14e75494ff63bd53a3e6e53cebc5b225205c86c094f4b7506cf52fccfb4a1c6b"
+    },
+    "styles/theme-page-shared.wxss": {
+      "bytes": 3722,
+      "sha256": "5731440f4677c604781b9919ac45e1a9430e67aeed34730565766d17beba988c"
+    },
+    "tests/package-reclaim/ui-resources.cjs": {
+      "bytes": 32957,
+      "sha256": "99366326a84a0f355c993298cb61ff30d5f9b4e9ca2513651237945f35e3931f"
+    },
+    "tests/package-reclaim/ui-test-first.json": {
+      "bytes": 3210,
+      "sha256": "54a54c45b6eaf864ee865d05e8836520a3628321471f7e19eda07e574e50a531"
+    },
+    "tests/release-check.js": {
+      "bytes": 354690,
+      "sha256": "6711120169059bf78428c3054fb4f47f261362a551b233915bef4e6d4a1a69fd"
+    },
+    "tests/dmx-first-use-experience-test.js": {
+      "bytes": 11145,
+      "sha256": "fd16eb8e20401628307f9cb0bf9f2b82d981d09035c81d5495d6bdad3edf0b5f"
+    },
+    "tests/dmx-ui-refactor-2026-10-18/layout-extra-interactions-test.cjs": {
+      "bytes": 6509,
+      "sha256": "8a0ceb819008a72595afad05a880e5888cc3f986be8e4ade7d2a3018dc2f8637"
+    }
+  }
+}

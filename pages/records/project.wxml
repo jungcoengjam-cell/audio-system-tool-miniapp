@@ -1,57 +1,32 @@
-<view class="project-page-root">
-<scroll-view class="project-scroll" scroll-y enhanced show-scrollbar="{{false}}">
-  <view class="project-content">
-    <view wx:if="{{workspaceError}}" class="project-storage-error">
-      <view class="project-storage-error-copy">{{workspaceError}}</view>
-      <button class="project-storage-error-retry" bindtap="retryWorkspace">重试</button>
-    </view>
-    <block wx:if="{{project}}">
-      <view class="project-hero">
-        <view class="project-heading">
-          <view class="project-name">{{project.name}}</view>
-          <view wx:if="{{project.isActive}}" class="project-active-chip">当前项目</view>
-        </view>
-        <view class="project-meta">{{project.recordCount}} 条计算记录 · 更新于 {{project.timeText}}</view>
-        <view class="project-actions">
-          <button class="project-action" disabled="{{workspaceError}}" bindtap="startEditProject">编辑资料</button>
-          <button wx:if="{{!project.isActive}}" class="project-action" disabled="{{workspaceError}}" bindtap="activateProject">设为当前</button>
-        </view>
-      </view>
-      <view wx:if="{{records.length}}" class="result-output-actions project-report-actions">
-        <button class="project-report-generate result-image-button" disabled="{{isGeneratingReport || workspaceError}}" bindtap="generateProjectReportImage">{{isGeneratingReport ? '正在生成…' : '生成项目长图'}}</button>
-        <button class="project-report-copy copy-result-button" disabled="{{workspaceError}}" bindtap="copyProject">复制文字</button>
+<view class="interior-root">
+  <scroll-view class="interior-scroll" scroll-y enhanced show-scrollbar="{{false}}" scroll-top="{{projectScrollTop}}" bindscroll="onProjectScroll">
+    <view class="interior-content">
+      <view wx:if="{{workspaceError}}" class="interior-error">
+        <view class="interior-error-copy">{{workspaceError}}</view>
+        <button class="interior-retry" bindtap="retryWorkspace">重试</button>
       </view>
 
-      <view class="project-wiring-card" hover-class="project-wiring-card-pressed" bindtap="openProjectWiring">
-        <view class="project-wiring-icon">⌁</view>
-        <view class="project-wiring-copy">
-          <view class="project-wiring-title">通道与线缆</view>
-          <view class="project-wiring-subtitle">线路端点与材料清单</view>
-          <view class="project-wiring-meta">{{project.wiringLineCount}} 条线路 · {{project.wiringPendingCount}} 条待核对</view>
-        </view>
-        <view class="project-wiring-chevron">›</view>
-      </view>
-
-      <view class="project-info-card">
-        <view class="project-info-heading">
-          <view>
-            <view class="project-info-title">项目资料</view>
+      <block wx:if="{{project}}">
+        <view wx:if="{{editing}}" class="interior-edit-panel">
+          <view class="interior-edit-heading">
+            <view>
+              <view class="interior-section-title">编辑项目资料</view>
+              <view class="interior-section-subtitle">只修改本项目资料，不影响已保存的计算内容。</view>
+            </view>
+            <button class="interior-quiet-button" bindtap="cancelEditProject">取消</button>
           </view>
-          <view wx:if="{{!editing}}" class="project-info-status {{storageHealth && storageHealth.warning ? 'project-info-status-warning' : ''}}">{{storageHealth ? storageHealth.text : '保存在本机'}}</view>
-        </view>
 
-        <block wx:if="{{editing}}">
           <view class="project-form-field">
             <view class="project-form-label">项目名称 <text>必填</text></view>
-            <input class="project-form-control" maxlength="30" value="{{projectForm.name}}" data-field="name" bindinput="onProjectFieldInput" placeholder="例如：三楼会议室" />
+            <input class="project-form-control" maxlength="30" value="{{projectForm.name}}" data-field="name" bindinput="onProjectFieldInput" placeholder="输入项目名称" />
           </view>
           <view class="project-form-field">
             <view class="project-form-label">场地名称</view>
-            <input class="project-form-control" maxlength="50" value="{{projectForm.venueName}}" data-field="venueName" bindinput="onProjectFieldInput" placeholder="例如：交易集团二楼报告厅" />
+            <input class="project-form-control" maxlength="50" value="{{projectForm.venueName}}" data-field="venueName" bindinput="onProjectFieldInput" placeholder="例如：二楼报告厅" />
           </view>
           <view class="project-form-field">
             <view class="project-form-label">调试人员</view>
-            <input class="project-form-control" maxlength="30" value="{{projectForm.engineer}}" data-field="engineer" bindinput="onProjectFieldInput" placeholder="请输入姓名或团队" />
+            <input class="project-form-control" maxlength="30" value="{{projectForm.engineer}}" data-field="engineer" bindinput="onProjectFieldInput" placeholder="输入姓名或团队" />
           </view>
           <view class="project-form-field">
             <view class="project-form-label">场地尺寸</view>
@@ -60,191 +35,149 @@
               <input class="project-form-control" type="digit" value="{{projectForm.roomWidthText}}" data-field="roomWidthText" bindinput="onProjectFieldInput" placeholder="宽 m" />
               <input class="project-form-control" type="digit" value="{{projectForm.roomHeightText}}" data-field="roomHeightText" bindinput="onProjectFieldInput" placeholder="高 m" />
             </view>
-            <view class="project-form-hint">填写后，从项目进入“会议室”工具会自动带入。</view>
-          </view>
-          <view class="project-form-field project-standard-row">
-            <view class="project-standard-field">
-              <view class="project-form-label">扩声类别</view>
-              <picker range="{{standardClasses}}" range-key="label" value="{{standardClassIndex}}" bindchange="onProjectStandardChange">
-                <view class="project-form-control project-date-control">
-                  <text>{{standardClasses[standardClassIndex].label}}</text><text class="project-form-arrow">›</text>
-                </view>
-              </picker>
-            </view>
-            <view class="project-standard-field">
-              <view class="project-form-label">目标等级</view>
-              <picker range="{{standardClasses[standardClassIndex].grades}}" range-key="label" value="{{gradeIndex}}" bindchange="onProjectGradeChange">
-                <view class="project-form-control project-date-control">
-                  <text>{{standardClasses[standardClassIndex].grades[gradeIndex].label}}</text><text class="project-form-arrow">›</text>
-                </view>
-              </picker>
-            </view>
           </view>
           <view class="project-form-field">
             <view class="project-form-label">调试日期</view>
             <picker mode="date" value="{{projectForm.projectDate}}" bindchange="onProjectDateChange">
               <view class="project-form-control project-date-control">
-                <text>{{projectForm.projectDate || '请选择日期'}}</text>
-                <text class="project-form-arrow">›</text>
+                <text>{{projectForm.projectDate || '选择日期'}}</text><text class="project-form-arrow">›</text>
               </view>
             </picker>
           </view>
-          <view class="project-form-field project-form-field-last">
+          <view class="project-form-field">
             <view class="project-form-label">现场备注</view>
-            <textarea class="project-form-textarea" maxlength="300" value="{{projectForm.notes}}" data-field="notes" bindinput="onProjectFieldInput" placeholder="记录系统用途、现场条件或需要继续处理的问题" />
+            <textarea class="project-form-textarea" maxlength="300" value="{{projectForm.notes}}" data-field="notes" bindinput="onProjectFieldInput" placeholder="记录现场条件或待处理事项" />
             <view class="project-form-count">{{projectForm.notes.length}} / 300</view>
           </view>
-          <view class="project-form-actions">
-            <button class="project-form-button" bindtap="cancelEditProject">取消</button>
-            <button class="project-form-button project-form-button-primary" disabled="{{workspaceError}}" bindtap="saveProjectDetails">保存项目资料</button>
+          <view class="interior-edit-actions">
+            <button class="interior-primary-button" disabled="{{workspaceError}}" bindtap="saveProjectDetails">保存资料</button>
           </view>
-        </block>
+        </view>
 
         <block wx:else>
-          <view class="project-detail-grid">
-            <view class="project-detail-item">
-              <view class="project-detail-label">场地名称</view>
-              <view class="project-detail-value">{{project.venueName || '未填写'}}</view>
+          <view class="interior-hero">
+            <view class="interior-hero-heading">
+              <view class="interior-title-block">
+                <view class="interior-project-title">{{project.name}}</view>
+                <view class="interior-updated">最近更新 · {{project.timeText}}</view>
+              </view>
+              <button class="interior-menu-button" aria-label="项目管理" disabled="{{workspaceError}}" bindtap="openManagementMenu">•••</button>
             </view>
-            <view class="project-detail-item">
-              <view class="project-detail-label">调试日期</view>
-              <view class="project-detail-value">{{project.projectDate || '未填写'}}</view>
-            </view>
-            <view class="project-detail-item">
-              <view class="project-detail-label">调试人员</view>
-              <view class="project-detail-value">{{project.engineer || '未填写'}}</view>
-            </view>
-            <view class="project-detail-item">
-              <view class="project-detail-label">场地尺寸</view>
-              <view class="project-detail-value">{{project.dimensionText}}</view>
-            </view>
-            <view class="project-detail-item">
-              <view class="project-detail-label">扩声目标</view>
-              <view class="project-detail-value">{{project.standardText}}</view>
+            <view class="interior-hero-actions">
+              <button class="interior-report-button" disabled="{{workspaceError}}" bindtap="openProjectReport">
+                <text class="interior-report-icon">▤</text><text>项目报告</text>
+              </button>
             </view>
           </view>
-          <view class="project-notes">
-            <view class="project-detail-label">现场备注</view>
-            <view class="project-notes-text">{{project.notes || '暂无备注'}}</view>
+
+          <view wx:if="{{project.notes}}" class="interior-project-notes"><view class="interior-project-notes-label">现场备注</view><view class="interior-project-notes-copy">{{project.notes}}</view></view>
+
+          <view class="interior-search-wrap">
+            <text class="interior-search-icon">⌕</text>
+            <input class="interior-search-input" value="{{projectSearchText}}" placeholder="搜索项目内容" confirm-type="search" bindinput="onProjectSearchInput" />
+            <text wx:if="{{projectSearchText}}" class="interior-search-clear" bindtap="clearProjectSearch">清除</text>
+          </view>
+
+          <scroll-view class="interior-filter-scroll" scroll-x show-scrollbar="{{false}}">
+            <view class="interior-filter-row">
+              <view wx:for="{{projectViewFilters}}" wx:key="key" class="home-chip {{projectViewFilter === item.key ? 'home-chip-active' : ''}}" hover-class="home-chip-pressed" data-key="{{item.key}}" bindtap="onProjectViewFilterTap">{{item.label}}</view>
+            </view>
+          </scroll-view>
+
+          <view wx:if="{{showCalculations && recordGroups.length}}" class="interior-section">
+            <view class="interior-section-heading">
+              <view class="interior-section-title">计算记录</view>
+              <view class="interior-section-count">{{visibleRecordCount}} 条</view>
+            </view>
+            <view wx:for="{{recordGroups}}" wx:key="module" wx:for-item="group" class="interior-record-group">
+              <view class="interior-group-heading">
+                <view class="interior-group-title">{{group.label}}</view>
+                <view class="interior-group-count">{{group.records.length}}</view>
+              </view>
+              <view wx:for="{{group.records}}" wx:key="id" wx:for-item="record" class="interior-swipe-row {{record.swipeOpen ? 'interior-swipe-row-open' : ''}} {{record.swipeDragging ? 'interior-swipe-row-dragging' : ''}}" data-swipe-type="record" data-swipe-id="{{record.id}}" bindtouchstart="onProjectSwipeStart" bindtouchmove="onProjectSwipeMove" bindtouchend="onProjectSwipeEnd" bindtouchcancel="onProjectSwipeCancel">
+                <view aria-role="button" wx:if="{{record.swipeOpen || (record.swipeDragging && record.swipeOffset < 0)}}" class="interior-swipe-delete" aria-label="从本项目移除{{record.title}}" data-swipe-type="record" data-swipe-id="{{record.id}}" catchtap="onProjectSwipeDelete"><text class="interior-swipe-label">移除</text></view>
+                <view class="interior-item interior-record-item interior-swipe-content" hover-class="interior-swipe-pressed" style="transform:translateX({{record.swipeOffset}}px);" data-id="{{record.id}}" bindtap="onProjectItemTap">
+                  <view class="interior-record-symbol">↗</view>
+                  <view class="interior-item-copy">
+                    <view class="interior-item-title-row">
+                      <view class="interior-item-title">{{record.title}}</view>
+                      <view class="interior-module-chip">{{record.moduleLabel}}</view>
+                    </view>
+                    <view wx:if="{{record.summary}}" class="interior-item-subtitle">{{record.summary}}</view>
+                    <view wx:if="{{record.projectNote}}" class="interior-item-subtitle interior-item-note">{{record.projectNote}}</view>
+                    <view class="interior-item-time">{{record.timeText}}</view>
+                  </view>
+                  <view class="interior-chevron">›</view>
+                </view>
+              </view>
+            </view>
+          </view>
+
+          <view wx:if="{{showWiring}}" class="interior-section">
+            <view class="interior-section-heading">
+              <view class="interior-section-title">通道与线缆</view>
+              <view class="interior-section-count">{{wiringLines.length}} 条</view>
+            </view>
+            <view wx:for="{{wiringLines}}" wx:key="id" class="interior-swipe-row {{item.swipeOpen ? 'interior-swipe-row-open' : ''}} {{item.swipeDragging ? 'interior-swipe-row-dragging' : ''}}" data-swipe-type="line" data-swipe-id="{{item.id}}" bindtouchstart="onProjectSwipeStart" bindtouchmove="onProjectSwipeMove" bindtouchend="onProjectSwipeEnd" bindtouchcancel="onProjectSwipeCancel">
+              <view aria-role="button" wx:if="{{item.swipeOpen || (item.swipeDragging && item.swipeOffset < 0)}}" class="interior-swipe-delete" aria-label="删除线路{{item.displayTitle}}" data-swipe-type="line" data-swipe-id="{{item.id}}" catchtap="onProjectSwipeDelete"><text class="interior-swipe-label">删除</text></view>
+              <view class="interior-item interior-swipe-content" hover-class="interior-swipe-pressed" style="transform:translateX({{item.swipeOffset}}px);" data-id="{{item.id}}" bindtap="openProjectWiring">
+                <view class="interior-kind-symbol interior-kind-wiring">⌁</view>
+                <view class="interior-item-copy">
+                  <view class="interior-item-title">{{item.displayTitle}}</view>
+                  <view class="interior-item-subtitle">{{item.endpointSummary}}</view>
+                  <view class="interior-item-time">{{item.materialSummary}}</view>
+                </view>
+                <view class="interior-chevron">›</view>
+              </view>
+            </view>
+          </view>
+
+          <view wx:if="{{showLighting}}" class="interior-section">
+            <view class="interior-section-heading">
+              <view class="interior-section-title">灯位方案</view>
+              <view wx:if="{{!project.lightingReadError}}" class="interior-section-count">{{lightingFixtures.length}} 个</view>
+            </view>
+            <view wx:if="{{project.lightingReadError}}" class="interior-inline-error">{{project.lightingReadError}}</view>
+            <view wx:for="{{lightingFixtures}}" wx:key="stableId" class="interior-swipe-row {{item.swipeOpen ? 'interior-swipe-row-open' : ''}} {{item.swipeDragging ? 'interior-swipe-row-dragging' : ''}}" data-swipe-type="lighting" data-swipe-id="{{item.stableId}}" bindtouchstart="onProjectSwipeStart" bindtouchmove="onProjectSwipeMove" bindtouchend="onProjectSwipeEnd" bindtouchcancel="onProjectSwipeCancel">
+              <view aria-role="button" wx:if="{{item.swipeOpen || (item.swipeDragging && item.swipeOffset < 0)}}" class="interior-swipe-delete" aria-label="移出灯位{{item.displayTitle}}" data-swipe-type="lighting" data-swipe-id="{{item.stableId}}" catchtap="onProjectSwipeDelete"><text class="interior-swipe-label">移出灯位</text></view>
+              <view class="interior-item interior-swipe-content" hover-class="interior-swipe-pressed" style="transform:translateX({{item.swipeOffset}}px);" data-id="{{item.stableId}}" bindtap="openProjectLighting">
+                <view class="interior-kind-symbol interior-kind-lighting">✳</view>
+                <view class="interior-item-copy">
+                  <view class="interior-item-title">{{item.displayTitle}}</view>
+                  <view class="interior-item-subtitle">{{item.modelSummary}}</view>
+                  <view class="interior-item-time">{{item.addressSummary}}{{item.isPlaced ? '' : ' · 未上杆'}}</view>
+                </view>
+                <view class="interior-chevron">›</view>
+              </view>
+            </view>
+          </view>
+
+          <view wx:if="{{projectSearchEmpty}}" class="home-empty-state interior-empty">
+            <view class="home-empty-title">没有匹配的项目内容</view>
+            <view class="home-empty-copy">调整搜索词或切换内容筛选。</view>
+          </view>
+          <view wx:elif="{{projectTypeEmpty}}" class="home-empty-state interior-empty">
+            <view class="home-empty-title">{{projectViewFilter === 'all' ? '这个项目还没有内容' : '此类内容暂未添加'}}</view>
+            <view class="home-empty-copy">保存到本项目的计算结果、线路和灯位方案会显示在这里。</view>
           </view>
         </block>
-      </view>
+      </block>
 
-      <view class="section-heading">
-        <view>
-          <view class="section-title">计算进度</view>
-        </view>
-        <view class="section-count">{{records.length ? '继续完善' : '从这里开始'}}</view>
+      <view wx:elif="{{missing}}" class="home-empty-state interior-missing">
+        <view class="home-empty-title">项目不存在或已移入回收站</view>
+        <view class="home-empty-copy">返回项目列表，或前往回收站恢复项目。</view>
       </view>
-      <view class="module-progress-grid">
-        <view wx:for="{{moduleProgress}}" wx:key="key" class="module-progress-card module-progress-{{item.theme}}">
-          <view class="module-progress-status {{item.complete ? 'module-progress-complete' : ''}}">{{item.complete ? '✓' : '○'}}</view>
-          <view class="module-progress-title">{{item.label}}</view>
-          <view class="module-progress-meta">{{item.statusText}}</view>
-          <button class="module-progress-action" disabled="{{workspaceError}}" data-module="{{item.key}}" bindtap="openProjectModule">{{item.actionText}}</button>
-        </view>
+    </view>
+  </scroll-view>
+
+  <view wx:if="{{renameVisible}}" class="interior-overlay {{renameClosing ? 'interior-overlay-closing' : ''}}" bindtap="closeRenameProject" catchtouchmove="preventTouchMove">
+    <view class="interior-rename-sheet {{renameClosing ? 'interior-rename-sheet-closing' : ''}}" catchtap="stopEvent">
+      <view class="interior-sheet-title">重命名项目</view>
+      <input class="interior-form-control" maxlength="30" focus value="{{renameDraft}}" bindinput="onRenameInput" placeholder="输入项目名称" confirm-type="done" bindconfirm="saveRenameProject" />
+      <view class="interior-sheet-actions">
+        <button class="interior-sheet-button" bindtap="closeRenameProject">取消</button>
+        <button class="interior-sheet-button interior-sheet-primary" disabled="{{workspaceError}}" bindtap="saveRenameProject">保存</button>
       </view>
-
-      <view wx:if="{{compareSelectedIds.length}}" class="comparison-card">
-        <view class="comparison-heading">
-          <view>
-            <view class="comparison-title">已选择 {{compareSelectedIds.length}} / 2 条记录</view>
-          </view>
-          <view class="comparison-clear" bindtap="clearComparison">清除</view>
-        </view>
-        <view wx:if="{{comparison}}" class="comparison-content">
-          <view class="comparison-head-row">
-            <view class="comparison-label">差异项</view>
-            <view class="comparison-value">{{comparison.firstTitle}}</view>
-            <view class="comparison-value">{{comparison.secondTitle}}</view>
-          </view>
-          <view wx:for="{{comparison.rows}}" wx:key="key" class="comparison-row">
-            <view class="comparison-label">{{item.label}}</view>
-            <view class="comparison-value">{{item.firstValue}}</view>
-            <view class="comparison-value">{{item.secondValue}}</view>
-          </view>
-          <view wx:if="{{comparison.identical}}" class="comparison-identical">两条记录的核心输入参数完全一致。</view>
-        </view>
-        <view wx:else class="comparison-tip">再选择同一模块中的一条记录，即可查看差异。</view>
-      </view>
-
-      <view class="section-heading">
-        <view>
-          <view class="section-title">按模块归类</view>
-        </view>
-        <view class="section-count">{{records.length}} 条</view>
-      </view>
-
-      <view wx:if="{{recordGroups.length}}" class="project-record-list">
-        <view wx:for="{{recordGroups}}" wx:key="module" wx:for-item="group" class="record-group">
-          <view class="record-group-heading">
-            <view>
-              <view class="record-group-title">{{group.label}}</view>
-              <view class="record-group-trust">{{group.trustLabel}}</view>
-            </view>
-            <view class="record-group-count">{{group.records.length}} 条</view>
-          </view>
-          <view class="record-group-description">{{group.trustDescription}}</view>
-
-          <view wx:for="{{group.records}}" wx:key="id" wx:for-item="record" class="project-record-card record-card-{{record.theme}}">
-            <view class="record-heading">
-              <view class="record-index">{{record.displayIndex}}</view>
-              <view class="record-module">{{record.moduleLabel}}</view>
-              <view class="record-time">{{record.timeText}}</view>
-            </view>
-            <view class="record-title {{record.hasProjectMetadata ? 'record-title-project-config' : ''}}">{{record.title}}</view>
-            <view class="record-summary">{{record.summary}}</view>
-            <view wx:if="{{record.projectNote}}" class="record-summary record-project-note">配置备注：{{record.projectNote}}</view>
-            <view class="record-trust-chip">{{record.trustLabel}}</view>
-            <view class="record-actions">
-              <button wx:if="{{group.records.length > 1}}" class="record-action record-action-compare {{record.compareSelected ? 'record-action-selected' : ''}}" data-id="{{record.id}}" bindtap="toggleCompareRecord">{{record.compareSelected ? '已选择' : '加入对比'}}</button>
-              <button class="record-action record-action-primary" disabled="{{workspaceError}}" data-id="{{record.id}}" bindtap="restoreRecord">重新打开</button>
-              <button class="record-action record-action-danger" disabled="{{workspaceError}}" data-id="{{record.id}}" bindtap="removeProjectRecord">从项目移除</button>
-            </view>
-          </view>
-        </view>
-      </view>
-
-      <view wx:else class="project-empty">
-        <view class="project-empty-mark">＋</view>
-        <view class="project-empty-title">这个项目还没有记录</view>
-        <view class="project-empty-text">先把它设为当前项目，再进入任一计算工具点击“加入当前项目”。</view>
-      </view>
-    </block>
-
-    <view wx:elif="{{missing}}" class="project-empty project-missing">
-      <view class="project-empty-mark">!</view>
-      <view class="project-empty-title">项目不存在或已被删除</view>
-      <view class="project-empty-text">请返回“项目与记录”页面，重新选择一个现场项目。</view>
     </view>
   </view>
-</scroll-view>
-
-<canvas
-  id="projectReportCanvas"
-  canvas-id="projectReportCanvas"
-  class="project-report-canvas-offscreen"
-  width="{{reportCanvasWidth}}"
-  height="{{reportCanvasHeight}}"
-  style="width: {{reportCanvasWidth}}px; height: {{reportCanvasHeight}}px;"
-></canvas>
-
-<view wx:if="{{reportPreviewVisible}}" class="project-report-preview-overlay" bindtap="closeProjectReportPreview" catchtouchmove="preventTouchMove">
-  <view class="project-report-preview-sheet" catchtap="stopEvent">
-    <view class="project-report-preview-header">
-      <view>
-        <view class="project-report-preview-title">项目汇总长图</view>
-        <view class="project-report-preview-subtitle">点击图片可查看原图</view>
-      </view>
-      <button class="project-report-preview-close" bindtap="closeProjectReportPreview">关闭</button>
-    </view>
-    <scroll-view class="project-report-preview-scroll" scroll-y enhanced show-scrollbar="{{false}}">
-      <image class="project-report-preview-image" src="{{reportImagePath}}" mode="widthFix" bindtap="previewProjectReportImage" />
-    </scroll-view>
-    <view class="project-report-preview-actions">
-      <button class="project-report-preview-action project-report-preview-action-secondary" disabled="{{workspaceError}}" bindtap="saveProjectReportImage">保存到相册</button>
-      <button class="project-report-preview-action project-report-preview-action-primary" disabled="{{workspaceError}}" bindtap="shareProjectReportImage">转发图片</button>
-    </view>
-  </view>
-</view>
 </view>

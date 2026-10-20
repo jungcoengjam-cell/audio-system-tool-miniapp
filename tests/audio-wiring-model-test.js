@@ -2,7 +2,7 @@ const assert = require('assert')
 const fs = require('fs')
 const path = require('path')
 
-const { OUTPUT_OPTIONS, INPUT_OPTIONS, getWiringModel, buildWiringText } = require('../pages/audio-wiring/wiring-model')
+const { OUTPUT_OPTIONS, INPUT_OPTIONS, getFixedWiringSelections, getWiringModel, buildWiringText } = require('../pages/audio-wiring/wiring-model')
 const {
   drawWiringDiagram,
   getDiagramHeight,
@@ -12,11 +12,12 @@ const {
 } = require('../pages/audio-wiring/wiring-renderer')
 
 assert.deepStrictEqual(OUTPUT_OPTIONS.map((item) => item.id), [
-  'xlrBalanced', 'trsBalanced', 'terminalBalanced', 'stereo35', 'rcaMono', 'tsMono',
+  'xlrBalanced', 'trsBalanced', 'terminalBalanced', 'stereo35', 'rcaMono', 'tsMono', 'stereo635',
 ])
 assert.deepStrictEqual(INPUT_OPTIONS.map((item) => item.id), [
-  'xlrBalanced', 'trsBalanced', 'terminalBalanced', 'rcaStereo', 'tsStereo', 'rcaMono', 'tsMono',
+  'xlrBalanced', 'trsBalanced', 'terminalBalanced', 'rcaStereo', 'tsStereo', 'rcaMono', 'tsMono', 'stereo635', 'stereo35',
 ])
+assert.strictEqual(INPUT_OPTIONS.at(-1).label, '3.5 mm 立体声输入')
 const audioImages = [...OUTPUT_OPTIONS, ...INPUT_OPTIONS].map((item) => item.image).filter(Boolean)
 assert.ok(audioImages.every((image) => image.startsWith('/pages/audio-wiring/assets/')
   || image === '/assets/home/module-audio-wiring-catalog.png'))
@@ -24,7 +25,7 @@ audioImages.forEach((image) => {
   assert.ok(fs.existsSync(path.resolve(__dirname, '..', image.slice(1))), `missing image resource: ${image}`)
 })
 
-// Independent pin-level oracle for the 21 plans that need no user choice.
+// Independent pin-level oracle for the 26 plans that were direct before fixed routing.
 const DIRECT_EXPECTED = {
   'xlrBalanced>xlrBalanced': ['2>2', '3>3', '1>1'],
   'xlrBalanced>trsBalanced': ['2>T', '3>R', '1>S'],
@@ -47,12 +48,50 @@ const DIRECT_EXPECTED = {
   'tsMono>xlrBalanced': ['T>2', 'S>3', 'S>1'],
   'tsMono>trsBalanced': ['T>T', 'S>R', 'S>S'],
   'tsMono>terminalBalanced': ['T>+', 'S>−', 'S>G'],
+  'stereo35>xlrBalanced': ['T>L·2', 'R>R·2', 'S>L·3', 'S>L·1', 'S>R·3', 'S>R·1'],
+  'stereo35>trsBalanced': ['T>L·T', 'R>R·T', 'S>L·R', 'S>L·S', 'S>R·R', 'S>R·S'],
+  'stereo35>terminalBalanced': ['T>L·+', 'R>R·+', 'S>L·−', 'S>L·G', 'S>R·−', 'S>R·G'],
+  'stereo35>rcaMono': ['T>L·中心针', 'R>R·中心针', 'S>L·外壳', 'S>R·外壳'],
+  'stereo35>tsMono': ['T>L·T', 'R>R·T', 'S>L·S', 'S>R·S'],
+  'stereo35>stereo635': ['T>T', 'R>R', 'S>S'],
+  'xlrBalanced>stereo635': ['2>T', '2>R', '3>S', '1>S'],
+  'trsBalanced>stereo635': ['T>T', 'T>R', 'R>S', 'S>S'],
+  'terminalBalanced>stereo635': ['+>T', '+>R', '−>S', 'G>S'],
+  'rcaMono>stereo635': ['中心针>T', '中心针>R', '外壳>S'],
+  'tsMono>stereo635': ['T>T', 'T>R', 'S>S'],
+  'stereo635>xlrBalanced': ['T>L·2', 'R>R·2', 'S>L·3', 'S>L·1', 'S>R·3', 'S>R·1'],
+  'stereo635>trsBalanced': ['T>L·T', 'R>R·T', 'S>L·R', 'S>L·S', 'S>R·R', 'S>R·S'],
+  'stereo635>terminalBalanced': ['T>L·+', 'R>R·+', 'S>L·−', 'S>L·G', 'S>R·−', 'S>R·G'],
+  'stereo635>rcaMono': ['T>L·中心针', 'R>R·中心针', 'S>L·外壳', 'S>R·外壳'],
+  'stereo635>tsMono': ['T>L·T', 'R>R·T', 'S>L·S', 'S>R·S'],
+  'stereo635>rcaStereo': ['T>L中心', 'R>R中心', 'S>L外壳', 'S>R外壳'],
+  'stereo635>tsStereo': ['T>L·T', 'R>R·T', 'S>L·S', 'S>R·S'],
+  'stereo635>stereo635': ['T>T', 'R>R', 'S>S'],
+  'xlrBalanced>stereo35': ['2>T', '2>R', '3>S', '1>S'],
+  'trsBalanced>stereo35': ['T>T', 'T>R', 'R>S', 'S>S'],
+  'terminalBalanced>stereo35': ['+>T', '+>R', '−>S', 'G>S'],
+  'rcaMono>stereo35': ['中心针>T', '中心针>R', '外壳>S'],
+  'tsMono>stereo35': ['T>T', 'T>R', 'S>S'],
+  'stereo35>stereo35': ['T>T', 'R>R', 'S>S'],
+  'stereo635>stereo35': ['T>T', 'R>R', 'S>S'],
 }
 
 const allPairs = []
 OUTPUT_OPTIONS.forEach((output) => INPUT_OPTIONS.forEach((input) => allPairs.push(`${output.id}>${input.id}`)))
-assert.strictEqual(allPairs.length, 42)
-assert.strictEqual(Object.keys(DIRECT_EXPECTED).length, 21)
+assert.strictEqual(allPairs.length, 63)
+assert.strictEqual(Object.keys(DIRECT_EXPECTED).length, 47)
+assert.deepStrictEqual(getFixedWiringSelections('', 'tsMono'), {})
+assert.deepStrictEqual(getFixedWiringSelections('xlrBalanced', null), {})
+assert.deepStrictEqual(getFixedWiringSelections('unknown', 'tsMono'), {})
+assert.deepStrictEqual(getFixedWiringSelections('xlrBalanced', 'stereo635'),
+  { outputMode: 'coldReturn', destinationChannel: 'both' })
+assert.deepStrictEqual(getFixedWiringSelections('tsMono', 'stereo635'), { destinationChannel: 'both' })
+assert.deepStrictEqual(getFixedWiringSelections('stereo35', 'stereo635'), {})
+assert.deepStrictEqual(getFixedWiringSelections('stereo635', 'tsMono'), { sourceChannel: 'both' })
+assert.deepStrictEqual(getFixedWiringSelections('xlrBalanced', 'stereo35'),
+  { outputMode: 'coldReturn', destinationChannel: 'both' })
+assert.deepStrictEqual(getFixedWiringSelections('tsMono', 'stereo35'), { destinationChannel: 'both' })
+assert.deepStrictEqual(getFixedWiringSelections('stereo35', 'stereo35'), {})
 
 allPairs.forEach((pair) => {
   const [outputId, inputId] = pair.split('>')
@@ -65,14 +104,20 @@ allPairs.forEach((pair) => {
     assert.ok(model.notes.length > 0 && model.sources.length > 0, pair)
     assert.doesNotThrow(() => buildWiringText(model), pair)
   } else {
-    assert.strictEqual(model.status, 'needs-choice', pair)
-    assert.strictEqual(model.supported, false, pair)
-    assert.ok(model.reason.length > 0, pair)
-    assert.ok(model.requirements.length > 0, pair)
-    assert.deepStrictEqual(model.connections, [], pair)
-    assert.throws(() => buildWiringText(model), /不能生成接线文本/, pair)
+    assert.strictEqual(model.status, 'ready', pair)
+    assert.strictEqual(model.supported, true, pair)
+    assert.ok(model.connections.length > 0, pair)
+    assert.deepStrictEqual(model.requirements, [], pair)
+    assert.doesNotThrow(() => buildWiringText(model), pair)
   }
 })
+const stereo35InputModel = getWiringModel('stereo35', 'stereo35')
+assert.ok(stereo35InputModel.connections.some((connection) =>
+  connection.fromPin === 'S' && connection.fromLabel === 'S 套筒（源端公共回路）'),
+'existing 3.5 mm stereo output pin text remains unchanged')
+assert.ok(stereo35InputModel.connections.some((connection) =>
+  connection.toPin === 'S' && connection.toLabel === 'S 套筒（公共回路 G）'),
+'3.5 mm stereo input describes S as the common return G')
 
 // The following fixtures spell out the source/target pin truth independently
 // of the model implementation; each legal choice combination is checked.
@@ -115,21 +160,28 @@ balancedIds.forEach((outputId) => monoIds.forEach((inputId) => {
   assert.strictEqual(model.unconnectedPins.some((item) => item.side === 'output' && item.pin === source.negative), false)
   selectedScenarioCount += 1
 }))
-const coldOptions = getWiringModel('xlrBalanced', 'tsMono').requirements[0].options
-assert.deepStrictEqual(coldOptions.map((option) => option.id), ['coldReturn'])
-assert.strictEqual(getWiringModel('xlrBalanced', 'tsMono').requirements[0].title, '冷端接法')
-assert.strictEqual(getWiringModel('xlrBalanced', 'tsMono').requirements[0].hint, '')
-assert.strictEqual(coldOptions[0].label, '冷端与屏蔽在输入端汇接')
-assert.ok(coldOptions[0].detail.includes('两台设备手册允许'))
-const sourceChannelOptions = getWiringModel('stereo35', 'tsMono').requirements[0].options
-assert.ok(sourceChannelOptions.every((option) => option.detail.includes('不接')))
-assert.strictEqual(getWiringModel('stereo35', 'tsMono').requirements[0].hint,
-  '本直连接法只取一路，可能遗漏另一声道内容；未选声道不接。')
-const destinationOptions = getWiringModel('tsMono', 'rcaStereo').requirements[0].options
-assert.ok(destinationOptions.find((option) => option.id === 'both').detail.includes('确认允许负载'))
+assert.deepStrictEqual(getFixedWiringSelections('xlrBalanced', 'tsMono'), { outputMode: 'coldReturn' })
+assert.deepStrictEqual(getWiringModel('xlrBalanced', 'tsMono').connections.map((wire) => `${wire.fromPin}>${wire.toPin}`),
+  ['2>T', '3>S', '1>S'], 'balanced-to-mono immediately uses the fixed input-end return')
+const fixedStereoMono = getWiringModel('stereo35', 'tsMono')
+assert.strictEqual(fixedStereoMono.status, 'ready', 'stereo to mono always keeps T and R as separate channels')
+assert.deepStrictEqual(fixedStereoMono.requirements, [])
+assert.deepStrictEqual(fixedStereoMono.unconnectedPins, [])
+assert.deepStrictEqual(getFixedWiringSelections('stereo35', 'tsMono'), { sourceChannel: 'both' })
+assert.strictEqual(fixedStereoMono.input.channelCount, 2)
+assert.ok(fixedStereoMono.input.connectorType.includes('×2'))
+assert.ok(fixedStereoMono.input.signalLabel.includes('L/R 各一路非平衡单声道'))
+;['left', 'right', 'both'].forEach((sourceChannel) => {
+  assert.deepStrictEqual(getWiringModel('stereo35', 'tsMono', { sourceChannel }).connections
+    .map((wire) => `${wire.fromPin}>${wire.toPin}`), DIRECT_EXPECTED['stereo35>tsMono'],
+  `legacy ${sourceChannel} input cannot drop either fixed stereo channel`)
+})
+assert.deepStrictEqual(getFixedWiringSelections('tsMono', 'rcaStereo'), { destinationChannel: 'both' })
+assert.deepStrictEqual(getWiringModel('tsMono', 'rcaStereo').connections.map((wire) => `${wire.fromPin}>${wire.toPin}`),
+  ['T>L中心', 'S>L外壳', 'T>R中心', 'S>R外壳'], 'mono-to-dual immediately uses the fixed 1-to-2 route')
 
 balancedIds.forEach((outputId) => dualIds.forEach((inputId) => {
-  ;['left', 'right', 'both'].forEach((destinationChannel) => {
+  ;['both'].forEach((destinationChannel) => {
     const source = BALANCED_PINS[outputId]
     const channels = destinationChannel === 'both' ? ['left', 'right'] : [destinationChannel]
     const expected = []
@@ -140,35 +192,29 @@ balancedIds.forEach((outputId) => dualIds.forEach((inputId) => {
       expected.push(`${source.shield}>${target.return}`)
     })
     const model = assertReadyPins(outputId, inputId, { outputMode: 'coldReturn', destinationChannel }, expected)
-    if (destinationChannel === 'both') assert.ok(model.criticalNotes.some((note) => note.includes('不是混音')))
-    else assert.strictEqual(model.unconnectedPins.filter((item) => item.side === 'input').length, 2)
+    assert.ok(model.criticalNotes.some((note) => note.includes('不是混音')))
     selectedScenarioCount += 1
   })
 }))
 
 ;['xlrBalanced', 'trsBalanced', 'terminalBalanced', 'rcaMono', 'tsMono'].forEach((inputId) => {
-  ;['left', 'right'].forEach((sourceChannel) => {
-    let expected
-    if (BALANCED_PINS[inputId]) {
-      const target = BALANCED_PINS[inputId]
-      expected = [
-        `${sourceChannel === 'left' ? 'T' : 'R'}>${target.positive}`,
-        `S>${target.negative}`,
-        `S>${target.shield}`,
-      ]
-    } else {
-      const target = MONO_PINS[inputId]
-      expected = [`${sourceChannel === 'left' ? 'T' : 'R'}>${target.signal}`, `S>${target.return}`]
-    }
-    const model = assertReadyPins('stereo35', inputId, { sourceChannel }, expected)
-    assert.strictEqual(model.unconnectedPins.length, 1)
-    assert.ok(buildWiringText(model).includes('保持未接'))
-    selectedScenarioCount += 1
-  })
+  const model = getWiringModel('stereo35', inputId, { sourceChannel: 'left' })
+  assert.strictEqual(model.input.channelCount, 2, `${inputId} exposes independent L/R input heads`)
+  assert.deepStrictEqual(model.unconnectedPins, [], `${inputId} does not discard the right channel`)
+  assert.ok(model.connections.some((wire) => wire.fromPin === 'T' && wire.toPin.startsWith('L·')))
+  assert.ok(model.connections.some((wire) => wire.fromPin === 'R' && wire.toPin.startsWith('R·')))
+  assert.strictEqual(model.connections.filter((wire) => wire.fromPin === 'S').length,
+    BALANCED_PINS[inputId] ? 4 : 2)
+  if (BALANCED_PINS[inputId]) {
+    assert.ok(model.criticalNotes.some((note) => note.includes('不会生成平衡信号')))
+    assert.strictEqual(model.input.signalLabel, 'LINE IN · L/R 各一路平衡单声道')
+  }
+  assert.ok(!buildWiringText(model).includes('R 信号输出保持未接'))
+  assert.deepStrictEqual(model.connections.map((wire) => `${wire.fromPin}>${wire.toPin}`), DIRECT_EXPECTED[`stereo35>${inputId}`])
 })
 
 monoIds.forEach((outputId) => dualIds.forEach((inputId) => {
-  ;['left', 'right', 'both'].forEach((destinationChannel) => {
+  ;['both'].forEach((destinationChannel) => {
     const source = MONO_PINS[outputId]
     const channels = destinationChannel === 'both' ? ['left', 'right'] : [destinationChannel]
     const expected = []
@@ -177,13 +223,33 @@ monoIds.forEach((outputId) => dualIds.forEach((inputId) => {
       expected.push(`${source.signal}>${target.signal}`, `${source.return}>${target.return}`)
     })
     const model = assertReadyPins(outputId, inputId, { destinationChannel }, expected)
-    if (destinationChannel === 'both') assert.ok(model.criticalNotes.some((note) => note.includes('不是混音')))
-    else assert.strictEqual(model.unconnectedPins.filter((item) => item.side === 'input').length, 2)
+    assert.ok(model.criticalNotes.some((note) => note.includes('不是混音')))
     selectedScenarioCount += 1
   })
 }))
-assert.strictEqual(selectedScenarioCount, 46)
-assert.strictEqual(Object.keys(DIRECT_EXPECTED).length + selectedScenarioCount, 67)
+assert.strictEqual(selectedScenarioCount, 16)
+assert.strictEqual(Object.keys(DIRECT_EXPECTED).length + selectedScenarioCount, 63)
+
+;['stereo35>stereo635', 'stereo635>stereo635'].forEach((pair) => {
+  const model = getWiringModel(...pair.split('>'))
+  assert.deepStrictEqual(model.requirements, [], `${pair} does not add a selector-confirmation step`)
+  assert.deepStrictEqual(model.unconnectedPins, [], `${pair} retains T/R/G`)
+  assert.deepStrictEqual(model.connections.map((wire) => `${wire.fromPin}>${wire.toPin}`), DIRECT_EXPECTED[pair])
+  assert.ok(model.connections.some((wire) => wire.fromPin === 'R' && wire.toPin === 'R'),
+    `${pair} retains the right stereo channel`)
+})
+
+;['xlrBalanced', 'trsBalanced', 'terminalBalanced'].forEach((outputId) => {
+  const model = getWiringModel(outputId, 'stereo635')
+  assert.deepStrictEqual(model.requirements, [])
+  assert.strictEqual(model.connections.length, 4)
+  assert.strictEqual(model.connections.filter((wire) => wire.fromRole === 'positive').length, 2,
+    `${outputId} splits + to the L and R signal contacts`)
+  assert.deepStrictEqual(model.connections.filter((wire) => wire.toPin === 'S').map((wire) => wire.fromRole),
+    ['negative', 'shield'], `${outputId} joins cold and shield only at input S/G`)
+  assert.deepStrictEqual(getFixedWiringSelections(outputId, 'stereo635'),
+    { outputMode: 'coldReturn', destinationChannel: 'both' })
+})
 
 const irrelevantOldChoices = getWiringModel('xlrBalanced', 'terminalBalanced', {
   outputMode: 'coldOpen', sourceChannel: 'right',
@@ -192,34 +258,34 @@ assert.deepStrictEqual(irrelevantOldChoices.selectionSummary, [], 'irrelevant ol
 assert.deepStrictEqual(irrelevantOldChoices.criticalNotes, [])
 assert.deepStrictEqual(irrelevantOldChoices.connections.map((connection) => `${connection.fromPin}>${connection.toPin}`),
   ['2>+', '3>−', '1>G'])
+assert.deepStrictEqual(getFixedWiringSelections('xlrBalanced', 'rcaStereo'),
+  { outputMode: 'coldReturn', destinationChannel: 'both' })
+assert.strictEqual(getWiringModel('xlrBalanced', 'rcaStereo').status, 'ready',
+  'balanced-to-dual uses the fixed cold-return and 1-to-2 route without a confirmation state')
+assert.strictEqual(getWiringModel('tsMono', 'rcaStereo', { destinationChannel: 'left' }).status, 'ready',
+  'legacy one-sided selections do not replace the fixed 1-to-2 route')
+assert.deepStrictEqual(getWiringModel('tsMono', 'rcaStereo', { destinationChannel: 'left' }).connections
+  .map((wire) => `${wire.fromPin}>${wire.toPin}`),
+['T>L中心', 'S>L外壳', 'T>R中心', 'S>R外壳'])
 
 balancedIds.forEach((outputId) => ['rcaMono', 'tsMono', 'rcaStereo', 'tsStereo'].forEach((inputId) => {
   const staleSelection = getWiringModel(outputId, inputId, { outputMode: 'coldOpen', destinationChannel: 'left' })
-  assert.strictEqual(staleSelection.status, 'needs-choice')
-  assert.deepStrictEqual(staleSelection.connections, [])
-  assert.throws(() => buildWiringText(staleSelection), /不能生成接线文本/)
+  assert.strictEqual(staleSelection.status, 'ready')
+  assert.strictEqual(staleSelection.supported, true)
+  assert.ok(staleSelection.connections.length > 0)
+  assert.deepStrictEqual(staleSelection.requirements, [])
+  assert.doesNotThrow(() => buildWiringText(staleSelection))
 }))
 assert.ok(getWiringModel('tsMono', 'rcaStereo', { destinationChannel: 'both' }).cableSummary.includes('Y 分线'))
 
-// Missing, invalid, and inapplicable connector ids never produce wiring.
-allPairs.forEach((pair) => {
-  const [outputId, inputId] = pair.split('>')
-  if (DIRECT_EXPECTED[pair]) return
-  const missing = getWiringModel(outputId, inputId)
-  assert.strictEqual(missing.status, 'needs-choice', pair)
-  assert.deepStrictEqual(missing.connections, [], pair)
-  assert.throws(() => buildWiringText(missing), /不能生成接线文本/, pair)
-  const bad = getWiringModel(outputId, inputId, {
-    outputMode: 'ground-it', sourceChannel: 'center', destinationChannel: 'mix',
-  })
-  assert.strictEqual(bad.status, 'needs-choice', pair)
-  assert.deepStrictEqual(bad.connections, [], pair)
-})
-balancedIds.forEach((outputId) => ['rcaMono', 'tsMono', 'rcaStereo', 'tsStereo'].forEach((inputId) => {
-  const model = getWiringModel(outputId, inputId)
-  const outputMode = model.requirements.find((requirement) => requirement.id === 'outputMode')
-  assert.deepStrictEqual(outputMode.options.map((option) => option.id), ['coldReturn'])
-}))
+// Unknown IDs remain unsupported; stale UI arguments cannot change a known fixed plan.
+const staleColdReturn = getWiringModel('xlrBalanced', 'rcaMono', { outputMode: 'coldOpen' })
+assert.strictEqual(staleColdReturn.status, 'ready')
+assert.deepStrictEqual(staleColdReturn.connections.map((wire) => `${wire.fromPin}>${wire.toPin}`),
+  ['2>中心针', '3>外壳', '1>外壳'])
+assert.ok(staleColdReturn.criticalNotes.some((note) => note.includes('手册明确允许')))
+assert.strictEqual(getWiringModel('unknown-output', 'tsMono').status, 'unsupported')
+assert.strictEqual(getWiringModel('xlrBalanced', 'unknown-input').status, 'unsupported')
 
 const defaultModel = getWiringModel('xlrBalanced', 'terminalBalanced')
 assert.strictEqual(defaultModel.title, '3 针 XLR → 平衡端子')
@@ -238,16 +304,16 @@ assert.ok(breakout.notes.some((note) => note.includes('T/R 分别对应左/右�
 assert.ok(breakout.notes.some((note) => note.includes('L/R 不可直接并接')))
 assert.ok(!breakout.notes.some((note) => note.includes('只取一路') || note.includes('遗漏另一声道')))
 const stereoMono = getWiringModel('stereo35', 'rcaMono')
-assert.ok(stereoMono.notes.some((note) => note.includes('本直连接法只取一路，可能遗漏另一声道内容')))
-assert.ok(stereoMono.notes.some((note) => note.includes('需要两边内容时先通过播放设备或混音器合成为单声道')))
-assert.ok(stereoMono.notes.some((note) => note.includes('L/R 不可直接并接')))
+assert.ok(stereoMono.notes.some((note) => note.includes('T（L）与 R 分别接入 L/R 两个独立单声道输入')))
+assert.ok(!stereoMono.notes.some((note) => note.includes('R 信号保持未接') || note.includes('只取一路')))
+assert.ok(stereoMono.notes.some((note) => note.includes('不并接')))
 assert.deepStrictEqual(breakout.connections.filter((connection) => connection.networkId === 'shield')
   .map((connection) => connection.toLabel), ['左 RCA 外壳（L 回路）', '右 RCA 外壳（R 回路）'])
 assert.deepStrictEqual(breakout.connections.slice(0, 2).map((connection) => connection.toLabel),
   ['左 RCA 中心针（L）', '右 RCA 中心针（R）'])
 assert.ok(breakout.notes.some((note) => note.includes('TRRS')))
 assert.ok(breakout.notes.some((note) => note.includes('音量')))
-assert.strictEqual(getWiringModel('stereo35', 'rcaMono').requirements[0].id, 'sourceChannel')
+assert.deepStrictEqual(getWiringModel('stereo35', 'rcaMono').requirements, [])
 
 const text = buildWiringText(breakout)
 assert.ok(text.includes('T 尖端（左声道 L） → 左 RCA 中心针（L）'))
@@ -380,8 +446,8 @@ assert.ok(tsStereoCanvas.calls.some((call) => call[0] === 'fillText' && call[1] 
   'left TS head is explicitly marked L')
 assert.ok(tsStereoCanvas.calls.some((call) => call[0] === 'fillText' && call[1] === 'R' && call[2] > 260 && call[3] >= 120 && call[3] < 190),
   'right TS head is explicitly marked R')
-assert.ok(tsStereoCanvas.calls.some((call) => call[0] === 'fillText' && call[1] === '3.5 TRS'),
-  '3.5 mm TRS header remains a complete connector label')
+assert.ok(tsStereoCanvas.calls.some((call) => call[0] === 'fillText' && call[1] === '3.5 立体声'),
+  '3.5 mm stereo header uses the plain user-facing connector name')
 assert.ok(tsStereoCanvas.calls.some((call) => call[0] === 'fillText' && call[1] === '双TS L/R'),
   'dual TS header remains a complete connector label')
 assert.ok(tsStereoCanvas.calls.some((call) => call[0] === 'setFillStyle' && call[1] === '#7257ce'),

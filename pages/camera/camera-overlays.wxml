@@ -1,0 +1,84 @@
+<view wx:if="{{projectDialogVisible}}" id="cameraProjectOverlay" class="camera-project-overlay {{projectKeyboardOpen ? 'camera-project-keyboard-open' : ''}} {{projectDialogClosing ? 'camera-project-dialog-closing' : ''}}" style="bottom:{{projectKeyboardBottom}}px;" bindtap="closeCameraProjectDialog" catchtouchmove="preventCameraProjectTouchMove">
+  <view id="cameraProjectSheet" class="camera-project-sheet {{projectKeyboardOpen ? 'camera-project-keyboard-open' : ''}}" style="{{projectKeyboardOpen ? 'max-height:' + projectSheetMaxHeight + 'px;' : ''}}" catchtap="stopCameraProjectTap">
+    <view class="camera-project-header">
+      <view class="camera-project-title">{{projectDialogStep == 'create' ? '新建项目' : projectDialogStep == 'confirm' ? '配置名称与备注' : projectDialogStep == 'success' ? '保存完成' : '保存到项目'}}</view>
+      <button class="camera-project-close" aria-label="关闭项目保存" disabled="{{projectSaving}}" bindtap="closeCameraProjectDialog">×</button>
+    </view>
+
+    <scroll-view wx:if="{{projectDialogStep == 'select'}}" id="cameraProjectSelect" class="camera-project-body camera-project-select-body" scroll-y scroll-into-view="{{projectFocusedInputId}}" enhanced show-scrollbar="{{false}}" aria-label="选择项目">
+      <input id="projectSearchText" class="camera-project-search" type="text" value="{{projectSearchText}}" placeholder="搜索项目" placeholder-class="camera-project-placeholder" data-field="projectSearchText" data-step="select" data-dialog-revision="{{projectDialogRevision}}" data-focus-episode="{{projectFocusEpisode}}" bindinput="onCameraProjectSearch" bindfocus="beginCameraProjectInputFocus" bindblur="endCameraProjectInputFocus" bindkeyboardheightchange="onCameraProjectKeyboardHeightChange" adjust-position="{{false}}" cursor-spacing="12" />
+      <view wx:if="{{projectLoadFailed}}" class="camera-project-error-state">
+        <view>读取项目列表失败</view>
+        <view class="camera-project-muted">请检查本地存储后重试。</view>
+      </view>
+      <view wx:elif="{{projectProjects.length}}" class="camera-project-list" aria-label="项目列表">
+        <view wx:for="{{filteredProjects}}" wx:key="id" class="camera-project-row" data-id="{{item.id}}" bindtap="selectCameraProjectTarget">
+          <view class="camera-project-row-copy">
+            <view class="camera-project-row-name">{{item.name}}</view>
+          </view>
+          <view class="camera-project-row-arrow">›</view>
+        </view>
+        <view wx:if="{{!filteredProjects.length}}" class="camera-project-empty">没有匹配的项目</view>
+      </view>
+      <view wx:elif="{{!projectLoadFailed}}" class="camera-project-empty">
+        <view>还没有现场项目</view>
+        <view class="camera-project-muted">新建后可将本次摄像机结果保存到项目。</view>
+      </view>
+      <view wx:if="{{projectError}}" class="camera-project-error">{{projectError}}</view>
+    </scroll-view>
+
+    <scroll-view wx:elif="{{projectDialogStep == 'create'}}" id="cameraProjectCreate" class="camera-project-body camera-project-create-body" scroll-y scroll-into-view="{{projectFocusedInputId}}" enhanced show-scrollbar="{{false}}" aria-label="新建项目">
+      <input id="projectNameText" class="camera-project-name-input" type="text" value="{{projectNameText}}" maxlength="30" placeholder="例如：三楼会议室" placeholder-class="camera-project-placeholder" data-field="projectNameText" data-step="create" data-dialog-revision="{{projectDialogRevision}}" data-focus-episode="{{projectFocusEpisode}}" bindinput="onCameraProjectNameInput" bindfocus="beginCameraProjectInputFocus" bindblur="endCameraProjectInputFocus" bindkeyboardheightchange="onCameraProjectKeyboardHeightChange" adjust-position="{{false}}" cursor-spacing="12" />
+      <view class="camera-project-muted">名称最多 30 字。创建后可继续设置本次配置名称与备注。</view>
+      <view wx:if="{{projectError}}" class="camera-project-error">{{projectError}}</view>
+    </scroll-view>
+
+    <scroll-view wx:elif="{{projectDialogStep == 'confirm'}}" id="cameraProjectConfirm" class="camera-project-body camera-project-confirm-body" scroll-y scroll-into-view="{{projectFocusedInputId}}" enhanced show-scrollbar="{{false}}" aria-label="确认保存到项目">
+      <view class="camera-project-target">
+        <view class="camera-project-field-label">保存到</view>
+        <view class="camera-project-target-name">{{projectTarget.name}}</view>
+      </view>
+      <view class="camera-project-field">
+        <view class="camera-project-field-label">配置名称</view>
+        <input id="projectConfigName" class="camera-project-name-input" type="text" value="{{projectConfigName}}" maxlength="60" placeholder="为本项目命名此配置" placeholder-class="camera-project-placeholder" data-field="projectConfigName" data-step="confirm" data-dialog-revision="{{projectDialogRevision}}" data-focus-episode="{{projectFocusEpisode}}" bindinput="onCameraProjectConfigNameInput" bindfocus="beginCameraProjectInputFocus" bindblur="endCameraProjectInputFocus" bindkeyboardheightchange="onCameraProjectKeyboardHeightChange" adjust-position="{{false}}" cursor-spacing="12" />
+        <view wx:if="{{projectNameError}}" class="camera-project-field-error">{{projectNameError}}</view>
+      </view>
+      <view class="camera-project-field">
+        <view class="camera-project-field-label">现场备注（选填）</view>
+        <textarea id="projectConfigNote" class="camera-project-note-input" value="{{projectConfigNote}}" maxlength="200" placeholder="填写安装位置或现场条件" placeholder-class="camera-project-placeholder" data-field="projectConfigNote" data-step="confirm" data-dialog-revision="{{projectDialogRevision}}" data-focus-episode="{{projectFocusEpisode}}" bindinput="onCameraProjectConfigNoteInput" bindfocus="beginCameraProjectInputFocus" bindblur="endCameraProjectInputFocus" bindkeyboardheightchange="onCameraProjectKeyboardHeightChange" adjust-position="{{false}}" cursor-spacing="12" auto-height="{{false}}" />
+        <view wx:if="{{projectNoteError}}" class="camera-project-field-error">{{projectNoteError}}</view>
+      </view>
+      <view class="camera-project-preview">
+        <view class="camera-project-preview-title">{{projectFrozenTitle}}</view>
+        <view class="camera-project-preview-summary">{{projectFrozenSummary}}</view>
+      </view>
+      <view wx:if="{{projectError}}" class="camera-project-error">{{projectError}}</view>
+    </scroll-view>
+
+    <scroll-view wx:elif="{{projectDialogStep == 'success'}}" id="cameraProjectSuccess" class="camera-project-body camera-project-success" scroll-y enhanced show-scrollbar="{{false}}" aria-label="保存结果">
+      <view class="camera-project-success-title">已保存到项目</view>
+      <view class="camera-project-success-detail">{{projectTarget.name}}</view>
+      <view class="camera-project-success-detail">配置：{{projectSavedConfigName}}</view>
+      <view class="camera-project-success-detail">{{projectFrozenSummary}}</view>
+    </scroll-view>
+
+    <view class="camera-project-footer">
+      <block wx:if="{{projectDialogStep == 'select'}}">
+        <button wx:if="{{projectLoadFailed}}" class="camera-project-button camera-project-button-primary" bindtap="retryCameraProjectRead">重试读取</button>
+        <button wx:else class="camera-project-button camera-project-button-primary" bindtap="openCameraProjectCreateForm">新建项目</button>
+      </block>
+      <block wx:elif="{{projectDialogStep == 'create'}}">
+        <button class="camera-project-button" bindtap="returnToCameraProjectSelection">{{projectSaveBlocked ? '关闭后重新保存' : '返回项目列表'}}</button>
+        <button class="camera-project-button camera-project-button-primary" disabled="{{projectSaving || projectSaveBlocked}}" bindtap="createCameraProjectFromForm">创建并继续</button>
+      </block>
+      <block wx:elif="{{projectDialogStep == 'confirm'}}">
+        <button class="camera-project-button" disabled="{{projectSaving}}" bindtap="returnToCameraProjectSelection">{{projectSaveBlocked ? '关闭后重新保存' : '返回项目列表'}}</button>
+        <button class="camera-project-button camera-project-button-primary" disabled="{{projectSaving || projectSaveBlocked}}" bindtap="saveCameraProjectTarget">{{projectSaving ? '正在保存…' : projectError && !projectLoadFailed ? '重试保存' : '确认保存'}}</button>
+      </block>
+      <block wx:else>
+        <button class="camera-project-button camera-project-button-primary" bindtap="closeCameraProjectDialog">完成</button>
+      </block>
+    </view>
+  </view>
+</view>
+

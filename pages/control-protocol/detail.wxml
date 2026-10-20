@@ -1,109 +1,167 @@
-<scroll-view class="protocol-page" scroll-y enhanced show-scrollbar="{{false}}">
+<scroll-view class="protocol-page" scroll-y enhanced show-scrollbar="{{false}}" scroll-top="{{readerScrollTop}}" bindscroll="onReaderScroll">
   <view class="protocol-content">
     <view wx:if="{{invalidGroup}}" class="invalid-card">
       <view class="invalid-mark">⌕</view>
-      <view class="invalid-title">控制卡资料不可用</view>
+      <view class="invalid-title">协议资料不可用</view>
       <view class="invalid-copy">{{statusMessage}}</view>
-      <button class="return-button" bindtap="returnToGallery">返回控制卡图库</button>
+      <button class="return-button" bindtap="returnToGallery">返回协议速查</button>
     </view>
 
-    <view wx:if="{{group}}" class="page-heading">
-      <view class="page-title">{{group.title}}</view>
-    </view>
+    <block wx:if="{{currentDeviceRef}}">
+      <view class="device-header">
+        <view class="device-photo-touch" wx:if="{{mainPhoto && !mainPhoto.imageFailed}}" data-path="{{mainPhoto.path}}" bindtap="previewPhoto">
+          <image class="device-photo" src="{{mainPhoto.path}}" mode="aspectFit" data-path="{{mainPhoto.path}}" binderror="onPhotoError" />
+          <view class="photo-zoom-mark" data-path="{{mainPhoto.path}}" catchtap="previewPhoto" aria-label="查看原图">⌕</view>
+        </view>
+        <view wx:elif="{{mainPhoto}}" class="device-photo-failed" data-path="{{mainPhoto.path}}" catchtap="retryPhoto">
+          <view class="photo-missing-mark">▧</view>
+          <view>照片加载失败</view>
+          <view class="photo-retry">点此重试</view>
+        </view>
+        <view wx:else class="device-photo-failed">
+          <view class="photo-missing-mark">▧</view>
+          <view>暂无可查看照片</view>
+        </view>
 
-    <view wx:if="{{developmentManual}}" class="development-manual-card">
-      <view class="manual-transport-tabs">
+        <view class="device-identity">
+          <button class="device-select-button" bindtap="openDeviceSelector" aria-label="选择设备：{{deviceTitle}}">
+            <text class="device-title">{{deviceTitle}}</text><view class="device-chevron" aria-hidden="true"></view>
+          </button>
+        </view>
+      </view>
+
+      <view wx:if="{{scopeSummary}}" class="scope-line">适用：{{scopeSummary}}</view>
+
+      <view wx:if="{{manualTransportTabs.length > 1}}" class="transport-segment">
         <button wx:for="{{manualTransportTabs}}" wx:for-item="tab" wx:key="id"
-          class="manual-transport-tab {{tab.sourceIndex == manualTransportIndex ? 'manual-transport-tab-active' : ''}}"
-          data-index="{{tab.sourceIndex}}" bindtap="selectManualTransport">{{tab.label}}</button>
+          class="transport-tab {{tab.id == manualTransport.id ? 'transport-tab-active' : ''}}"
+          data-index="{{tab.sourceIndex}}" bindtap="selectManualTransport">{{tab.displayLabel}}</button>
       </view>
-      <view wx:if="{{manualTransport}}" class="manual-transport">
-        <view class="manual-connection-params">{{manualTransport.parameters}}</view>
+      <view wx:elif="{{manualTransportTabs.length == 1}}" class="single-transport">
+        {{manualTransportTabs[0].displayLabel}} · {{manualTransportTabs[0].label}}
+      </view>
 
-        <view wx:if="{{manualTransport.id == 'udp'}}" class="manual-mac-input-card">
-          <view class="manual-mac-label">现场控制器 MAC 地址</view>
-          <view class="manual-mac-row">
-            <input class="manual-mac-input" value="{{deviceMacInput}}" maxlength="12" placeholder="输入12位十六进制字符" confirm-type="done" bindinput="onDeviceMacInput" />
-            <button class="manual-mac-clear" bindtap="clearDeviceMac">清空</button>
-          </view>
-          <view class="manual-meta">读取现场标签，输入无分隔的12位十六进制字符。</view>
-          <view class="manual-meta">{{deviceMacValid ? '当前替换值：' + deviceMacFormatted : '请填写当前控制卡的有效 MAC，才能复制 UDP 指令'}}</view>
+      <view wx:if="{{manualTransport}}" class="parameter-summary">{{manualTransport.parameters}}</view>
+      <view wx:elif="{{protocol}}" class="parameter-summary">{{protocol.transportSummary}}</view>
+      <view wx:if="{{!manual && !protocol && group}}" class="resolution-note">{{statusMessage}}</view>
+
+      <view wx:if="{{manualTransport && manualTransport.id == 'udp'}}" class="mac-input-card">
+        <view class="mac-input-label">现场控制器 MAC 地址</view>
+        <view class="mac-input-row">
+          <input class="mac-input" value="{{deviceMacInput}}" maxlength="12" placeholder="输入12位十六进制字符" confirm-type="done" bindinput="onDeviceMacInput" />
+          <button class="mac-clear" bindtap="clearDeviceMac">清空</button>
         </view>
+        <view wx:if="{{deviceMacValid}}" class="mac-input-hint">{{deviceMacFormatted}}</view>
+      </view>
 
-        <view class="manual-section-title">常用操作</view>
-        <view wx:for="{{commonManualCommands}}" wx:for-item="command" wx:for-index="commandIndex" wx:key="id" class="manual-command manual-command-featured">
-          <view class="manual-command-head"><view class="manual-command-label">{{command.label}}</view><button class="manual-copy-button" data-command-id="{{command.id}}" disabled="{{!command.copyEnabled}}" bindtap="copyManualCommand">复制</button></view>
-          <view class="manual-command-frame">{{command.displayFrame}}</view>
+      <view wx:if="{{manual}}" class="commands-section">
+        <view class="section-heading">
+          <view class="section-title">常用操作</view>
+          <view class="section-count">{{commonManualCommands.length}} 条</view>
         </view>
-
-        <view class="manual-section-title loop-title">选择回路（{{selectedLoopLabel}}）</view>
-        <picker class="loop-picker" mode="selector" range="{{loopOptions}}" value="{{selectedLoopIndex}}" bindchange="selectManualLoop">
-          <view class="loop-picker-value">{{selectedLoopLabel}}<text class="loop-picker-arrow">更换⌄</text></view>
-        </picker>
-        <view wx:for="{{selectedLoopCommands}}" wx:for-item="command" wx:for-index="commandIndex" wx:key="id" class="manual-command manual-command-featured">
-          <view class="manual-command-head"><view class="manual-command-label">{{command.label}}</view><button class="manual-copy-button" data-command-id="{{command.id}}" disabled="{{!command.copyEnabled}}" bindtap="copyManualCommand">复制</button></view>
-          <view class="manual-command-frame">{{command.displayFrame}}</view>
-        </view>
-
-        <button class="manual-section-toggle" bindtap="toggleManualWrites">{{showManualWrites ? '收起' : '展开'}}其余控制请求（{{manualWriteCommands.length}}）</button>
-        <view wx:if="{{showManualWrites}}" class="manual-command-list">
-          <view wx:for="{{manualWriteCommands}}" wx:for-item="command" wx:for-index="commandIndex" wx:key="id" class="manual-command manual-command-featured">
-            <view class="manual-command-head"><view class="manual-command-label">{{command.label}}</view><button class="manual-copy-button" data-command-id="{{command.id}}" disabled="{{!command.copyEnabled}}" bindtap="copyManualCommand">复制</button></view>
-            <view class="manual-command-frame">{{command.displayFrame}}</view>
+        <view class="command-list">
+          <view wx:for="{{commonManualCommands}}" wx:for-item="command" wx:key="id" class="command-row">
+            <view class="command-copy">
+              <view class="command-label">{{command.label}}</view>
+              <view class="command-frame">{{command.displayFrame}}</view>
+            </view>
+            <button class="copy-glyph" aria-label="复制{{command.label}}" data-command-id="{{command.id}}" disabled="{{!command.copyEnabled}}" catchtap="copyManualCommand"><view class="copy-icon" aria-hidden="true"></view></button>
           </view>
         </view>
 
-        <!-- Keep the visible loop number when switching TCP/RTU to compare the same circuit. -->
-      </view>
-    </view>
+        <view class="loop-heading">
+          <view class="section-title">选择回路</view>
+          <picker class="loop-picker" mode="selector" range="{{loopOptions}}" value="{{selectedLoopIndex}}" bindchange="selectManualLoop">
+            <view class="loop-picker-value">{{selectedLoopLabel}}<view class="loop-picker-arrow" aria-hidden="true"></view></view>
+          </picker>
+        </view>
+        <view wx:if="{{selectedLoopCommands.length}}" class="command-list">
+          <view wx:for="{{selectedLoopCommands}}" wx:for-item="command" wx:key="id" class="command-row">
+            <view class="command-copy">
+              <view class="command-label">{{command.label}}</view>
+              <view class="command-frame">{{command.displayFrame}}</view>
+            </view>
+            <button class="copy-glyph" aria-label="复制{{command.label}}" data-command-id="{{command.id}}" disabled="{{!command.copyEnabled}}" catchtap="copyManualCommand"><view class="copy-icon" aria-hidden="true"></view></button>
+          </view>
+        </view>
 
-    <view wx:if="{{group && !developmentManual}}" class="safety-note">
-      <view class="safety-mark">!</view>
-      <view class="safety-copy">请核对控制卡外观和标签；型号不一致或无法辨认时勿套用协议。不要打开或拆卸带电设备。</view>
-    </view>
-
-    <view wx:if="{{photos.length}}" class="appearance-photos">
-      <view class="appearance-photo-track">
-        <view wx:for="{{photos}}" wx:key="id" class="appearance-photo-card">
-          <image class="appearance-photo" src="{{item.path}}" mode="widthFix" data-path="{{item.path}}" bindtap="previewPhoto" />
-          <view class="photo-zoom-hint">点图放大</view>
+        <button class="expand-commands" bindtap="toggleManualWrites">
+          {{showManualWrites ? '收起指令' : '其他指令'}}（{{manualWriteCommands.length}}）<view class="expand-chevron {{showManualWrites ? 'expand-chevron-open' : ''}}" aria-hidden="true"></view>
+        </button>
+        <view wx:if="{{showManualWrites}}" class="command-list expanded-command-list">
+          <view wx:for="{{manualWriteCommands}}" wx:for-item="command" wx:key="id" class="command-row">
+            <view class="command-copy">
+              <view class="command-label">{{command.label}}</view>
+              <view class="command-frame">{{command.displayFrame}}</view>
+            </view>
+            <button class="copy-glyph" aria-label="复制{{command.label}}" data-command-id="{{command.id}}" disabled="{{!command.copyEnabled}}" catchtap="copyManualCommand"><view class="copy-icon" aria-hidden="true"></view></button>
+          </view>
         </view>
       </view>
-    </view>
-    <view wx:elif="{{group}}" class="photo-missing-card">
-      <view class="photo-missing-mark">▧</view>
-      <view class="photo-missing-title">已审核实拍待补</view>
-      <view class="photo-missing-copy">当前没有可公开展示的设备实拍，协议也不会自动开放。</view>
-    </view>
 
-    <view wx:if="{{group.sampleStatusLabel && !developmentManual}}" class="draft-material-card">
-      <view class="draft-material-title">关联机柜与资料状态</view>
-      <view class="draft-material-copy">{{group.visiblePanelLabel}}</view>
-      <view class="draft-material-copy">参考原件：《{{group.manualReferenceTitle}}》；{{group.manualMappingNote}}</view>
-      <view class="draft-material-copy">说明书版本：{{group.manualDocumentVersion}}（{{group.manualVersionNote}}）</view>
-      <view class="draft-material-copy">{{group.transportClue}}</view>
-      <view class="draft-material-warning">用户确认这台 itC KZX 柜内 SmartPLC-F300 样本所用协议已验证且准确；正式目录尚未收录。F300 品牌与固件/协议版本、柜内控制卡照片公开授权、具名复核及正式映射记录仍待完成。</view>
-    </view>
-
-    <view wx:if="{{group && !protocol && !developmentManual}}" class="resolution-card">
-      <view class="resolution-mark">!</view>
-      <view class="resolution-title">暂不能确定适用协议</view>
-      <view class="resolution-copy">{{statusMessage}}</view>
-      <view class="resolution-hint">同一外观可能对应不同控制卡；资料不足时请联系维护人员。</view>
-    </view>
-
-    <view wx:if="{{protocol}}" class="protocol-card">
-      <view class="protocol-card-title">{{protocol.title}}</view>
-      <view class="protocol-meta">控制卡 {{protocol.controllerBrand}} · {{protocol.controllerModel}} · {{protocol.controllerVersion}}</view>
-      <view class="protocol-row"><text class="protocol-label">协议版本</text><text>{{protocol.protocolVersion}}</text></view>
-      <view class="protocol-row"><text class="protocol-label">连接参数</text><text>{{protocol.transportSummary}}</text></view>
-      <view wx:for="{{protocol.commands}}" wx:key="id" class="command-row">
-        <view class="command-head"><view class="command-label">{{item.label}}</view><button class="command-copy-button" data-command-id="{{item.id}}" bindtap="copyProtocolCommand">复制</button></view>
-        <view class="command-value">{{item.value}}</view>
+      <view wx:if="{{protocol}}" class="commands-section">
+        <view class="section-heading">
+          <view class="section-title">控制请求</view>
+          <view class="section-count">{{protocol.commands.length}} 条</view>
+        </view>
+        <view class="command-list">
+          <view wx:for="{{protocol.commands}}" wx:for-item="command" wx:key="id" class="command-row">
+            <view class="command-copy">
+              <view class="command-label">{{command.label}}</view>
+              <view class="command-frame">{{command.value}}</view>
+            </view>
+            <button class="copy-glyph" aria-label="复制{{command.label}}" data-command-id="{{command.id}}" catchtap="copyProtocolCommand"><view class="copy-icon" aria-hidden="true"></view></button>
+          </view>
+        </view>
       </view>
-      <view class="protocol-meta">来源：{{protocol.displaySourceTitle}}</view>
-      <view class="protocol-meta">复核：{{protocol.displayReviewerName}} · 最近更新：{{protocol.updatedAt}}</view>
-      <button class="copy-button" bindtap="copyProtocol">复制摘要</button>
-    </view>
+
+    </block>
   </view>
 </scroll-view>
+
+<view wx:if="{{activeOverlay}}" class="sheet-overlay {{sheetOpen ? 'sheet-overlay-open' : ''}}" bindtap="onOverlayMaskTap">
+  <view wx:if="{{activeOverlay == 'device'}}" class="bottom-sheet {{sheetOpen ? 'bottom-sheet-open' : ''}} device-sheet" catchtap="stopOverlayTap" bindtransitionend="onSheetTransitionEnd">
+    <view class="sheet-grabber"></view>
+    <view class="sheet-heading">
+      <view class="sheet-title">选择设备</view>
+      <view class="sheet-count">{{directoryItems.length}} 项</view>
+    </view>
+    <view wx:if="{{selectedDeviceHidden}}" class="selected-hidden-note">当前设备不在此筛选结果中</view>
+    <view class="directory-search">
+      <text class="search-symbol">⌕</text>
+      <input class="directory-search-input" value="{{keyword}}" placeholder="搜索设备名称、品牌或型号" confirm-type="search" bindinput="onSearchInput" />
+      <button wx:if="{{keyword}}" class="search-clear" aria-label="清除搜索" catchtap="clearSearch"><view class="search-clear-icon" aria-hidden="true"></view></button>
+    </view>
+    <scroll-view class="category-scroll" scroll-x enhanced show-scrollbar="{{false}}">
+      <view class="category-row">
+        <view wx:for="{{categories}}" wx:key="key" class="category-chip {{item.selected ? 'category-chip-active' : ''}}" data-key="{{item.key}}" bindtap="onCategoryTap">{{item.label}}</view>
+      </view>
+    </scroll-view>
+    <scroll-view class="directory-list" style="height:{{directoryListHeight}}rpx" scroll-y enhanced show-scrollbar="{{false}}">
+      <view wx:if="{{directoryIsEmpty}}" class="directory-empty">
+        <view class="directory-empty-title">{{keyword || categoryKey != 'all' ? '没有找到匹配资料' : '暂无可查看设备'}}</view>
+        <button wx:if="{{keyword || categoryKey != 'all'}}" class="clear-filters-button" catchtap="clearFilters">清除筛选</button>
+      </view>
+      <view wx:for="{{directoryItems}}" wx:for-item="item" wx:key="key" class="directory-row {{item.selected ? 'directory-row-selected' : ''}}">
+        <view class="directory-photo-wrap" data-path="{{item.photoPath}}" bindtap="previewDirectoryPhoto">
+          <image wx:if="{{item.photoPath && !item.imageFailed}}" class="directory-photo" src="{{item.photoPath}}" mode="aspectFit" lazy-load data-key="{{item.key}}" binderror="onDirectoryPhotoError" />
+          <view wx:elif="{{item.photoPath}}" class="directory-photo-failed" data-key="{{item.key}}" catchtap="retryDirectoryPhoto">照片加载失败<text>点此重试</text></view>
+          <view wx:else class="directory-photo-failed">暂无照片</view>
+          <view wx:if="{{item.photoPath && !item.imageFailed}}" class="directory-zoom-mark" data-path="{{item.photoPath}}" catchtap="previewDirectoryPhoto" aria-label="查看原图">⌕</view>
+        </view>
+        <view class="directory-copy" data-type="{{item.type}}" data-id="{{item.id}}" bindtap="selectDevice">
+          <view class="directory-title">{{item.title}}</view>
+          <view class="directory-subtitle">{{item.subtitle}}</view>
+        </view>
+        <view wx:if="{{item.selected}}" class="directory-select-control" data-type="{{item.type}}" data-id="{{item.id}}" bindtap="selectDevice" aria-label="当前设备：{{item.title}}">
+          <view class="selected-check"><view class="selected-check-mark" aria-hidden="true"></view></view>
+        </view>
+        <view wx:else class="directory-select-control" data-type="{{item.type}}" data-id="{{item.id}}" bindtap="selectDevice" aria-label="选择设备：{{item.title}}">
+          <view class="directory-arrow" aria-hidden="true"></view>
+        </view>
+      </view>
+    </scroll-view>
+    <button class="sheet-cancel" bindtap="closeOverlay">取消</button>
+  </view>
+
+</view>

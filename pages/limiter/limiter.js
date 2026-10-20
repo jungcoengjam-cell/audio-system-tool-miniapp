@@ -11,9 +11,15 @@ const {
 const {
   buildCatalogCategories, buildCatalogOptions, filterCatalogItems, findCatalogModelIndex,
 } = require('../../utils/catalog-selector')
-const { syncPageFavorite, togglePageFavorite } = require('../../utils/result-record-actions')
 const {
-  addRecordToProject, createProject, getProjectRecordView, getRecordByPayload, getWorkspaceSnapshot,
+  requestEditorLeave,
+  saveEditorRecord: saveEditorRecordAction,
+  syncPageFavorite,
+  togglePageFavorite,
+} = require('../../utils/result-record-actions')
+const { attachResultEditor, captureEditorBaseline, createEditorNavigationMethods, finalizeResultEditor } = require('../../utils/result-record-context')
+const {
+  addRecordToProject, createProject, getProjectRecordView, getRecordById, getRecordByPayload, getWorkspaceSnapshot,
 } = require('../../utils/records')
 const { drawAndExportReport } = require('../../utils/report-canvas')
 const {
@@ -270,6 +276,7 @@ function sameMetadata(left, name, note) {
 }
 
 Page({
+  ...createEditorNavigationMethods(),
   data: {
     selectedAmplifier: null, selectedSpeaker: null,
     counts: [1, 2, 3, 4],
@@ -311,7 +318,8 @@ Page({
     ...createResultReportData(),
   },
 
-  onLoad() {
+  onLoad(options = {}) {
+    attachResultEditor(this, 'limiter', options)
     const finishInitialization = startMeasurement('限幅器/初始化总耗时')
     this._pageVisible = false
     this._isUnloaded = false
@@ -361,9 +369,18 @@ Page({
     this.setData({ pageContainerSupported, ...draft, ...view }, () => {
       if (this._isUnloaded) return
       finishView()
+      captureEditorBaseline(this)
       if (this._pageVisible && view.hasValidResult) syncPageFavorite(this)
       finishInitialization({ valid: view.hasValidResult })
     })
+  },
+
+  saveEditorContext(event) {
+    return saveEditorRecordAction(this, event?.currentTarget?.dataset?.saveAs === 'true')
+  },
+
+  leaveEditorContext() {
+    return requestEditorLeave(this)
   },
 
   onShow() {
@@ -411,6 +428,7 @@ Page({
     this._activePageContainerOverlay = null
     this._pageContainerLeave = null
     printPerformanceSummary('限幅器/')
+    finalizeResultEditor(this)
   },
 
   openPageContainerOverlay(name) {
@@ -762,6 +780,10 @@ Page({
 
   getPreferences(state = this.data) {
     return state.result && state.result.valid ? canonicalPreferences(state) : null
+  },
+
+  getEditorPreferences(state = this.data) {
+    return savedDraftPreferences(state)
   },
 
   getRecordLookupPayload() {
@@ -1180,7 +1202,8 @@ Page({
       this._projectPrefillKey = prefillKey
       if (!this._projectNameTouched) changes.projectConfigName = `${this.data.selectedAmplifier.model} + ${this.data.selectedSpeaker.model}`
       if (!this._projectNoteTouched) changes.projectConfigNote = ''
-      const record = getRecordByPayload(payload)
+      const record = (this._resultEditorSession?.recordId && getRecordById(this._resultEditorSession.recordId))
+        || getRecordByPayload(payload)
       const canonicalRecord = record ? { ...record, title: payload?.title || '' } : null
       const projected = getProjectRecordView(canonicalRecord, project.id)
       if (projected) {
@@ -1302,7 +1325,8 @@ Page({
       const target = snapshot.projects.find((project) => project.id === targetId)
       if (!target) return finish('所选项目已不存在，请重新选择。')
       if (target.name !== targetName) return finish('项目名称已变化，请重新选择。')
-      const existing = getRecordByPayload(payload)
+      const existing = (this._resultEditorSession?.recordId && getRecordById(this._resultEditorSession.recordId))
+        || getRecordByPayload(payload)
       const previousView = getProjectRecordView(existing ? { ...existing, title: payload.title } : null, target.id)
       const associated = Boolean(previousView?.projectIds?.includes(target.id))
       const previous = previousView && { name: previousView.title, note: previousView.projectNote }

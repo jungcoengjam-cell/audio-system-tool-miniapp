@@ -134,8 +134,6 @@ const knowledgeItems = [
     image: '/assets/home/knowledge-fill.jpg',
     path: '/pages/knowledge/detail?id=fill-handoff',
     readTime: '约 3 分钟',
-    relatedLabel: '打开会议室扩声预估',
-    relatedPath: '/pages/venue/venue',
     intro: '房间中点不一定是补声点。先估算主扩直达声从哪里开始不够，再结合补声覆盖范围找接力区，最后用时间、电平和极性测量收口。',
     sections: [
       {

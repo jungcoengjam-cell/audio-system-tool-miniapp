@@ -1,0 +1,45 @@
+@import "../../styles/homepage.wxss";
+
+.basis-detail-heading{margin:4rpx 2rpx 18rpx}
+.basis-detail-heading-main{display:flex;min-width:0;align-items:center;gap:14px}
+.basis-detail-icon-wrap{display:flex;box-sizing:border-box;width:56px;height:56px;flex:0 0 56px;align-items:center;justify-content:center;border-radius:16px;background:var(--theme-accent-soft)}
+.basis-detail-icon{display:block;width:48px;height:48px}
+.basis-detail-heading-copy{min-width:0;flex:1}
+.basis-detail-kicker{color:var(--theme-accent-text);font-size:26rpx;font-weight:650;line-height:1.35}
+.basis-detail-title{margin-top:4rpx;color:var(--theme-text);font-size:40rpx;font-weight:700;line-height:1.2;overflow-wrap:anywhere;word-break:break-word}
+.basis-detail-subtitle{margin-top:8rpx;color:var(--theme-text-secondary);font-size:28rpx;line-height:1.5;overflow-wrap:anywhere;word-break:break-word}
+.basis-section{margin-top:12rpx;padding:18rpx 20rpx 20rpx}
+.home-section-title{display:flex;align-items:center;gap:10rpx;color:var(--theme-text);font-size:30rpx;font-weight:680;line-height:1.35}
+.basis-section-index{display:flex;width:40rpx;height:40rpx;flex:0 0 40rpx;align-items:center;justify-content:center;border-radius:12rpx;background:var(--theme-accent-soft);color:var(--theme-accent-text);font-size:21rpx;font-weight:700;font-variant-numeric:tabular-nums}
+.basis-figure-panel{padding:18rpx 14rpx 16rpx}
+.basis-figure-panel .home-section-title{margin:0 6rpx 12rpx}
+.basis-figure{display:block;width:100%;height:auto;border-radius:16rpx}
+.basis-figure-caption{margin:10rpx 5rpx 0;color:var(--theme-text-secondary);font-size:26rpx;line-height:1.5;overflow-wrap:anywhere;word-break:break-word}
+.basis-quick-method,.basis-reference-copy,.basis-full-copy{color:var(--theme-text-secondary);font-size:28rpx;line-height:1.58;overflow-wrap:anywhere;word-break:break-word}
+.basis-quick-method{margin-top:11rpx;color:var(--theme-text)}
+.basis-parameter-list{display:flex;margin-top:14rpx;flex-wrap:wrap;gap:8rpx}
+.basis-parameter{display:flex;box-sizing:border-box;width:calc(50% - 4rpx);min-height:58rpx;padding:8rpx 10rpx;flex-direction:column;justify-content:center;border-radius:13rpx;background:var(--theme-surface-muted)}
+.basis-parameter-label{color:var(--theme-text-secondary);font-size:23rpx;line-height:1.3}
+.basis-parameter-value{margin-top:2rpx;color:var(--theme-text);font-size:26rpx;font-weight:620;line-height:1.35;overflow-wrap:anywhere;word-break:break-word}
+.basis-source-panel{padding-top:17rpx}
+.basis-reference-block+.basis-limit-block{margin-top:15rpx;padding-top:14rpx;border-top:1rpx solid var(--theme-divider)}
+.basis-reference-title{margin-bottom:5rpx;color:var(--theme-text);font-size:27rpx;font-weight:650;line-height:1.4}
+.basis-limit-block .basis-reference-title{color:var(--theme-warning)}
+.basis-full-toggle{margin-top:12rpx}
+.basis-full-panel{padding-top:18rpx}
+.basis-full-field{padding:11rpx 0;border-bottom:1rpx solid var(--theme-divider)}
+.basis-full-field-last{padding-bottom:0;border-bottom:0}
+.basis-full-label{margin-bottom:4rpx;color:var(--theme-text);font-size:26rpx;font-weight:650;line-height:1.4}
+.basis-open-button{margin-top:14rpx}
+.basis-detail-page .home-secondary-button.basis-full-toggle{display:flex;box-sizing:border-box;width:100%;max-width:none;min-height:44px;flex:0 0 100%;align-items:center;justify-content:center;text-align:center}
+.basis-detail-page .home-primary-button.basis-open-button{display:flex;box-sizing:border-box;width:100%;max-width:none;min-height:44px;flex:0 0 100%;align-items:center;justify-content:center;text-align:center}
+@media (max-width:374px){
+  .basis-detail-kicker{font-size:13px}
+  .basis-detail-title{font-size:18px}
+  .basis-detail-subtitle,.basis-quick-method,.basis-reference-copy,.basis-full-copy{font-size:14px}
+  .home-section-title{font-size:15px}
+  .basis-figure-caption{font-size:13px}
+  .basis-parameter-label{font-size:12px}
+  .basis-parameter-value,.basis-full-label,.basis-reference-title{font-size:13px}
+}
+@media (prefers-reduced-motion:reduce){.basis-open-button,.basis-full-toggle{transition:none}}
