@@ -34,7 +34,7 @@ const server = http.createServer((request, response) => {
     }
     if (url.pathname === '/__bundle') {
       const entry = url.searchParams.get('entry') || 'pages/dmx-address/dmx-address.js'
-      if (!/^pages\/dmx-(?:address|layout|layout-landscape)\/[a-z-]+\.js$/.test(entry)) throw Error('Invalid entry')
+      if (!/^pages\/dmx-(?:address|layout)\/[a-z-]+\.js$/.test(entry)) throw Error('Invalid entry')
       response.setHeader('Content-Type', 'application/json')
       return response.end(JSON.stringify(bundle(entry, url.searchParams.get('before') === '1')))
     }

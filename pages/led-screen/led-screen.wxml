@@ -8,7 +8,6 @@
           <button class="action-button" aria-label="收藏当前方案" aria-pressed="{{currentFavorite}}" disabled="{{!result || inputPending || inputError}}" bindtap="toggleCurrentFavorite"><view class="action-icon icon-bookmark {{currentFavorite ? 'icon-bookmark-active' : ''}}"></view></button>
           <button class="action-button" aria-label="保存到项目" disabled="{{!result || inputPending || inputError}}" bindtap="openProjectSheet"><view class="action-icon icon-folder"></view></button>
         </view>
-        <include src="../../templates/result-record-actions.wxml" />
         <view wx:if="{{result}}" class="result-content">
           <view class="result-main">
             <view class="result-primary">

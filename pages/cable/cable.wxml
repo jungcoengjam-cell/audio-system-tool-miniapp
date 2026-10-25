@@ -10,7 +10,6 @@
         <button class="action-button" aria-label="收藏当前选型" aria-pressed="{{currentFavorite}}" disabled="{{!canUseResultActions}}" bindtap="toggleCurrentFavorite"><view class="action-icon icon-bookmark {{currentFavorite ? 'icon-bookmark-active' : ''}}"></view></button>
         <button class="action-button" aria-label="选择项目保存" disabled="{{!canUseResultActions}}" bindtap="saveToActiveProject"><view class="action-icon icon-folder"></view></button>
       </view>
-      <include src="../../templates/result-record-actions.wxml" />
 
       <view class="result-card result-card-{{calculationState}}">
           <view class="result-content">

@@ -221,7 +221,8 @@ async function boot(){
   if(fixture!=='empty')storage.set('audioTool.dmxAddress.preferences',buildPreferences({startAddressText:'1',allocationMode:'auto',groups}))
   const now=Date.now();storage.set('audioTool.projects.v1',[{id:'project-1',name:'礼堂灯光',createdAt:now,updatedAt:now,recordIds:[]},{id:'project-2',name:'多功能厅',createdAt:now,updatedAt:now,recordIds:[]}]);storage.set('audioTool.storage.schemaVersion',2)
   const loadOptions=Object.fromEntries([...query.entries()].filter(([key])=>key.startsWith('lighting')))
-  await window.__openPage(query.get('page')==='landscape'?'pages/dmx-layout-landscape/dmx-layout-landscape.js':query.get('page')==='layout'?'pages/dmx-layout/dmx-layout.js':'pages/dmx-address/dmx-address.js',loadOptions)
+  if(query.get('page')==='landscape')throw Error('The retired landscape page has no browser route')
+  await window.__openPage(query.get('page')==='layout'?'pages/dmx-layout/dmx-layout.js':'pages/dmx-address/dmx-address.js',loadOptions)
 }
 window.addEventListener('resize',()=>{capsuleInfo();page?.onResize?.({size:{windowWidth:innerWidth,windowHeight:innerHeight,width:innerWidth,height:innerHeight}})})
 boot().catch(reportError)

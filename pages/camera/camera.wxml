@@ -8,7 +8,6 @@
           <button id="cameraFavorite" class="camera-action-button" aria-label="{{currentFavorite ? '取消常用收藏' : '收藏常用'}}" aria-pressed="{{currentFavorite}}" disabled="{{!result || legacyCustomUnsupported || resultUpdating || operationSnapshot || operationActive}}" bindtap="toggleCurrentFavorite"><view class="camera-action-icon icon-bookmark {{currentFavorite ? 'icon-bookmark-active' : ''}}" aria-hidden="true"></view></button>
           <button id="cameraProject" class="camera-action-button" aria-label="选择项目保存结果" disabled="{{!result || legacyCustomUnsupported || resultUpdating || operationSnapshot || operationActive}}" bindtap="saveToActiveProject"><view class="camera-action-icon icon-folder" aria-hidden="true"></view></button>
         </view>
-        <include src="../../templates/result-record-actions.wxml" />
 
         <view wx:if="{{result}}" id="cameraResultHero" class="camera-result-screen">
           <view class="camera-result-heading">

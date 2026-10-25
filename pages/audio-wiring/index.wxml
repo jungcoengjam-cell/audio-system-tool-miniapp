@@ -2,7 +2,6 @@
   <scroll-view class="wiring-scroll" scroll-y enhanced show-scrollbar="{{false}}">
     <view class="page-content">
       <view wx:if="{{wiringStorageWarning}}" class="wiring-storage-warning">{{wiringStorageWarning}}</view>
-      <include src="../../templates/result-record-actions.wxml" />
       <view class="diagram-card">
         <view class="diagram-body">
           <view class="diagram-main">

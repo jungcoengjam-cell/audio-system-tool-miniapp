@@ -16,7 +16,6 @@
               <button id="splFavorite" class="action-button" aria-label="收藏当前估算" aria-pressed="{{currentFavorite}}" disabled="{{!canUseResultActions}}" bindtap="toggleCurrentFavorite"><view class="action-icon icon-bookmark {{currentFavorite ? 'icon-bookmark-active' : ''}}"></view></button>
               <button id="splProject" class="action-button" aria-label="选择项目保存" disabled="{{!canUseResultActions}}" bindtap="openProjectSheet"><view class="action-icon icon-folder"></view></button>
             </view>
-            <include src="../../templates/result-record-actions.wxml" />
 
           <view wx:if="{{isCalculationPending}}" id="splPanelResult" class="result-tab-panel result-state" role="tabpanel" aria-labelledby="splTabResult" aria-live="polite" aria-busy="true">
             <view class="result-label">当前距离理论声压级</view>
