@@ -15,7 +15,6 @@ const {
 } = require('../../pages/records/report-model')
 const reportPageConfig = require('../../pages/records/report.json')
 const { calculateScheme, WORKSPACE_KEY } = require('../../pages/dmx-layout/lighting-workspace')
-const { saveErrorNeedsSettings, saveReportPages } = require('../../pages/records/report-actions')
 
 const projectId = 'project-report-a'
 const otherProjectId = 'project-report-b'
@@ -239,10 +238,10 @@ const duplicateOutputResult = readLightingProjectContext(projectId, {
 assert.equal(duplicateOutputResult.ok, false, 'calculated addresses must map one-to-one to saved fixture IDs')
 
 let reportPageMethods
-const sharedPaths = []
+const sharedPdfs = []
 global.Page = (definition) => { reportPageMethods = definition }
 global.wx = {
-  showShareImageMenu: ({ path }) => sharedPaths.push(path),
+  shareFileMessage: ({ filePath, fileName }) => sharedPdfs.push({ filePath, fileName }),
   showToast: () => {},
 }
 require('../../pages/records/report')
@@ -253,11 +252,16 @@ function makeReportPage(state) {
   return page
 }
 const sharePage = makeReportPage({ currentPageIndex: 0 })
-sharePage._reportPages = [{ path: 'temp://report-1' }, { path: 'temp://report-2' }, { path: 'temp://report-3' }]
-sharePage.shareCurrentReportPage()
+sharePage.reportSignature = 'pdf-signature'
+sharePage._reportPdfPath = '/user/project-report.pdf'
+sharePage._reportPdfSignature = 'pdf-signature'
+sharePage.shareReportPdf()
 sharePage.data.currentPageIndex = 2
-sharePage.shareCurrentReportPage()
-assert.deepEqual(sharedPaths, ['temp://report-1', 'temp://report-3'], 'sharing must target only the current page each time')
+sharePage.shareReportPdf()
+assert.deepEqual(sharedPdfs, [
+  { filePath: '/user/project-report.pdf', fileName: 'project-report.pdf' },
+  { filePath: '/user/project-report.pdf', fileName: 'project-report.pdf' },
+], 'sharing must send the complete current PDF regardless of the selected preview page')
 
 const cancelPage = makeReportPage({ isGenerating: true, mode: 'rendering' })
 cancelPage._reportRevision = 4
@@ -277,36 +281,4 @@ assert.equal(failurePage.data.mode, 'select')
 assert.equal(failurePage.data.isGenerating, false)
 assert.equal(failurePage.data.pageStatus, '第 3 页生成失败，未打开不完整报告。请重试。')
 
-async function verifySaving() {
-  const savePages = [0, 1, 2, 3].map((index) => ({ path: `temp://page-${index + 1}` }))
-  const firstSaveCalls = []
-  const canceledSave = await saveReportPages({
-    pages: savePages,
-    saveImage: async (path, index) => {
-      firstSaveCalls.push(index)
-      if (index === 1) throw new Error('fail cancel')
-    },
-  })
-  assert.deepEqual(firstSaveCalls, [0, 1])
-  assert.deepEqual(canceledSave.savedIndexes, [0])
-  assert.equal(canceledSave.canceled, true)
-  assert.equal(canceledSave.complete, false)
-
-  const retryCalls = []
-  const retrySave = await saveReportPages({
-    pages: savePages,
-    savedIndexes: canceledSave.savedIndexes,
-    saveImage: async (path, index) => { retryCalls.push(index) },
-  })
-  assert.deepEqual(retryCalls, [1, 2, 3], 'retry must skip pages already saved and continue at the canceled page')
-  assert.equal(retrySave.complete, true)
-  assert.deepEqual(retrySave.savedIndexes, [0, 1, 2, 3])
-  assert.equal(saveErrorNeedsSettings('fail auth deny'), true)
-}
-
-verifySaving().then(() => {
-  console.log('Project report completeness checks passed (18 selected items, complete pagination, stable IDs, page-specific sharing, render/save cancellation and failure).')
-}).catch((error) => {
-  console.error(error)
-  process.exitCode = 1
-})
+console.log('Project report completeness checks passed (18 selected items, complete pagination, stable IDs, full-PDF sharing, and render cancellation and failure).')

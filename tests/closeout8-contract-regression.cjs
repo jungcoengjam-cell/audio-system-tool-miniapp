@@ -267,6 +267,7 @@ const appWxss = read('app.wxss')
 const layoutWxml = read('pages/dmx-layout/dmx-layout.wxml')
 const layoutWxss = read('pages/dmx-layout/dmx-layout.wxss')
 const layoutFactory = read('pages/dmx-layout/page-factory.js')
+const layoutInteractions = read('pages/dmx-layout/layout-interactions.js')
 const layoutRenderer = read('pages/dmx-layout/layout-renderer.js')
 
 check('dmx-current-picker-and-group-controls', () => {
@@ -544,7 +545,10 @@ check('layout-direct-drag-copy-and-six-state-canvas-contract', () => {
   const sideNote = '侧光同一位置的展开仅为地址辨识，不代表安装高度。'
   expect(layoutWxml.includes('wx:if="{{manipulationText}}"')
     && layoutWxml.includes('{{manipulationText}}')
-    && layoutFactory.includes('拖动到目标灯杆，松手吸附')
+    && layoutFactory.includes("require('./layout-interactions')")
+    && layoutFactory.includes('createLayoutPlacementMethods(layoutInteractionDependencies)')
+    && layoutFactory.includes('...layoutPlacementMethods')
+    && layoutInteractions.includes('拖动到目标灯杆，松手吸附')
     && !layoutWxml.includes(sideNote)
     && layoutRenderer.includes(sideNote),
   'current direct-drag cue and renderer-only side-light height clarification must remain available')

@@ -50,7 +50,6 @@ function context({ captureTextBounds = false } = {}) {
 
 const drawing = require('../utils/report-drawing')
 const result = loadPrivate('utils/result-report.js', ['drawWrappedText'])
-const project = loadPrivate('pages/records/project-report.js', ['drawPill'])
 const led = require('../pages/led-screen/report')
 
 assert.deepStrictEqual(drawing.REPORT_COLORS, {
@@ -87,11 +86,8 @@ function assertPill(fn, expectedWidth, expectedHeight) {
   return calls
 }
 const sharedPillCalls = assertPill(drawing.drawPill, 38, 34)
-const projectPillCalls = assertPill(project.drawPill, 36, 33)
 assert.ok(sharedPillCalls.some((call) => call[0] === 'set' && call[1] === 'font' && call[2].startsWith('600 18px')))
-assert.ok(projectPillCalls.some((call) => call[0] === 'set' && call[1] === 'font' && call[2].startsWith('600 17px')))
 assert.deepStrictEqual(sharedPillCalls.find((call) => call[0] === 'fillText').slice(1), ['x', 81, 44])
-assert.deepStrictEqual(projectPillCalls.find((call) => call[0] === 'fillText').slice(1), ['x', 82, 43])
 assert.throws(() => drawing.drawPill(context().ctx, 'x', 100, 20, null), TypeError)
 
 const ledContext = context()
@@ -198,10 +194,6 @@ for (const bounds of longChineseBounds) {
 assert.deepStrictEqual(Object.keys(require('../utils/result-report')).sort(), [
   'REPORT_CANVAS_ID', 'REPORT_WIDTH', 'buildResultReportPayload', 'calculateResultReportHeight',
   'drawResultReport', 'getExportDimensions',
-])
-assert.deepStrictEqual(Object.keys(require('../pages/records/project-report')).sort(), [
-  'REPORT_CANVAS_ID', 'REPORT_WIDTH', 'buildProjectReportPayload', 'calculateProjectReportHeight',
-  'drawProjectReport', 'getExportDimensions',
 ])
 assert.deepStrictEqual(Object.keys(require('../pages/led-screen/report')).sort(), [
   'REPORT_CANVAS_ID', 'REPORT_HEIGHT', 'REPORT_WIDTH', 'buildLedScreenReportLayout', 'buildLedScreenReportPayload',

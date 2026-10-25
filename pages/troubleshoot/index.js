@@ -25,6 +25,7 @@ const trees={
 }
 const own = (object, key) => Object.prototype.hasOwnProperty.call(object, key)
 const isState = (value) => value === 'restored' || value === 'ongoing'
+const { vibrate } = require('../../utils/haptics')
 
 Page({
   data: {
@@ -73,22 +74,33 @@ Page({
       id: this.data.node, question: node[0],
       label: option[0], index, from: this.data.node, to: option[1],
     })
-    if (own(result, option[1])) this.showResult(option[1], history)
-    else if (own(this.tree.nodes, option[1])) this.render(option[1], history, null)
+    if (own(result, option[1])) {
+      this.showResult(option[1], history)
+      vibrate('light')
+    } else if (own(this.tree.nodes, option[1])) {
+      this.render(option[1], history, null)
+      vibrate('light')
+    }
   },
   back() {
     const history = this.data.history.slice()
     if (!history.length) return
     const last = history.pop()
     this.render(last.from, history, last.index)
+    vibrate('light')
   },
   restart() {
-    if(this.tree)this.render(this.tree.scope, [], null)
+    if (!this.tree) return
+    const changed = this.data.node !== this.tree.scope || this.data.history.length > 0
+      || Boolean(this.data.result || this.data.pathExpanded || this.data.feedback || this.data.selectedIndex !== null)
+    this.render(this.tree.scope, [], null)
+    if (changed) vibrate('light')
   },
   togglePath(event) {
     const dataset = event && event.currentTarget && event.currentTarget.dataset
     if (!this.data.result || !dataset || dataset.node !== this.data.node) return
     this.setData({ pathExpanded: !this.data.pathExpanded })
+    vibrate('light')
   },
   editStep(event) {
     const dataset = event && event.currentTarget && event.currentTarget.dataset
@@ -98,12 +110,15 @@ Page({
       || !Number.isInteger(index) || index < 0 || index >= this.data.history.length) return
     const item = this.data.history[index]
     this.render(item.id, this.data.history.slice(0, index), item.index)
+    vibrate('light')
   },
   feedback(event) {
     const dataset = event && event.currentTarget && event.currentTarget.dataset
     if (!this.data.result || !this.data.result.feedbackEnabled || !dataset
       || dataset.node !== this.data.node || !isState(dataset.state)) return
+    if (this.data.feedback === dataset.state) return
     this.setData({ feedback: dataset.state })
+    vibrate('light')
   },
   openTool() {
     if (this.data.result && this.data.result.tool === 'dmx-address') {

@@ -8,6 +8,7 @@ const {
 } = require('./model')
 const { CATEGORIES } = require('./catalog')
 const viewerState = require('./viewer-state')
+const { vibrate } = require('../../utils/haptics')
 
 function messageForReason(reason) {
   const messages = {
@@ -160,6 +161,7 @@ Page({
 
   onLoad(options = {}) {
     this._pageUnloaded = false
+    this._pageHidden = false
     this._viewerState = viewerState.readViewerState(catalog)
     this._currentScrollTop = 0
     this._copyContextToken = 0
@@ -291,7 +293,12 @@ Page({
   },
 
   onHide() {
+    this._pageHidden = true
     this.persistViewerState()
+  },
+
+  onShow() {
+    this._pageHidden = false
   },
 
   onUnload() {
@@ -535,7 +542,9 @@ Page({
   onCategoryTap(event) {
     const categoryKey = String(event.currentTarget.dataset.key || 'all')
     const safeKey = CATEGORIES.some((item) => item.key === categoryKey) ? categoryKey : 'all'
+    const changed = safeKey !== this.data.categoryKey
     this.setData({ categoryKey: safeKey }, () => this.refreshDirectory())
+    if (changed) vibrate('light')
   },
 
   onSearchInput(event) {
@@ -547,7 +556,9 @@ Page({
   },
 
   clearFilters() {
+    const categoryChanged = this.data.categoryKey !== 'all'
     this.setData({ categoryKey: 'all', keyword: '' }, () => this.refreshDirectory())
+    if (categoryChanged) vibrate('light')
   },
 
   selectDevice(event) {
@@ -555,7 +566,9 @@ Page({
     const id = String(event.currentTarget.dataset.id || '')
     const selectedRef = { type, id }
     if (!viewerState.normalizeDeviceRef(selectedRef, catalog)) return
-    if (!sameDevice(this.data.currentDeviceRef, selectedRef) && !this.loadDevice(selectedRef)) return
+    const changed = !sameDevice(this.data.currentDeviceRef, selectedRef)
+    if (changed && !this.loadDevice(selectedRef)) return
+    if (changed) vibrate('light')
     this.closeOverlay()
   },
 
@@ -732,6 +745,7 @@ Page({
       selectedLoopCommands: decorateManualCommands(this.getLoopCommands(manualWriteCommands, loopIndex + 1, manual), transport, this.data.deviceMacInput),
       readerScrollTop: reading.scrollTop,
     })
+    vibrate('light')
     this._viewerState = viewerState.updateDevice(this._viewerState, this.data.currentDeviceRef, transport.id, reading, catalog)
     viewerState.saveViewerState(this._viewerState, catalog)
   },
@@ -747,12 +761,14 @@ Page({
     const index = Number(event.detail.value)
     const loopCount = this.data.manual && this.data.manual.loopCount || 40
     if (!Number.isInteger(index) || index < 0 || index >= loopCount) return
+    const changed = index !== this.data.selectedLoopIndex
     const selectedLoopCommands = decorateManualCommands(
       this.getLoopCommands(this.data.manualWriteCommands, index + 1, this.data.manual),
       this.data.manualTransport,
       this.data.deviceMacInput,
     )
     this.setData({ selectedLoopIndex: index, selectedLoopLabel: `第${index + 1}路`, selectedLoopCommands })
+    if (changed) vibrate('light')
     this.rememberCurrentView()
     viewerState.saveViewerState(this._viewerState, catalog)
   },
@@ -783,6 +799,7 @@ Page({
   toggleManualWrites() {
     const showManualWrites = !this.data.showManualWrites
     this.setData({ showManualWrites })
+    vibrate('light')
     this.rememberCurrentView()
     viewerState.saveViewerState(this._viewerState, catalog)
   },
@@ -819,6 +836,7 @@ Page({
       const isCurrentAttempt = this._copyInFlight === attempt && contextToken === this._copyContextToken
       if (this._copyInFlight === attempt) this._copyInFlight = 0
       if (!isCurrentAttempt || this._pageUnloaded) return
+      if (succeeded && !this._pageHidden) vibrate('medium')
       this.showCopyFeedback(succeeded ? '已复制到剪贴板' : '复制失败，请重试', contextToken)
     }
     try {

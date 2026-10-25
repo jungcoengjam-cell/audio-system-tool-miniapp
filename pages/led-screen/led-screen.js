@@ -15,6 +15,7 @@ const { attachResultEditor, captureEditorBaseline, createEditorNavigationMethods
 const { saveEditorRecord: saveEditorRecordAction, requestEditorLeave } = require('../../utils/result-record-actions')
 const { getExportDimensions } = require('../../utils/report-drawing')
 const {
+  isPageContextCurrent,
   previewGeneratedImage,
   saveGeneratedImage,
   shareGeneratedImage,
@@ -703,7 +704,7 @@ Page({
     const persisted = writePreferencesDetailed(PREFERENCE_KEY, preferences)
     this.setData({ resetPersistenceError: !persisted.ok })
     if (!persisted.ok) wx.showToast({ title: '清空未保存，请重试', icon: 'none' })
-    vibrate('light')
+    if (persisted.ok && isPageContextCurrent(this)) vibrate('light')
     return true
   },
 
@@ -871,8 +872,11 @@ Page({
     if (this.data.reportImagePath && this.reportSignature === signature) {
       if (!this.isCapturedOutputCurrent(capture)) return false
       if (this.hasAccessibleReportImage()) {
-        vibrate('light')
-        return this.openReportPreview()
+        const shouldNotifyOpen = !this.data.reportPreviewVisible
+        const opened = this.openReportPreview()
+        if (opened && shouldNotifyOpen && this.isCapturedOutputCurrent(capture)
+          && isPageContextCurrent(this)) vibrate('light')
+        return opened
       }
       this.reportSignature = ''
       this.setData({ reportImagePath: '', reportPreviewError: false })
@@ -894,7 +898,6 @@ Page({
     if (!layout || !Number.isFinite(layout.height) || layout.height <= 0) return false
 
     this.cancelReportPreviewCloseTimer()
-    vibrate('medium')
     const revision = (this.reportRevision || 0) + 1
     this.reportRevision = revision
     this.reportPendingSignature = signature
@@ -931,6 +934,8 @@ Page({
             this.reportSignature = signature
             this.openReportPreview({ reportImagePath: tempFilePath })
             this.finishReportGeneration(revision)
+            if (this.reportRevision === revision && !this.reportPendingSignature
+              && this.isCapturedOutputCurrent(capture) && isPageContextCurrent(this)) vibrate('medium')
           },
           onFailure: () => {
             this.finishReportGeneration(revision)
@@ -990,7 +995,7 @@ Page({
     }
     if (!this.data.reportPreviewVisible || this.data.reportPreviewClosing
       || this._pageVisible === false || this._ledUnloaded) return false
-    vibrate('light')
+    if (isPageContextCurrent(this)) vibrate('light')
     const revision = this.cancelReportPreviewCloseTimer()
     this.setData({ reportPreviewClosing: true }, () => {
       const isCurrentClose = () => this._ledReportPreviewCloseRevision === revision
@@ -1077,7 +1082,13 @@ Page({
       this.setData({ reportImagePath: '', reportPreviewError: true })
       return false
     }
-    return saveGeneratedImage(path)
+    const capture = this.captureCurrentOutput()
+    const signature = this.reportSignature
+    return saveGeneratedImage(path, {
+      isCurrent: () => this.isCurrentReportPreview()
+        && this.isCapturedOutputCurrent(capture)
+        && this.data.reportImagePath === path && this.reportSignature === signature,
+    })
   },
 
   getRecordLookupPayload() {
@@ -1136,7 +1147,9 @@ Page({
     const state = this.getOutputState()
     const text = state && this.getResultText(state)
     if (!text) return
-    wx.setClipboardData({ data: text, success: () => { if (this.isCapturedOutputCurrent(capture)) vibrate('medium') } })
+    wx.setClipboardData({ data: text, success: () => {
+      if (this.isCapturedOutputCurrent(capture) && isPageContextCurrent(this)) vibrate('medium')
+    } })
   },
 
   toggleCurrentFavorite() {

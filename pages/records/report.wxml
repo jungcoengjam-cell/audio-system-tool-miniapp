@@ -63,31 +63,30 @@
   <view wx:elif="{{mode === 'rendering'}}" class="report-state-wrap report-rendering-wrap">
     <view class="report-state-card">
       <view class="report-rendering-indicator"></view>
-      <view class="report-state-title">正在生成分页图片</view>
+      <view class="report-state-title">正在生成报告预览</view>
       <view class="report-state-copy">{{renderProgressText}}</view>
-      <view class="report-state-copy">请保持此页打开；完成后可逐页检查与分享。</view>
+      <view class="report-state-copy">请保持此页打开；完成后可逐页检查并导出 PDF。</view>
       <button class="report-secondary-button report-cancel-button" bindtap="cancelReportGeneration">取消生成</button>
     </view>
   </view>
 
   <block wx:elif="{{mode === 'preview'}}">
-    <view class="report-return-selection-wrap">
+    <view class="report-preview-toolbar">
       <button class="report-secondary-button report-return-selection" bindtap="backToSelection">‹ 返回选择</button>
-    </view>
-    <view class="report-page-nav">
-      <button class="report-page-arrow" disabled="{{currentPageIndex === 0}}" bindtap="previousReportPage">‹</button>
-      <view class="report-page-counter">第 {{currentPageNumber}} / {{pageCount}} 页</view>
-      <button class="report-page-arrow" disabled="{{currentPageIndex + 1 >= pageCount}}" bindtap="nextReportPage">›</button>
+      <view class="report-page-nav">
+        <button class="report-page-arrow" aria-label="上一页" disabled="{{currentPageIndex === 0}}" bindtap="previousReportPage">‹</button>
+        <view class="report-page-counter">{{currentPageNumber}} / {{pageCount}}</view>
+        <button class="report-page-arrow" aria-label="下一页" disabled="{{currentPageIndex + 1 >= pageCount}}" bindtap="nextReportPage">›</button>
+      </view>
     </view>
     <scroll-view class="report-preview-scroll" scroll-y enhanced show-scrollbar="{{false}}" scroll-top="{{previewScrollTop}}">
-      <image class="report-preview-image" src="{{currentPagePath}}" mode="widthFix" bindtap="inspectReportPages" aria-label="项目报告分页图片，点击可缩放查看"></image>
-      <view class="report-preview-hint">白纸报告 · 点击图片可全屏缩放，左右滑动查看各页</view>
+      <image class="report-preview-image" src="{{currentPagePath}}" mode="widthFix" aria-label="项目报告第 {{currentPageNumber}} 页预览"></image>
     </scroll-view>
     <view class="report-preview-footer">
-      <view class="report-save-status">{{saveProgressText || pageStatus}}</view>
+      <view wx:if="{{pdfStatusText || pageStatus}}" class="report-save-status">{{pdfStatusText || pageStatus}}</view>
       <view class="report-preview-actions">
-        <button class="report-secondary-button report-preview-action" disabled="{{!currentPagePath}}" bindtap="shareCurrentReportPage">分享第 {{currentPageNumber}} 页</button>
-        <button class="report-primary-button report-preview-action" disabled="{{!pageCount || isSaving}}" bindtap="saveAllReportPages">{{isSaving ? '正在保存…' : saveButtonText}}</button>
+        <button class="report-secondary-button report-preview-action" disabled="{{!reportPdfPath || isExportingPdf}}" bindtap="shareReportPdf">分享 PDF</button>
+        <button class="report-primary-button report-preview-action" disabled="{{!pageCount}}" bindtap="generateReportPdf">{{isExportingPdf ? '取消生成' : reportPdfPath ? '打开 PDF' : '生成 PDF'}}</button>
       </view>
     </view>
   </block>
@@ -95,4 +94,6 @@
   <canvas id="projectReportExportCanvas" canvas-id="projectReportExportCanvas" class="report-canvas-offscreen"
     width="{{reportCanvasWidth}}" height="{{reportCanvasHeight}}"
     style="width: {{reportCanvasWidth}}px; height: {{reportCanvasHeight}}px;"></canvas>
+  <canvas id="projectReportPdfCanvas" type="2d" class="report-canvas-offscreen"
+    style="width: 1px; height: 1px;"></canvas>
 </view>

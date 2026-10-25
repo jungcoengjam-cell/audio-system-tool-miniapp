@@ -373,20 +373,6 @@ checkLateReportCallbacks(
   },
 )
 
-const recordsApi = fresh('../utils/records')
-const reviewProject = recordsApi.createProject('审查回归项目')
-recordsApi.addRecordToProject({
-  module: 'limiter',
-  title: '审查记录',
-  summary: '用于导出失败回归',
-  preferences: { speakerModel: speaker.model },
-  resultText: '限幅器计算结果',
-}, reviewProject.id)
-checkLateReportCallbacks(
-  '../pages/records/project', 'onLoad', 'generateProjectReportImage', 'projectReportCanvas',
-  () => [{ id: reviewProject.id }],
-)
-
 const drawing = fresh('../utils/report-drawing')
 const calls = []
 const context = {

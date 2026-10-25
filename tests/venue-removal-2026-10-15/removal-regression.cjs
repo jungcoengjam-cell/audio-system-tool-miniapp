@@ -254,8 +254,8 @@ toolsPage.setData = (changes, callback) => {
   if (callback) callback()
 }
 toolsPage.refreshTools()
-assert.equal(toolsPage.data.tools.length, 10,
-  'ten active menu entries remain, including the wiring assistant and wiring workspace')
+assert.equal(toolsPage.data.tools.length, 11,
+  'eleven active menu entries remain, including both wiring entries and the product library')
 assert(toolsPage.data.tools.some((item) => item.id === 'audioWiring')
   && toolsPage.data.tools.some((item) => item.id === 'projectWiring'),
 'the tools menu retains both wiring entries')
@@ -314,10 +314,6 @@ const venueGroup = projectPage.data.recordGroups.find((group) => group.module ==
 assert(venueGroup, 'the project still displays its historical venue group')
 assert.equal(venueGroup.records[0].summary, legacyRecord.summary)
 assert.equal(venueGroup.records[0].retired, true)
-const { buildRecordComparison } = require('../../utils/record-comparison')
-assert.equal(buildRecordComparison([legacyRecord, legacyRecord]), null,
-  'retired records cannot enter comparison')
-
 const writesBeforeLegacyUi = writes.length
 const navigationsBeforeLegacyUi = [...navigations]
 projectPage.onProjectItemTap({ currentTarget: { dataset: { id: legacyRecord.id } } })
@@ -330,13 +326,6 @@ assert.equal(clipboardText, retainedLegacy.resultText, 'the dialog copies the fu
 projectPage.openProjectModule({ currentTarget: { dataset: { module: 'venue' } } })
 assert.deepEqual(navigations, navigationsBeforeLegacyUi, 'legacy UI actions do not navigate to a removed page')
 assert.equal(writes.length, writesBeforeLegacyUi, 'legacy UI actions do not write preferences or project state')
-
-const projectReportText = projectPage.getProjectReportText()
-assert(projectReportText.includes(retainedLegacy.resultText), 'the copied project report retains the legacy result')
-assert(!/扩声目标|类别等级|标准类别|目标等级/.test(projectReportText),
-  'a new project summary does not emit removed room-amplification fields')
-projectPage.copyProject()
-assert.equal(clipboardText, projectReportText, 'copying the project report uses the same retained history')
 
 loadFresh('pages/projects/projects.js')
 const favoritesPage = capturedPage
@@ -379,13 +368,22 @@ assert.equal(savedProject.standardClassKey, projectA.standardClassKey,
 assert.equal(savedProject.gradeKey, projectA.gradeKey,
   'editing ordinary project fields preserves the stored grade key')
 
-const projectReport = loadFresh('pages/records/project-report.js')
-const reportPayload = projectReport.buildProjectReportPayload(projectPage.data.project,
-  projectPage.data.recordGroups, { totalModuleCount: 8, generatedAt: 'test' })
-assert(reportPayload)
-assert.equal(reportPayload.completedModuleCount, 8, 'the project report counts only active modules')
-assert.equal(reportPayload.totalModuleCount, 8, 'the project report denominator remains eight active modules')
-assert(reportPayload.groups.some((group) => group.module === 'venue'),
-  'the project report can still include a readable historical result group')
+const reportModel = loadFresh('pages/records/report-model.js')
+const reportSource = reportModel.loadProjectReportSource(projectA.id)
+assert.equal(reportSource.ok, true, reportSource.error)
+const reportSections = reportModel.getProjectReportSections(reportSource)
+const historicalVenueItem = reportSections.find((section) => section.key === 'calculation')
+  .items.find((item) => item.record.id === legacyRecord.id)
+assert(historicalVenueItem, 'the PDF report retains a historical venue record as a selectable item')
+const reportPayload = reportModel.buildReportPayload(reportSource, [historicalVenueItem.id])
+assert.equal(reportPayload.itemCount, 1)
+assert.equal(reportPayload.selectedItems[0].record.resultText, retainedLegacy.resultText,
+  'the selected PDF report snapshot retains the full historical venue result')
+const reportText = reportPayload.pages.flatMap((page) => page.lines).map((line) => line.text).join('')
+assert(reportText.includes('历史配置 A'), 'the PDF report keeps the historical project-specific name')
+assert(reportText.includes('项目备注：保留的项目备注'), 'the PDF report keeps the historical project-specific note')
+assert(reportText.includes(`关键结果：${retainedLegacy.summary}`), 'the PDF report keeps the historical result summary')
+assert(!/扩声目标|类别等级|标准类别|目标等级/.test(reportText),
+  'a new project report does not emit removed room-amplification fields')
 
-console.log('PASS venue removal integration: active routes and menu, retired record storage, project progress, and history display')
+console.log('PASS venue removal integration: active routes and menu, retired record storage, project progress, and PDF report history')

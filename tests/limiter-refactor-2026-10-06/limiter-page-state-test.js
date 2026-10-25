@@ -1387,7 +1387,7 @@ function testLimiterSharePreviewHaptics() {
     page.setData({ resultReportImagePath: 'temp://limiter-share.png' })
     clearVibrations(context)
     assert.equal(page.shareResultReportImage(), true)
-    expectVibrations(context, 'medium')
+    expectVibrations(context)
     const share = context.shareCalls.at(-1)
     assert.deepEqual({ path: share.path, needShowEntrance: share.needShowEntrance }, {
       path: 'temp://limiter-share.png', needShowEntrance: false,

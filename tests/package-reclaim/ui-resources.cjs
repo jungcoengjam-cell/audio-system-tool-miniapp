@@ -6,6 +6,9 @@ const path = require('node:path')
 const root = path.resolve(__dirname, '../..')
 const baseline = require('./ui-test-first.json')
 const repair7CurrentContract = require('./repair7-current-contract.json')
+const retiredLandscapePage = 'pages/dmx-layout-landscape/dmx-layout-landscape'
+const retiredLandscapeWxml = retiredLandscapePage + '.wxml'
+const registeredPages = JSON.parse(fs.readFileSync(path.join(root, 'app.json'), 'utf8')).pages
 
 function read(relativePath) {
   return fs.readFileSync(path.join(root, relativePath), 'utf8')
@@ -44,16 +47,25 @@ for (const [relativePath, expectedHash] of Object.entries({
 })) {
   assert.match(expectedHash, /^[0-9a-f]{64}$/, `missing test-first WXML hash: ${relativePath}`)
   const file = path.join(root, relativePath)
+  if (relativePath === retiredLandscapeWxml) {
+    assert(!registeredPages.includes(retiredLandscapePage), 'retired landscape page must remain unregistered')
+    assert.equal(fs.existsSync(file), false, 'retired landscape WXML must be removed')
+    continue
+  }
   const source = fs.readFileSync(file, 'utf8')
   const expanded = expandIncludes(withoutHomepageEditorSurfaces(source), file)
   const dmxLayoutPages = new Set([
     'pages/dmx-layout/dmx-layout.wxml',
-    'pages/dmx-layout-landscape/dmx-layout-landscape.wxml'
   ])
   let hashInput = normalizeLineEndings(expanded)
   if (relativePath === 'pages/cable/cable.wxml') {
     const overlay = read('pages/cable/cable-overlays.wxml')
-    const controller = read('pages/cable/cable.js')
+    const pageController = read('pages/cable/cable.js')
+    const projectController = read('pages/cable/cable-project.js')
+    assert(pageController.includes("require('./cable-project')")
+      && pageController.includes('...cableProjectMethods'),
+    'cable page must compose its project controller methods')
+    const controller = `${pageController}\n${projectController}`
     const reportUi = read('pages/cable/cable-report.js')
     const styles = read('pages/cable/cable.wxss')
     const sharedPreview = read('templates/result-report-preview.wxml')
@@ -310,7 +322,12 @@ for (const [relativePath, expectedHash] of Object.entries({
   }
   if (relativePath === 'pages/gain-structure/gain-structure.wxml') {
     const overlay = read('pages/gain-structure/gain-overlays.wxml')
-    const controller = read('pages/gain-structure/gain-structure.js')
+    const pageController = read('pages/gain-structure/gain-structure.js')
+    const projectController = read('pages/gain-structure/gain-project.js')
+    assert(pageController.includes("require('./gain-project')")
+      && pageController.includes('...gainProjectMethods'),
+    'gain page must compose its project controller methods')
+    const controller = `${pageController}\n${projectController}`
     const styles = read('pages/gain-structure/gain-structure.wxss')
     const hasWxmlClass = (className) => [...source.matchAll(/class="([^"]*)"/g)]
       .some((match) => match[1].split(/\s+/).includes(className))
@@ -432,7 +449,13 @@ for (const [relativePath, expectedHash] of Object.entries({
       .every((flag) => stageCanvas.includes(`!${flag}`)) && stageCanvas.includes('wx:if='),
     `lighting overlays must unmount the native stage surface: ${relativePath}`)
     const exportCanvas = hashInput.match(/<canvas\b[^>]*id="dmxLayoutExportCanvas"[^>]*>/)?.[0] || ''
-    const canvasController = read('pages/dmx-layout/page-factory.js')
+    const pageFactory = read('pages/dmx-layout/page-factory.js')
+    const exportController = read('pages/dmx-layout/layout-export-controller.js')
+    assert(pageFactory.includes("require('./layout-export-controller')")
+      && pageFactory.includes('createLayoutExportMethods({')
+      && pageFactory.includes('...layoutExportMethods'),
+    'lighting page must create and compose the layout export controller')
+    const canvasController = `${pageFactory}\n${exportController}`
     assert(exportCanvas.includes('type="2d"')
       && exportCanvas.includes('style="width:1px;height:1px;"')
       && canvasController.includes('configureCanvas2DNode(node, page.width, page.height, 1)')

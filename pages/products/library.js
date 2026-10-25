@@ -1,4 +1,5 @@
 const { printPerformanceSummary, startMeasurement } = require('../../utils/performance')
+const { vibrate } = require('../../utils/haptics')
 const finishLibraryModuleLoad = startMeasurement('产品资料库/脚本加载')
 const { PRODUCT_COUNTS } = require('../../data/app-meta')
 const {
@@ -91,16 +92,20 @@ Page({
   },
 
   onTypeTap(event) {
+    const typeIndex = Number(event.currentTarget.dataset.index)
+    const changed = Number.isInteger(typeIndex) && Boolean(this.data.types[typeIndex])
+      && typeIndex !== this.data.typeIndex
     this.cancelSearchRefresh()
     this.pendingSearchKeyword = null
     this.refresh(true, true, {
-      typeIndex: Number(event.currentTarget.dataset.index),
+      typeIndex,
       keyword: '',
       categoryIndex: 0,
       capabilityFilterIndex: 0,
       compareSelectedModels: [],
       productComparison: null,
     })
+    if (changed) vibrate('light')
   },
 
   onSearchInput(event) {
@@ -121,22 +126,30 @@ Page({
 
   onCategoryTap(event) {
     const keyword = this.pendingSearchKeyword ?? this.data.keyword
+    const categoryIndex = Number(event.currentTarget.dataset.index)
+    const changed = Number.isInteger(categoryIndex) && Boolean(this.data.categories[categoryIndex])
+      && categoryIndex !== this.data.categoryIndex
     this.cancelSearchRefresh()
     this.pendingSearchKeyword = null
     this.refresh(false, true, {
       keyword,
-      categoryIndex: Number(event.currentTarget.dataset.index),
+      categoryIndex,
     })
+    if (changed) vibrate('light')
   },
 
   onCapabilityTap(event) {
     const keyword = this.pendingSearchKeyword ?? this.data.keyword
+    const capabilityFilterIndex = Number(event.currentTarget.dataset.index)
+    const changed = Number.isInteger(capabilityFilterIndex) && Boolean(this.data.capabilityFilters[capabilityFilterIndex])
+      && capabilityFilterIndex !== this.data.capabilityFilterIndex
     this.cancelSearchRefresh()
     this.pendingSearchKeyword = null
     this.refresh(false, true, {
       keyword,
-      capabilityFilterIndex: Number(event.currentTarget.dataset.index),
+      capabilityFilterIndex,
     })
+    if (changed) vibrate('light')
   },
 
   scheduleSearchRefresh(keyword) {
@@ -271,6 +284,7 @@ Page({
 
   toggleProductCompare(event) {
     const model = event.currentTarget.dataset.model
+    const isProduct = this.data.products.some((product) => product.model === model)
     const selected = this.data.compareSelectedModels
     let next
     if (selected.includes(model)) next = selected.filter((item) => item !== model)
@@ -291,9 +305,11 @@ Page({
       }
     })
     this.setData(patch)
+    if (isProduct) vibrate('light')
   },
 
   clearProductComparison() {
+    const changed = this.data.compareSelectedModels.length > 0
     const patch = {
       compareSelectedModels: [],
       productComparison: null,
@@ -302,5 +318,6 @@ Page({
       if (product.compareSelected) patch[`products[${index}].compareSelected`] = false
     })
     this.setData(patch)
+    if (changed) vibrate('light')
   },
 })

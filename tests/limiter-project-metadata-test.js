@@ -23,7 +23,6 @@ const storage = new Map([
 const writeCounts = new Map()
 let failedWriteKey = ''
 let failedReadKey = ''
-let clipboardText = ''
 const navigatedUrls = []
 
 function clone(value) {
@@ -43,7 +42,6 @@ global.wx = {
   getStorageInfoSync() { return { currentSize: 1, limitSize: 100 } },
   setNavigationBarTitle() {},
   navigateTo({ url }) { navigatedUrls.push(url) },
-  setClipboardData({ data }) { clipboardText = data },
 }
 
 delete require.cache[require.resolve('../utils/records')]
@@ -135,6 +133,21 @@ assert.equal(refreshedCalibrationRecord.summary, currentCalibrationPayload.summa
 assert.equal(refreshedCalibrationRecord.resultText, currentCalibrationPayload.resultText,
   '相同输入签名下的项目备注保存仍采用当前计算页面的标定结果')
 assert.equal(refreshedCalibrationRecord.projectMetadata[projectC.id].name, '当前标定配置')
+const reportModel = require('../pages/records/report-model')
+const latestCalibrationSource = reportModel.loadProjectReportSource(projectC.id)
+assert.equal(latestCalibrationSource.ok, true, latestCalibrationSource.error)
+const latestCalibrationItem = reportModel.getProjectReportSections(latestCalibrationSource)
+  .find((section) => section.key === 'calculation').items
+  .find((item) => item.record.id === refreshedCalibrationRecord.id)
+assert(latestCalibrationItem, 'the current calibration record remains selectable in the PDF report')
+const latestCalibrationReport = reportModel.buildReportPayload(latestCalibrationSource, [latestCalibrationItem.id])
+assert.equal(latestCalibrationReport.selectedItems[0].record.resultText, currentCalibrationPayload.resultText,
+  'the PDF report snapshot uses the latest result for an unchanged input signature')
+const latestCalibrationText = latestCalibrationReport.pages.flatMap((page) => page.lines)
+  .map((line) => line.text).join('')
+assert(latestCalibrationText.includes(`关键结果：${currentCalibrationPayload.summary}`))
+assert(!latestCalibrationText.includes(previousCalibrationPayload.summary),
+  'the PDF report does not show the superseded calibration summary')
 
 const sameNameDifferentParameters = records.addRecordToProject({
   ...payload,
@@ -272,6 +285,25 @@ function captureProjectPage() {
   }
 }
 
+function captureReportPage() {
+  let definition
+  const previousPage = global.Page
+  global.Page = (value) => { definition = value }
+  const reportPagePath = require.resolve('../pages/records/report')
+  delete require.cache[reportPagePath]
+  require(reportPagePath)
+  global.Page = previousPage
+  assert(definition)
+  return {
+    ...definition,
+    data: clone(definition.data),
+    setData(changes, callback) {
+      this.data = { ...this.data, ...changes }
+      if (callback) callback()
+    },
+  }
+}
+
 const projectPage = captureProjectPage()
 projectPage.onLoad({ id: projectA.id })
 let limiterView = projectPage.data.recordGroups.find((group) => group.module === 'limiter')
@@ -279,31 +311,51 @@ let limiterView = projectPage.data.recordGroups.find((group) => group.module ===
 assert.equal(limiterView.title, '有效名称')
 assert.equal(limiterView.projectNote, '注'.repeat(200))
 assert.equal(limiterView.updatedAt, favoriteRecord.projectMetadata[projectA.id].savedAt)
-const reportSignatureRecord = JSON.parse(projectPage.reportSourceSignature).records
-  .find((record) => record.id === favoriteRecord.id)
 const viewSignatureRecord = JSON.parse(projectPage.projectViewSignature).records
   .find((record) => record.id === favoriteRecord.id)
-;[reportSignatureRecord, viewSignatureRecord].forEach((item) => {
-  assert.equal(item.title, limiterView.title)
-  assert.equal(item.hasProjectMetadata, true)
-  assert.equal(item.projectNote, limiterView.projectNote)
-  assert.equal(item.updatedAt, limiterView.updatedAt)
-})
+assert.equal(viewSignatureRecord.title, limiterView.title)
+assert.equal(viewSignatureRecord.hasProjectMetadata, true)
+assert.equal(viewSignatureRecord.projectNote, limiterView.projectNote)
+assert.equal(viewSignatureRecord.updatedAt, limiterView.updatedAt)
 
 const longNote = '甲乙丙丁戊己庚辛壬癸'.repeat(20)
 const fixedSavedAt = Date.now() + 5000
 const originalDateNow = Date.now
 let noteOnlyRecord
+let reportPage
+let previousViewSignature
+let previousReportSourceFingerprint
 try {
   Date.now = () => fixedSavedAt
   records.addRecordToProject(payload, projectA.id, { name: '有效名称', note: '时间戳基准备注' })
   projectPage.refresh()
   const baselineProject = records.getProjects().find((project) => project.id === projectA.id)
   assert.equal(baselineProject.updatedAt, fixedSavedAt)
-  projectPage.reportSignature = projectPage.reportSourceSignature
-  projectPage.setData({ reportImagePath: 'temp://old-project-report.png', reportPreviewVisible: true })
-  const previousViewSignature = projectPage.projectViewSignature
-  const previousReportSourceSignature = projectPage.reportSourceSignature
+
+  reportPage = captureReportPage()
+  reportPage.onLoad({ id: projectA.id })
+  const initialSections = reportModel.getProjectReportSections(reportPage.reportSource)
+  const initialReportItem = initialSections.find((section) => section.key === 'calculation')
+    .items.find((item) => item.record.id === favoriteRecord.id)
+  assert(initialReportItem, 'the current project report loads the metadata record')
+  previousReportSourceFingerprint = reportPage._sourceFingerprint
+  previousViewSignature = projectPage.projectViewSignature
+  const cachedSignature = JSON.stringify({
+    source: reportPage._sourceFingerprint,
+    selectedIds: [initialReportItem.id],
+  })
+  reportPage.reportSignature = cachedSignature
+  reportPage._reportPages = [{ path: 'temp://cached-report-page.png' }]
+  reportPage._reportPdfPath = 'temp://cached-pdf.pdf'
+  reportPage._reportPdfSignature = cachedSignature
+  reportPage.setData({
+    mode: 'preview',
+    reportPages: reportPage._reportPages,
+    currentPagePath: 'temp://cached-report-page.png',
+    pageCount: 1,
+    reportPdfPath: 'temp://cached-pdf.pdf',
+  })
+
   noteOnlyRecord = records.addRecordToProject(payload, projectA.id, {
     name: '有效名称',
     note: longNote,
@@ -314,10 +366,19 @@ try {
   projectPage.refresh()
   assert.notEqual(projectPage.projectViewSignature, previousViewSignature,
     '同一时间戳下仅备注变化仍更新项目视图签名')
-  assert.notEqual(projectPage.reportSourceSignature, previousReportSourceSignature,
-    '同一时间戳下仅备注变化仍更新报告来源签名')
-  assert.equal(projectPage.data.reportImagePath, '', '备注变化后清空长图缓存')
-  assert.equal(projectPage.data.reportPreviewVisible, false)
+  assert.equal(reportPage.refreshSourceForGeneration(), false,
+    '仅备注变化即使 savedAt 不变也要求当前 PDF 报告刷新来源')
+  assert.notEqual(reportPage._sourceFingerprint, previousReportSourceFingerprint,
+    '报告来源指纹包含项目内备注变化')
+  assert.equal(reportPage.reportSignature, '', '来源变化后清除旧报告签名')
+  assert.deepEqual(reportPage._reportPages, [], '来源变化后清除已生成的分页预览缓存')
+  assert.equal(reportPage._reportPdfPath, '', '来源变化后清除已生成的 PDF 文件缓存')
+  assert.equal(reportPage._reportPdfSignature, '')
+  assert.equal(reportPage.data.mode, 'select')
+  assert.deepEqual(reportPage.data.reportPages, [])
+  assert.equal(reportPage.data.currentPagePath, '')
+  assert.equal(reportPage.data.pageCount, 0)
+  assert.equal(reportPage.data.reportPdfPath, '')
 } finally {
   Date.now = originalDateNow
 }
@@ -327,230 +388,23 @@ assert.equal(limiterView.title, '有效名称')
 assert.equal(limiterView.projectNote, longNote)
 assert.equal(limiterView.updatedAt, noteOnlyRecord.projectMetadata[projectA.id].savedAt)
 
-projectPage.copyProject()
-assert(clipboardText.includes('—— 1. 有效名称 ——'))
-assert(clipboardText.includes(`配置备注：${longNote}`), '文字报告完整包含配置备注')
-const savedAtDate = new Date(noteOnlyRecord.projectMetadata[projectA.id].savedAt)
-const pad = (value) => String(value).padStart(2, '0')
-const savedAtText = `${savedAtDate.getFullYear()}-${pad(savedAtDate.getMonth() + 1)}-${pad(savedAtDate.getDate())} ${pad(savedAtDate.getHours())}:${pad(savedAtDate.getMinutes())}`
-assert(clipboardText.includes(`记录时间：${savedAtText}`), '文字报告显示项目自己的实际保存时间')
-
-const projectReport = require('../pages/records/project-report')
-const reportPayload = projectReport.buildProjectReportPayload(projectPage.data.project,
-  projectPage.data.recordGroups, { generatedAt: '2026-10-06' })
-assert(reportPayload.groups.some((group) => group.records.some((record) => record.projectNote === longNote)))
-const expectedLegacyHeight = 700 + (reportPayload.groups.length * 76)
-  + (reportPayload.groups.reduce((sum, group) => sum + group.records.length, 0) * 126)
-  + (reportPayload.omittedCount ? 54 : 0) + 138
-assert(projectReport.calculateProjectReportHeight(reportPayload) > expectedLegacyHeight,
-  '有长备注时动态增加长图高度')
-const legacyPayload = projectReport.buildProjectReportPayload(projectPage.data.project,
-  reportPayload.groups.map((group) => ({
-    ...group,
-    records: group.records.map(({ projectNote, ...record }) => record),
-  })), { generatedAt: '2026-10-06' })
-const expectedNoNoteHeight = 700 + (legacyPayload.groups.length * 76)
-  + (legacyPayload.groups.reduce((sum, group) => sum + group.records.length, 0) * 126)
-  + (legacyPayload.omittedCount ? 54 : 0) + 138
-assert.equal(projectReport.calculateProjectReportHeight(legacyPayload), expectedNoNoteHeight,
-  '无项目备注时沿用原长图高度')
-
-function createReportContext() {
-  const calls = []
-  const shapes = []
-  let pathPoints = []
-  const context = {
-    font: '15px sans-serif',
-    measureText(text) {
-      const size = Number(this.font.match(/(\d+)px/)?.[1]) || 15
-      return { width: [...String(text)].length * size }
-    },
-    setFillStyle() {},
-    setStrokeStyle() {},
-    setLineWidth() {},
-    setTextAlign() {},
-    fillRect(x, y, width, height) { shapes.push({ x, y, width, height }) },
-    beginPath() { pathPoints = [] },
-    moveTo(x, y) { pathPoints.push({ x, y }) },
-    lineTo(x, y) { pathPoints.push({ x, y }) },
-    quadraticCurveTo(controlX, controlY, x, y) {
-      pathPoints.push({ x: controlX, y: controlY }, { x, y })
-    },
-    closePath() {},
-    fill() { shapes.push({ points: pathPoints }) },
-    stroke() {},
-    fillText(text, x, y) { calls.push({ text: String(text), x, y, font: this.font }) },
-  }
-  return { context, calls, shapes }
-}
-
-const { context, calls: canvasCalls } = createReportContext()
-projectReport.drawProjectReport(context, reportPayload, projectReport.calculateProjectReportHeight(reportPayload))
-const noteLines = []
-const drawingText = canvasCalls.map((item) => item.text)
-const firstNoteLine = drawingText.findIndex((line) => line.startsWith('配置备注：'))
-assert.notEqual(firstNoteLine, -1, '长图展示项目配置备注')
-noteLines.push(...drawingText.slice(firstNoteLine, firstNoteLine + 4))
-assert.deepEqual(noteLines, [
-  `配置备注：${longNote.slice(0, 15)}`,
-  longNote.slice(15, 35),
-  longNote.slice(35, 55),
-  '备注摘录，全文见文字报告',
-], '长图明确标示备注摘录；文字报告保留完整备注')
-
-const wrappedMetadataName = '名'.repeat(60)
-const wrappedMetadataNote = '第一行备注\n第二行备注'
-const wrappedMetadataPayload = projectReport.buildProjectReportPayload(projectPage.data.project, [{
-  module: 'limiter',
-  label: '限幅器',
-  theme: 'cyan',
-  records: [{
-    id: 'wrapped-metadata',
-    module: 'limiter',
-    title: wrappedMetadataName,
-    hasProjectMetadata: true,
-    summary: '配置名称和换行备注边界',
-    projectNote: wrappedMetadataNote,
-    timeText: '10-06 12:00',
-    theme: 'cyan',
-  }],
-}], { generatedAt: '2026-10-06' })
-const wrappedMetadataHeight = projectReport.calculateProjectReportHeight(wrappedMetadataPayload)
-const wrappedMetadataContext = createReportContext()
-projectReport.drawProjectReport(wrappedMetadataContext.context, wrappedMetadataPayload, wrappedMetadataHeight)
-const wrappedMetadataCalls = wrappedMetadataContext.calls
-const longTitleLines = wrappedMetadataCalls.filter((item) => item.x === 66 && /^名+$/.test(item.text))
-assert.equal(longTitleLines.map((item) => item.text).join(''), wrappedMetadataName,
-  '长图完整换行绘制60字中文配置名')
-const configTitleFirstLine = longTitleLines[0]
-const configTitleTime = wrappedMetadataCalls.find((item) => item.text === '10-06 12:00')
-assert(configTitleFirstLine && configTitleTime)
-wrappedMetadataContext.context.font = configTitleFirstLine.font
-const configTitleLineWidth = wrappedMetadataContext.context.measureText(configTitleFirstLine.text).width
-wrappedMetadataContext.context.font = configTitleTime.font
-const configTitleTimeWidth = wrappedMetadataContext.context.measureText(configTitleTime.text).width
-assert(configTitleFirstLine.x + configTitleLineWidth + 12 <= configTitleTime.x - configTitleTimeWidth,
-  '配置名首行与同一行的记录时间实际绘制边界不重叠')
-const firstWrappedNoteIndex = wrappedMetadataCalls.findIndex((item) => item.text === '配置备注：第一行备注')
-assert.notEqual(firstWrappedNoteIndex, -1)
-assert.equal(wrappedMetadataCalls[firstWrappedNoteIndex + 1].text, '第二行备注',
-  '长图保留备注中的换行，不把两段合并')
-assert(wrappedMetadataCalls.every((item) => !item.text.includes('\n') && !item.text.includes('\r')),
-  '长图把换行拆成真实独立绘制行')
-assert(wrappedMetadataCalls.every((item) => {
-  const fontSize = Number(item.font.match(/(\d+)px/)?.[1]) || 0
-  return item.y + fontSize <= wrappedMetadataHeight
-}), '长配置名与多行备注的文字均未越出长图高度')
-assert(wrappedMetadataContext.shapes.every((shape) => shape.points
-  ? shape.points.every((point) => point.y <= wrappedMetadataHeight)
-  : shape.y + shape.height <= wrappedMetadataHeight), '长配置名卡片边界处于长图高度内')
-
-const legacyLongCanonicalPayload = projectReport.buildProjectReportPayload(projectPage.data.project, [{
-  module: 'limiter',
-  label: '限幅器',
-  theme: 'cyan',
-  records: [{
-    id: 'legacy-long-canonical',
-    module: 'limiter',
-    title: wrappedMetadataName,
-    summary: '旧版共享标题',
-    timeText: '10-06 12:00',
-    theme: 'cyan',
-  }],
-}], { generatedAt: '2026-10-06' })
-const legacyLongCanonicalHeight = projectReport.calculateProjectReportHeight(legacyLongCanonicalPayload)
-assert.equal(legacyLongCanonicalHeight, 1040, '无元数据的旧限幅标题保持旧长图高度')
-const legacyLongCanonicalContext = createReportContext()
-projectReport.drawProjectReport(legacyLongCanonicalContext.context, legacyLongCanonicalPayload,
-  legacyLongCanonicalHeight)
-const legacyCanonicalTitleCalls = legacyLongCanonicalContext.calls.filter((item) => item.x === 66 && item.y === 819)
-assert.equal(legacyCanonicalTitleCalls.length, 1, '无元数据的旧限幅标题保持原单行绘制轨迹')
-assert(legacyCanonicalTitleCalls[0].text.endsWith('…'), '旧长canonical标题继续沿用旧版单行省略')
-assert.equal(wrappedMetadataPayload.groups[0].records[0].title, legacyLongCanonicalPayload.groups[0].records[0].title,
-  '元数据配置名与canonical标题可以同名')
-assert(wrappedMetadataHeight > legacyLongCanonicalHeight,
-  '同名的有效元数据仍按项目配置名完整换行并扩展长图卡片')
-
-const maximumReportPayload = projectReport.buildProjectReportPayload(projectPage.data.project, [{
-  module: 'limiter',
-  label: '限幅器',
-  theme: 'cyan',
-  trustLabel: '产品参数计算',
-  records: Array.from({ length: 12 }, (_, index) => ({
-    id: `maximum-note-${index}`,
-    title: `限幅配置 ${index + 1}`,
-    summary: '同一真实计算摘要',
-    projectNote: longNote,
-    timeText: '10-06 12:00',
-    theme: 'cyan',
-  })),
-}], { generatedAt: '2026-10-06' })
-const maximumReportHeight = projectReport.calculateProjectReportHeight(maximumReportPayload)
-assert.equal(maximumReportHeight, 3314, '12条备注在3条内容行加提示行内布局')
-assert(maximumReportHeight <= 4096, '最长备注源画布不超过4096px，避免大尺寸画布')
-const maximumContext = createReportContext()
-projectReport.drawProjectReport(maximumContext.context, maximumReportPayload, maximumReportHeight)
-const maximumDraws = maximumContext.calls
-assert(maximumDraws.every((item) => {
-  const fontSize = Number(item.font.match(/(\d+)px/)?.[1]) || 0
-  return item.y + fontSize <= maximumReportHeight
-}), '12 条最长备注的文字基线与字号均在画布高度内')
-assert(maximumContext.shapes.every((shape) => shape.points
-  ? shape.points.every((point) => point.y <= maximumReportHeight)
-  : shape.y + shape.height <= maximumReportHeight), '所有报告卡片边界均在画布高度内')
-const maximumFooter = maximumDraws.find((item) => item.text.startsWith('本报告为项目内计算结果汇总'))
-const maximumVersion = maximumDraws.find((item) => item.text.startsWith('版本 '))
-assert(maximumFooter && maximumVersion)
-assert(maximumVersion.y + 16 <= maximumReportHeight, '版本页脚完整处于画布内')
-const maximumExport = projectReport.getExportDimensions(maximumReportHeight)
-assert(maximumExport.destHeight <= 4096 && maximumExport.destHeight >= maximumReportHeight,
-  '报告导出不把文字缩小到源画布以下，并保持平台高度上限')
-assert(750 * maximumReportHeight * 4 <= 12 * 1024 * 1024,
-  '最大12条备注的源画布 RGBA 数据量低于12 MiB')
-
-const adversarialNote = `${'A\n'.repeat(99)}A`
-assert.equal(adversarialNote.length, 199)
-const adversarialGroups = Array.from({ length: 12 }, (_, index) => ({
-  module: `module-${index + 1}`,
-  label: `模块 ${index + 1}`,
-  theme: 'cyan',
-  records: [{
-    id: `adversarial-${index + 1}`,
-    title: wrappedMetadataName,
-    hasProjectMetadata: true,
-    summary: '最坏换行输入',
-    projectNote: adversarialNote,
-    timeText: '10-06 12:00',
-    theme: 'cyan',
-  }],
-}))
-const adversarialReport = projectReport.buildProjectReportPayload(projectPage.data.project,
-  adversarialGroups, { generatedAt: '2026-10-06' })
-const adversarialHeight = projectReport.calculateProjectReportHeight(adversarialReport)
-assert(adversarialHeight <= 4096, '12模块的最长配置名和199字符换行备注仍限制在4096px')
-assert(adversarialReport.omittedCount > 0, '超出画布预算时沿用omittedCount省略长图记录')
-assert.equal(adversarialReport.completedModuleCount, 0, '未知模块组不计入已完成活跃模块数')
-assert(adversarialReport.groups.flatMap((group) => group.records)
-  .every((record) => record.projectNote === adversarialNote), '被保留的记录仍带有完整原始备注')
-assert(adversarialGroups.every((group) => group.records[0].projectNote === adversarialNote),
-  '长图预算裁减不改原始输入与文字报告数据')
-const adversarialExport = projectReport.getExportDimensions(adversarialHeight)
-assert(adversarialExport.destHeight <= 4096 && adversarialExport.destHeight >= adversarialHeight,
-  '极端换行报告导出尺寸既保留源画布字号又不超4096px')
-assert(750 * adversarialHeight * 4 <= 12 * 1024 * 1024,
-  '极端换行报告源画布 RGBA 数据量低于12 MiB')
-const adversarialContext = createReportContext()
-projectReport.drawProjectReport(adversarialContext.context, adversarialReport, adversarialHeight)
-assert(adversarialContext.calls.some((item) => item.text === '备注摘录，全文见文字报告'),
-  '极端换行长图清楚提示备注全文见文字报告')
-assert(adversarialContext.calls.every((item) => {
-  const fontSize = Number(item.font.match(/(\d+)px/)?.[1]) || 0
-  return item.y + fontSize <= adversarialHeight
-}), '裁减记录后的极端报告页脚与所有文字均在画布内')
-assert(adversarialContext.shapes.every((shape) => shape.points
-  ? shape.points.every((point) => point.y <= adversarialHeight)
-  : shape.y + shape.height <= adversarialHeight), '裁减记录后的极端报告卡片边界在画布内')
-
+const reportSections = reportModel.getProjectReportSections(reportPage.reportSource)
+const reportItem = reportSections.find((section) => section.key === 'calculation')
+  .items.find((item) => item.record.id === favoriteRecord.id)
+const reportPayload = reportModel.buildReportPayload(reportPage.reportSource, [reportItem.id])
+assert.equal(reportPayload.itemCount, 1)
+assert.equal(reportPayload.selectedItems[0].record.resultText, payload.resultText,
+  'the PDF report snapshot retains the complete saved calculation result')
+assert.equal(reportPayload.selectedItems[0].record.projectNote, longNote)
+assert.equal(reportPayload.selectedItems[0].record.title, '有效名称')
+const reportText = reportPayload.pages.flatMap((page) => page.lines).map((line) => line.text).join('')
+assert(reportText.includes('项目方案名称：有效名称'))
+assert(reportText.includes(`项目备注：${longNote}`), 'the PDF report contains the full untruncated metadata note')
+assert(reportText.includes(`关键结果：${noteOnlyRecord.summary}`))
+assert(reportText.includes(`保存时间：${new Date(noteOnlyRecord.projectMetadata[projectA.id].savedAt).toLocaleString('zh-CN')}`),
+  'the PDF report shows the project record saved time')
+assert(reportText.includes('功放型号：TC-2350B'))
+assert(reportText.includes('音箱型号：TS-803C'))
 const metadataBeforeProjection = clone(favoriteRecord.projectMetadata)
 const projectionWrites = [...writeCounts.values()].reduce((sum, count) => sum + count, 0)
 const projected = records.getProjectRecordView(favoriteRecord, projectA.id)

@@ -4,7 +4,11 @@ const path=require('node:path')
 const {createRuntime}=require('./controller-runtime.cjs')
 const root=path.resolve(__dirname,'../..')
 const nativeTags=new Set(['view','text','image','input','textarea','button','picker','picker-view','picker-view-column','scroll-view','canvas','block','template','include','import','rich-text','switch','label','navigator','swiper','swiper-item','movable-area','movable-view','cover-view','cover-image'])
-for(const [kind,base]of [['main','pages/dmx-address/dmx-address'],['portrait','pages/dmx-layout/dmx-layout'],['landscape','pages/dmx-layout-landscape/dmx-layout-landscape']]){
+const appConfig=JSON.parse(fs.readFileSync(path.join(root,'app.json'),'utf8'))
+const registeredPages=[...(appConfig.pages||[]),...(appConfig.subPackages||[]).flatMap(pkg=>(pkg.pages||[]).map(page=>path.posix.join(pkg.root,page)))]
+assert(!registeredPages.includes('pages/dmx-layout-landscape/dmx-layout-landscape'),'Retired landscape route must stay out of app.json')
+assert.equal(fs.existsSync(path.join(root,'pages/dmx-layout-landscape')),false,'Retired landscape page source must stay absent')
+for(const [kind,base]of [['main','pages/dmx-address/dmx-address'],['portrait','pages/dmx-layout/dmx-layout'],['landscape','pages/dmx-layout/dmx-layout']]){
   const r=createRuntime();r.seed()
   try{
     const page=r.make(kind),xml=fs.readFileSync(path.join(root,base+'.wxml'),'utf8'),css=fs.readFileSync(path.join(root,base+'.wxss'),'utf8')

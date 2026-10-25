@@ -29,16 +29,14 @@
           <block wx:elif="{{item.id === 'camera'}}">
             <view class="home-tool-title-line">摄像机</view><view class="home-tool-title-line">视场角</view>
           </block>
+          <block wx:elif="{{item.id === 'productLibrary'}}">
+            <view class="home-tool-title-line">产品</view><view class="home-tool-title-line">资料库</view>
+          </block>
           <view wx:else class="home-tool-title-line">{{item.title}}</view>
         </view>
       </navigator>
     </view>
 
-    <navigator class="home-library-card" url="/pages/products/library" hover-class="home-pressed" aria-label="打开产品资料库">
-      <view class="home-library-icon" aria-hidden="true">▤</view>
-      <view class="home-library-title">产品资料库</view>
-      <view class="home-chevron" aria-hidden="true">›</view>
-    </navigator>
     <view class="home-bottom-space"></view>
   </view>
 </scroll-view>

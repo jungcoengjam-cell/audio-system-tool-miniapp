@@ -37,13 +37,7 @@ const {
 } = require('../utils/catalog-selector')
 const { calculateGainStructure } = require('../utils/gain-structure')
 const { calculateLedScreenPlan } = require('../utils/led-screen')
-const {
-  buildProjectReportPayload,
-  calculateProjectReportHeight,
-  getExportDimensions,
-} = require('../pages/records/project-report')
 const { calculateSpeakerSpl } = require('../utils/spl')
-const { buildRecordComparison } = require('../utils/record-comparison')
 const {
   RECENT_STORAGE_KEY,
   buildProductComparison,
@@ -240,6 +234,8 @@ walkWxss(root)
 assert.strictEqual(bareLengthViolations.length, 0, `WXSS 存在非零长度裸数字: ${JSON.stringify(bareLengthViolations.slice(0, 5))}`)
 const PACKAGE_BUDGETS = Object.freeze({
   total: 5120 * 1024,
+  // Source-only ceiling; the compiled WeChat package still needs a DevTools size check.
+  mainTotal: 2460 * 1024,
   mainJavaScript: 1536 * 1024,
   subPackageJavaScript: 352 * 1024,
   '.wxss': 576 * 1024,
@@ -678,11 +674,11 @@ function checkReleasePackageGates() {
   assertDarkDeclaration(sharedTheme, 'page .warning-text.warning-text', 'color:var(--theme-warning)', '共享警告正文未使用 warning 语义色')
   assert(!recordsTheme.includes('.interior-comparison-grid') && !recordsTheme.includes('.interior-comparison-row'),
     '项目详情不再保留计算记录比较表样式')
-  ;['pages/dmx-layout/dmx-layout.wxss', 'pages/dmx-layout-landscape/dmx-layout-landscape.wxss']
+  ;['pages/dmx-layout/dmx-layout.wxss']
     .forEach((file) => assert(!fs.readFileSync(path.join(root, file), 'utf8').includes('theme-page-shared'), `${file} 不得导入第二批共享主题`))
   ;['pages/led-screen/led-screen.json', 'pages/gain-structure/gain-structure.json', 'pages/products/library.json',
     'pages/products/detail.json', 'pages/dmx-address/dmx-address.json', 'pages/dmx-address/channel-guide.json',
-    'pages/dmx-layout/dmx-layout.json', 'pages/dmx-layout-landscape/dmx-layout-landscape.json']
+    'pages/dmx-layout/dmx-layout.json']
     .forEach((file) => {
       const source = fs.readFileSync(path.join(root, file), 'utf8')
       assert(!source.includes('navigationBarBackgroundColor') && !source.includes('navigationBarTextStyle'),
@@ -708,7 +704,7 @@ function checkReleasePackageGates() {
     layoutFactorySource.includes('wx.onThemeChange') && layoutFactorySource.includes('wx.offThemeChange') &&
     layoutFactorySource.includes('this.clearImage()') && layoutRendererSource.includes('theme.background') &&
     layoutRendererSource.includes('theme.stage'), '位置图 Canvas 缺少浅深色调色板或主题切换清图重绘机制')
-  ;['pages/dmx-layout/dmx-layout.wxss', 'pages/dmx-layout-landscape/dmx-layout-landscape.wxss'].forEach((file) => {
+  ;['pages/dmx-layout/dmx-layout.wxss'].forEach((file) => {
     const source = fs.readFileSync(path.join(root, file), 'utf8')
     const layoutDarkCss = source.slice(source.search(/@media\s*\(prefers-color-scheme:\s*dark\)/)).replace(/\s+/g, '')
     assert(/@media\s*\(prefers-color-scheme:\s*dark\)/.test(source) &&
@@ -726,9 +722,15 @@ function checkReleasePackageGates() {
   const packageGroups = getPackageGroups(packageFiles, appConfig)
   const subPackageRoots = (appConfig.subPackages || []).map((subPackage) => subPackage.root)
   const mainPackage = packageGroups.find((group) => !group.root)
+  const mainPackageBytes = mainPackage.files.reduce((total, file) => total + fs.statSync(file).size, 0)
   const crossPackageRequires = findSubPackageRequires(mainPackage.files, subPackageRoots)
   assert.strictEqual(crossPackageRequires.length, 0,
     `主包 JS 不得 require 分包资源：${crossPackageRequires.map((item) => `${item.file} -> ${item.request}`).join('；')}`)
+  const basisSubPackage = (appConfig.subPackages || []).find((subPackage) => subPackage.root === 'pages/basis')
+  assert(basisSubPackage?.pages?.includes('detail'), '依据详情页未注册为独立分包')
+  assert(!appConfig.pages.includes('pages/basis/detail'), '依据详情页仍位于主包 pages 中')
+  assert(fs.existsSync(path.join(root, 'pages/basis/assets/cable.png')))
+  assert(!fs.existsSync(path.join(root, 'assets/basis')), '依据详情图仍位于主包 assets')
   const dmxSubPackage = (appConfig.subPackages || []).find((subPackage) => subPackage.root === 'pages/dmx-address')
   assert(dmxSubPackage?.pages?.includes('dmx-address'), 'DMX 地址页未注册为独立分包')
   assert(dmxSubPackage?.pages?.includes('channel-guide'), 'DMX 通道资料页未注册为独立分包')
@@ -752,6 +754,10 @@ function checkReleasePackageGates() {
   assert(
     totalBytes <= PACKAGE_BUDGETS.total,
     `有效正式包超过 ${formatKiB(PACKAGE_BUDGETS.total)}：${formatKiB(totalBytes)}`,
+  )
+  assert(
+    mainPackageBytes <= PACKAGE_BUDGETS.mainTotal,
+    `主包源码资源超过 ${formatKiB(PACKAGE_BUDGETS.mainTotal)}：${formatKiB(mainPackageBytes)}`,
   )
   ;['.wxss', '.wxml'].forEach((extension) => {
     const actual = bytesByExtension[extension] || 0
@@ -812,6 +818,7 @@ function checkReleasePackageGates() {
   }).join('；')
   console.log(
     `发布包门禁：总计 ${formatKiB(totalBytes)} / ${formatKiB(PACKAGE_BUDGETS.total)}；`
+    + `主包源码资源 ${formatKiB(mainPackageBytes)} / ${formatKiB(PACKAGE_BUDGETS.mainTotal)}（非微信编译包实测值）；`
     + `${javascriptByPackage}；`
     + `WXSS ${formatKiB(bytesByExtension['.wxss'] || 0)} / ${formatKiB(PACKAGE_BUDGETS['.wxss'])}；`
     + `WXML ${formatKiB(bytesByExtension['.wxml'] || 0)} / ${formatKiB(PACKAGE_BUDGETS['.wxml'])}；`
@@ -969,31 +976,6 @@ function checkSharedResultReportPreviewTemplate() {
     && limiterShareActions[1].includes('发送给微信好友')
     && limiterShareActions[1].includes('保存到手机'),
   '限制器图片预览必须只提供发送与保存两个应用内动作')
-}
-
-function checkProjectReportPlan() {
-  const groups = Array.from({ length: 7 }, (_, groupIndex) => ({
-    module: `module-${groupIndex}`,
-    label: `模块 ${groupIndex + 1}`,
-    trustLabel: '结果摘要',
-    theme: 'blue',
-    records: Array.from({ length: 3 }, (_, recordIndex) => ({
-      title: `记录 ${groupIndex + 1}-${recordIndex + 1}`,
-      summary: '用于验证项目长图记录上限和模块覆盖。',
-      timeText: '08-12 16:00',
-    })),
-  }))
-  const payload = buildProjectReportPayload({ name: '测试项目' }, groups, {
-    totalModuleCount: 7,
-  })
-  assert.strictEqual(payload.groups.length, 7, '项目长图未保留每个已完成模块')
-  assert.strictEqual(payload.groups.reduce((total, group) => total + group.records.length, 0), 12,
-    '项目长图没有执行摘要记录上限')
-  assert.strictEqual(payload.omittedCount, 9)
-  const height = calculateProjectReportHeight(payload)
-  const exportDimensions = getExportDimensions(height)
-  assert(height > 0 && exportDimensions.destHeight <= 4096,
-    '项目长图导出高度超过安全上限')
 }
 
 function checkLedScreenPlan() {
@@ -2344,6 +2326,9 @@ function checkPageControllers() {
   const dmxResultViewJs = fs.readFileSync(path.join(root, 'pages/dmx-address/result-view.js'), 'utf8')
   const dmxLayoutWxml = fs.readFileSync(path.join(root, 'pages/dmx-layout/dmx-layout.wxml'), 'utf8')
   const dmxLayoutFactory = fs.readFileSync(path.join(root, 'pages/dmx-layout/page-factory.js'), 'utf8')
+  const dmxLayoutExportController = fs.readFileSync(path.join(root, 'pages/dmx-layout/layout-export-controller.js'), 'utf8')
+  const dmxLayoutInteractions = fs.readFileSync(path.join(root, 'pages/dmx-layout/layout-interactions.js'), 'utf8')
+  const dmxLayoutSettings = fs.readFileSync(path.join(root, 'pages/dmx-layout/layout-settings.js'), 'utf8')
   assert(dmxResultViewJs.includes('CHANNEL_GUIDE_FIXTURE_MODELS')
     && dmxAddressJs.includes('getChannelGuideApi')
     && !dmxAddressJs.includes('hasDmxChannelProfile')
@@ -2360,10 +2345,13 @@ function checkPageControllers() {
     && dmxLayoutWxml.includes('bindtap="previewImage"')
     && dmxLayoutWxml.includes('bindtap="shareImage"')
     && dmxLayoutWxml.includes('bindtap="saveImage"')
-    && dmxLayoutFactory.includes('generateLayoutImage()')
-    && dmxLayoutFactory.includes('previewImage()')
-    && dmxLayoutFactory.includes('shareImage()')
-    && dmxLayoutFactory.includes('saveImage()'),
+    && dmxLayoutFactory.includes("require('./layout-export-controller')")
+    && dmxLayoutFactory.includes('createLayoutExportMethods({')
+    && dmxLayoutFactory.includes('...layoutExportMethods')
+    && dmxLayoutExportController.includes('generateLayoutImage()')
+    && dmxLayoutExportController.includes('previewImage()')
+    && dmxLayoutExportController.includes('shareImage()')
+    && dmxLayoutExportController.includes('saveImage()'),
   'DMX 统一布局图未从地址页连通到生成、预览、转发与保存动作')
   assert(!dmxWxml.includes('class="notice-card"')
     && !dmxWxml.includes('域尾保留地址')
@@ -2493,10 +2481,13 @@ function checkPageControllers() {
     '正式竖屏灯位图仍暴露已退役横屏入口')
   assert(dmxLayoutWxml.includes('bindtap="clearSelectedRodLayout"')
     && dmxLayoutWxml.includes('bindtap="clearLayoutImage"')
-    && dmxLayoutFactory.includes('clearSelectedRodLayout()')
-    && dmxLayoutFactory.includes('this.clearLayoutPositions(this._activeRodId)')
-    && dmxLayoutFactory.includes("this.clearLayoutPositions('')")
-    && dmxLayoutFactory.includes('String(position.rodId) === targetRodId'),
+    && dmxLayoutFactory.includes("require('./layout-interactions')")
+    && dmxLayoutFactory.includes('createLayoutPlacementMethods(layoutInteractionDependencies)')
+    && dmxLayoutFactory.includes('...layoutPlacementMethods')
+    && dmxLayoutInteractions.includes('clearSelectedRodLayout()')
+    && dmxLayoutInteractions.includes('this.clearLayoutPositions(this._activeRodId)')
+    && dmxLayoutInteractions.includes("this.clearLayoutPositions('')")
+    && dmxLayoutInteractions.includes('String(position.rodId) === targetRodId'),
   '灯位图须区分当前杆清空和全图清空，并将单杆操作限制在目标杆')
   const dmxWritesBeforeRepeatedCalculation = storageWriteCount
   let unchangedDmxSetDataCount = 0
@@ -2642,15 +2633,6 @@ function checkPageControllers() {
   delete wx.canvasToTempFilePath
   delete wx.showLoading
   delete wx.hideLoading
-  const dmxComparison = buildRecordComparison([
-    { ...dmxPage.getRecordPayload(), id: 'dmx-first' },
-    {
-      ...dmxPage.getRecordPayload(),
-      id: 'dmx-second',
-      preferences: { ...dmxPage.getPreferences(), startAddressText: '101' },
-    },
-  ])
-  assert(dmxComparison.rows.some((row) => row.label === 'A 域起始地址'))
   dmxPage.openFixtureSearch({ currentTarget: { dataset: { index: 0 } } })
   assert.strictEqual(dmxPage.data.fixtureSearchOpen, true)
   assert.strictEqual(dmxPage.data.fixtureSearchTotal, 121)
@@ -3239,11 +3221,14 @@ function checkPageControllers() {
     const tail = source.slice(Math.max(0, source.lastIndexOf(neutral)))
     assertDarkDeclaration(selector, declaration, tail)
   }
-  assert(dmxLayoutFactory.includes('const validationErrors = {}')
-    && dmxLayoutFactory.includes('collectRodErrors(\'internalRods\', draft.internalRods, internalRods, axis)')
-    && dmxLayoutFactory.includes('collectRodErrors(\'frontRods\', draft.frontRods, frontRods, 200)')
-    && dmxLayoutFactory.includes('layoutValidationErrorsById: validationErrors')
-    && dmxLayoutFactory.includes("layoutErrorScrollIntoView: 'rod-error-' + firstInvalidRodId")
+  assert(dmxLayoutFactory.includes("require('./layout-settings')")
+    && dmxLayoutFactory.includes('createLayoutSettingsMethods({')
+    && dmxLayoutFactory.includes('...layoutSettingsMethods')
+    && dmxLayoutSettings.includes('const validationErrors = {}')
+    && dmxLayoutSettings.includes('collectRodErrors(\'internalRods\', draft.internalRods, internalRods, axis)')
+    && dmxLayoutSettings.includes('collectRodErrors(\'frontRods\', draft.frontRods, frontRods, 200)')
+    && dmxLayoutSettings.includes('layoutValidationErrorsById: validationErrors')
+    && dmxLayoutSettings.includes("layoutErrorScrollIntoView: 'rod-error-' + firstInvalidRodId")
     && dmxLayoutWxml.includes('layoutValidationErrorsById[item.id]')
     && /\.rod-inline-error\{[^}]*background:rgba\(220,55,55,\.1\)[^}]*color:#a5231d/.test(dmxLayoutWxss)
     && /\.layout-page\.dark-mode \.rod-inline-error\{color:#ff8b83\}/.test(dmxLayoutWxss),
@@ -3893,11 +3878,6 @@ function checkPageControllers() {
   const planeCameraText = cameraPage.getResultText()
   assert(planeCameraText.includes('摄像机安装反算｜垂直平面'))
   assert(planeCameraText.includes('摄像机距目标平面：4.63 m'))
-  const cameraComparison = buildRecordComparison([
-    { ...groundCameraPayload, id: 'camera-ground' },
-    { ...cameraPage.getRecordPayload(), id: 'camera-plane' },
-  ])
-  assert(cameraComparison.rows.some((row) => row.label === '拍摄场景'))
   cameraPage.onSceneModeTap({ currentTarget: { dataset: { index: 0 } } })
   const fixedCameraIndex = cameraPage.data.selectorItems.findIndex((item) => item.model === 'TS-0663JP')
   cameraPage.selectCamera({ currentTarget: { dataset: { index: fixedCameraIndex } } })
@@ -4062,12 +4042,6 @@ function checkPageControllers() {
   recordsApi.getRecordByPayload(limiterPayload)
   assert.strictEqual(storageReadCounts.get('audioTool.records.v1') || 0, recordStorageReads,
     'Repeated favorite lookups should reuse the normalized record index instead of reading storage')
-  const recordComparison = buildRecordComparison([
-    { ...limiterPayload, id: 'comparison-1' },
-    { ...limiterPayload, id: 'comparison-2', preferences: { ...limiterPayload.preferences, count: 2 } },
-  ])
-  assert(recordComparison.rows.some((row) => row.label === '每通道数量'))
-
   const persistentRecordCount = recordsApi.getRecords().length
   for (let index = 0; index < 25; index += 1) {
     const transientRecord = recordsApi.saveRecord({
@@ -4111,10 +4085,27 @@ function checkPageControllers() {
     '依据首页应从统一工具注册表读取计算依据入口')
   const indexPage = loadPage('pages/index/index.js')
   assertWxmlHandlers(indexPage, 'pages/index/index.wxml')
+  assert.deepStrictEqual(indexPage.data.basisTools, [], '依据目录首次渲染前应为空，避免隐藏条目闪现')
+  const visibilityKey = require('../utils/tool-visibility').TOOL_VISIBILITY_KEY
+  const hadVisibilityPreference = storage.has(visibilityKey)
+  const previousVisibilityPreference = storage.get(visibilityKey)
+  const previousGetApp = global.getApp
+  global.getApp = () => ({ globalData: { primaryNavigation: { launchPath: '', restoreAllowed: false, restoreChecked: true } } })
+  storage.delete(visibilityKey)
+  indexPage.onShow()
   assert.deepStrictEqual(indexPage.data.basisTools.map(({ id }) => id),
     ['cable', 'gainStructure', 'limiter', 'spl', 'camera', 'ledScreen'])
   assert.deepStrictEqual(indexPage.data.basisTools, toolRegistry.getBasisTools(),
     '依据首页入口必须与工具注册表保持一致')
+  assert.strictEqual(indexPage.data.visibilityReady, true, '依据目录应在 onShow 后标记为可显示')
+  storage.set(visibilityKey, { version: 1, hiddenToolIds: ['camera'] })
+  indexPage.onShow()
+  assert(!indexPage.data.basisTools.some(({ id }) => id === 'camera'), '依据页 onShow 应同步隐藏设置已关闭的工具')
+  storage.delete(visibilityKey)
+  indexPage.onShow()
+  assert.deepStrictEqual(indexPage.data.basisTools, toolRegistry.getBasisTools(), '重新显示工具后依据入口应在 onShow 恢复')
+  if (hadVisibilityPreference) storage.set(visibilityKey, previousVisibilityPreference)
+  else storage.delete(visibilityKey)
   indexPage.data.basisTools.forEach((item) => {
     assert.strictEqual(item.path, `/pages/basis/detail?tool=${encodeURIComponent(item.id)}`)
     assert.strictEqual(toolRegistry.getBasisTool(item.id).id, item.id)
@@ -4130,9 +4121,6 @@ function checkPageControllers() {
   assert(indexWxss.includes('@import "../../styles/homepage.wxss"'))
   assert(indexWxss.includes('.home-basis-row') && indexWxss.includes('var(--theme-surface)')
     && indexWxss.includes('prefers-reduced-motion'))
-  const previousGetApp = global.getApp
-  global.getApp = () => ({ globalData: { primaryNavigation: { launchPath: '', restoreAllowed: false, restoreChecked: true } } })
-  indexPage.onShow()
   assert.strictEqual(storage.get('audioTool.primaryTab.v1'), 'basis', '依据页显示时应记录依据主标签')
   if (previousGetApp === undefined) delete global.getApp
   else global.getApp = previousGetApp
@@ -4146,7 +4134,7 @@ function checkPageControllers() {
   const toolImageNames = [
     'module-gain-structure-catalog.png', 'module-limiter-catalog.png', 'module-spl-catalog.png',
     'module-cable-catalog.png', 'module-camera-catalog.png',
-    'module-led-screen-catalog.png', 'module-dmx-address-catalog.png',
+    'module-led-screen-catalog.png', 'module-dmx-address-catalog.png', 'module-library-catalog.png',
   ]
   const parsePngHeader = (file) => {
     const bytes = fs.readFileSync(file)
@@ -4197,7 +4185,7 @@ function checkPageControllers() {
   assert(audioWiringCatalogBytes <= 20 * 1024,
     '接线助手工具卡透明 PNG 超过 20 KiB')
   assert(toolImageBytes + audioWiringCatalogBytes <= 121 * 1024,
-    `八张工具透明 PNG 超过 121 KiB：${formatKiB(toolImageBytes + audioWiringCatalogBytes)}`)
+    `九张工具透明 PNG 超过 121 KiB：${formatKiB(toolImageBytes + audioWiringCatalogBytes)}`)
   const projectWiringCatalogImage = 'module-project-wiring-catalog.png'
   const projectWiringCatalogPath = path.join(root, 'assets', 'home', projectWiringCatalogImage)
   assert(fs.existsSync(projectWiringCatalogPath) && toolRegistry.getTool('projectWiring').icon === `/assets/home/${projectWiringCatalogImage}`,
@@ -4240,7 +4228,7 @@ function checkPageControllers() {
   assert.strictEqual(ledPanel[(10 * 256 + 10) * 4 + 3], 0, 'LED 屏外部区域被错误恢复')
   assert.strictEqual(ledPanel[(195 * 256 + 230) * 4 + 3], 0, 'LED 屏右下外部区域被错误恢复')
   assertWxmlHandlers(toolsPage, 'pages/tools/tools.wxml')
-  assert.deepStrictEqual(toolsPage.data.categories, ['全部', '布线', '音频', '视频', '灯光', '中控'])
+  assert.deepStrictEqual(toolsPage.data.categories, ['全部', '布线', '音频', '视频', '灯光', '中控', '资料'])
   assert.strictEqual(toolsPage.data.activeCategory, '全部')
   assert.deepStrictEqual(toolsPage.data.tools, [], '显示偏好读取前不应闪现已隐藏工具')
   toolsPage.onShow()
@@ -4279,7 +4267,9 @@ function checkPageControllers() {
     && toolsWxml.includes('wx:key="id"'))
   assert(toolsWxml.includes('bindtap="openSettings"')
     && toolsWxml.includes('aria-label="打开设置"')
-    && toolsWxml.includes('url="/pages/products/library"'))
+    && toolsWxml.includes("item.id === 'productLibrary'")
+    && toolsWxml.includes('home-tool-title-line">产品</view><view class="home-tool-title-line">资料库')
+    && !toolsWxml.includes('home-library-card'))
   assert(toolsWxss.includes('@import "../../styles/homepage.wxss"'))
   assert(toolsWxssCompact.includes('.home-tool-grid{display:grid;box-sizing:border-box;width:100%;grid-template-columns:repeat(4,minmax(0,1fr));column-gap:16rpx;row-gap:16rpx}')
     && toolsWxssCompact.includes('.home-tool-card{display:flex;box-sizing:border-box;width:100%;height:200rpx;min-width:0;min-height:200rpx;flex:00auto;padding:10rpx6rpx;')
@@ -4287,7 +4277,7 @@ function checkPageControllers() {
     && toolsWxssCompact.includes('.home-tool-title-line{display:block;box-sizing:border-box;width:100%;min-width:0;font-size:13px;line-height:1.2')
     && toolsWxssCompact.includes('background:var(--theme-surface)')
     && toolsWxssCompact.includes('overflow-wrap:anywhere'),
-  '工具目录需维持四列（10 项按 4/4/2 排列）、16rpx 间距、固定 200rpx 高度、13px 两行名称和主题表面')
+  '工具目录需维持四列（11 项按 4/4/3 排列）、16rpx 间距、固定 200rpx 高度、13px 两行名称和主题表面')
   assert(toolsWxssCompact.includes('.home-header-action{')
     && toolsWxssCompact.includes('min-width:44px;min-height:44px')
     && toolsWxssCompact.includes('.tools-settings-glyph{'),
@@ -4935,9 +4925,13 @@ function checkPageControllers() {
   assert(reportWxml.includes('bindtap="toggleAllReportItems"')
     && reportWxml.includes('bindtap="toggleReportItem"')
     && reportWxml.includes('bindtap="generateReport"')
-    && reportWxml.includes('bindtap="saveAllReportPages"')
-    && reportWxml.includes('bindtap="shareCurrentReportPage"'),
-  '独立项目报告缺少明确选择、分页预览、保存或分享操作')
+    && reportWxml.includes('bindtap="generateReportPdf"')
+    && reportWxml.includes('bindtap="shareReportPdf"')
+    && reportWxml.includes('projectReportPdfCanvas')
+    && !reportWxml.includes('bindtap="inspectReportPages"')
+    && !reportWxml.includes('bindtap="saveAllReportPages"')
+    && !reportWxml.includes('bindtap="shareCurrentReportPage"'),
+  '独立项目报告缺少选择、分页预览或 PDF 导出/分享操作，或仍暴露图片预览/保存入口')
 
   const knowledgePage = loadPage('pages/knowledge/detail.js')
   assertWxmlHandlers(knowledgePage, 'pages/knowledge/detail.wxml')
@@ -5140,7 +5134,7 @@ function checkProjectDetailPerformanceCoverage() {
   const file = 'pages/records/project.js'
   const prefix = '项目详情/'
   const source = fs.readFileSync(path.join(root, file), 'utf8')
-  ;['刷新总耗时', '整理项目记录', 'setData视图更新', '长图绘制', '长图导出'].forEach((name) => {
+  ;['刷新总耗时', '整理项目记录', 'setData视图更新'].forEach((name) => {
     assert(source.includes(`'${prefix}${name}'`), `${file} 缺少性能测量点：${prefix}${name}`)
   })
   assert(source.includes(`printPerformanceSummary('${prefix}')`), `${file} 离开页面时未输出性能汇总`)
@@ -5193,6 +5187,8 @@ function checkHapticFeedback() {
 
 function checkReportImageActions() {
   const previousWx = global.wx
+  const previousGetCurrentPages = global.getCurrentPages
+  const page = {}
   let previewOptions = null
   let shareOptions = null
   let saveOptions = null
@@ -5201,6 +5197,7 @@ function checkReportImageActions() {
   const toastTitles = []
   const vibrationTypes = []
   try {
+    global.getCurrentPages = () => [page]
     global.wx = {
       vibrateShort: ({ type }) => vibrationTypes.push(type),
       previewImage: (options) => { previewOptions = options },
@@ -5224,18 +5221,25 @@ function checkReportImageActions() {
     assert.strictEqual(shareOptions.path, 'temp://report.png')
     shareOptions.fail({ errMsg: 'showShareImageMenu:fail cancel' })
     assert.deepStrictEqual(toastTitles, [])
+    assert.strictEqual(actions.shareGeneratedImage('temp://report.png'), true)
     shareOptions.fail({ errMsg: 'showShareImageMenu:fail' })
     assert.deepStrictEqual(toastTitles, ['转发未完成，请重试'])
+    assert.deepStrictEqual(vibrationTypes, [], '打开分享菜单或分享失败不应触发页面震动')
     assert.strictEqual(actions.saveGeneratedImage('temp://report.png'), true)
+    assert.deepStrictEqual(vibrationTypes, [], '调用相册保存接口前不应提前震动')
     assert.strictEqual(saveOptions.filePath, 'temp://report.png')
     saveOptions.success()
+    assert.deepStrictEqual(vibrationTypes, ['medium'], '相册保存成功后只触发一次medium')
+    assert.strictEqual(actions.saveGeneratedImage('temp://failed.png'), true)
     saveOptions.fail({ errMsg: 'saveImageToPhotosAlbum:fail auth deny' })
     assert.strictEqual(modalOptions.title, '需要相册权限')
     assert.strictEqual(settingsOpened, true)
-    assert.deepStrictEqual(vibrationTypes, ['medium', 'medium'])
+    assert.deepStrictEqual(vibrationTypes, ['medium'], '相册保存失败不应触发震动')
   } finally {
     if (previousWx === undefined) delete global.wx
     else global.wx = previousWx
+    if (previousGetCurrentPages === undefined) delete global.getCurrentPages
+    else global.getCurrentPages = previousGetCurrentPages
   }
 }
 
@@ -5248,7 +5252,6 @@ checkReleasePackageGates()
 checkCatalogSelector()
 checkDmxAddressLazyChannelGuide()
 checkSharedResultReportPreviewTemplate()
-checkProjectReportPlan()
 checkLedScreenPlan()
 checkData()
 checkProductLibraryLazyLoading()
@@ -5263,6 +5266,7 @@ checkLedScreenPerformanceCoverage()
 checkProjectDetailPerformanceCoverage()
 
 const auditRegressionScripts = [
+  'record-module-boundary-test.cjs',
   'audit-runtime-regression.js',
   'homepage-refactor-2026-10-18/storage-adversarial.cjs',
   'homepage-refactor-2026-10-18/projects-storage-recovery.cjs',
@@ -5279,8 +5283,11 @@ const auditRegressionScripts = [
   'dmx-layout-renderer-test.js',
   'dmx-layout-overlap-test.js',
   'dmx-unified-export-flow-regression.cjs',
+  'dmx-viewport-boundary-regression.cjs',
   'dmx-result-view-test.js',
   'report-drawing-regression.js',
+  'report-pdf-regression.cjs',
+  'report-empty-lighting-regression.cjs',
   'report-canvas-equivalence.js',
   'dmx-core-regression.js',
   'dmx-group-input-test.js',
@@ -5294,6 +5301,10 @@ const auditRegressionScripts = [
   'dmx-lifecycle-regression.js',
   'dmx-layout-overlay-style-regression.cjs',
   'dmx-layout-current-flow-regression.cjs',
+  'dmx-remaining-structure-realm-regression.cjs',
+  'dmx-ui-refactor-2026-10-18/native-source-contracts-test.cjs',
+  'dmx-ui-native-fixes-2026-10-18/layout-canvas-2d-regression-test.cjs',
+  'dmx-placement-panel-2026-10-18/placement-panel-regression.cjs',
   'repair7-owner-decisions-regression.cjs',
   'dmx-ui-refactor-2026-10-18/layout-theme-lifecycle-test.cjs',
   'dmx-floating-card-contract-regression.cjs',
@@ -5303,6 +5314,7 @@ const auditRegressionScripts = [
   'dmx-ui-refinements-2026-10-18/main-runtime-robustness-test.cjs',
   'dmx-first-use-experience-test.js',
   'dmx-search-lifecycle-regression.js',
+  'dmx-picker-cross-boundary-regression.cjs',
   'page-lifecycle-regression.js',
   'calculator-renderer-regression.js',
   'camera-first-use-regression.js',
@@ -5317,19 +5329,27 @@ const auditRegressionScripts = [
   'audio-wiring-page-test.js',
   'audio-wiring-renderer-test.js',
   'project-wiring-model-test.js',
+  'project-save-controllers-2026-10-24.cjs',
   'project-wiring-storage-test.js',
   'project-wiring-page-test.js',
+  'project-wiring-editor-boundary-regression-2026-10-24.cjs',
+  'project-wiring-report-lifecycle-regression.cjs',
   'project-wiring-report-test.js',
   'project-wiring-entry-test.js',
+  'homepage-refactor-2026-10-18/navigation-basis-behavior.cjs',
+  'homepage-refactor-2026-10-18/revision-2/settings-visibility.cjs',
   'venue-removal-2026-10-15/removal-regression.cjs',
   'control-protocol-test.js',
   'spl-refactor-2026-10-11/localreport-regression.cjs',
   'dmx-engineering-closeout8-regression.cjs',
   'closeout8-contract-regression.cjs',
+  'haptics-ui-regression.cjs',
+  'haptics-wiring-regression.cjs',
+  'haptics-calculators-regression.cjs',
 ].map((filename) => path.resolve(__dirname, filename))
 auditRegressionScripts.forEach((scriptPath) => {
   assert(fs.existsSync(scriptPath), `缺少独立审查回归脚本：${scriptPath}`)
   childProcess.execFileSync(process.execPath, [scriptPath], { stdio: 'inherit' })
 })
 
-console.log('开发工作区自检通过：九个工具入口（含七个计算模块、接线助手与通道线缆入口）、38 款功放、148 款音箱、26 款摄像机、149 款舞台灯光设备及既有数值基准均正常。')
+console.log('开发工作区自检通过：十一个工具入口（含七个计算模块、两个接线工具、控制协议与产品资料库）、38 款功放、148 款音箱、26 款摄像机、149 款舞台灯光设备及既有数值基准均正常。')

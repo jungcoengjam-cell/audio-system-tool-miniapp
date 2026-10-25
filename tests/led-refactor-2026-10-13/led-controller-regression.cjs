@@ -1,10 +1,13 @@
 'use strict'
 
 const assert = require('node:assert/strict')
+const fs = require('node:fs')
+const Module = require('node:module')
 const path = require('node:path')
 const { createDelayedEnvironment } = require('../p2-safety-remediation/minimal/delayed-environment.cjs')
 
 const root = path.resolve(__dirname, '../..')
+const clone = (value) => value === undefined ? undefined : JSON.parse(JSON.stringify(value))
 const preferenceKey = 'audioTool.ledScreen.preferences'
 const recordsKey = 'audioTool.records.v1'
 const projectsKey = 'audioTool.projects.v1'
@@ -15,6 +18,37 @@ const storageModules = [
   '../../pages/led-screen/led-project', '../../pages/led-screen/report',
 ]
 const core = require('../../utils/led-screen')
+const ledPagePath = path.join(root, 'pages/led-screen/led-screen.js')
+
+function loadLedPageSource(env) {
+  let definition
+  const previousPage = global.Page
+  const sourcePath = process.env.LED_PROJECT_PAGE_SOURCE
+    ? path.resolve(root, process.env.LED_PROJECT_PAGE_SOURCE)
+    : ledPagePath
+  global.Page = (value) => { definition = value }
+  try {
+    const pageModule = new Module(ledPagePath, module)
+    pageModule.filename = ledPagePath
+    pageModule.paths = Module._nodeModulePaths(path.dirname(ledPagePath))
+    pageModule.require = Module.createRequire(ledPagePath)
+    pageModule._compile(fs.readFileSync(sourcePath, 'utf8'), ledPagePath)
+  } finally {
+    global.Page = previousPage
+  }
+  assert(definition?.data, `LED Page definition did not register from ${sourcePath}`)
+  const page = { ...definition, data: clone(definition.data) }
+  page.setData = (patch, callback) => {
+    for (const [key, value] of Object.entries(patch)) {
+      const segments = key.replace(/\[(\d+)\]/g, '.$1').split('.')
+      let target = page.data
+      for (const segment of segments.slice(0, -1)) target = target[segment]
+      target[segments.at(-1)] = clone(value)
+    }
+    if (callback) env.pending.nextTicks.push(callback)
+  }
+  return page
+}
 
 function clearStorageModules() {
   for (const id of storageModules) {
@@ -27,10 +61,12 @@ function fixture(preferences) {
   const env = createDelayedEnvironment()
   env.wx.setStorageSync(recordsKey, [])
   env.wx.setStorageSync(projectsKey, [])
+  env.wx.setStorageSync('audioTool.favorites.v1', [])
+  env.wx.setStorageSync('audioTool.recovery.v1', [])
   env.wx.setStorageSync(activeProjectKey, '')
-  env.wx.setStorageSync('audioTool.storageSchemaVersion', 3)
+  env.wx.setStorageSync('audioTool.storageSchemaVersion', 4)
   if (preferences) env.wx.setStorageSync(preferenceKey, preferences)
-  const page = env.loadPage('pages/led-screen/led-screen.js')
+  const page = loadLedPageSource(env)
   page.onLoad()
   env.flushNextTicks()
   page.onShow()
@@ -223,8 +259,9 @@ function assertRecordMetadataAndValidation() {
   setSelections(page, 0, 0, 0)
   const { first, second } = seedProjects(env, records)
   page.toggleCurrentFavorite()
-  const favoriteBefore = records.getRecords()[0]
+  const favoriteBefore = records.getFavorites()[0]
   assert(favoriteBefore?.favorite)
+  const favoriteSnapshotBefore = JSON.parse(JSON.stringify(favoriteBefore))
 
   projectFlow(page, first, 'N'.repeat(61), 'N'.repeat(201))
   assert.equal(page.saveProjectTarget(), false, 'oversized project name and note must be rejected')
@@ -243,19 +280,27 @@ function assertRecordMetadataAndValidation() {
   assert.equal(firstView.title, 'N'.repeat(60))
   assert.equal(firstView.projectNote, 'T'.repeat(200))
   assert.equal(firstView.hasProjectMetadata, true)
-  assert.equal(firstStored.id, favoriteBefore.id, 'metadata save should preserve favorite record identity')
-  assert.equal(records.getRecords().find((item) => item.id === favoriteBefore.id).favorite, true)
+  assert.notEqual(firstStored.id, favoriteBefore.id, 'project records and favorites have independent identities')
+  assert.equal(firstStored.favorite, false, 'project record must not become a favorite')
+  assert.deepEqual(records.getFavorites().find((item) => item.id === favoriteBefore.id), favoriteSnapshotBefore,
+    'saving project metadata must leave the favorite snapshot unchanged')
 
   projectFlow(page, second, 'South Hall final', '独立项目备注')
   assert(page.saveProjectTarget())
   env.flushNextTicks()
-  const latest = records.getRecords().find((item) => item.id === favoriteBefore.id)
+  const latest = records.getProjectRecords(first.id).find((item) => item.id === firstStored.id)
   assert(latest, 'the same engineering result should remain one record')
+  assert.equal(records.getProjectRecords(first.id).length, 1, 'resaving one project must not duplicate its result')
+  assert.equal(records.getProjectRecords(second.id).length, 1, 'second project should point to one shared result')
+  assert.equal(records.getProjectRecords(second.id)[0].id, firstStored.id,
+    'the same result keeps one project record identity across projects')
   assert.deepEqual(latest.projectIds.slice().sort(), [first.id, second.id].sort())
   assert.equal(records.getProjectRecordView(latest, first.id).title, 'N'.repeat(60))
   assert.equal(records.getProjectRecordView(latest, first.id).projectNote, 'T'.repeat(200))
   assert.equal(records.getProjectRecordView(latest, second.id).title, 'South Hall final')
   assert.equal(records.getProjectRecordView(latest, second.id).projectNote, '独立项目备注')
+  assert.deepEqual(records.getFavorites().find((item) => item.id === favoriteBefore.id), favoriteSnapshotBefore,
+    'project writes leave the independent favorite snapshot unchanged')
 
   const legacy = records.addRecordToProject({
     ...page.getRecordPayload(),
@@ -267,7 +312,8 @@ function assertRecordMetadataAndValidation() {
   assert.equal(legacyView.title, legacy.title)
   assert.equal(legacyView.projectNote, undefined)
   assert.equal(records.restoreRecord(legacy), '/pages/led-screen/led-screen')
-  assert.equal(env.storage.get(preferenceKey).wallWidthText, '7.2')
+  assert.equal(env.storage.get(preferenceKey).wallWidthText, '6',
+    'resolving a restore route must not overwrite the current temporary inputs')
   return 7
 }
 

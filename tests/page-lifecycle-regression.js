@@ -244,9 +244,15 @@ try {
     setStorageSync(key, value) { primaryTabWrites.push({ key, value }) },
   })
   const indexSetDataCount = installSetData(indexPage)
+  const basisVisibilityTimersBeforeShow = timers.size
   indexPage.onShow()
   assert.deepEqual(primaryTabWrites, [{ key: 'audioTool.primaryTab.v1', value: 'basis' }])
-  assert.equal(indexSetDataCount(), 0, 'basis-tab activation does not mutate page render data')
+  assert.deepEqual(indexPage.data.basisTools, require('../utils/tool-registry').getBasisTools(),
+    'basis onShow refreshes visible directory entries')
+  assert.equal(indexSetDataCount(), 1, 'basis onShow updates render data once with the visible entries')
+  assert.equal(timers.size, basisVisibilityTimersBeforeShow, 'basis visibility refresh does not queue asynchronous updates')
+  indexPage.onUnload?.()
+  assert.equal(indexSetDataCount(), 1, 'basis unload does not trigger a late render update')
 
   console.log('page lifecycle regression PASS')
 } finally {

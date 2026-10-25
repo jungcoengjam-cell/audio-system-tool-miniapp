@@ -179,7 +179,7 @@ function buildBasisPresentation(tool) {
     limitRows: splitLimits(basis.limits).map((text, index) => ({ number: index + 1, text })),
     quick,
     figure: quick ? {
-      src: '/assets/basis/' + tool.id + '.png',
+      src: '/pages/basis/assets/' + tool.id + '.png',
       alt: quick.figureAlt,
       caption: quick.figureCaption,
     } : null,

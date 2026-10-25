@@ -3,6 +3,7 @@ const { startMeasurement } = require('../../utils/performance')
 const { drawAndExportReport } = require('../../utils/report-canvas')
 const { getExportDimensions, roundedRect } = require('../../utils/report-drawing')
 const {
+  isPageContextCurrent,
   previewGeneratedImage,
   saveGeneratedImage,
   shareGeneratedImage,
@@ -338,6 +339,7 @@ function createCableReportMethods() {
       const signature = this.getResultReportSignature(record)
       const inputRevision = this._inputRevision || 0
       const reopeningPreview = this.data.resultReportPreviewVisible && this.data.resultReportPreviewClosing
+      const wasPreviewVisible = Boolean(this.data.resultReportPreviewVisible)
       cancelReportPreviewClose(this)
       this._reportPreviewLayoutRevision = (this._reportPreviewLayoutRevision || 0) + 1
       if (this.data.resultReportImagePath && this.resultReportSignature === signature) {
@@ -345,7 +347,6 @@ function createCableReportMethods() {
         const revision = (this.resultReportRevision || 0) + 1
         this.resultReportRevision = revision
         this._reportCacheCheckRevision = revision
-        vibrate('light')
         this.setData({
           isCheckingResultReportCache: true,
           resultReportPreviewVisible: reopeningPreview,
@@ -360,7 +361,13 @@ function createCableReportMethods() {
             if (!isCurrent()) return
             this._reportCacheCheckRevision = 0
             cancelReportPreviewClose(this)
-            this.setData({ isCheckingResultReportCache: false, resultReportPreviewVisible: true, resultReportPreviewClosing: false }, () => this.updateResultReportPreviewLayout())
+            this.setData({ isCheckingResultReportCache: false, resultReportPreviewVisible: true, resultReportPreviewClosing: false }, () => {
+              if (!wasPreviewVisible && this.resultReportRevision === revision
+                && (this._inputRevision || 0) === inputRevision
+                && this.getResultReportSignature(this.getRecordPayload()) === signature
+                && isPageContextCurrent(this)) vibrate('light')
+              this.updateResultReportPreviewLayout()
+            })
           }
           const regenerate = () => {
             if (!isCurrent()) return
@@ -405,7 +412,6 @@ function createCableReportMethods() {
         return
       }
 
-      vibrate('medium')
       const revision = (this.resultReportRevision || 0) + 1
       this.resultReportRevision = revision
       this.resultReportPendingSignature = signature
@@ -441,6 +447,8 @@ function createCableReportMethods() {
                 resultReportImagePath: tempFilePath,
                 resultReportPreviewVisible: true,
               })
+              if (this.resultReportRevision === revision && !this.resultReportPendingSignature
+                && isPageContextCurrent(this)) vibrate('medium')
             },
             onFailure: () => {
               this.finishResultReportGeneration(revision)
@@ -579,7 +587,7 @@ function createCableReportMethods() {
     closeResultReportPreview(immediate) {
       if (!this.data.resultReportPreviewVisible
         || (this.data.resultReportPreviewClosing && immediate !== true)) return false
-      vibrate('light')
+      if (immediate !== true && this._pageVisible && !this._isUnloaded && isPageContextCurrent(this)) vibrate('light')
       if (immediate === true || !this._pageVisible || this._isUnloaded) {
         this.setData(this.hideResultReportPreview())
         return true
@@ -628,7 +636,15 @@ function createCableReportMethods() {
       const path = this.data.resultReportImagePath
       if (!path || !this.data.resultReportPreviewVisible || this.data.resultReportPreviewClosing
         || !this._pageVisible || this._isUnloaded) return false
-      saveGeneratedImage(path)
+      const signature = this.resultReportSignature
+      const inputRevision = this._inputRevision || 0
+      saveGeneratedImage(path, {
+        isCurrent: () => this._pageVisible && !this._isUnloaded
+          && (this._inputRevision || 0) === inputRevision
+          && this.data.resultReportImagePath === path
+          && this.resultReportSignature === signature
+          && this.getResultReportSignature(this.getRecordPayload()) === signature,
+      })
       return true
     },
   }

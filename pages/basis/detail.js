@@ -1,6 +1,7 @@
 'use strict'
 
 const { getBasisTool } = require('../../utils/tool-registry')
+const { vibrate } = require('../../utils/haptics')
 const { buildBasisPresentation } = require('./presentation')
 
 function currentRoute(page) {
@@ -27,6 +28,7 @@ Page({
 
   toggleFullExplanation() {
     this.setData({ showFullExplanation: !this.data.showFullExplanation })
+    vibrate('light')
   },
 
   openTool() {

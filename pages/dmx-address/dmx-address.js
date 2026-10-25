@@ -13,10 +13,20 @@ getFixtureProgressKey,
 buildResultView,
 } = require('./result-view')
 const { createGroup, restoreGroups, buildPreferences } = require('./group-input')
+const { createFixtureCatalog } = require('./fixture-catalog')
+const { createFixturePickerMethods } = require('./fixture-picker')
+const { createDmxAddressResultReportUiMethods } = require('./result-report-ui')
 const { readPreferences, writePreferences } = require('../../utils/preferences')
 const records = require('../../utils/records')
 const lightingWorkspace = require('../dmx-layout/lighting-workspace')
+const {
+getLightingViewportMetrics,
+getFixtureSearchScrollMetrics,
+computeFloatingCardFrame,
+getAddressCardChipColumns,
+} = require('./viewport')
 const { vibrate } = require('../../utils/haptics')
+const { isPageContextCurrent } = require('../../utils/report-image-actions')
 const {
 cancelResultReportGeneration,
 createResultReportData,
@@ -31,18 +41,14 @@ togglePageFavorite,
 const PREFERENCE_KEY = 'audioTool.dmxAddress.preferences'
 const PROGRESS_KEY = 'audioTool.dmxAddress.progress'
 const CALCULATION_DELAY = 160
-const FIXTURE_SEARCH_DELAY = 120
 const PROGRESS_SAVE_DELAY = 120
-const FIXTURE_SEARCH_LIMIT = 36
-const ALL_FIXTURE_CATEGORIES = '全部'
-const FIXTURE_SEARCH_MIN_SCROLL_HEIGHT = 24
-const FIXTURE_SEARCH_BATCH_FOOTER_GAP = 6
 const MAIN_SHEET_CLOSE_MS = 180
 const LIGHTING_GROUP_COLORS = ['#8a2bff', '#007aff', '#00b8ba']
 const resultReportMethods = createResultReportMethods({
 performancePrefix: 'DMX',
 emptyToast: '暂无可生成的编址结果',
 })
+const resultReportUiMethods = createDmxAddressResultReportUiMethods({ resultReportMethods, isPageContextCurrent, vibrate })
 let fixtureProgressCacheLoaded = false
 let fixtureProgressCache = null
 function readPageDataPath(data, key) {
@@ -77,52 +83,20 @@ if (shorter.every((part, index) => part === longer[index])) return true
 }
 return entries.some(([key, value]) => !samePageDataValue(readPageDataPath(data, key), value))
 }
-function getFixtureCategory(name = '') {
-if (/烟机|雾机|雪花机|泡泡机|火花机|水雾机/.test(name)) return '舞台特效'
-if (/摇头/.test(name)) return '摇头灯'
-if (/柔光灯/.test(name)) return '柔光灯'
-if (/成像灯|聚光灯|追光灯/.test(name)) return '成像/聚光'
-if (/PAR灯|帕灯|染色灯|观众灯|天地排|天幕灯/.test(name)) return 'PAR/染色'
-return '效果灯'
-}
-const FIXTURE_SEARCH_ROWS = dmxFixtures.map((fixture) => ({
-model: fixture.model,
-name: fixture.name,
-primaryName: getFixtureDisplayName(fixture),
-spriteOffset: `${-(getFixtureSpriteIndex(fixture) * 100 / 3)}%`,
-category: getFixtureCategory(fixture.name),
-modeText: fixture.channelModes.map((mode) => `${mode} CH`).join(' / '),
-searchText: `${fixture.model} ${fixture.name}`.toLowerCase(),
-}))
-const FIXTURE_CATEGORY_LABELS = ['摇头灯', 'PAR/染色', '柔光灯', '成像/聚光', '效果灯', '舞台特效']
-const FIXTURE_SEARCH_CATEGORIES = [ALL_FIXTURE_CATEGORIES, ...FIXTURE_CATEGORY_LABELS].map((label) => ({
-label,
-count: label === ALL_FIXTURE_CATEGORIES
-? FIXTURE_SEARCH_ROWS.length
-: FIXTURE_SEARCH_ROWS.filter((item) => item.category === label).length,
-}))
-function searchFixtures(keyword = '', category = ALL_FIXTURE_CATEGORIES) {
-const normalized = keyword.trim().toLowerCase()
-const matches = FIXTURE_SEARCH_ROWS.filter(
-(item) => (
-(category === ALL_FIXTURE_CATEGORIES || item.category === category)
-&& (!normalized || item.searchText.includes(normalized))
-),
-)
-return {
-rows: matches.slice(0, FIXTURE_SEARCH_LIMIT),
-total: matches.length,
-}
-}
-const DEFAULT_FIXTURE_SEARCH = searchFixtures()
+const fixtureCatalog = createFixtureCatalog(dmxFixtures, {
+getFixtureDisplayName,
+getFixtureSpriteIndex,
+})
+const {
+ALL_FIXTURE_CATEGORIES,
+FIXTURE_SEARCH_CATEGORIES,
+DEFAULT_FIXTURE_SEARCH,
+decorateBatchRows,
+} = fixtureCatalog
 let channelGuideApi = null
 function getChannelGuideApi() {
   if (!channelGuideApi) channelGuideApi = require('./utils/dmx-channel-guide')
   return channelGuideApi
-}
-function decorateBatchRows(rows, selectedItems = []) {
-const selectedModels = new Set(selectedItems.map((item) => item.model))
-return rows.map((item) => ({ ...item, batchSelected: selectedModels.has(item.model) }))
 }
 function readFixtureProgress(calculationSignature, forceRefresh = false) {
 try {
@@ -216,127 +190,12 @@ return targetData.gestureIgnore === true
 || targetData.gestureIgnore === 'true'
 || ['input', 'picker', 'textarea', 'scroll-view'].includes(tagName)
 }
-function finiteNumber(value) {
-if (value === null || value === undefined || value === '') return null
-const number = Number(value)
-return Number.isFinite(number) ? number : null
-}
-function positiveDimension(...values) {
-for (const value of values) {
-const number = finiteNumber(value)
-if (number !== null && number > 0) return number
-}
-return null
-}
-function getLightingViewportMetrics(resize = {}) {
-let systemInfo = {}
-try {
-const current = wx.getSystemInfoSync?.()
-if (current && typeof current === 'object') systemInfo = current
-} catch (_) {}
-const size = resize && typeof resize === 'object' ? resize : {}
-const windowHeight = positiveDimension(size.windowHeight, systemInfo.windowHeight, 720)
-const windowWidth = positiveDimension(size.windowWidth, systemInfo.windowWidth, 390)
-const rawStatusBarHeight = finiteNumber(systemInfo.statusBarHeight)
-const statusBarHeight = Math.min(windowHeight, Math.max(0, rawStatusBarHeight !== null && rawStatusBarHeight >= 0 ? rawStatusBarHeight : Math.min(24, windowHeight)))
-let capsule = null
-try {
-const candidate = wx.getMenuButtonBoundingClientRect?.()
-const left = finiteNumber(candidate?.left)
-const right = finiteNumber(candidate?.right)
-const top = finiteNumber(candidate?.top)
-const bottom = finiteNumber(candidate?.bottom)
-const width = finiteNumber(candidate?.width)
-const height = finiteNumber(candidate?.height)
-if (candidate && left !== null && right !== null && top !== null && bottom !== null
-&& left >= 0 && right > left && right <= windowWidth + 1
-&& top >= 0 && bottom > top && bottom <= windowHeight + 1
-&& (width === null || width >= 0) && (height === null || height >= 0)) {
-capsule = { left, right, top, bottom, width: width ?? right - left, height: height ?? bottom - top }
-}
-} catch (_) {}
-const fallbackCapsuleBottom = Math.min(windowHeight, statusBarHeight + Math.min(36, Math.max(0, windowHeight - statusBarHeight)))
-const capsuleBottom = capsule ? capsule.bottom : fallbackCapsuleBottom
-const expectedSafeTop = Math.ceil(Math.max(capsuleBottom + 8, statusBarHeight + 52))
-const rawSafeAreaBottom = finiteNumber(systemInfo.safeArea?.bottom)
-const safeAreaValid = rawSafeAreaBottom !== null && rawSafeAreaBottom > 0 && rawSafeAreaBottom <= windowHeight + 1
-const safeBottomInset = safeAreaValid ? Math.max(12, windowHeight - rawSafeAreaBottom + 8) : 12
-const overlaySafeBottom = Math.min(windowHeight, Math.ceil(Math.max(0, safeBottomInset)))
-const overlaySafeTop = Math.max(0, Math.min(expectedSafeTop, Math.max(0, windowHeight - overlaySafeBottom - 1)))
-const overlayMaxHeight = Math.max(1, windowHeight - overlaySafeTop - overlaySafeBottom)
-const overlaySearchMaxHeight = Math.min(Math.round(windowHeight * 0.88), overlayMaxHeight)
-const overlaySearchSheetHeight = Math.min(overlayMaxHeight, Math.round(windowHeight <= 360 ? overlayMaxHeight : windowHeight * 0.78))
-const navigationBodyHeight = Math.min(Math.max(0, windowHeight - statusBarHeight), Math.max(44, capsule ? capsule.bottom - statusBarHeight + 8 : 44))
-return {
-statusBarHeight,
-navigationHeight: statusBarHeight + navigationBodyHeight,
-shareTop: Math.min(windowHeight, statusBarHeight + Math.max(0, (navigationBodyHeight - 40) / 2)),
-windowHeight,
-windowWidth,
-overlaySafeTop,
-overlaySafeBottom,
-overlayMaxHeight,
-overlayCenterTop: overlaySafeTop + overlayMaxHeight / 2,
-overlaySearchMaxHeight,
-overlaySearchSheetHeight,
-...getFixtureSearchScrollMetrics({ windowHeight, overlaySearchSheetHeight }, false, 0),
-overlayPendingMaxHeight: Math.min(Math.round(windowHeight * 0.8), overlayMaxHeight),
-overlayAddMaxHeight: Math.min(Math.round(windowHeight * 0.88), overlayMaxHeight),
-overlaySaveMaxHeight: Math.min(Math.round(windowHeight * 0.66), overlayMaxHeight),
-overlayGuideHeight: Math.min(Math.round(windowHeight * 0.82), overlayMaxHeight),
-overlayReportHeight: Math.min(Math.round(windowHeight * 0.84), overlayMaxHeight),
-overlaySaveListMaxHeight: Math.min(Math.round(windowHeight * 0.34), Math.round(overlayMaxHeight * 0.48)),
-}
-}
-function getFixtureSearchScrollMetrics(metrics = {}, batchOpen = false, selectedCount = 0) {
-const windowHeight = positiveDimension(metrics.windowHeight, 720)
-const sheetHeight = Math.max(1, finiteNumber(metrics.overlaySearchSheetHeight) ?? Math.min(windowHeight, 560))
-const chromeHeight = windowHeight <= 360 ? 132 : 198
-const availableHeight = Math.max(1, sheetHeight - chromeHeight)
-const footerVisible = Boolean(batchOpen && Number(selectedCount) > 0)
-let fixtureBatchFooterHeight = 0
-if (footerVisible) {
-const count = Math.max(0, Number(selectedCount) || 0)
-const minimumResultsHeight = Math.min(82, Math.max(FIXTURE_SEARCH_MIN_SCROLL_HEIGHT, Math.round(availableHeight * 0.15)))
-const panelFooterLimit = Math.max(48, availableHeight - FIXTURE_SEARCH_BATCH_FOOTER_GAP - minimumResultsHeight)
-const viewportFooterLimit = Math.max(48, Math.round(windowHeight * 0.28))
-fixtureBatchFooterHeight = Math.max(48, Math.min(48 + count * 36, panelFooterLimit, viewportFooterLimit))
-}
-const footerSpace = footerVisible ? fixtureBatchFooterHeight + FIXTURE_SEARCH_BATCH_FOOTER_GAP : 0
-return {
-fixtureSearchResultsHeight: Math.max(1, availableHeight - footerSpace),
-fixtureBatchFooterHeight,
-batchSelectedListHeight: footerVisible ? Math.max(0, fixtureBatchFooterHeight - 48) : 0,
-}
-}
-function computeFloatingCardFrame(group = {}, info = {}, safeTop = 76, safeBottom = 12) {
-const width = positiveDimension(info.windowWidth, 390)
-const height = positiveDimension(info.windowHeight, 720)
-const topInset = Math.min(height, Math.max(0, finiteNumber(safeTop) ?? 76))
-const bottomInset = Math.min(Math.max(0, height - topInset), Math.max(0, finiteNumber(safeBottom) ?? 12))
-const availableHeight = Math.max(1, height - topInset - bottomInset)
-const targetWidth = Math.max(1, Math.min(width - 24, 520))
-const contentWidth = Math.max(0, targetWidth - 28)
-const chipColumns = Math.max(1, Math.floor((contentWidth + 6) / 54))
-const chipRows = Math.ceil(Math.max(0, Number(group.fixtureChips?.length) || 0) / chipColumns)
-const naturalHeight = 28 + 105 + (group.hasChannelGuide ? 27 : 0) + chipRows * 50
-const cardHeight = Math.max(1, Math.min(availableHeight, Math.max(Math.min(180, availableHeight), naturalHeight)))
-const targetLeft = Math.max(0, Math.min(width - targetWidth, Math.round((width - targetWidth) / 2)))
-const targetTop = Math.max(topInset, Math.min(topInset + availableHeight - cardHeight, Math.round(topInset + Math.max(0, (availableHeight - cardHeight) / 2))))
-return { targetLeft, targetTop, targetWidth, cardHeight, availableHeight }
-}
 function getFixtureTint(index) {
 return [
 'rgba(138,43,255,0.15)',
 'rgba(0,122,255,0.15)',
 'rgba(0,184,186,0.15)',
 ][index % LIGHTING_GROUP_COLORS.length]
-}
-function getAddressCardChipColumns(windowWidth = 390) {
-const width = positiveDimension(windowWidth, 390)
-const pagePadding = width <= 350 ? 12 : 16
-const chipAreaWidth = Math.max(1, width - pagePadding * 2 - 20)
-return Math.max(1, Math.floor((chipAreaWidth + 4) / (38 + 4)))
 }
 function buildAddressCardPreviewChips(fixtures = [], columns = 8, color = '#007aff') {
 const visible = (fixtures || []).slice(0, Math.max(1, Number(columns) || 1) * 2).map((fixture) => ({ ...fixture }))
@@ -771,10 +630,6 @@ return
 }
 this.refreshLightingWorkspace()
 },
-clearFixtureSearch() {
-if (!this._pageAlive || !this._pageVisible || this.data.fixturePickerClosing) return
-this.setData({ fixtureSearchKeyword: '' }, () => this.applyFixtureSearch())
-},
 onShareAppMessage() {
 return {
 title: '灯具编址',
@@ -1169,6 +1024,7 @@ this.cancelSheetClose('saveProject', 'saveProjectClosing')
 this.setData({ showSaveNewProject: false, saveProjectClosing: false, projectSaveBusy: false, newProjectName: '', projectSaveError: '', pendingProjectSaveId: '' })
 this._pendingProjectSave = null
 this.applyWorkspaceState(loaded, 'saveProject')
+if (isPageContextCurrent(this)) vibrate('medium')
 wx.showToast({ title: '灯光方案已保存', icon: 'success' })
 },
 retryUnsavedScheme() {
@@ -1212,6 +1068,7 @@ saveRetryAvailable: false,
 }
 this.syncUnsavedLeaveGuard()
 this.setData({ contextError: '', saveRetryAvailable: false })
+if (isPageContextCurrent(this)) vibrate('medium')
 return true
 },
 syncUnsavedLeaveGuard() {
@@ -1460,102 +1317,18 @@ openGroupEditor(event) { const index = Number(event.currentTarget.dataset.index)
 closeGroupEditor() { if (!this.data.groupEditorOpen) return; this.flushScheduledCalculation(); this.setData({ groupEditorOpen: false, groupEditorIndex: -1 }) },
 finishGroupEditor() { this.closeGroupEditor() },
 removeGroupFromEditor(event) { const index = Number(event.currentTarget.dataset.index); if (!Number.isInteger(index)) return; this.closeGroupEditor(); this.removeGroup(event) },
-resetFixturePicker(mode = 'closed', extra = {}) {
-const open = mode !== 'closed'
-if (open) this.openSheetModal('fixturePicker', 'fixturePickerClosing')
-else this.cancelSheetClose('fixturePicker', 'fixturePickerClosing')
-const fixtureSearchLayout = getFixtureSearchScrollMetrics(this.data, mode === 'batch', 0)
-this.setData({
-fixtureSearchOpen: mode === 'search',
-fixturePickerClosing: false,
-fixtureBatchOpen: mode === 'batch',
-fixtureSearchKeyword: '',
-fixtureSearchCategory: ALL_FIXTURE_CATEGORIES,
-fixtureSearchResults: open ? DEFAULT_FIXTURE_SEARCH.rows : [],
-fixtureSearchTotal: open ? DEFAULT_FIXTURE_SEARCH.total : 0,
-fixtureSearchGroupIndex: -1,
-fixtureSearchSelectedModel: '',
-batchSelectedItems: [],
-batchSelectedTotal: 0,
-removedDetailsExpanded: false,
-...fixtureSearchLayout,
-...extra,
-})
-},
-cancelFixtureSearch(preservePending = false) {
-const hasPending = this._fixtureSearchTimer !== null && this._fixtureSearchTimer !== undefined
-if (hasPending) clearTimeout(this._fixtureSearchTimer)
-this._fixtureSearchTimer = null
-this._fixtureSearchToken = (Number(this._fixtureSearchToken) || 0) + 1
-this._fixtureSearchNeedsRefresh = Boolean(preservePending
-&& !this.data.fixturePickerClosing
-&& (this.data.fixtureSearchOpen || this.data.fixtureBatchOpen))
-},
-closeFixturePicker() {
-this.cancelFixtureSearch()
-this.resetFixturePicker()
-},
-onUserCloseFixturePicker() {
-if ((!this.data.fixtureSearchOpen && !this.data.fixtureBatchOpen) || this.data.fixturePickerClosing) return
-this.cancelFixtureSearch()
-this.beginSheetClose('fixturePicker', 'fixturePickerClosing', () => this.closeFixturePicker())
-},
+...createFixturePickerMethods({
+...fixtureCatalog,
+stageLightingProductIndex,
+createGroup,
+makeStableId,
+getFixtureSearchScrollMetrics,
+vibrate,
+setTimeout: (...args) => setTimeout(...args),
+clearTimeout: (...args) => clearTimeout(...args),
+now: () => Date.now(),
+}),
 stopPropagation() {},
-onFixtureSearchInput(event) {
-if (!this._pageAlive || !this._pageVisible || this.data.fixturePickerClosing) return
-const fixtureSearchKeyword = event.detail.value
-this.setData({ fixtureSearchKeyword })
-this.cancelFixtureSearch()
-const searchToken = this._fixtureSearchToken
-this._fixtureSearchTimer = setTimeout(() => {
-if (searchToken !== this._fixtureSearchToken) return
-this._fixtureSearchTimer = null
-if (!this._pageAlive || !this._pageVisible) {
-this._fixtureSearchNeedsRefresh = Boolean(this.data.fixtureSearchOpen || this.data.fixtureBatchOpen)
-return
-}
-this.applyFixtureSearch()
-}, FIXTURE_SEARCH_DELAY)
-},
-applyFixtureSearch() {
-if (this.data.fixturePickerClosing) return false
-if (!this._pageAlive || !this._pageVisible) {
-this._fixtureSearchNeedsRefresh = Boolean(this.data.fixtureSearchOpen || this.data.fixtureBatchOpen)
-return false
-}
-const search = searchFixtures(
-this.data.fixtureSearchKeyword,
-this.data.fixtureSearchCategory,
-)
-this.setData({
-fixtureSearchResults: this.data.fixtureBatchOpen
-? decorateBatchRows(search.rows, this.data.batchSelectedItems)
-: search.rows,
-fixtureSearchTotal: search.total,
-})
-return true
-},
-selectFixtureCategory(event) {
-if (!this._pageAlive || !this._pageVisible || this.data.fixturePickerClosing) return
-const fixtureSearchCategory = event.currentTarget.dataset.category
-if (!FIXTURE_SEARCH_CATEGORIES.some((item) => item.label === fixtureSearchCategory)
-|| fixtureSearchCategory === this.data.fixtureSearchCategory) return
-this.cancelFixtureSearch()
-vibrate('light')
-const search = searchFixtures(this.data.fixtureSearchKeyword, fixtureSearchCategory)
-this.setData({
-fixtureSearchCategory,
-fixtureSearchResults: this.data.fixtureBatchOpen
-? decorateBatchRows(search.rows, this.data.batchSelectedItems)
-: search.rows,
-fixtureSearchTotal: search.total,
-})
-},
-flushFixtureSearch() {
-if (!this._pageAlive || !this._pageVisible || this.data.fixturePickerClosing) return
-this.cancelFixtureSearch()
-this.applyFixtureSearch()
-},
 switchFixtureSource(event) {
 const index = Number(event.currentTarget.dataset.index)
 const fixtureSource = event.currentTarget.dataset.source
@@ -1623,7 +1396,6 @@ this.commitCalculation({ groups })
 },
 openBatchFixtureSearch() {
 this.cancelFixtureSearch()
-vibrate('medium')
 this.resetFixturePicker('batch', { fixtureSearchResults: decorateBatchRows(DEFAULT_FIXTURE_SEARCH.rows) })
 },
 toggleBatchFixture(event) {
@@ -1657,6 +1429,7 @@ const selectedItems = this.data.batchSelectedItems
 if (!selectedItems.length) return
 const groups = this.data.groups.map((group) => ({ ...group }))
 const skipped = []
+let changed = false
 selectedItems.forEach((item) => {
 const existingIndex = groups.findIndex((group) => group.fixtureSource === 'library' && group.fixtureModel === item.model)
 if (existingIndex >= 0) {
@@ -1665,6 +1438,7 @@ groups[existingIndex] = {
 ...group,
 fixtureCount: String(Number(group.fixtureCount) + item.quantity),
 }
+changed = true
 return
 }
 if (groups.length >= MAX_GROUPS) {
@@ -1676,12 +1450,13 @@ fixtureSource: 'library',
 fixtureModel: item.model,
 fixtureCount: item.quantity,
 }))
+changed = true
 this._nextGroupId += 1
 })
 this.closeFixturePicker()
-vibrate('medium')
 if (skipped.length) wx.showToast({ title: `最多 ${MAX_GROUPS} 组，已跳过 ${skipped.length} 款`, icon: 'none' })
 this.commitCalculation({ groups, activeWorkspace: 'config' })
+if (changed && isPageContextCurrent(this)) vibrate('medium')
 },
 removeGroup(event) {
 const index = Number(event.currentTarget.dataset.index)
@@ -2236,87 +2011,6 @@ return
 }
 this.cancelFixtureSearch()
 this.resetFixturePicker('search', { fixtureSearchGroupIndex: -1 })
-},
-openModelPicker(event) {
-if (!this._pageAlive || !this._pageVisible || Date.now() < (Number(this._suppressFloatingOpenUntil) || 0)) return
-const index = Number(event.currentTarget.dataset.index)
-if (!this.data.groups[index]) return
-this.cancelFixtureSearch()
-this.resetFixturePicker('search', {
-fixtureSearchGroupIndex: index,
-fixtureSearchSelectedModel: this.data.groups[index].fixtureModel,
-})
-},
-openFixtureSearch(event) {
-this.openModelPicker(event)
-},
-selectFixture(event) {
-if (this.data.fixturePickerClosing) return
-if (this.data.fixtureBatchOpen) return this.toggleBatchFixture(event)
-const fixture = stageLightingProductIndex.get(event.currentTarget.dataset.model)
-if (!fixture || !fixture.channelModes?.length) return
-const index = this.data.fixtureSearchGroupIndex
-this.cancelFixtureSearch()
-this.resetFixturePicker()
-if (index < 0) {
-const group = {
-...createGroup(this._nextGroupId, {
-fixtureSource: 'library',
-fixtureModel: fixture.model,
-fixtureCount: 1,
-}),
-_lightingGroupId: makeStableId('group'),
-name: `${fixture.model} ${fixture.name}`,
-channelModes: fixture.channelModes,
-channelCount: String(fixture.channelModes[0]),
-fixtureCount: '1',
-}
-const groups = [...this.data.groups, group]
-const candidate = this.buildSchemeFromState({ ...this.data, groups })
-const groupIndex = groups.length - 1
-this.buildPendingPreview(candidate, {
-kind: 'add',
-title: '确认添加灯组',
-groupIndex,
-groupId: group._lightingGroupId,
-quantityText: '1',
-channelCount: fixture.channelModes[0],
-channelModeIndex: 0,
-channelModes: fixture.channelModes,
-fixtureModel: fixture.model,
-fixtureName: fixture.name,
-})
-this._nextGroupId += 1
-return
-}
-const current = this.data.groups[index]
-if (!current) return
-const groups = this.data.groups.map((group, groupIndex) => groupIndex === index
-? {
-...group,
-name: `${fixture.model} ${fixture.name}`,
-fixtureSource: 'library',
-fixtureModel: fixture.model,
-fixtureName: fixture.name,
-channelModes: fixture.channelModes,
-libraryChannelCount: String(fixture.channelModes[0]),
-channelModeIndex: 0,
-channelCount: String(fixture.channelModes[0]),
-}
-: group)
-const candidate = this.buildSchemeFromState({ ...this.data, groups })
-this.buildPendingPreview(candidate, {
-kind: 'edit',
-title: '确认更换灯具型号',
-groupIndex: index,
-groupId: current._lightingGroupId,
-quantityText: String(current.fixtureCount),
-channelCount: fixture.channelModes[0],
-channelModeIndex: 0,
-channelModes: fixture.channelModes,
-fixtureModel: fixture.model,
-fixtureName: fixture.name,
-})
 },
 requestDeleteGroup(event) {
 const index = Number(event.currentTarget.dataset.index)
@@ -2969,7 +2663,6 @@ wx.showToast({ title: '请先完成有效编址', icon: 'none' })
 return
 }
 this.flushFixtureProgressWrite()
-vibrate('medium')
 wx.navigateTo({ url: `/pages/dmx-layout/dmx-layout?lightingContextId=${encodeURIComponent(this._contextId)}` })
 },
 onHeaderBack() {
@@ -2983,7 +2676,6 @@ wx.showToast({ title: '请先完成有效编址', icon: 'none' })
 return
 }
 this.flushFixtureProgressWrite()
-vibrate('medium')
 wx.navigateTo({
 url: `/pages/dmx-layout/dmx-layout?lightingContextId=${encodeURIComponent(this._contextId)}&openExport=1`,
 })
@@ -3101,53 +2793,22 @@ preferences: this.getPreferences(),
 resultText,
 }
 },
-buildResultReportRecord(result = this._calculationResult, preferences = this.getPreferences()) {
-if (!result?.valid) return null
-const resultText = result.groups.map((group) => {
-const firstFixture = group.fixtures[0]
-const lastFixture = group.fixtures[group.fixtures.length - 1]
-const endAddress = lastFixture.rangeText.split('–').pop()
-const groupDomain = result.allocationMode === 'manual' ? ` · ${group.targetUniverse}域` : ''
-return `${group.groupIndex + 1}. ${group.name} · ${group.fixtureCount} 台 × ${group.channelCount} CH${groupDomain} · ${firstFixture.addressText} → ${endAddress}`
-}).join('\n')
-return {
-module: 'dmxAddress',
-title: `${result.modeText} · ${result.totalGroups} 组 · ${result.totalFixtures} 台灯具`,
-summary: `${result.modeText} · ${result.startText} → ${result.endText} · 下一可用 ${result.nextText}`,
-preferences,
-resultText,
-}
-},
-...resultReportMethods,
-generateResultReportImage() {
-this.openSheetModal('resultReportPreview', 'resultReportPreviewClosing')
-return resultReportMethods.generateResultReportImage.call(this)
-},
-closeResultReportPreview() {
-this.cancelSheetClose('resultReportPreview', 'resultReportPreviewClosing')
-return resultReportMethods.closeResultReportPreview.call(this)
-},
-onUserCloseResultReportPreview() {
-if (!this.data.resultReportPreviewVisible || this.data.resultReportPreviewClosing) return
-this.beginSheetClose('resultReportPreview', 'resultReportPreviewClosing', () => this.closeResultReportPreview())
-},
-previewResultReportImage() {
-if (this.data.resultReportPreviewClosing) return
-return resultReportMethods.previewResultReportImage.call(this)
-},
-shareResultReportImage() {
-if (this.data.resultReportPreviewClosing) return
-return resultReportMethods.shareResultReportImage.call(this)
-},
-saveResultReportImage() {
-if (this.data.resultReportPreviewClosing) return
-return resultReportMethods.saveResultReportImage.call(this)
-},
+
+...resultReportUiMethods,
+
+
+
+
+
+
 copyResult() {
 const data = this.getResultText()
 if (!data) return
-vibrate('medium')
-wx.setClipboardData({ data })
+const workspaceRevision = this._workspaceRevision
+wx.setClipboardData({ data, success: () => {
+if (this._pageAlive && this._pageVisible && this._workspaceRevision === workspaceRevision
+&& this.getResultText() === data && isPageContextCurrent(this)) vibrate('medium')
+} })
 },
 toggleCurrentFavorite() {
 togglePageFavorite(this)

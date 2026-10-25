@@ -130,7 +130,11 @@ const { createDmxLayoutPage } = require('../../pages/dmx-layout/page-factory')
 const { saveLightingScheme } = require('../../pages/dmx-layout/lighting-workspace')
 const { pointOnRod } = require('../../pages/dmx-layout/layout-model')
 const sourceRoot = path.resolve(__dirname, '../..')
-for (const relative of ['pages/dmx-layout/dmx-layout.wxml', 'pages/dmx-layout-landscape/dmx-layout-landscape.wxml']) {
+const appConfig = JSON.parse(fs.readFileSync(path.join(sourceRoot, 'app.json'), 'utf8'))
+const registeredPages = [...(appConfig.pages || []), ...(appConfig.subPackages || []).flatMap(pkg => (pkg.pages || []).map(page => path.posix.join(pkg.root, page)))]
+assert(!registeredPages.includes('pages/dmx-layout-landscape/dmx-layout-landscape'), 'Retired landscape route must stay out of app.json')
+assert.equal(fs.existsSync(path.join(sourceRoot, 'pages/dmx-layout-landscape')), false, 'Retired landscape page source must stay absent')
+for (const relative of ['pages/dmx-layout/dmx-layout.wxml']) {
   const markup = fs.readFileSync(path.join(sourceRoot, relative), 'utf8')
   assert.match(markup, /<canvas\s+wx:if="\{\{!layoutPanelVisible && !locateVisible && !placementVisible && !previewVisible && !isGeneratingImage && !exportCanvasActive\}\}"\s+type="2d"\s+id="dmxLayoutCanvas"/, `${relative} must unmount its native 2D stage node while a native overlay is active`)
   assert.match(markup, /<canvas\s+wx:if="\{\{exportCanvasActive\}\}"\s+type="2d"\s+id="dmxLayoutExportCanvas"/, `${relative} must use a native 2D export node`)
@@ -138,7 +142,7 @@ for (const relative of ['pages/dmx-layout/dmx-layout.wxml', 'pages/dmx-layout-la
 }
 assert.doesNotMatch(fs.readFileSync(path.join(sourceRoot, 'pages/dmx-layout/page-factory.js'), 'utf8'), /createCanvasContext|canvasId\s*:/,
   'production page must not use legacy canvas contexts or canvas IDs')
-for (const relative of ['pages/dmx-layout/dmx-layout.wxss', 'pages/dmx-layout-landscape/dmx-layout-landscape.wxss']) {
+for (const relative of ['pages/dmx-layout/dmx-layout.wxss']) {
   const styles = fs.readFileSync(path.join(sourceRoot, relative), 'utf8')
   assert.doesNotMatch(styles, /\.export-canvas\{[^}]*left:-2000px|\.export-canvas\{[^}]*z-index:-1/,
     `${relative} export node must stay mounted visibly in the native layer`)
@@ -380,13 +384,15 @@ assert.equal(exportRequests[0].canvasId, undefined)
 assert.equal(exportRequests[0].backingWidth, exportRequests[0].width)
 assert.equal(exportRequests[0].backingHeight, exportRequests[0].height)
 assert.ok(exportTextCalls.some((call) => call.value === '灯位图'), 'export node should receive the real diagram title draw call')
-assert.ok(!exportTextCalls.some((call) => /灯具地址清单|灯具编址与灯位图|地址清单/.test(String(call.value))), 'native export draw calls must not include the removed list/report')
+assert.ok(exportTextCalls.some((call) => String(call.value) === '完整地址清单（3 台）'), 'native export must retain the current complete address-list title')
+assert.ok(!exportTextCalls.some((call) => /灯具地址清单|灯具编址与灯位图/.test(String(call.value))), 'native export must not use a retired list or combined-report title')
 assert.equal(page.data.previewVisible, true)
 assert.equal(page.data.exportCanvasActive, false)
 assert.equal(page._canvasNode, null, 'preview should continue to keep the main stage node unmounted')
 assert.ok(stageBeforeExport, 'export should retain no dependency on the stage canvas node')
 
 page.closePreview()
+await waitForPanelExit()
 assert.notStrictEqual(mainNode, stageBeforeExport, 'closing export preview should remount a fresh stage node')
 assert.strictEqual(page._canvasNode, mainNode)
 mainNode.flushFrames()
@@ -428,6 +434,7 @@ assert.equal(openExportPage.data.previewVisible, true, 'direct openExport naviga
 assert.equal(openExportPage._canvasNode, null, 'direct export should not require the main stage node after loading')
 assert.equal(exportRequests.length, requestsBeforeDirectExport + 1)
 openExportPage.closePreview()
+await waitForPanelExit()
 assert.strictEqual(openExportPage._canvasNode, mainNode, 'closing direct export should mount and measure a fresh stage node')
 openExportPage.onUnload()
 

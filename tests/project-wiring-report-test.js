@@ -514,8 +514,6 @@ try {
   delete global.__projectWiringRoute
   delete global.__projectActionSheet
   delete require.cache[currentPageFile]
-  const reportPath = path.join(root, 'pages/records/project-report.js')
-  delete require.cache[reportPath]
 }
 
 console.log('project wiring report tests passed')

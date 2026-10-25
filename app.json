@@ -4,7 +4,6 @@
     "pages/projects/projects",
     "pages/index/index",
     "pages/settings/settings",
-    "pages/basis/detail",
     "pages/projects/favorite-detail",
     "pages/projects/recovery",
     "pages/records/report",
@@ -47,6 +46,12 @@
       "root": "pages/control-protocol",
       "pages": [
         "index",
+        "detail"
+      ]
+    },
+    {
+      "root": "pages/basis",
+      "pages": [
         "detail"
       ]
     }

@@ -1,6 +1,6 @@
 'use strict'
 
-const { MODULES: RECORD_MODULES } = require('./records')
+const { MODULES: RECORD_MODULES } = require('./record-modules')
 
 function recordRoute(id) {
   const module = RECORD_MODULES[id]
@@ -109,9 +109,13 @@ const TOOLS = Object.freeze([
     id: 'controlProtocol', title: '控制协议', category: '中控', subtitle: '查看型号对应的接线与协议资料',
     icon: '/assets/home/module-control-protocol-catalog.png', path: '/pages/control-protocol/index',
   },
+  {
+    id: 'productLibrary', title: '产品资料库', category: '资料', subtitle: '查阅产品规格与资料',
+    icon: '/assets/home/module-library-catalog.png', path: '/pages/products/library',
+  },
 ])
 
-const CATEGORY_FILTERS = Object.freeze(['全部', '布线', '音频', '视频', '灯光', '中控'])
+const CATEGORY_FILTERS = Object.freeze(['全部', '布线', '音频', '视频', '灯光', '中控', '资料'])
 const TOOL_BY_ID = new Map(TOOLS.map((tool) => [tool.id, tool]))
 const BASIS_TOOLS = Object.freeze(TOOLS.filter((tool) => tool.basis))
 

@@ -96,7 +96,7 @@ async function run() {
 
   {
     const env = createRuntime()
-    const page = env.page()
+    const page = env.page({ id: 'qa-project-1' })
     const lineId = page._schedule.lines[0].id
     page.editLine({ currentTarget: { dataset: { id: lineId } } })
     assert.equal(page.data.editorVisible, true)
@@ -120,7 +120,7 @@ async function run() {
 
   {
     const env = createRuntime()
-    const page = env.page()
+    const page = env.page({ id: 'qa-project-1' })
     const device = page.data.devices[0]
     const action = { actionType: 'connect', projectId: page.projectId, id: device.id, revision: page._schedule.revision }
     swipeRow(page, 'device', device.id)
@@ -135,7 +135,7 @@ async function run() {
 
   {
     const env = createRuntime()
-    const page = env.page()
+    const page = env.page({ id: 'qa-project-1' })
     const device = page.data.devices[0]
     const action = { actionType: 'connect', projectId: page.projectId, id: device.id, revision: page._schedule.revision }
     const currentTarget = { dataset: { swipeType: 'device', swipeId: device.id, retiring: false } }
@@ -152,7 +152,7 @@ async function run() {
 
   {
     const env = createRuntime()
-    const page = env.page()
+    const page = env.page({ id: 'qa-project-1' })
     const device = page.data.devices[0]
     const action = { actionType: 'connect', projectId: page.projectId, id: device.id, revision: page._schedule.revision }
     const currentTarget = { dataset: { swipeType: 'device', swipeId: device.id, retiring: false } }
@@ -169,7 +169,7 @@ async function run() {
 
   {
     const env = createRuntime()
-    const page = env.page()
+    const page = env.page({ id: 'qa-project-1' })
     const line = page._schedule.lines[0]
     const action = { deleteType: 'line', actionType: 'delete', projectId: page.projectId, id: line.id, revision: page._schedule.revision }
     swipeRow(page, 'line', line.id)
@@ -186,7 +186,7 @@ async function run() {
 
   {
     const env = createRuntime()
-    const page = env.page()
+    const page = env.page({ id: 'qa-project-1' })
     const device = page.data.devices[0]
     const action = { actionType: 'connect', projectId: page.projectId, id: device.id, revision: page._schedule.revision }
     page.rememberWorkspaceSuppressedTouch({ changedTouches: [{ identifier: 0 }] }, `device:${device.id}`)
@@ -199,7 +199,7 @@ async function run() {
 
   {
     const env = createRuntime()
-    const page = env.page()
+    const page = env.page({ id: 'qa-project-1' })
     const device = page.data.devices[0]
     const action = { actionType: 'connect', projectId: page.projectId, id: device.id, revision: page._schedule.revision }
     page.traceWorkspaceInteraction('ignored-before-opt-in')
@@ -231,7 +231,7 @@ async function run() {
 
   {
     const env = createRuntime()
-    const page = env.page()
+    const page = env.page({ id: 'qa-project-1' })
     page.editLine({ currentTarget: { dataset: { id: page._schedule.lines[0].id } } })
     page.deleteLine()
     page.projectId = 'qa-project-2'
@@ -244,7 +244,7 @@ async function run() {
 
   {
     const env = createRuntime()
-    const page = env.page()
+    const page = env.page({ id: 'qa-project-1' })
     page.openNewLine()
     assert.equal(page.data.draftIsNew, true)
     assert.equal(page.data.draft.id || '', '', 'new draft starts without a persisted ID')
@@ -266,7 +266,7 @@ async function run() {
 
   {
     const env = createRuntime()
-    const page = env.page()
+    const page = env.page({ id: 'qa-project-1' })
     const key = page.data.groups[0].key
     page.onLineTouchStart({ currentTarget: { dataset: { key } }, touches: [{ identifier: 0, clientX: 10, clientY: 10 }] })
     page.onLineTouchMove({ touches: [{ identifier: 0, clientX: 20, clientY: 10 }] })
@@ -286,7 +286,7 @@ async function run() {
 
   {
     const env = createRuntime()
-    const page = env.page()
+    const page = env.page({ id: 'qa-project-1' })
     const key = `group:${page.data.groups[0].key}`
     page._workspaceSuppressedTouches['0'] = Date.now() + 300
     page._workspaceSuppressedTapTarget = key
@@ -300,7 +300,7 @@ async function run() {
     ['project-picker', (page) => page.requestProjectPicker(), (page) => page.cancelProjectPicker(), (page) => page.requestProjectPicker()],
   ]) {
     const env = createRuntime()
-    const page = env.page()
+    const page = env.page({ id: 'qa-project-1' })
     open(page)
     close(page)
     const phaseKey = name === 'new-project' ? 'newProject' : 'projectPicker'
@@ -315,7 +315,7 @@ async function run() {
 
   {
     const env = createRuntime()
-    const page = env.page()
+    const page = env.page({ id: 'qa-project-1' })
     const commits = deferRenderCommits(page)
     page.requestNewProject()
     page.closeNewProject()
@@ -331,7 +331,7 @@ async function run() {
 
   {
     const env = createRuntime()
-    const page = env.page()
+    const page = env.page({ id: 'qa-project-1' })
     const commits = deferRenderCommits(page)
     page.beginWorkspaceOverlay('newProject', { newProjectVisible: true })
     page.beginWorkspaceOverlay('report', { reportPreviewVisible: true })
@@ -350,7 +350,7 @@ async function run() {
 
   {
     const env = createRuntime({ count: 1 })
-    const page = env.page()
+    const page = env.page({ id: 'qa-project-1' })
     const commits = deferRenderCommits(page)
     const line = page._schedule.lines[0]
     page.deleteWorkspaceRecord(tapEvent({
@@ -377,7 +377,7 @@ async function run() {
 
   {
     const env = createRuntime()
-    const page = env.page()
+    const page = env.page({ id: 'qa-project-1' })
     page.setData({ reportImages: [{ title: 'old', path: '/old.png' }] })
     page._reportSignature = 'old-signature'
     page.showReportPage(0)

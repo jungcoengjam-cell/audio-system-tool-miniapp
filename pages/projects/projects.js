@@ -6,6 +6,7 @@ const {
   getWorkspaceSnapshot,
   toggleFavoriteById,
 } = require('../../utils/records')
+const { vibrate } = require('../../utils/haptics')
 const { getLightingContexts } = require('../dmx-layout/lighting-workspace')
 
 const PROJECT_FILTERS = [
@@ -54,7 +55,17 @@ Page({
   },
 
   onShow() {
+    this._pageVisible = true
     this.refresh({ forceRefresh: true })
+  },
+
+  onHide() {
+    this._pageVisible = false
+  },
+
+  onUnload() {
+    this._pageVisible = false
+    this._unloaded = true
   },
 
   refresh(options = {}) {
@@ -152,10 +163,13 @@ Page({
 
   onTabTap(event) {
     const tabIndex = Number(event.currentTarget.dataset.index)
+    const changed = Number.isInteger(tabIndex) && tabIndex >= 0 && tabIndex < this.data.tabs.length
+      && tabIndex !== this.data.tabIndex
     this.setData({ tabIndex, searchText: '', scrollTop: 1 }, () => {
       this.setData({ scrollTop: 0 })
       this.refresh({ forceRefresh: true })
     })
+    if (changed) vibrate('light')
   },
 
   onSearchInput(event) {
@@ -167,11 +181,19 @@ Page({
   },
 
   onProjectFilterTap(event) {
-    this.setData({ projectFilter: String(event.currentTarget.dataset.key || 'all') }, () => this.refreshFiltered())
+    const projectFilter = String(event.currentTarget.dataset.key || 'all')
+    const changed = this.data.projectFilters.some((item) => item.key === projectFilter)
+      && projectFilter !== this.data.projectFilter
+    this.setData({ projectFilter }, () => this.refreshFiltered())
+    if (changed) vibrate('light')
   },
 
   onFavoriteFilterTap(event) {
-    this.setData({ favoriteFilter: String(event.currentTarget.dataset.key || 'all') }, () => this.refreshFiltered())
+    const favoriteFilter = String(event.currentTarget.dataset.key || 'all')
+    const changed = this.data.favoriteModules.some((item) => item.key === favoriteFilter)
+      && favoriteFilter !== this.data.favoriteFilter
+    this.setData({ favoriteFilter }, () => this.refreshFiltered())
+    if (changed) vibrate('light')
   },
 
   retryWorkspace() {
@@ -193,6 +215,7 @@ Page({
           wx.showToast({ title: content?.trim() ? '新建失败，请检查本地存储' : '请输入项目名称', icon: 'none' })
           return
         }
+        if (this._pageVisible && !this._unloaded) vibrate('medium')
         this.refresh({ forceRefresh: true })
       },
     })
@@ -220,6 +243,7 @@ Page({
       wx.showToast({ title: '移入恢复区失败，收藏仍然保留', icon: 'none' })
       return false
     }
+    vibrate('medium')
     this.refresh({ forceRefresh: true })
     return true
   },

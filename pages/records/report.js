@@ -1,9 +1,12 @@
 const { drawAndExportReport } = require('../../utils/report-canvas')
 const { getExportDimensions } = require('../../utils/report-drawing')
+const { vibrate } = require('../../utils/haptics')
+const { buildReportPdfFile } = require('./report-pdf-export')
 const {
-  previewGeneratedImage,
-  shareGeneratedImage,
-} = require('../../utils/report-image-actions')
+  MAX_IMAGE_DIMENSION,
+  MAX_IMAGE_PIXELS,
+  makeReportPdfFileName,
+} = require('./report-pdf')
 const {
   REPORT_WIDTH,
   buildReportPayload,
@@ -18,14 +21,9 @@ const {
   buildReportImageTasks,
   splitTaskIntoSegments,
 } = require('./report-snapshot-adapter')
-const {
-  saveErrorNeedsSettings,
-  saveReportPages,
-  saveWxImageToAlbum,
-} = require('./report-actions')
-
 const BRIDGE_RETURN_SETTLE_MS = 500
 const CANVAS_ID = 'projectReportExportCanvas'
+const PDF_CANVAS_ID = 'projectReportPdfCanvas'
 
 function prepareReportImagePlan(items, projectName, measureContext) {
   const errors = {}
@@ -87,10 +85,9 @@ Page({
     previewScrollTop: 0,
     reportCanvasWidth: REPORT_WIDTH,
     reportCanvasHeight: 1000,
-    isSaving: false,
-    savedPageIndexes: [],
-    saveProgressText: '',
-    saveButtonText: '保存全部页面',
+    isExportingPdf: false,
+    reportPdfPath: '',
+    pdfStatusText: '',
   },
 
   onLoad(options = {}) {
@@ -100,7 +97,10 @@ Page({
     this._reportPages = []
     this._bridgeResults = {}
     this._pendingBridgeResult = null
-    this._saveRevision = 0
+    this._pdfRevision = 0
+    this._activeReportPdfJob = null
+    this._reportPdfPath = ''
+    this._reportPdfSignature = ''
     this.loadSource()
   },
 
@@ -117,12 +117,15 @@ Page({
     }
   },
 
+  onHide() {
+    if (this._activeReportPdfJob) this.cancelReportPdfExport('页面已离开，PDF 生成已取消。')
+  },
+
   onUnload() {
     this._unloaded = true
     this.cancelActiveReportBridge()
     this._reportRevision = (this._reportRevision || 0) + 1
-    this._saveRevision = (this._saveRevision || 0) + 1
-    this._saveSignature = ''
+    this.invalidateReportPdf()
   },
 
   cancelActiveReportBridge() {
@@ -148,7 +151,7 @@ Page({
   },
 
   loadSource(options = {}) {
-    this.invalidateReportSave()
+    this.invalidateReportPdf()
     const previousSelectedIds = options.preserveSelection && Array.isArray(this.data.selectedItemIds)
       ? [...this.data.selectedItemIds]
       : null
@@ -189,7 +192,6 @@ Page({
       currentPagePath: '',
       pageCount: 0,
       pageStatus: '',
-      savedPageIndexes: [],
     })
   },
 
@@ -199,17 +201,17 @@ Page({
 
   backToSelection() {
     if (this.data.mode !== 'preview') return
-    const stoppedSaveText = this.invalidateReportSave('已返回选择。')
+    const stoppedExport = this.cancelReportPdfExport('已取消 PDF 生成。')
     this.setData({
       mode: 'select',
-      pageStatus: stoppedSaveText || '已返回选择，原选择仍保留。',
+      pageStatus: stoppedExport ? '已取消 PDF 生成，原选择仍保留。' : '已返回选择，原选择仍保留。',
     })
   },
 
   stopEvent() {},
 
   updateSelection(selectedIds) {
-    this.invalidateReportSave()
+    this.invalidateReportPdf()
     const sections = getProjectReportSections(this.reportSource)
     this.reportSignature = ''
     this._reportPages = []
@@ -222,8 +224,6 @@ Page({
       currentPageIndex: 0,
       pageCount: 0,
       pageStatus: '',
-      savedPageIndexes: [],
-      saveProgressText: '',
     })
   },
 
@@ -235,18 +235,19 @@ Page({
     else selected.add(id)
     const allIds = getProjectReportSections(this.reportSource).flatMap((section) => section.items.map((item) => item.id))
     this.updateSelection(allIds.filter((itemId) => selected.has(itemId)))
+    if (allIds.includes(id)) vibrate('light')
   },
 
   toggleAllReportItems() {
     if (!this.reportSource) return
     const allIds = getProjectReportSections(this.reportSource).flatMap((section) => section.items.map((item) => item.id))
     this.updateSelection(this.data.allSelected ? [] : allIds)
+    if (allIds.length) vibrate('light')
   },
 
   generateReport() {
     if (!this.reportSource || this.data.isGenerating || !this.data.hasSelection) return
     if (!this.refreshSourceForGeneration()) return
-    this.invalidateReportSave()
     const selectedIds = [...this.data.selectedItemIds]
     const signature = JSON.stringify({
       source: this._sourceFingerprint,
@@ -269,7 +270,7 @@ Page({
       return
     }
     if (typeof wx.createCanvasContext !== 'function' || typeof wx.canvasToTempFilePath !== 'function') {
-      wx.showToast({ title: '当前微信版本暂不支持生成报告图片', icon: 'none' })
+      wx.showToast({ title: '当前微信版本暂不支持生成报告预览', icon: 'none' })
       return
     }
 
@@ -312,6 +313,7 @@ Page({
   refreshSourceForGeneration() {
     const refreshed = loadProjectReportSource(this.projectId)
     if (!refreshed.ok) {
+      this.invalidateReportPdf()
       this.reportSource = null
       this._sourceFingerprint = ''
       this.reportSignature = ''
@@ -322,9 +324,6 @@ Page({
         reportPages: [],
         currentPagePath: '',
         pageCount: 0,
-        savedPageIndexes: [],
-        saveProgressText: '',
-        saveButtonText: '保存全部页面',
       })
       return false
     }
@@ -338,6 +337,7 @@ Page({
     this.reportSource = refreshed
     this._sourceFingerprint = getReportSourceFingerprint(refreshed)
     if (sourceChanged || selectionChanged) {
+      this.invalidateReportPdf()
       this.reportSignature = ''
       this._reportPages = []
       this.setData({
@@ -351,9 +351,6 @@ Page({
         currentPageNumber: 1,
         currentPagePath: '',
         pageCount: 0,
-        savedPageIndexes: [],
-        saveProgressText: '',
-        saveButtonText: '保存全部页面',
         pageStatus: selectionChanged
           ? '项目内容有变化，已移除无法找到的内容并刷新候选。请检查选择后重新生成。'
           : '项目内容有变化，候选已刷新。请检查选择后重新生成。',
@@ -757,7 +754,6 @@ Page({
     this.setData({
       mode: 'preview',
       isGenerating: false,
-      isSaving: false,
       renderProgressText: '',
       reportPages: this._reportPages,
       currentPageIndex: 0,
@@ -766,10 +762,8 @@ Page({
       pageCount,
       previewScrollTop: 0,
       pageStatus: `报告已生成，共 ${pageCount} 页。`,
-      savedPageIndexes: [],
-      saveProgressText: '',
-      saveButtonText: `保存全部 ${pageCount} 页`,
     })
+    if (pageCount > 0) vibrate('medium')
   },
 
   failReportGeneration(revision, pageIndex, details = {}) {
@@ -813,12 +807,14 @@ Page({
   setCurrentPage(index) {
     const pages = this._reportPages || []
     if (!Number.isInteger(index) || index < 0 || index >= pages.length) return
+    const changed = index !== this.data.currentPageIndex
     this.setData({
       currentPageIndex: index,
       currentPageNumber: index + 1,
       currentPagePath: pages[index].path,
       previewScrollTop: 0,
     })
+    if (changed) vibrate('light')
   },
 
   previousReportPage() {
@@ -829,98 +825,393 @@ Page({
     this.setCurrentPage(this.data.currentPageIndex + 1)
   },
 
-  inspectReportPages() {
-    const pages = this._reportPages || []
-    const path = pages[this.data.currentPageIndex]?.path
-    if (!path) return
-    if (typeof wx.previewImage === 'function') {
-      wx.previewImage({ current: path, urls: pages.map((page) => page.path) })
-      return
-    }
-    previewGeneratedImage(path)
-  },
+  exportReportPageAsJpeg(page, index, isCurrent, job) {
+    return new Promise((resolve, reject) => {
+      let image = null
+      let settled = false
+      let acceptedExport = false
+      const clearImageHandlers = () => {
+        if (image) {
+          image.onload = null
+          image.onerror = null
+        }
+        if (job.cancelPendingExport === cancelPending) job.cancelPendingExport = null
+      }
+      const fail = (error) => {
+        if (settled) return
+        settled = true
+        clearImageHandlers()
+        this.releaseReportPdfCanvas(job)
+        reject(error instanceof Error ? error : new Error(String(error || 'PDF 页面导出失败。')))
+      }
+      const cancelPending = () => fail(new Error('PDF 导出已取消。'))
+      job.cancelPendingExport = cancelPending
 
-  shareCurrentReportPage() {
-    const path = this._reportPages?.[this.data.currentPageIndex]?.path
-    if (!path) return
-    if (!shareGeneratedImage(path)) wx.showToast({ title: '当前页面暂不支持分享图片', icon: 'none' })
-  },
-
-  saveAllReportPages() {
-    if (this.data.isSaving || !this._reportPages?.length || !this.reportSignature) return
-    if (typeof wx.saveImageToPhotosAlbum !== 'function') {
-      this.setData({ saveProgressText: '当前微信版本暂不支持保存报告图片。' })
-      return
-    }
-    this._saveRevision = (this._saveRevision || 0) + 1
-    const revision = this._saveRevision
-    const signature = this.reportSignature
-    this._saveSignature = signature
-    const pages = [...this._reportPages]
-    const initialSaved = [...this.data.savedPageIndexes]
-    this.setData({ isSaving: true, saveProgressText: '准备保存报告图片…' }, () => {
-      const isCurrent = () => !this._unloaded
-        && this._saveRevision === revision
-        && this._saveSignature === signature
-        && this.reportSignature === signature
-      const saveTask = saveReportPages({
-        pages,
-        savedIndexes: initialSaved,
-        saveImage: saveWxImageToAlbum,
-        isCurrent,
-        shouldContinue: isCurrent,
-        onProgress: ({ currentIndex, completedCount, pageCount }) => {
-          if (!isCurrent()) return
-          this.setData({ saveProgressText: `正在保存第 ${currentIndex + 1} / ${pageCount} 页，已保存 ${completedCount} 页` })
-        },
-        onSaved: ({ currentIndex, completedCount, pageCount }) => {
-          if (!isCurrent()) return
-          const indexes = [...new Set([...this.data.savedPageIndexes, currentIndex])].sort((a, b) => a - b)
-          this.setData({
-            savedPageIndexes: indexes,
-            saveProgressText: `已保存 ${completedCount} / ${pageCount} 页`,
-          })
-        },
-      }).then((result) => {
-        if (!isCurrent()) return
-        this._saveSignature = ''
-        this.setData({
-          isSaving: false,
-          savedPageIndexes: result.savedIndexes,
-          saveProgressText: result.complete
-            ? `已保存全部 ${pages.length} 页。`
-            : result.canceled
-              ? `已取消第 ${(result.failedIndex || 0) + 1} 页；已保存 ${result.savedIndexes.length} / ${pages.length} 页。再次保存会从未完成页继续。`
-              : `第 ${(result.failedIndex || 0) + 1} 页保存失败；已保存 ${result.savedIndexes.length} / ${pages.length} 页。再次保存可继续。`,
-          saveButtonText: result.complete ? `已保存全部 ${pages.length} 页` : '继续保存剩余页',
-        })
-        if (result.complete) {
-          wx.showToast({ title: `已保存全部 ${pages.length} 页`, icon: 'success' })
+      const exportDecodedImage = (canvas, width, height) => {
+        if (settled) return
+        if (!isCurrent()) {
+          fail(new Error('PDF 导出已取消。'))
           return
         }
-        if (!result.canceled && saveErrorNeedsSettings(result.error) && typeof wx.showModal === 'function') {
-          wx.showModal({
-            title: '需要相册权限',
-            content: '请在设置中允许保存图片到相册，再点“保存全部页面”继续。已成功保存的页面会跳过。',
-            confirmText: '去设置',
-            success: ({ confirm }) => { if (confirm && typeof wx.openSetting === 'function') wx.openSetting() },
-          })
-        } else if (!result.canceled) {
-          wx.showToast({ title: `第 ${(result.failedIndex || 0) + 1} 页保存失败`, icon: 'none' })
+        try {
+          const context = canvas.getContext('2d')
+          if (!context || typeof canvas.createImage !== 'function'
+            || typeof wx.canvasToTempFilePath !== 'function') {
+            fail(new Error('当前微信版本暂不支持生成 PDF 页面。'))
+            return
+          }
+          context.fillStyle = '#ffffff'
+          context.fillRect(0, 0, width, height)
+          context.drawImage(image, 0, 0, width, height)
+          wx.canvasToTempFilePath({
+            canvas,
+            x: 0,
+            y: 0,
+            width,
+            height,
+            destWidth: width,
+            destHeight: height,
+            fileType: 'jpg',
+            quality: 0.94,
+            success: (result) => {
+              const path = result?.tempFilePath
+              if (settled) {
+                if (!acceptedExport && path) this.cleanupReportPdfFile(path)
+                return
+              }
+              if (!isCurrent()) {
+                if (path) this.cleanupReportPdfFile(path)
+                fail(new Error('PDF 导出已取消。'))
+                return
+              }
+              if (!path) {
+                fail(new Error(`第 ${index + 1} 页 JPEG 导出失败。`))
+                return
+              }
+              acceptedExport = true
+              settled = true
+              clearImageHandlers()
+              this.releaseReportPdfCanvas(job)
+              resolve({ path, width, height })
+            },
+            fail,
+          }, this)
+        } catch (error) {
+          fail(error)
         }
-      })
-      this._savePromise = saveTask
+      }
+
+      const queryCanvas = (width, height) => {
+        if (settled) return
+        if (!isCurrent()) {
+          fail(new Error('PDF 导出已取消。'))
+          return
+        }
+        if (typeof wx.createSelectorQuery !== 'function') {
+          fail(new Error('当前微信版本暂不支持 PDF Canvas 2D。'))
+          return
+        }
+        try {
+          wx.createSelectorQuery().in(this).select(`#${PDF_CANVAS_ID}`)
+            .fields({ node: true, size: true })
+            .exec((result) => {
+              if (settled) return
+              if (!isCurrent()) {
+                fail(new Error('PDF 导出已取消。'))
+                return
+              }
+              const canvas = result?.[0]?.node
+              if (!canvas || typeof canvas.getContext !== 'function' || typeof canvas.createImage !== 'function') {
+                fail(new Error('PDF Canvas 2D 节点不可用。'))
+                return
+              }
+              try {
+                job.canvas = canvas
+                canvas.width = width
+                canvas.height = height
+                image = canvas.createImage()
+                if (!image) throw new Error('PDF 页面图片无法创建。')
+                image.onload = () => {
+                  if (!settled) exportDecodedImage(canvas, width, height)
+                }
+                image.onerror = (error) => {
+                  if (!settled) fail(error || new Error(`第 ${index + 1} 页图片解码失败。`))
+                }
+                image.src = page.path
+              } catch (error) {
+                fail(error)
+              }
+            })
+        } catch (error) {
+          fail(error)
+        }
+      }
+
+      if (typeof wx.getImageInfo !== 'function') {
+        fail(new Error('当前微信版本暂不支持读取报告图片。'))
+        return
+      }
+      try {
+        wx.getImageInfo({
+          src: page.path,
+          fail,
+          success: (info) => {
+            if (settled) return
+            if (!isCurrent()) {
+              fail(new Error('PDF 导出已取消。'))
+              return
+            }
+            const width = Number(info.width)
+            const height = Number(info.height)
+            if (!Number.isInteger(width) || !Number.isInteger(height) || width < 1 || height < 1
+              || width > MAX_IMAGE_DIMENSION || height > MAX_IMAGE_DIMENSION || width * height > MAX_IMAGE_PIXELS) {
+              fail(new RangeError(`第 ${index + 1} 页报告尺寸超过导出上限。`))
+              return
+            }
+            const logicalAspect = Number(page.width) / Number(page.height)
+            if (!Number.isFinite(logicalAspect) || Math.abs((width / height) / logicalAspect - 1) > 0.02) {
+              fail(new Error(`第 ${index + 1} 页报告图片比例无效。`))
+              return
+            }
+            queryCanvas(width, height)
+          },
+        })
+      } catch (error) {
+        fail(error)
+      }
     })
   },
 
-  invalidateReportSave(reason = '') {
-    this._saveRevision = (this._saveRevision || 0) + 1
-    this._saveSignature = ''
-    if (!this.data.isSaving) return ''
+  releaseReportPdfCanvas(job) {
+    if (!job?.canvas || this._activeReportPdfJob !== job) return
+    const canvas = job.canvas
+    job.canvas = null
+    try {
+      canvas.width = 1
+      canvas.height = 1
+    } catch (_) { /* A detached Canvas 2D node is already released. */ }
+  },
+
+  getReportFileSystem() {
+    if (typeof wx.getFileSystemManager !== 'function') throw new Error('当前微信版本不支持本地 PDF 文件。')
+    return wx.getFileSystemManager()
+  },
+
+  getReportFileInfo(filePath) {
+    const fileSystem = this.getReportFileSystem()
+    return new Promise((resolve, reject) => fileSystem.getFileInfo({ filePath, success: (result) => resolve(result.size), fail: reject }))
+  },
+
+  readReportFile(filePath) {
+    const fileSystem = this.getReportFileSystem()
+    return new Promise((resolve, reject) => fileSystem.readFile({ filePath, success: (result) => resolve(result.data), fail: reject }))
+  },
+
+  writeReportFile(filePath, data) {
+    const fileSystem = this.getReportFileSystem()
+    return new Promise((resolve, reject) => fileSystem.writeFile({ filePath, data, success: resolve, fail: reject }))
+  },
+
+  removeReportFile(filePath) {
+    if (!filePath) return Promise.resolve()
+    return new Promise((resolve, reject) => this.getReportFileSystem().unlink({ filePath, success: resolve, fail: reject }))
+  },
+
+  generateReportPdf() {
+    if (this.data.isExportingPdf) {
+      this.cancelReportPdfExport('已取消 PDF 生成。')
+      return
+    }
+    if (this._reportPdfPath && this._reportPdfSignature === this.reportSignature) {
+      this.openReportPdf()
+      return
+    }
+    if (this._reportPdfPath) this.invalidateReportPdf()
     const pages = this._reportPages || []
-    const savedCount = Array.isArray(this.data.savedPageIndexes) ? this.data.savedPageIndexes.length : 0
-    const status = `${reason ? `${reason} ` : ''}已停止后续页面保存；已完成 ${savedCount} / ${pages.length} 页。正在处理的页面稍后请核对相册。`
-    this.setData({ isSaving: false, saveProgressText: status })
-    return status
+    const signature = this.reportSignature
+    if (!pages.length || !signature || this.data.mode !== 'preview') return
+    if (!wx.env?.USER_DATA_PATH || typeof wx.getImageInfo !== 'function'
+      || typeof wx.createSelectorQuery !== 'function' || typeof wx.canvasToTempFilePath !== 'function') {
+      this.setData({ pdfStatusText: '当前微信版本暂不支持生成 PDF。' })
+      return
+    }
+
+    const revision = (this._pdfRevision || 0) + 1
+    this._pdfRevision = revision
+    const outputPath = `${wx.env.USER_DATA_PATH}/${makeReportPdfFileName(
+      this.data.project?.name,
+      Date.now(),
+      `${revision}-${Math.random().toString(36).slice(2, 8)}`,
+    )}`
+    const job = {
+      revision,
+      signature,
+      outputPath,
+      tempPaths: new Set(),
+      outputWriteStarted: false,
+      canvas: null,
+      cancelPendingExport: null,
+    }
+    this._activeReportPdfJob = job
+    const isCurrent = () => !this._unloaded
+      && this._activeReportPdfJob === job
+      && this._pdfRevision === revision
+      && this.reportSignature === signature
+      && this._reportPages === pages
+    this.setData({ isExportingPdf: true, pdfStatusText: `准备生成 ${pages.length} 页 PDF…` })
+    const exportPromise = buildReportPdfFile({
+      pages,
+      outputPath,
+      tempPaths: job.tempPaths,
+      isCurrent,
+      exportJpeg: (page, index) => this.exportReportPageAsJpeg(page, index, isCurrent, job),
+      getJpegSize: (path) => this.getReportFileInfo(path),
+      readJpeg: (path) => this.readReportFile(path),
+      removeFile: (path) => this.removeReportFile(path),
+      writePdf: (path, bytes) => {
+        job.outputWriteStarted = true
+        return this.writeReportFile(path, bytes)
+      },
+      onProgress: ({ completedCount, pageCount }) => {
+        if (isCurrent()) this.setData({ pdfStatusText: `正在转换第 ${completedCount} / ${pageCount} 页…` })
+      },
+    }).then(({ filePath, pageCount }) => {
+      if (!isCurrent()) return
+      this.releaseReportPdfCanvas(job)
+      this._activeReportPdfJob = null
+      this._reportPdfPath = filePath
+      this._reportPdfSignature = signature
+      this.setData({
+        isExportingPdf: false,
+        reportPdfPath: filePath,
+        pdfStatusText: `PDF 已生成，共 ${pageCount} 页。`,
+      })
+      vibrate('medium')
+    }).catch((error) => {
+      if (!isCurrent()) return
+      this.releaseReportPdfCanvas(job)
+      this._activeReportPdfJob = null
+      this.setData({
+        isExportingPdf: false,
+        pdfStatusText: error?.message || 'PDF 生成失败，请重试。',
+      })
+      wx.showToast({ title: 'PDF 生成失败', icon: 'none' })
+    })
+    this._pdfPromise = exportPromise
+  },
+
+  cancelReportPdfExport(statusText = 'PDF 生成已取消。', silent = false) {
+    this._pdfRevision = (this._pdfRevision || 0) + 1
+    const job = this._activeReportPdfJob
+    if (job) {
+      if (typeof job.cancelPendingExport === 'function') job.cancelPendingExport()
+      this.releaseReportPdfCanvas(job)
+      this._activeReportPdfJob = null
+      job.tempPaths.forEach((path) => this.cleanupReportPdfFile(path))
+      if (job.outputWriteStarted) this.cleanupReportPdfFile(job.outputPath)
+    }
+    if (!silent && !this._unloaded) {
+      this.setData({
+        isExportingPdf: false,
+        pdfStatusText: statusText,
+      })
+    }
+    return Boolean(job)
+  },
+
+  invalidateReportPdf() {
+    this.cancelReportPdfExport('', true)
+    const filePath = this._reportPdfPath
+    this._reportPdfPath = ''
+    this._reportPdfSignature = ''
+    if (filePath) this.cleanupReportPdfFile(filePath)
+    if (!this._unloaded) {
+      this.setData({
+        isExportingPdf: false,
+        reportPdfPath: '',
+        pdfStatusText: '',
+      })
+    }
+  },
+
+  cleanupReportPdfFile(filePath) {
+    try { this.removeReportFile(filePath).catch(() => {}) } catch (_) { /* Cleanup is best effort. */ }
+  },
+
+  reportPdfFileMissing(error) {
+    return /not exist|no such file|enoent|file.*not found|文件不存在/i.test(String(error?.errMsg || error?.message || ''))
+  },
+
+  clearMissingReportPdf(filePath, signature) {
+    if (this._unloaded || this._reportPdfPath !== filePath
+      || this._reportPdfSignature !== signature || this.reportSignature !== signature) return
+    this._reportPdfPath = ''
+    this._reportPdfSignature = ''
+    this.setData({ reportPdfPath: '', pdfStatusText: 'PDF 文件已失效，请重新生成。' })
+  },
+
+  openReportPdf() {
+    const filePath = this._reportPdfPath
+    const signature = this.reportSignature
+    const isCurrent = () => !this._unloaded && this._reportPdfPath === filePath
+      && this._reportPdfSignature === signature && this.reportSignature === signature
+    if (!filePath || !isCurrent()) return
+    if (typeof wx.openDocument !== 'function') {
+      this.setData({ pdfStatusText: '当前微信版本暂不支持打开 PDF。' })
+      return
+    }
+    try {
+      wx.openDocument({
+        filePath,
+        fileType: 'pdf',
+        showMenu: true,
+        fail: (error) => {
+          if (!isCurrent()) return
+          if (this.reportPdfFileMissing(error)) this.clearMissingReportPdf(filePath, signature)
+          else wx.showToast({ title: 'PDF 打开失败，请重试。', icon: 'none' })
+        },
+      })
+    } catch (_) {
+      if (isCurrent()) this.setData({ pdfStatusText: 'PDF 打开失败，请重试。' })
+    }
+  },
+
+  shareReportPdf() {
+    const filePath = this._reportPdfPath
+    const signature = this.reportSignature
+    const isCurrent = () => !this._unloaded && this._reportPdfPath === filePath
+      && this._reportPdfSignature === signature && this.reportSignature === signature
+    if (!filePath || !isCurrent()) return
+    const fileName = filePath.split('/').pop()
+    if (typeof wx.shareFileMessage !== 'function') {
+      if (typeof wx.showModal !== 'function') {
+        wx.showToast({ title: '当前微信版本暂不支持分享 PDF。', icon: 'none' })
+        return
+      }
+      try {
+        wx.showModal({
+          title: '分享项目报告 PDF',
+          content: '当前微信版本不支持直接分享文件，可打开 PDF 后使用右上角菜单分享。',
+          confirmText: '打开 PDF',
+          success: ({ confirm }) => { if (confirm && isCurrent()) this.openReportPdf() },
+        })
+      } catch (_) {
+        if (isCurrent()) this.setData({ pdfStatusText: 'PDF 分享失败，请重试。' })
+      }
+      return
+    }
+    try {
+      wx.shareFileMessage({
+        filePath,
+        fileName,
+        fail: (error) => {
+          if (!isCurrent()) return
+          if (this.reportPdfFileMissing(error)) this.clearMissingReportPdf(filePath, signature)
+          else if (!/cancel/i.test(String(error?.errMsg || ''))) wx.showToast({ title: 'PDF 分享失败，请重试。', icon: 'none' })
+        },
+      })
+    } catch (_) {
+      if (isCurrent()) this.setData({ pdfStatusText: 'PDF 分享失败，请重试。' })
+    }
   },
 })

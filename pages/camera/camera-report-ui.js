@@ -1,5 +1,5 @@
 const { vibrate } = require('../../utils/haptics')
-const { previewGeneratedImage } = require('../../utils/report-image-actions')
+const { isPageContextCurrent, previewGeneratedImage } = require('../../utils/report-image-actions')
 
 const PREVIEW_CLOSE_DURATION = 320
 
@@ -145,6 +145,7 @@ function createCameraReportUiMethods(baseMethods = {}) {
 
       const inputRevision = this._inputRevision || 0
       const revision = bump(this, '_cameraReportCacheCheckRevision')
+      const reportRevision = this.resultReportRevision || 0
       cancelPreviewClose(this)
       bump(this, '_cameraReportPreviewLayoutRevision')
       this.setData({
@@ -158,14 +159,19 @@ function createCameraReportUiMethods(baseMethods = {}) {
         && isCurrentReport(this, path, signature)
       const openCached = () => {
         if (!isCurrent()) return
+        const shouldNotifyOpen = !this.data.resultReportPreviewVisible
         this._cameraReportCacheCheckRevision = 0
-        vibrate('light')
         this.setData({
           isCheckingResultReportCache: false,
           resultReportPreviewVisible: true,
           resultReportPreviewClosing: false,
           resultReportPreviewStyle: '',
-        }, () => this.updateResultReportPreviewLayout())
+        }, () => {
+          if (shouldNotifyOpen && this.resultReportRevision === reportRevision
+            && !this.data.isCheckingResultReportCache && this.data.resultReportPreviewVisible
+            && isPageContextCurrent(this) && isCurrentReport(this, path, signature)) vibrate('light')
+          this.updateResultReportPreviewLayout()
+        })
       }
       const regenerate = () => {
         if (this._cameraReportCacheCheckRevision !== revision
@@ -309,7 +315,7 @@ function createCameraReportUiMethods(baseMethods = {}) {
     closeResultReportPreview(immediate) {
       if (!this.data?.resultReportPreviewVisible
         || (this.data.resultReportPreviewClosing && immediate !== true)) return false
-      vibrate('light')
+      if (immediate !== true && isPageActive(this) && isPageContextCurrent(this)) vibrate('light')
       if (immediate === true || !isPageActive(this)) {
         this.setData(hiddenPreviewChanges(this))
         return true
@@ -355,7 +361,7 @@ function createCameraReportUiMethods(baseMethods = {}) {
           showToast('原图预览暂不可用，请重试')
           return
         }
-        vibrate('light')
+        if (isPageContextCurrent(this)) vibrate('light')
       }
       const invalidate = () => {
         if (!isCurrent()) return

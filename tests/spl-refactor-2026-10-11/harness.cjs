@@ -235,7 +235,8 @@ function loadPageDefinition() {
   pageModule.filename = pagePath
   pageModule.paths = Module._nodeModulePaths(path.dirname(pagePath))
   pageModule.require = Module.createRequire(pagePath)
-  pageModule._compile(fs.readFileSync(pagePath, 'utf8'), pagePath)
+  const sourcePath = process.env.SPL_PROJECT_PAGE_SOURCE || pagePath
+  pageModule._compile(fs.readFileSync(sourcePath, 'utf8'), pagePath)
   global.Page = previousPage
   if (!definition) throw new Error('pages/spl/spl.js did not register Page()')
   return definition

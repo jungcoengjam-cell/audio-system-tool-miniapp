@@ -1,6 +1,7 @@
 const { vibrate } = require('../../utils/haptics')
 const { startMeasurement } = require('../../utils/performance')
 const { drawAndExportReport } = require('../../utils/report-canvas')
+const { isPageContextCurrent } = require('../../utils/report-image-actions')
 const { REPORT_CANVAS_ID } = require('../../utils/result-report')
 const {
   REPORT_WIDTH,
@@ -456,8 +457,11 @@ function createCameraReportMethods(baseMethods = {}) {
         return false
       }
       if (this.data.resultReportImagePath && this.resultReportSignature === signature) {
-        vibrate('light')
+        const shouldNotifyOpen = !this.data.resultReportPreviewVisible
+        const revision = this.resultReportRevision || 0
         this.setData({ resultReportPreviewVisible: true }, () => {
+          if (shouldNotifyOpen && this.resultReportRevision === revision
+            && this.data.resultReportPreviewVisible && isPageContextCurrent(this)) vibrate('light')
           if (typeof this.updateResultReportPreviewLayout === 'function') this.updateResultReportPreviewLayout()
         })
         return true
@@ -481,7 +485,6 @@ function createCameraReportMethods(baseMethods = {}) {
         return false
       }
 
-      vibrate('medium')
       const revision = (this.resultReportRevision || 0) + 1
       this.resultReportRevision = revision
       this.resultReportPendingSignature = signature
@@ -519,6 +522,8 @@ function createCameraReportMethods(baseMethods = {}) {
                 resultReportImagePath: tempFilePath,
                 resultReportPreviewVisible: true,
               })
+              if (this.resultReportRevision === revision && !this.resultReportPendingSignature
+                && isPageContextCurrent(this)) vibrate('medium')
             },
             onFailure: () => {
               this.finishResultReportGeneration(revision)

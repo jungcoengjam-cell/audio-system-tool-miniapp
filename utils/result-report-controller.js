@@ -2,6 +2,7 @@ const { vibrate } = require('./haptics')
 const { startMeasurement } = require('./performance')
 const { drawAndExportReport } = require('./report-canvas')
 const {
+  isPageContextCurrent,
   previewGeneratedImage,
   saveGeneratedImage,
   shareGeneratedImage,
@@ -83,8 +84,12 @@ function createResultReportMethods(options = {}) {
 
       const signature = this.getResultReportSignature(record)
       if (this.data.resultReportImagePath && this.resultReportSignature === signature) {
-        vibrate('light')
-        this.setData({ resultReportPreviewVisible: true })
+        const shouldNotifyOpen = !this.data.resultReportPreviewVisible
+        const revision = this.resultReportRevision || 0
+        this.setData({ resultReportPreviewVisible: true }, () => {
+          if (shouldNotifyOpen && this.resultReportRevision === revision
+            && this.data.resultReportPreviewVisible && isPageContextCurrent(this)) vibrate('light')
+        })
         return
       }
       if (typeof wx.createCanvasContext !== 'function'
@@ -93,7 +98,6 @@ function createResultReportMethods(options = {}) {
         return
       }
 
-      vibrate('medium')
       const resultReportCanvasHeight = calculateResultReportHeight(payload)
       const revision = (this.resultReportRevision || 0) + 1
       this.resultReportRevision = revision
@@ -124,6 +128,8 @@ function createResultReportMethods(options = {}) {
                 resultReportImagePath: tempFilePath,
                 resultReportPreviewVisible: true,
               })
+              if (this.resultReportRevision === revision && !this.resultReportPendingSignature
+                && isPageContextCurrent(this)) vibrate('medium')
             },
             onFailure: () => {
               this.finishResultReportGeneration(revision)
@@ -138,7 +144,6 @@ function createResultReportMethods(options = {}) {
     },
 
     closeResultReportPreview() {
-      vibrate('light')
       this.setData({ resultReportPreviewVisible: false })
     },
 
@@ -155,7 +160,13 @@ function createResultReportMethods(options = {}) {
     },
 
     saveResultReportImage() {
-      saveGeneratedImage(this.data.resultReportImagePath)
+      const imagePath = this.data.resultReportImagePath
+      const signature = this.resultReportSignature
+      return saveGeneratedImage(imagePath, {
+        isCurrent: () => this.data.resultReportImagePath === imagePath
+          && this.resultReportSignature === signature
+          && this.getResultReportSignature() === signature,
+      })
     },
   }
 }

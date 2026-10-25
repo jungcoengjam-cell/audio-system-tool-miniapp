@@ -1,20 +1,5 @@
-const { APP_VERSION, PRODUCT_DATA_DATE } = require('../../data/app-meta')
 const { printPerformanceSummary, startMeasurement } = require('../../utils/performance')
 const { vibrate } = require('../../utils/haptics')
-const { drawAndExportReport } = require('../../utils/report-canvas')
-const {
-  previewGeneratedImage,
-  saveGeneratedImage,
-  shareGeneratedImage,
-} = require('../../utils/report-image-actions')
-const {
-  REPORT_CANVAS_ID,
-  REPORT_WIDTH,
-  buildProjectReportPayload,
-  calculateProjectReportHeight,
-  drawProjectReport,
-  getExportDimensions,
-} = require('./project-report')
 const {
   MODULES,
   getModuleMetadata,
@@ -329,11 +314,6 @@ Page({
       roomHeightText: '',
     },
     missing: false,
-    reportCanvasWidth: REPORT_WIDTH,
-    reportCanvasHeight: 1200,
-    reportImagePath: '',
-    reportPreviewVisible: false,
-    isGeneratingReport: false,
   },
 
   onLoad(options) {
@@ -382,9 +362,6 @@ Page({
     invalidateProjectDeletion(this)
     closeProjectSwipe(this)
     if (this._renameCloseTimer) clearTimeout(this._renameCloseTimer)
-    this.reportRevision = (this.reportRevision || 0) + 1
-    this.reportPendingSignature = ''
-    if (this.data.isGeneratingReport && typeof wx.hideLoading === 'function') wx.hideLoading()
     printPerformanceSummary('项目详情/')
   },
 
@@ -397,14 +374,8 @@ Page({
       forceRefresh: options.forceRefresh === true || Boolean(this.data.workspaceError),
     })
     if (snapshot.ok === false) {
-      if (this.data.isGeneratingReport || this.reportPendingSignature) {
-        this.reportRevision = (this.reportRevision || 0) + 1
-        this.reportPendingSignature = ''
-        if (this.data.isGeneratingReport && typeof wx.hideLoading === 'function') wx.hideLoading()
-      }
       this.setData({
         workspaceError: snapshot.error || '本地项目和收藏数据读取失败，请重试。',
-        ...(this.data.isGeneratingReport ? { isGeneratingReport: false } : {}),
       })
       finishRefresh({ storageError: true })
       return
@@ -412,12 +383,6 @@ Page({
     const { projects, records: allRecords } = snapshot
     const project = projects.find((item) => item.id === this.projectId) || null
     if (!project) {
-      if (this.reportPendingSignature || this.reportSignature) {
-        this.reportRevision = (this.reportRevision || 0) + 1
-        this.reportPendingSignature = ''
-        this.reportSignature = ''
-        if (this.data.isGeneratingReport && typeof wx.hideLoading === 'function') wx.hideLoading()
-      }
       if (this.projectViewSignature === 'missing') {
         if (this.data.workspaceError) this.setData({ workspaceError: '' })
         finishRefresh({ skipped: true, missing: true })
@@ -435,9 +400,6 @@ Page({
         records: [],
         recordGroups: [],
         moduleProgress: [],
-        reportImagePath: '',
-        reportPreviewVisible: false,
-        isGeneratingReport: false,
         ...(this.data.workspaceError ? { workspaceError: '' } : {}),
         missing: true,
       }, () => {
@@ -468,22 +430,6 @@ Page({
       .map((record) => [String(record.id), projectRecordFingerprint(record)]))
     const { wiringSchedule, ...projectViewFields } = project
     const wiringSummary = getProjectWiringSummary(project)
-    const reportSourceSignature = JSON.stringify({
-      project: projectViewFields,
-      records: rawRecords.map((record) => {
-        const signatureRecord = {
-          id: record.id,
-          title: record.title,
-          summary: record.summary,
-          updatedAt: record.updatedAt,
-        }
-        if (record.hasProjectMetadata) {
-          signatureRecord.hasProjectMetadata = true
-          signatureRecord.projectNote = record.projectNote
-        }
-        return signatureRecord
-      }),
-    })
     const viewSignature = JSON.stringify({
       project: projectViewFields,
       wiringSummary,
@@ -537,15 +483,6 @@ Page({
       lightingFixtureCount,
       lightingReadError: lightingState.ok ? '' : lightingState.error,
     }
-    const previousReportSignature = this.reportPendingSignature || this.reportSignature
-    const reportChanged = previousReportSignature && previousReportSignature !== reportSourceSignature
-    if (reportChanged) {
-      this.reportRevision = (this.reportRevision || 0) + 1
-      this.reportPendingSignature = ''
-      if (this.data.isGeneratingReport && typeof wx.hideLoading === 'function') wx.hideLoading()
-    }
-    this.reportSourceSignature = reportSourceSignature
-    if (reportChanged) this.reportSignature = ''
     this.rawRecords = rawRecords
     this._projectWiringSchedule = project.wiringSchedule || {}
     finishBuildView({ groups: recordGroups.length })
@@ -558,7 +495,6 @@ Page({
       projectScrollTop: this._projectScrollTop || 0,
       storageHealth: getStorageHealth(),
       ...(this.data.workspaceError ? { workspaceError: '' } : {}),
-      ...(reportChanged ? { reportImagePath: '', reportPreviewVisible: false, isGeneratingReport: false } : {}),
       missing: false,
     }, () => {
       filterProjectRows(this)
@@ -603,9 +539,12 @@ Page({
   },
 
   onProjectDateChange(event) {
+    const projectDate = event.detail.value
+    const changed = projectDate !== this.data.projectForm.projectDate
     this.setData({
-      projectForm: { ...this.data.projectForm, projectDate: event.detail.value },
+      projectForm: { ...this.data.projectForm, projectDate },
     })
+    if (changed) vibrate('light')
   },
 
   openProjectModule(event) {
@@ -722,6 +661,7 @@ Page({
     }
     this.closeRenameProject()
     this.refresh({ forceRefresh: true })
+    vibrate('medium')
     wx.showToast({ title: '项目已重命名', icon: 'none' })
   },
 
@@ -747,6 +687,7 @@ Page({
           wx.showToast({ title: '移入回收站失败，请重试', icon: 'none' })
           return
         }
+        if (this._projectVisible && !this._projectDestroyed) vibrate('medium')
         wx.showToast({ title: '已移入回收站', icon: 'none' })
         wx.navigateBack({ delta: 1 })
       },
@@ -770,10 +711,13 @@ Page({
 
   onProjectViewFilterTap(event) {
     const projectViewFilter = String(event.currentTarget.dataset.key || 'all')
+    const changed = PROJECT_VIEW_FILTERS.some((item) => item.key === projectViewFilter)
+      && projectViewFilter !== this.data.projectViewFilter
     this._projectInteractionToken = (this._projectInteractionToken || 0) + 1
     invalidateProjectDeletion(this)
     closeProjectSwipe(this)
     this.setData({ projectViewFilter }, () => filterProjectRows(this))
+    if (changed) vibrate('light')
   },
 
   onProjectSearchInput(event) {
@@ -1072,6 +1016,7 @@ Page({
           if (this._projectVisible && !this._projectDestroyed) this.refresh({ forceRefresh: true })
           return
         }
+        vibrate('medium')
         closeProjectSwipe(this)
         this.refresh({ forceRefresh: true })
         wx.showToast({ title: request.type === 'record' ? '已从本项目移除' : request.type === 'line' ? '线路已删除' : '已移出灯位', icon: 'none' })
@@ -1123,156 +1068,10 @@ Page({
     }
     this.setData({ editing: false })
     this.refresh()
-    wx.showToast({ title: '项目资料已保存', icon: 'none' })
-  },
-
-  getProjectReportText() {
-    if (this.data.workspaceError) return ''
-    const project = this.data.project
-    if (!project) return ''
-
-    const groups = groupRecords(this.rawRecords || [])
-    const lines = [
-      '现场项目调试报告',
-      `项目名称：${project.name}`,
-      `场地名称：${project.venueName || '未填写'}`,
-      `调试日期：${project.projectDate || '未填写'}`,
-      `调试人员：${project.engineer || '未填写'}`,
-      `现场备注：${project.notes || '无'}`,
-      `场地尺寸：${project.roomLengthText && project.roomWidthText && project.roomHeightText
-        ? `${project.roomLengthText} × ${project.roomWidthText} × ${project.roomHeightText} m`
-        : '未填写'}`,
-      `模块进度：${getModuleProgress(this.rawRecords).map((item) => `${item.label}${item.complete ? '已完成' : '未完成'}`).join('、')}`,
-      `计算记录：${this.rawRecords.length} 条`,
-      `报告生成：${formatTime(Date.now(), true)}`,
-      `小程序版本：${APP_VERSION}`,
-      `产品资料复核：${PRODUCT_DATA_DATE}`,
-      '',
-      '结果说明：以下内容包含参数计算、理论估算、公司标准推荐或前期粗略方案，不替代现场测量与工程复核。',
-      '',
-    ]
-
-    groups.forEach((group) => {
-      lines.push(`【${group.label}｜${group.trustLabel}】`, group.trustDescription)
-      group.records.forEach((record, index) => {
-        lines.push(
-          `—— ${index + 1}. ${record.title} ——`,
-          `记录时间：${formatTime(record.updatedAt, true)}`,
-          ...(record.projectNote ? [`配置备注：${record.projectNote}`] : []),
-          record.resultText,
-          '',
-        )
-      })
-    })
-    return lines.join('\n').trim()
-  },
-
-  copyProject() {
-    if (this.data.workspaceError) return
-    const text = this.getProjectReportText()
-    if (text) wx.setClipboardData({ data: text })
-  },
-
-  finishReportGeneration(revision, changes = {}) {
-    if (this.reportRevision !== revision) return
-    if (typeof wx.hideLoading === 'function') wx.hideLoading()
-    this.reportPendingSignature = ''
-    this.setData({ isGeneratingReport: false, ...changes })
-  },
-
-  generateProjectReportImage() {
-    if (this.data.workspaceError) return
-    const payload = buildProjectReportPayload(this.data.project, this.data.recordGroups, {
-      totalModuleCount: Object.keys(MODULES).length,
-      generatedAt: formatTime(Date.now(), true),
-      appVersion: APP_VERSION,
-      productDataDate: PRODUCT_DATA_DATE,
-    })
-    if (!payload || this.data.isGeneratingReport) {
-      if (!payload) wx.showToast({ title: '暂无可生成的项目记录', icon: 'none' })
-      return
-    }
-    const signature = this.reportSourceSignature || this.projectViewSignature
-    if (this.data.reportImagePath && this.reportSignature === signature) {
-      vibrate('light')
-      this.setData({ reportPreviewVisible: true })
-      return
-    }
-    if (typeof wx.createCanvasContext !== 'function'
-      || typeof wx.canvasToTempFilePath !== 'function') {
-      wx.showToast({ title: '当前微信版本暂不支持生成图片', icon: 'none' })
-      return
-    }
-
     vibrate('medium')
-    const reportCanvasHeight = calculateProjectReportHeight(payload)
-    const revision = (this.reportRevision || 0) + 1
-    this.reportRevision = revision
-    this.reportPendingSignature = signature
-    const isCurrent = () => this.reportRevision === revision
-      && this.reportPendingSignature === signature
-    this.setData({
-      reportCanvasHeight,
-      isGeneratingReport: true,
-      reportPreviewVisible: false,
-    }, () => {
-      if (this.reportRevision !== revision) return
-      if (typeof wx.showLoading === 'function') wx.showLoading({ title: '正在生成图片', mask: true })
-      try {
-        drawAndExportReport(this, {
-          canvasId: REPORT_CANVAS_ID,
-          isCurrent,
-          width: REPORT_WIDTH,
-          height: reportCanvasHeight,
-          draw: (context) => {
-            const finishReportDrawing = startMeasurement('项目详情/长图绘制', {
-              records: payload.groups.reduce((total, group) => total + group.records.length, 0),
-            })
-            drawProjectReport(context, payload, reportCanvasHeight)
-            finishReportDrawing({ height: reportCanvasHeight })
-          },
-          getExportOptions: () => getExportDimensions(reportCanvasHeight),
-          startExportMeasurement: (exportDimensions) => startMeasurement('项目详情/长图导出', exportDimensions),
-          onSuccess: (tempFilePath) => {
-            this.reportSignature = signature
-            this.finishReportGeneration(revision, {
-              reportImagePath: tempFilePath,
-              reportPreviewVisible: true,
-            })
-          },
-          onFailure: () => {
-            this.finishReportGeneration(revision)
-            wx.showToast({ title: '图片生成失败，请重试', icon: 'none' })
-          },
-        })
-      } catch (error) {
-        if (!isCurrent()) return
-        this.finishReportGeneration(revision)
-        wx.showToast({ title: '图片生成失败，请重试', icon: 'none' })
-      }
-    })
-  },
-
-  closeProjectReportPreview() {
-    vibrate('light')
-    this.setData({ reportPreviewVisible: false })
+    wx.showToast({ title: '项目资料已保存', icon: 'none' })
   },
 
   stopEvent() {},
   preventTouchMove() {},
-
-  previewProjectReportImage() {
-    if (this.data.workspaceError) return
-    previewGeneratedImage(this.data.reportImagePath)
-  },
-
-  shareProjectReportImage() {
-    if (this.data.workspaceError) return
-    shareGeneratedImage(this.data.reportImagePath)
-  },
-
-  saveProjectReportImage() {
-    if (this.data.workspaceError) return
-    saveGeneratedImage(this.data.reportImagePath)
-  },
 })

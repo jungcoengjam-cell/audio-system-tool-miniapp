@@ -40,6 +40,8 @@ Page({
   onToolVisibilityChange(event) {
     const id = event.currentTarget.dataset.id
     const visible = event.detail.value
+    const row = this.data.toolRows.find((item) => item.id === id)
+    const changed = Boolean(row && row.visible !== visible)
     if (!setToolVisible(id, visible)) {
       wx.showToast({ title: '保存失败，请重试', icon: 'none' })
       // Recreate switch nodes so a failed native toggle returns to stored state.
@@ -47,6 +49,7 @@ Page({
       return
     }
     this.refreshToolVisibility()
+    if (changed) vibrate('light')
   },
 
   resetPreferences() {

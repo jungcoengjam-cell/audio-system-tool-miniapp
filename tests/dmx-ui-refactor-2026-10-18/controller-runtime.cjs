@@ -227,9 +227,17 @@ function createRuntime(options = {}) {
   }
 
   function make(kind = 'portrait', loadOptions = {}) {
-    const relative = kind === 'main' ? 'pages/dmx-address/dmx-address.js' : kind === 'landscape' ? 'pages/dmx-layout-landscape/dmx-layout-landscape.js' : 'pages/dmx-layout/dmx-layout.js'
+    const relative = kind === 'main' ? 'pages/dmx-address/dmx-address.js' : 'pages/dmx-layout/dmx-layout.js'
     const file = path.join(root, relative)
-    definition = null; delete require.cache[require.resolve(file)]; require(file)
+    definition = null
+    if (kind === 'landscape') {
+      const factoryFile = path.join(root, 'pages/dmx-layout/page-factory.js')
+      delete require.cache[require.resolve(factoryFile)]
+      definition = require(factoryFile).createDmxLayoutPage({ mode: 'landscape' })
+    } else {
+      delete require.cache[require.resolve(file)]
+      require(file)
+    }
     assert(definition, 'Actual page did not register: ' + relative)
     const page = { ...definition, data: clone(definition.data), route: relative.slice(0, -3), _qaActive: true, _qaPatches: [] }
     page.setData = (patch, callback) => {

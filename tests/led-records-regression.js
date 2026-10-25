@@ -14,7 +14,6 @@ let storageFailure = false
 let storageReadFailureKey = ''
 let storageWriteFailureKey = ''
 let pageDefinition = null
-let clipboard = ''
 const toastTitles = []
 
 function clone(value) {
@@ -32,7 +31,6 @@ global.wx = {
   },
   removeStorageSync: (key) => storage.delete(key),
   showToast: ({ title }) => toastTitles.push(title),
-  setClipboardData: ({ data, success }) => { clipboard = data; if (success) success() },
   vibrateShort: () => {},
   hideLoading: () => {},
   getStorageInfoSync: () => ({ currentSize: 1, limitSize: 100 }),
@@ -58,10 +56,9 @@ function reset() {
   storageReadFailureKey = ''
   storageWriteFailureKey = ''
   toastTitles.length = 0
-  clipboard = ''
   pageDefinition = null
   ;['../utils/records', '../utils/preferences', '../utils/result-record-actions', '../pages/led-screen/led-screen',
-    '../pages/records/project', '../pages/records/project-report'].forEach((modulePath) => {
+    '../pages/records/project'].forEach((modulePath) => {
     try { delete require.cache[require.resolve(modulePath)] } catch (error) {}
   })
 }
@@ -172,7 +169,7 @@ function checkPageActionsAndPersistence() {
   assert.equal(records.restoreRecord(saved[0]), '/pages/led-screen/led-screen')
 }
 
-function checkRestoreAndComparison() {
+function checkRestoreAndFavoriteCompatibility() {
   reset()
   const records = fresh('../utils/records')
   const original = makePage()
@@ -199,18 +196,6 @@ function checkRestoreAndComparison() {
     '放弃收藏工作副本后恢复原临时输入')
   assert.deepEqual(records.getFavoriteByPayload(record), record, '编辑收藏副本不修改独立收藏快照')
 
-  const other = {
-    ...record,
-    id: 'other',
-    preferences: {
-      ...record.preferences,
-      topReserveText: '0.3', aspectRatio: '21:9', unitKey: 'module', pitch: 1.25,
-    },
-  }
-  const comparison = fresh('../utils/record-comparison').buildRecordComparison([record, other])
-  assert(comparison.rows.some((row) => row.key === 'topReserveText'))
-  assert(comparison.rows.some((row) => row.key === 'aspectRatio'))
-  assert(!comparison.identical)
   assert(fresh('../utils/records').MODULES.ledScreen)
 }
 
@@ -307,13 +292,16 @@ function checkInvalidAndStorageFailures() {
   assert.equal(visibilityPage.data.currentFavorite, false, '重新显示页面未同步外部取消收藏')
 }
 
-function checkProjectReportAndWxml() {
+function checkProjectReportPayloadAndWxml() {
   reset()
   const records = fresh('../utils/records')
   const page = makePage()
   page.toggleCurrentFavorite()
   const project = records.createProject('LED 汇总项目')
-  records.addRecordToProject(page.getRecordPayload(), project.id)
+  records.addRecordToProject(page.getRecordPayload(), project.id, {
+    name: 'LED 项目方案',
+    note: '报告保留项目备注',
+  })
   const detail = makePage('../pages/records/project', { id: project.id })
   const expectedModuleKeys = [
     'limiter', 'spl', 'cable', 'camera', 'gainStructure', 'dmxAddress', 'ledScreen', 'audioWiring',
@@ -322,20 +310,30 @@ function checkProjectReportAndWxml() {
     '项目进度应包含七个计算模块和接线助手')
   assert.equal(detail.data.moduleProgress.length, expectedModuleKeys.length)
   assert.equal(detail.data.recordGroups.find((group) => group.module === 'ledScreen').records.length, 1)
-  detail.copyProject()
-  assert(clipboard.includes('LED 大屏尺寸预估'))
-  const report = fresh('../pages/records/project-report').buildProjectReportPayload(
-    detail.data.project, detail.data.recordGroups,
-  )
-  assert.equal(report.totalModuleCount, expectedModuleKeys.length)
-  assert(report.groups.some((group) => group.module === 'ledScreen'))
+  const reportModel = require('../pages/records/report-model')
+  const source = reportModel.loadProjectReportSource(project.id)
+  assert.equal(source.ok, true, source.error)
+  const sections = reportModel.getProjectReportSections(source)
+  const ledItem = sections.find((section) => section.key === 'calculation')
+    .items.find((item) => item.record.module === 'ledScreen')
+  assert(ledItem, 'the PDF report retains the LED project record as a selectable item')
+  const report = reportModel.buildReportPayload(source, [ledItem.id])
+  assert.equal(report.itemCount, 1)
+  assert.equal(report.selectedItems[0].record.resultText, page.getResultText(),
+    'the selected PDF report snapshot retains the complete saved LED result')
+  assert.equal(report.selectedItems[0].record.projectNote, '报告保留项目备注')
+  const reportText = report.pages.flatMap((item) => item.lines).map((line) => line.text).join('')
+  assert(reportText.includes('LED 项目方案'))
+  assert(reportText.includes('项目备注：报告保留项目备注'))
+  assert(reportText.includes(`关键结果：${ledItem.record.summary}`))
+  assert(reportText.includes('墙体宽度（m）'))
   assert(fs.readFileSync(path.join(__dirname, '../pages/led-screen/led-screen.wxml'), 'utf8')
     .includes('bindtap="openProjectSheet"'))
 }
 
 checkPageActionsAndPersistence()
-checkRestoreAndComparison()
+checkRestoreAndFavoriteCompatibility()
 checkLegacyRecordCompatibility()
 checkInvalidAndStorageFailures()
-checkProjectReportAndWxml()
+checkProjectReportPayloadAndWxml()
 console.log('LED records regression passed')

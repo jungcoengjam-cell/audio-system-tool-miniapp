@@ -170,8 +170,7 @@ function readLightingProjectContext(projectId, options = {}) {
   if (fixtures.some((fixture) => !fixture)) {
     return { ok: false, error: '灯位地址与灯具编号无法对应，未将灯位方案加入候选。' }
   }
-  const hasSavedContent = entry.revision > 0 || groupIds.length > 0 || Boolean(scheme.layout)
-  if (!hasSavedContent) return { ok: true, lighting: null }
+  if (!fixtures.length) return { ok: true, lighting: null }
   return {
     ok: true,
     lighting: {

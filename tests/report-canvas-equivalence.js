@@ -9,7 +9,6 @@ const BASELINE = path.join(ROOT, 'docs/recovery/package-structure-2026-09-30/bef
 const storage = new Map()
 const isolatedModules = [
   'utils/performance.js',
-  'pages/records/project-report.js',
   'pages/led-screen/report.js',
   'utils/result-report.js',
 ].map((relativePath) => path.join(ROOT, relativePath))
@@ -17,6 +16,7 @@ const originalModuleEntries = new Map(isolatedModules.map((filename) => [filenam
 const originalDateNow = Date.now
 const originalWx = global.wx
 const originalPage = global.Page
+const originalGetCurrentPages = global.getCurrentPages
 Date.now = () => 1790750000000
 
 function loadRevision(relativePath, baseline, dependencyOverrides = {}) {
@@ -42,24 +42,8 @@ function loadRevision(relativePath, baseline, dependencyOverrides = {}) {
   return loaded.exports
 }
 
-function loadPreMigrationRecords() {
-  const filename = path.join(ROOT, 'utils/records.js')
-  const sourcePath = path.join(__dirname,
-    'audio-wiring-refactor-2026-10-13/before/utils/records.js')
-  const loaded = new Module(filename, module)
-  loaded.filename = filename
-  loaded.paths = Module._nodeModulePaths(path.dirname(filename))
-  loaded._compile(fs.readFileSync(sourcePath, 'utf8'), filename)
-  return {
-    ...loaded.exports,
-    // The current project page decorates historical module groups through this
-    // API. Supply the current read-only metadata resolver while keeping the
-    // frozen pre-migration storage behavior under test.
-    getModuleMetadata: require('../utils/records').getModuleMetadata,
-  }
-}
-
 function installRuntime(trace, queues, fault) {
+  global.getCurrentPages = () => queues.page ? [queues.page] : []
   global.wx = {
     getStorageSync: (key) => storage.get(key),
     setStorageSync: (key, value) => storage.set(key, value),
@@ -130,24 +114,7 @@ function flushSetDataCallbacks(queues, trace) {
   }
 }
 
-function seedProject(includeRetiredHistory = false) {
-  storage.set('audioTool.storageSchemaVersion', 3)
-  storage.set('audioTool.projects.v1', [{ id: 'p', name: 'P', createdAt: 1, updatedAt: 1 }])
-  const records = [{
-    id: 'r', module: 'limiter', title: 'R', summary: 'S', preferences: { speakerModel: 'S' },
-    resultText: 'R', projectIds: ['p'], favorite: false, createdAt: 1, updatedAt: 1,
-  }]
-  if (includeRetiredHistory) records.push({
-    id: 'v', module: 'venue', title: 'Historical venue', summary: 'Retained legacy result',
-    preferences: { sceneMode: 'meeting' }, resultText: 'Historical room plan',
-    signature: JSON.stringify(['venue', { sceneMode: 'meeting' }]),
-    projectIds: ['p'], favorite: false, createdAt: 2, updatedAt: 2,
-  })
-  storage.set('audioTool.records.v1', records)
-}
-
-function setup(kind, baseline, trace, queues, fault, usePreMigrationProjectRecords = false,
-  includeRetiredHistory = false) {
+function setup(kind, baseline, trace, queues, fault) {
   storage.clear()
   installRuntime(trace, queues, fault)
   const perfPath = path.join(ROOT, 'utils/performance.js')
@@ -159,34 +126,15 @@ function setup(kind, baseline, trace, queues, fault, usePreMigrationProjectRecor
   }
   performance.printPerformanceSummary = () => {}
 
-  const drawingPath = kind === 'project' ? 'pages/records/project-report.js'
-    : kind === 'led' ? 'pages/led-screen/report.js' : 'utils/result-report.js'
+  const drawingPath = kind === 'led' ? 'pages/led-screen/report.js' : 'utils/result-report.js'
   const drawingFile = path.join(ROOT, drawingPath)
   delete require.cache[drawingFile]
   if (fault === 'draw-throws') {
     const drawing = require(drawingFile)
-    const method = kind === 'project' ? 'drawProjectReport' : kind === 'led' ? 'drawLedScreenReport' : 'drawResultReport'
+    const method = kind === 'led' ? 'drawLedScreenReport' : 'drawResultReport'
     drawing[method] = () => { throw new Error('draw failed synchronously') }
   }
 
-  if (kind === 'project') {
-    seedProject(includeRetiredHistory)
-    const dependencyOverrides = usePreMigrationProjectRecords
-      ? { [path.join(ROOT, 'utils/records.js')]: loadPreMigrationRecords() }
-      : {}
-    loadRevision('pages/records/project.js', baseline && !usePreMigrationProjectRecords, dependencyOverrides)
-    recordSetData(queues.page, trace)
-    queues.page.onLoad({ id: 'p' })
-    return {
-      page: queues.page,
-      generate: () => queues.page.generateProjectReportImage(),
-      invalidate: () => {
-        queues.page.reportRevision += 1
-        queues.page.reportPendingSignature = 'changed-source'
-        queues.page.setData({ isGeneratingReport: false })
-      },
-    }
-  }
   if (kind === 'led') {
     loadRevision('pages/led-screen/led-screen.js', baseline)
     // The redesigned LED report sizes its canvas with setData, then draws in
@@ -235,11 +183,10 @@ function takeSnapshot(kind, page) {
   }
 }
 
-function run(kind, baseline, outcome, fault = '', usePreMigrationProjectRecords = false,
-  includeRetiredHistory = false) {
+function run(kind, baseline, outcome, fault = '') {
   const trace = []
   const queues = { draws: [], exports: [], setDataCallbacks: [] }
-  const owner = setup(kind, baseline, trace, queues, fault, usePreMigrationProjectRecords, includeRetiredHistory)
+  const owner = setup(kind, baseline, trace, queues, fault)
   trace.length = 0
   let thrown = ''
   const generate = () => {
@@ -292,7 +239,7 @@ function assertLedScenarioSemantics(outcome, fault, result) {
 }
 
 const cases = []
-for (const kind of ['project', 'led', 'result']) {
+for (const kind of ['led', 'result']) {
   for (const outcome of ['success', 'empty', 'fail', 'stale-draw', 'stale-success', 'stale-fail',
     'interleave-draw', 'interleave-success', 'interleave-fail']) cases.push({ kind, outcome, fault: '' })
   for (const fault of ['create-throws', 'draw-throws', 'export-throws']) cases.push({ kind, outcome: 'success', fault })
@@ -300,13 +247,13 @@ for (const kind of ['project', 'led', 'result']) {
 const digest = (value) => crypto.createHash('sha256').update(JSON.stringify(value)).digest('hex')
 const CURRENT_RESULT_REPORT_FOOTER = '版本 6.0.0 · 产品资料 2026-09-01'
 const FROZEN_RESULT_REPORT_FOOTER = '版本 5.1.0 · 产品资料 2026-09-01'
-function resultTraceForFrozenDigest(current, scenario) {
+function resultTraceWithFrozenFooter(trace, scenario) {
   const expectedDrawCount = scenario.fault === 'create-throws' || scenario.fault === 'draw-throws' ? 0
     : scenario.outcome.startsWith('interleave-') ? 2 : 1
-  const drawCount = current.trace.filter((entry) => entry[0] === 'draw').length
+  const drawCount = trace.filter((entry) => entry[0] === 'draw').length
   assert.equal(drawCount, expectedDrawCount,
     `result/${scenario.outcome}/${scenario.fault}: 页面绘制次数偏离生命周期合同`)
-  const versionCalls = current.trace.filter((entry) => entry[0] === 'canvasCall'
+  const versionCalls = trace.filter((entry) => entry[0] === 'canvasCall'
     && entry[1] === 'fillText' && typeof entry[2]?.[0] === 'string' && entry[2][0].startsWith('版本 '))
   assert.equal(versionCalls.length, drawCount,
     `result/${scenario.outcome}/${scenario.fault}: 每次绘制都必须保留一个完整版本页脚`)
@@ -314,7 +261,7 @@ function resultTraceForFrozenDigest(current, scenario) {
     Array.from({ length: drawCount }, () => CURRENT_RESULT_REPORT_FOOTER),
     `result/${scenario.outcome}/${scenario.fault}: 当前版本页脚必须完整且不能被省略`)
 
-  const normalized = current.trace.map((entry) => {
+  const normalized = trace.map((entry) => {
     if (entry[0] !== 'canvasCall' || entry[1] !== 'fillText'
       || entry[2]?.[0] !== CURRENT_RESULT_REPORT_FOOTER) return entry
     return [entry[0], entry[1], [FROZEN_RESULT_REPORT_FOOTER, ...entry[2].slice(1)], ...entry.slice(3)]
@@ -322,8 +269,8 @@ function resultTraceForFrozenDigest(current, scenario) {
   assert.equal(normalized.filter((entry) => entry[0] === 'canvasCall'
     && entry[1] === 'fillText' && entry[2]?.[0] === FROZEN_RESULT_REPORT_FOOTER).length, drawCount,
   `result/${scenario.outcome}/${scenario.fault}: 历史摘要归一化只能覆盖完整当前页脚`)
-  for (let index = 0; index < current.trace.length; index += 1) {
-    const actual = current.trace[index]
+  for (let index = 0; index < trace.length; index += 1) {
+    const actual = trace[index]
     const comparable = normalized[index]
     if (actual === comparable) continue
     assert.equal(actual[0], 'canvasCall', `result/${scenario.outcome}/${scenario.fault}: 不得改写其他轨迹命令`)
@@ -334,8 +281,15 @@ function resultTraceForFrozenDigest(current, scenario) {
   }
   return normalized
 }
+function resultTraceForFrozenDigest(current, scenario) {
+  const shouldVibrate = !scenario.fault && (scenario.outcome === 'success' || scenario.outcome.startsWith('interleave-'))
+  const expectedHaptics = shouldVibrate ? [['vibrate', { type: 'medium' }]] : []
+  assert.deepEqual(current.trace.filter((entry) => entry[0] === 'vibrate'), expectedHaptics,
+    `result/${scenario.outcome}/${scenario.fault}: 仅当前生成成功后 medium 一次，失败或过期回调不得震动`)
+  const nonHapticTrace = current.trace.filter((entry) => entry[0] !== 'vibrate')
+  return resultTraceWithFrozenFooter(nonHapticTrace, scenario)
+}
 const sourcePaths = [
-  'pages/records/project.js',
   'pages/led-screen/led-screen.js',
   'utils/result-report-controller.js',
 ]
@@ -344,94 +298,6 @@ const getBaselineSourceHashes = () => Object.fromEntries(sourcePaths.map((relati
   crypto.createHash('sha256').update(fs.readFileSync(path.join(BASELINE, `${relativePath}.baseline`))).digest('hex'),
 ]))
 const fixturePath = path.join(__dirname, 'report-canvas-equivalence.fixture.json')
-const preMigrationFixturePath = path.join(__dirname,
-  'audio-wiring-refactor-2026-10-13/before/tests/report-canvas-equivalence.fixture.json')
-
-const EXPECTED_CURRENT_MODULE_PROGRESS = [
-  { key: 'limiter', label: '限幅器', theme: 'cyan', count: 1, complete: true, statusText: '1 条结果', actionText: '继续计算' },
-  { key: 'spl', label: '声压级', theme: 'violet', count: 0, complete: false, statusText: '尚未计算', actionText: '开始计算' },
-  { key: 'cable', label: '线材', theme: 'amber', count: 0, complete: false, statusText: '尚未计算', actionText: '开始计算' },
-  { key: 'camera', label: '摄像机', theme: 'blue', count: 0, complete: false, statusText: '尚未计算', actionText: '开始计算' },
-  { key: 'gainStructure', label: '增益结构', theme: 'teal', count: 0, complete: false, statusText: '尚未计算', actionText: '开始计算' },
-  { key: 'dmxAddress', label: '灯光编址', theme: 'indigo', count: 0, complete: false, statusText: '尚未计算', actionText: '开始计算' },
-  { key: 'ledScreen', label: 'LED 大屏', theme: 'violet', count: 0, complete: false, statusText: '尚未计算', actionText: '开始计算' },
-  { key: 'audioWiring', label: '接线助手', theme: 'teal', count: 0, complete: false, statusText: '尚未计算', actionText: '开始计算' },
-]
-const EXPECTED_CURRENT_MODULE_OPTIONS = [
-  { key: 'limiter', label: '限幅器' },
-  { key: 'spl', label: '声压级' },
-  { key: 'cable', label: '线材' },
-  { key: 'camera', label: '摄像机' },
-  { key: 'gainStructure', label: '增益结构' },
-  { key: 'ledScreen', label: 'LED 大屏' },
-  { key: 'audioWiring', label: '接线助手' },
-]
-const EXPECTED_CURRENT_ACTIVE_RECORD_GROUPS = [{
-  module: 'limiter',
-  label: '限幅器',
-  theme: 'cyan',
-  trustLabel: '产品参数计算',
-  trustDescription: '基于产品说明书额定参数与 DSP 电平标定计算，现场需复核接线、增益结构和实际电平。',
-  records: [{
-    id: 'r', module: 'limiter', displayIndex: 1, moduleLabel: '限幅器', trustLabel: '产品参数计算',
-    theme: 'cyan', retired: false, timeText: '01-01 08:00', title: 'R', summary: 'S',
-    swipeKey: 'record:r', swipeOpen: false, swipeOffset: 0, swipeDragging: false,
-  }],
-}]
-const EXPECTED_CURRENT_PROJECT_SIGNATURE = '{"project":{"id":"p","name":"P","createdAt":1,"updatedAt":1,"venueName":"","engineer":"","projectDate":"1970-01-01","notes":"","roomLengthText":"","roomWidthText":"","roomHeightText":"","standardClassKey":"conference","gradeKey":"II"},"records":[{"id":"r","title":"R","summary":"S","updatedAt":1}]}'
-const EXPECTED_CURRENT_PROJECT_DATA = {
-  project: {
-    id: 'p', name: 'P', createdAt: 1, updatedAt: 1, venueName: '', engineer: '', projectDate: '1970-01-01',
-    notes: '', roomLengthText: '', roomWidthText: '', roomHeightText: '', standardClassKey: 'conference', gradeKey: 'II',
-    dimensionText: '未填写', recordCount: 1, timeText: '01-01 08:00', wiringLineCount: 0, wiringPendingCount: 0,
-    hasLighting: false, lightingRevision: 0, lightingFixtureCount: 0, lightingReadError: '',
-  },
-  projectViewFilters: [
-    { key: 'all', label: '全部' },
-    { key: 'calculations', label: '计算记录' },
-    { key: 'wiring', label: '线路' },
-    { key: 'lighting', label: '灯位' },
-  ],
-  projectViewFilter: 'all',
-  projectSearchText: '',
-  records: [{ id: 'r', module: 'limiter' }],
-  recordGroups: EXPECTED_CURRENT_ACTIVE_RECORD_GROUPS,
-  wiringLines: [],
-  lightingFixtures: [],
-  moduleProgress: EXPECTED_CURRENT_MODULE_PROGRESS,
-  moduleOptions: EXPECTED_CURRENT_MODULE_OPTIONS,
-  visibleRecordCount: 1,
-  showWiring: false,
-  showLighting: false,
-  showCalculations: true,
-  projectSearchEmpty: false,
-  projectTypeEmpty: false,
-  projectScrollTop: 0,
-  storageHealth: { currentSize: 1, limitSize: 10, percent: 10, warning: false, text: '本地数据已使用 10%' },
-  editing: false,
-  renameVisible: false,
-  renameClosing: false,
-  renameDraft: '',
-  projectForm: {
-    name: '', venueName: '', engineer: '', projectDate: '', notes: '',
-    roomLengthText: '', roomWidthText: '', roomHeightText: '',
-  },
-  missing: false,
-  reportCanvasWidth: 750,
-  reportCanvasHeight: 1040,
-}
-const EXPECTED_ACTIVE_REPORT_TEXT = [
-  ['PROJECT REPORT', 117, 66], ['P', 44, 126], ['现场项目 · 1970-01-01', 44, 190],
-  ['项目资料', 74, 258], ['1 条记录', 638, 255], ['场地名称', 74, 296], ['未填写', 158, 296],
-  ['调试日期', 390, 296], ['1970-01-01', 474, 296], ['调试人员', 74, 345], ['未填写', 158, 345],
-  ['场地尺寸', 390, 345], ['未填写', 474, 345], ['更新时间', 74, 394], ['01-01 08:00', 158, 394],
-  ['现场备注', 74, 469], ['暂无备注', 158, 469], ['项目汇总', 74, 558], ['1 / 8', 74, 611],
-  ['已归档模块', 202, 611], ['1', 390, 611], ['计算记录', 442, 611], ['2026-09-30 14:33', 676, 611],
-  ['项目结果', 44, 692], ['按模块归类', 706, 692], ['限幅器', 44, 758], ['产品参数计算', 663, 754],
-  ['R', 66, 819], ['01-01 08:00', 688, 819], ['S', 66, 853],
-  ['本报告为项目内计算结果汇总，不替代现场测量、工程复核与最终深化。', 44, 970],
-  ['版本 6.0.0 · 产品资料 2026-09-01', 44, 1005], ['音视频工具', 706, 1005],
-]
 const EXPECTED_CURRENT_LED_RESULT = {
   unitKey: 'module', unitType: 'module', unitLabel: '模组', unitSizeText: '320 × 160 mm',
   columns: 14, rows: 15, totalUnits: 210,
@@ -599,52 +465,52 @@ const LED_LIFECYCLE_EXPECTATIONS = {
   'empty|': {
     revision: 1, pending: '', signature: null, path: '', preview: false, height: 1304, thrown: '', draws: 1,
     measureStarts: ['LED大屏/长图绘制', 'LED大屏/长图导出'], measureFinishes: 2,
-    eventCounts: { createCanvas: 2, vibrate: 1, setData: 2, setDataCallback: 3, loading: 1,
+    eventCounts: { createCanvas: 2, setData: 2, setDataCallback: 3, loading: 1,
       measureStart: 2, measureFinish: 2, draw: 1, export: 1, hideLoading: 1, toast: 1 },
   },
   'fail|': {
     revision: 1, pending: '', signature: null, path: '', preview: false, height: 1304, thrown: '', draws: 1,
     measureStarts: ['LED大屏/长图绘制', 'LED大屏/长图导出'], measureFinishes: 2,
-    eventCounts: { createCanvas: 2, vibrate: 1, setData: 2, setDataCallback: 3, loading: 1,
+    eventCounts: { createCanvas: 2, setData: 2, setDataCallback: 3, loading: 1,
       measureStart: 2, measureFinish: 2, draw: 1, export: 1, hideLoading: 1, toast: 1 },
   },
   'stale-draw|': {
     revision: 2, pending: 'changed-source', signature: null, path: '', preview: false,
     height: 1304, thrown: '', draws: 1, measureStarts: ['LED大屏/长图绘制'], measureFinishes: 1,
-    eventCounts: { createCanvas: 2, vibrate: 1, setData: 2, setDataCallback: 3, loading: 1,
+    eventCounts: { createCanvas: 2, setData: 2, setDataCallback: 3, loading: 1,
       measureStart: 1, measureFinish: 1, draw: 1 },
   },
   'stale-success|': {
     revision: 2, pending: 'changed-source', signature: null, path: '', preview: false,
     height: 1304, thrown: '', draws: 1, measureStarts: ['LED大屏/长图绘制', 'LED大屏/长图导出'], measureFinishes: 1,
-    eventCounts: { createCanvas: 2, vibrate: 1, setData: 2, setDataCallback: 3, loading: 1,
+    eventCounts: { createCanvas: 2, setData: 2, setDataCallback: 3, loading: 1,
       measureStart: 2, measureFinish: 1, draw: 1, export: 1 },
   },
   'stale-fail|': {
     revision: 2, pending: 'changed-source', signature: null, path: '', preview: false,
     height: 1304, thrown: '', draws: 1, measureStarts: ['LED大屏/长图绘制', 'LED大屏/长图导出'], measureFinishes: 1,
-    eventCounts: { createCanvas: 2, vibrate: 1, setData: 2, setDataCallback: 3, loading: 1,
+    eventCounts: { createCanvas: 2, setData: 2, setDataCallback: 3, loading: 1,
       measureStart: 2, measureFinish: 1, draw: 1, export: 1 },
   },
   'interleave-draw|': {
     revision: 3, pending: '', signature: '6|3|0.2|0.2|5|3|16:9|module|1.53|14|15',
     path: 'temp://new.png', preview: true, height: 1304, thrown: '', draws: 2,
     measureStarts: ['LED大屏/长图绘制', 'LED大屏/长图绘制', 'LED大屏/长图导出'], measureFinishes: 3,
-    eventCounts: { createCanvas: 4, vibrate: 2, setData: 5, setDataCallback: 6, loading: 2,
+    eventCounts: { createCanvas: 4, vibrate: 1, setData: 5, setDataCallback: 6, loading: 2,
       measureStart: 3, measureFinish: 3, draw: 2, export: 1, hideLoading: 1 },
   },
   'interleave-success|': {
     revision: 3, pending: '', signature: '6|3|0.2|0.2|5|3|16:9|module|1.53|14|15',
     path: 'temp://new.png', preview: true, height: 1304, thrown: '', draws: 2,
     measureStarts: ['LED大屏/长图绘制', 'LED大屏/长图导出', 'LED大屏/长图绘制', 'LED大屏/长图导出'], measureFinishes: 3,
-    eventCounts: { createCanvas: 4, vibrate: 2, setData: 5, setDataCallback: 6, loading: 2,
+    eventCounts: { createCanvas: 4, vibrate: 1, setData: 5, setDataCallback: 6, loading: 2,
       measureStart: 4, measureFinish: 3, draw: 2, export: 2, hideLoading: 1 },
   },
   'interleave-fail|': {
     revision: 3, pending: '', signature: '6|3|0.2|0.2|5|3|16:9|module|1.53|14|15',
     path: 'temp://new.png', preview: true, height: 1304, thrown: '', draws: 2,
     measureStarts: ['LED大屏/长图绘制', 'LED大屏/长图导出', 'LED大屏/长图绘制', 'LED大屏/长图导出'], measureFinishes: 3,
-    eventCounts: { createCanvas: 4, vibrate: 2, setData: 5, setDataCallback: 6, loading: 2,
+    eventCounts: { createCanvas: 4, vibrate: 1, setData: 5, setDataCallback: 6, loading: 2,
       measureStart: 4, measureFinish: 3, draw: 2, export: 2, hideLoading: 1 },
   },
   'success|create-throws': {
@@ -655,13 +521,13 @@ const LED_LIFECYCLE_EXPECTATIONS = {
   'success|draw-throws': {
     revision: 1, pending: '', signature: null, path: '', preview: false, height: 1304,
     thrown: '', draws: 0, measureStarts: ['LED大屏/长图绘制'], measureFinishes: 1,
-    eventCounts: { createCanvas: 2, vibrate: 1, setData: 2, setDataCallback: 3, loading: 1,
+    eventCounts: { createCanvas: 2, setData: 2, setDataCallback: 3, loading: 1,
       measureStart: 1, measureFinish: 1, hideLoading: 1, toast: 1 },
   },
   'success|export-throws': {
     revision: 1, pending: '', signature: null, path: '', preview: false, height: 1304,
     thrown: '', draws: 1, measureStarts: ['LED大屏/长图绘制', 'LED大屏/长图导出'], measureFinishes: 2,
-    eventCounts: { createCanvas: 2, vibrate: 1, setData: 2, setDataCallback: 3, loading: 1,
+    eventCounts: { createCanvas: 2, setData: 2, setDataCallback: 3, loading: 1,
       measureStart: 2, measureFinish: 2, draw: 1, hideLoading: 1, toast: 1 },
   },
 }
@@ -878,217 +744,23 @@ function assertLedCurrentSemanticContract(outcome, fault, current) {
   }
 }
 
-const PROJECT_LIFECYCLE_EXPECTATIONS = {
-  'success|': {
-    revision: 1, pending: '', signature: EXPECTED_CURRENT_PROJECT_SIGNATURE,
-    path: 'temp://report.png', preview: true, generating: false, thrown: '',
-    events: { setData: 2, loading: 1, hideLoading: 1, toast: 0, measureStart: 2, measureFinish: 2, draw: 1, export: 1 },
-  },
-  'empty|': {
-    revision: 1, pending: '', signature: null,
-    path: '', preview: false, generating: false, thrown: '',
-    events: { setData: 2, loading: 1, hideLoading: 1, toast: 1, measureStart: 2, measureFinish: 2, draw: 1, export: 1 },
-  },
-  'fail|': {
-    revision: 1, pending: '', signature: null,
-    path: '', preview: false, generating: false, thrown: '',
-    events: { setData: 2, loading: 1, hideLoading: 1, toast: 1, measureStart: 2, measureFinish: 2, draw: 1, export: 1 },
-  },
-  'stale-draw|': {
-    revision: 2, pending: 'changed-source', signature: null,
-    path: '', preview: false, generating: false, thrown: '',
-    events: { setData: 2, loading: 1, hideLoading: 0, toast: 0, measureStart: 1, measureFinish: 1, draw: 1, export: 0 },
-  },
-  'stale-success|': {
-    revision: 2, pending: 'changed-source', signature: null,
-    path: '', preview: false, generating: false, thrown: '',
-    events: { setData: 2, loading: 1, hideLoading: 0, toast: 0, measureStart: 2, measureFinish: 1, draw: 1, export: 1 },
-  },
-  'stale-fail|': {
-    revision: 2, pending: 'changed-source', signature: null,
-    path: '', preview: false, generating: false, thrown: '',
-    events: { setData: 2, loading: 1, hideLoading: 0, toast: 0, measureStart: 2, measureFinish: 1, draw: 1, export: 1 },
-  },
-  'interleave-draw|': {
-    revision: 3, pending: '', signature: EXPECTED_CURRENT_PROJECT_SIGNATURE,
-    path: 'temp://new.png', preview: true, generating: false, thrown: '',
-    events: { setData: 4, loading: 2, hideLoading: 1, toast: 0, measureStart: 3, measureFinish: 3, draw: 2, export: 1 },
-  },
-  'interleave-success|': {
-    revision: 3, pending: '', signature: EXPECTED_CURRENT_PROJECT_SIGNATURE,
-    path: 'temp://new.png', preview: true, generating: false, thrown: '',
-    events: { setData: 4, loading: 2, hideLoading: 1, toast: 0, measureStart: 4, measureFinish: 3, draw: 2, export: 2 },
-  },
-  'interleave-fail|': {
-    revision: 3, pending: '', signature: EXPECTED_CURRENT_PROJECT_SIGNATURE,
-    path: 'temp://new.png', preview: true, generating: false, thrown: '',
-    events: { setData: 4, loading: 2, hideLoading: 1, toast: 0, measureStart: 4, measureFinish: 3, draw: 2, export: 2 },
-  },
-  'success|create-throws': {
-    revision: 1, pending: '', signature: null,
-    path: '', preview: false, generating: false, thrown: '',
-    events: { setData: 2, loading: 1, hideLoading: 1, toast: 1, measureStart: 0, measureFinish: 0, draw: 0, export: 0 },
-  },
-  'success|draw-throws': {
-    revision: 1, pending: '', signature: null,
-    path: '', preview: false, generating: false, thrown: '',
-    events: { setData: 2, loading: 1, hideLoading: 1, toast: 1, measureStart: 1, measureFinish: 0, draw: 0, export: 0 },
-  },
-  'success|export-throws': {
-    revision: 1, pending: EXPECTED_CURRENT_PROJECT_SIGNATURE, signature: null,
-    path: '', preview: false, generating: true, thrown: 'export failed synchronously',
-    events: { setData: 1, loading: 1, hideLoading: 0, toast: 0, measureStart: 2, measureFinish: 1, draw: 1, export: 0 },
-  },
-}
-
-function assertProjectScenarioSemanticContract(current, before, scenario) {
-  const key = `${scenario.outcome}|${scenario.fault}`
-  const expected = PROJECT_LIFECYCLE_EXPECTATIONS[key]
-  assert(expected, `未声明项目报告生命周期合同：${key}`)
-  const expectedData = {
-    ...EXPECTED_CURRENT_PROJECT_DATA,
-    reportImagePath: expected.path,
-    reportPreviewVisible: expected.preview,
-    isGeneratingReport: expected.generating,
-  }
-  assert.deepEqual(current.state.data, expectedData,
-    `project/${key}: 当前完整页面状态偏离独立模块与字段合同`)
-  assert.deepEqual(current.state.fields, {
-    reportRevision: expected.revision,
-    reportPendingSignature: expected.pending,
-    reportSignature: expected.signature,
-  }, `project/${key}: 报告修订、待处理签名或已提交签名偏离生命周期合同`)
-  assert.equal(current.thrown, expected.thrown, `project/${key}: 同步错误结果发生变化`)
-
-  // This old-records adapter is a controlled composition check only. It does not
-  // reproduce the saved pre-migration golden digest, which remains immutable evidence.
-  assert.deepEqual(current.trace, before.trace,
-    `project/${key}: 记录模块迁移不得改变完整绘制、副作用顺序或导出调用`)
-  const canvasTrace = current.trace.filter((entry) => ['canvasCall', 'canvasProperty'].includes(entry[0]))
-  const drawCount = expected.events.draw
-  const expectedText = Array.from({ length: drawCount }, () => EXPECTED_ACTIVE_REPORT_TEXT).flat()
-  assert.deepEqual(canvasTrace.filter((entry) => entry[0] === 'canvasCall' && entry[1] === 'fillText')
-    .map((entry) => entry[2]), expectedText,
-  `project/${key}: 项目报告文字、坐标或模块进度标识偏离独立绘制合同`)
-  const moduleProgressTags = canvasTrace.filter((entry) => entry[0] === 'canvasCall' && entry[1] === 'fillText'
-    && entry[2][0] === '1 / 8')
-  assert.deepEqual(moduleProgressTags.map((entry) => entry[2]),
-    Array.from({ length: drawCount }, () => ['1 / 8', 74, 611]),
-  `project/${key}: 模块进度标签调用次数、坐标或进度文本发生变化`)
-
-  for (const [event, count] of Object.entries(expected.events)) {
-    assert.equal(current.trace.filter((entry) => entry[0] === event).length, count,
-      `project/${key}: ${event} 生命周期副作用数量发生变化`)
-  }
-  const expectedExports = Array.from({ length: expected.events.export }, () => ['export', {
-    canvasId: 'projectReportCanvas', width: 750, height: 1040,
-    destWidth: 1500, destHeight: 2080, fileType: 'png', quality: 1,
-  }, true])
-  assert.deepEqual(current.trace.filter((entry) => entry[0] === 'export'), expectedExports,
-    `project/${key}: Canvas 导出尺寸、目标或次数发生变化`)
-  return {
-    drawCount,
-    canvasOperations: canvasTrace.length,
-    moduleProgressTags: moduleProgressTags.map((entry) => entry[2]),
-  }
-}
-
-function assertRetiredProjectHistoryReport() {
-  const result = run('project', false, 'success', '', false, true)
-  const { data } = result.state
-  assert.deepEqual(data.moduleProgress, EXPECTED_CURRENT_MODULE_PROGRESS,
-    '历史会议室记录不得占用八个当前模块的进度槽')
-  assert.deepEqual(data.moduleOptions, EXPECTED_CURRENT_MODULE_OPTIONS,
-    '历史会议室记录不得成为当前筛选模块选项')
-  assert.deepEqual(data.records, [{ id: 'r', module: 'limiter' }, { id: 'v', module: 'venue' }],
-    '项目结果列表仍保留历史会议室记录')
-  assert.deepEqual(data.recordGroups, [...EXPECTED_CURRENT_ACTIVE_RECORD_GROUPS, {
-    module: 'venue', label: '会议室', theme: 'green', trustLabel: '历史结果',
-    trustDescription: '会议室扩声模块已移除；此历史记录仅供查看和复制，不支持恢复计算。',
-    records: [{
-      id: 'v', module: 'venue', displayIndex: 2, moduleLabel: '会议室', trustLabel: '历史结果',
-      theme: 'green', retired: true, timeText: '01-01 08:00', title: 'Historical venue',
-      summary: 'Retained legacy result', swipeKey: 'record:v', swipeOpen: false, swipeOffset: 0, swipeDragging: false,
-    }],
-  }], '历史记录应作为独立只读组保留并明确标记')
-  assert.equal(data.reportCanvasHeight, 1242, '包含历史组的完整报告应分配相符画布高度')
-  assert.deepEqual(result.state.fields, {
-    reportRevision: 1,
-    reportPendingSignature: '',
-    reportSignature: '{"project":{"id":"p","name":"P","createdAt":1,"updatedAt":1,"venueName":"","engineer":"","projectDate":"1970-01-01","notes":"","roomLengthText":"","roomWidthText":"","roomHeightText":"","standardClassKey":"conference","gradeKey":"II"},"records":[{"id":"r","title":"R","summary":"S","updatedAt":1},{"id":"v","title":"Historical venue","summary":"Retained legacy result","updatedAt":2}]}',
-  }, '历史记录报告签名必须包含两条保留结果')
-  const canvasTrace = result.trace.filter((entry) => ['canvasCall', 'canvasProperty'].includes(entry[0]))
-  const texts = canvasTrace.filter((entry) => entry[0] === 'canvasCall' && entry[1] === 'fillText')
-    .map((entry) => entry[2])
-  for (const expectedText of [
-    ['1 / 8', 74, 611], ['会议室', 44, 948], ['历史结果', 673, 944],
-    ['Historical venue', 66, 1009], ['Retained legacy result', 66, 1043],
-  ]) assert(texts.some((text) => JSON.stringify(text) === JSON.stringify(expectedText)),
-  `历史报告绘制缺少独立内容或坐标：${expectedText[0]}`)
-  assert.deepEqual(result.trace.filter((entry) => entry[0] === 'export'), [['export', {
-    canvasId: 'projectReportCanvas', width: 750, height: 1242,
-    destWidth: 1500, destHeight: 2484, fileType: 'png', quality: 1,
-  }, true]], '历史组报告应绘制一张完整大图并导出对应尺寸')
-  assert.equal(result.state.data.reportImagePath, 'temp://report.png')
-  assert.equal(result.state.data.reportPreviewVisible, true)
-  assert.equal(result.state.data.isGeneratingReport, false)
-}
-
-function getFixtureScenario(fixture, scenario) {
-  return fixture.scenarios.find((item) => item.kind === scenario.kind
-    && item.outcome === scenario.outcome && item.fault === scenario.fault)
-}
-
-function replaceProjectScenarioDigest(source, scenario, hash) {
-  const escape = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  const pattern = new RegExp(`("kind": "project",\\s*"outcome": "${escape(scenario.outcome)}",\\s*"fault": "${escape(scenario.fault)}",\\s*"sha256": ")[a-f0-9]{64}`)
-  assert.match(source, pattern, `fixture missing project case ${scenario.outcome}/${scenario.fault}`)
-  return source.replace(pattern, (match, prefix) => `${prefix}${hash}`)
-}
-
 try {
   if (process.argv.includes('--capture-fixture')) {
+    const originalFixture = JSON.parse(fs.readFileSync(fixturePath, 'utf8'))
     const scenarios = cases.map((scenario) => ({
       ...scenario,
       sha256: digest(run(scenario.kind, true, scenario.outcome, scenario.fault)),
     }))
-    fs.writeFileSync(fixturePath, `${JSON.stringify({ sourceHashes: getBaselineSourceHashes(), scenarios }, null, 2)}\n`)
-  } else if (process.argv.includes('--capture-project-fixture')) {
-    const originalFixture = JSON.parse(fs.readFileSync(preMigrationFixturePath, 'utf8'))
-    const currentText = fs.readFileSync(fixturePath, 'utf8')
-    const currentFixture = JSON.parse(currentText)
-    let updatedText = currentText
-    const projectScenarios = cases.filter((scenario) => scenario.kind === 'project')
-    projectScenarios.forEach((scenario) => {
-      const originalScenario = getFixtureScenario(originalFixture, scenario)
-      assert.ok(originalScenario, `pre-migration fixture missing ${scenario.outcome}/${scenario.fault}`)
-      const before = run('project', false, scenario.outcome, scenario.fault, true)
-      assert.equal(digest(before), originalScenario.sha256,
-        `pre-migration records + current project page must match original ${scenario.outcome}/${scenario.fault} hash`)
-      const current = run('project', false, scenario.outcome, scenario.fault)
-      const equivalence = assertProjectScenarioSemanticContract(current, before, scenario)
-      const currentHash = digest(current)
-      updatedText = replaceProjectScenarioDigest(updatedText, scenario, currentHash)
-      console.log(JSON.stringify({
-        case: `project/${scenario.outcome}/${scenario.fault || '(no fault)'}`,
-        oldSha256: digest(before),
-        newSha256: currentHash,
-        drawCount: equivalence.drawCount,
-        canvasOperations: equivalence.canvasOperations,
-        moduleProgressTags: equivalence.moduleProgressTags,
-      }))
-    })
-    const updatedFixture = JSON.parse(updatedText)
-    assert.deepEqual(updatedFixture.sourceHashes, currentFixture.sourceHashes,
-      'project rebaseline must preserve sourceHashes')
-    assert.deepEqual(updatedFixture.scenarios.filter((item) => item.kind !== 'project'),
-      currentFixture.scenarios.filter((item) => item.kind !== 'project'),
-      'project rebaseline must preserve LED/result cases byte-for-byte')
-    fs.writeFileSync(fixturePath, updatedText)
-    console.log('Rebaselined only 12 project report scenarios after verifying original hashes and normalized equivalence.')
+    // Keep the retired project-image rows as historical evidence without executing them.
+    scenarios.push(...originalFixture.scenarios.filter((scenario) => scenario.kind === 'project'))
+    const sourceHashes = getBaselineSourceHashes()
+    if (originalFixture.sourceHashes['pages/records/project.js']) {
+      sourceHashes['pages/records/project.js'] = originalFixture.sourceHashes['pages/records/project.js']
+    }
+    fs.writeFileSync(fixturePath, JSON.stringify({ sourceHashes, scenarios }, null, 2) + '\n')
   } else if (process.argv.includes('--capture-led-fixture')) {
     // LED reporting now intentionally measures and lays out a longer report.
-    // Rebaseline only its 12 cases; project/result snapshots stay byte-for-byte intact.
+    // Rebaseline its 12 cases while preserving all other historical rows byte-for-byte.
     const originalText = fs.readFileSync(fixturePath, 'utf8')
     const originalFixture = JSON.parse(originalText)
     const ledScenarios = cases.filter((scenario) => scenario.kind === 'led').map((scenario) => {
@@ -1106,9 +778,9 @@ try {
     const updatedFixture = JSON.parse(updatedText)
     assert.deepEqual(updatedFixture.sourceHashes, originalFixture.sourceHashes, 'LED rebaseline must preserve sourceHashes')
     assert.deepEqual(updatedFixture.scenarios.filter((item) => item.kind !== 'led'),
-      originalFixture.scenarios.filter((item) => item.kind !== 'led'), 'LED rebaseline must preserve project/result cases')
+      originalFixture.scenarios.filter((item) => item.kind !== 'led'), 'LED rebaseline must preserve non-LED historical cases')
     fs.writeFileSync(fixturePath, updatedText)
-    console.log('Rebaselined only 12 LED report scenarios; project/result cases and sourceHashes are preserved.')
+    console.log('Rebaselined only 12 LED report scenarios; non-LED historical cases and sourceHashes are preserved.')
   } else {
     const fixture = JSON.parse(fs.readFileSync(fixturePath, 'utf8'))
     const compareBefore = process.argv.includes('--compare-before')
@@ -1119,74 +791,54 @@ try {
       const fixtureHashes = fixture.sourceHashes
       assert.deepEqual(Object.fromEntries(comparablePaths.map((relativePath) => [relativePath, currentHashes[relativePath]])),
         Object.fromEntries(comparablePaths.map((relativePath) => [relativePath, fixtureHashes[relativePath]])),
-        '本地冻结源码与project/result fixture来源哈希不一致')
+        '冻结结果报告源码与原 fixture 来源哈希不一致')
     }
-    if (!compareBefore) assertRetiredProjectHistoryReport()
     for (const scenario of cases) {
       const current = run(scenario.kind, false, scenario.outcome, scenario.fault)
       const frozen = fixture.scenarios.find((item) => item.kind === scenario.kind
         && item.outcome === scenario.outcome && item.fault === scenario.fault)
-      assert.ok(frozen, `fixture缺少场景 ${scenario.kind}/${scenario.outcome}/${scenario.fault}`)
-      if (scenario.kind === 'led') assertLedScenarioSemantics(scenario.outcome, scenario.fault, current)
-      if (scenario.kind === 'project') {
-        const before = run('project', false, scenario.outcome, scenario.fault, true)
-        const equivalence = assertProjectScenarioSemanticContract(current, before, scenario)
-        const oldFixture = JSON.parse(fs.readFileSync(preMigrationFixturePath, 'utf8'))
-        const oldAnchor = getFixtureScenario(oldFixture, scenario)
-        assert.ok(oldAnchor, `pre-migration fixture missing ${scenario.outcome}/${scenario.fault}`)
-        if (!compareBefore) {
-          console.log(JSON.stringify({
-            case: `project/${scenario.outcome}/${scenario.fault || '(no fault)'}`,
-            preservedProjectFixtureSha256: frozen.sha256,
-            preservedPreMigrationAnchorSha256: oldAnchor.sha256,
-            controlledPreMigrationDigest: digest(before),
-            currentSemanticDigest: digest(current),
-            preMigrationAnchorReproduced: digest(before) === oldAnchor.sha256,
-            drawCount: equivalence.drawCount,
-            canvasOperations: equivalence.canvasOperations,
-            moduleProgressTags: equivalence.moduleProgressTags,
-          }))
-        }
-      } else if (scenario.kind === 'led') {
+      assert.ok(frozen, 'fixture缺少场景 ' + scenario.kind + '/' + scenario.outcome + '/' + scenario.fault)
+      if (scenario.kind === 'led') {
+        assertLedScenarioSemantics(scenario.outcome, scenario.fault, current)
         if (!compareBefore) console.log(JSON.stringify({
-          case: `led/${scenario.outcome}/${scenario.fault || '(no fault)'}`,
+          case: 'led/' + scenario.outcome + '/' + (scenario.fault || '(no fault)'),
           preservedHistoricalSha256: frozen.sha256,
           currentSemanticDigest: digest(current),
           historicalHashReproduced: digest(current) === frozen.sha256,
-          canvasDraws: LED_LIFECYCLE_EXPECTATIONS[`${scenario.outcome}|${scenario.fault}`].draws,
+          canvasDraws: LED_LIFECYCLE_EXPECTATIONS[scenario.outcome + '|' + scenario.fault].draws,
         }))
       } else {
-        const comparable = scenario.kind === 'result'
-          ? { ...current, trace: resultTraceForFrozenDigest(current, scenario) }
-          : current
-        assert.equal(digest(comparable), frozen.sha256,
-          `${scenario.kind}/${scenario.outcome}/${scenario.fault}: 页面副作用、Canvas绘制轨迹或最终状态变化`)
-      }
-      if (compareBefore && scenario.kind !== 'led') {
-        if (scenario.kind === 'project') {
-          const originalFixture = JSON.parse(fs.readFileSync(preMigrationFixturePath, 'utf8'))
-          const originalScenario = getFixtureScenario(originalFixture, scenario)
-          const before = run('project', false, scenario.outcome, scenario.fault, true)
-          assert.equal(digest(before), originalScenario.sha256,
-            `project/${scenario.outcome}/${scenario.fault}: 预迁移记录模块 hash 偏离原fixture`)
-        } else {
-          const before = run(scenario.kind, true, scenario.outcome, scenario.fault)
-          assert.deepEqual(current, before, `${scenario.kind}/${scenario.outcome}/${scenario.fault}: 偏离冻结原源码`)
+        const comparable = { ...current, trace: resultTraceForFrozenDigest(current, scenario) }
+        const before = run('result', true, scenario.outcome, scenario.fault)
+        const legacyComparable = { ...before, trace: resultTraceWithFrozenFooter(before.trace, scenario) }
+        assert.equal(digest(legacyComparable), frozen.sha256,
+          'result/' + scenario.outcome + '/' + scenario.fault + ': 冻结原源码必须保留原 fixture hash')
+        const legacyWithoutHaptics = {
+          ...legacyComparable,
+          trace: legacyComparable.trace.filter((entry) => entry[0] !== 'vibrate'),
         }
+        assert.deepEqual(comparable, legacyWithoutHaptics,
+          'result/' + scenario.outcome + '/' + scenario.fault + ': 移除触感差异后，页面状态、Canvas 与其他副作用必须等价')
+        if (!compareBefore) console.log(JSON.stringify({
+          case: 'result/' + scenario.outcome + '/' + (scenario.fault || '(no fault)'),
+          legacyFixtureHashReproduced: true,
+          legacyHapticCount: legacyComparable.trace.filter((entry) => entry[0] === 'vibrate').length,
+          currentHaptics: current.trace.filter((entry) => entry[0] === 'vibrate').map((entry) => entry[1].type),
+        }))
+        if (compareBefore) assert.deepEqual(comparable, {
+          ...before,
+          trace: resultTraceWithFrozenFooter(before.trace.filter((entry) => entry[0] !== 'vibrate'), scenario),
+        }, 'result/' + scenario.outcome + '/' + scenario.fault + ': 触感/版本差异外偏离冻结原源码')
       }
       if (scenario.outcome === 'success' && !scenario.fault) {
         const exportIndex = current.trace.findIndex((entry) => entry[0] === 'export')
         const finishIndex = current.trace.findIndex((entry) => entry[0] === 'measureFinish' && /导出|结果图导出/.test(entry[1]))
-        assert.ok(exportIndex >= 0 && finishIndex > exportIndex, `${scenario.kind}: 导出计时与回调顺序丢失`)
+        assert.ok(exportIndex >= 0 && finishIndex > exportIndex, scenario.kind + ': 导出计时与回调顺序丢失')
       }
     }
-  }
-  if (process.argv.includes('--capture-project-fixture')) {
-    console.log('12 个项目报告迁移场景通过预迁移 hash 和归一化差异检查。')
-  } else if (process.argv.includes('--compare-before')) {
-    console.log('24 个非项目报告场景通过冻结原源码差分；预迁移项目 hash 锚点按原样校验。')
-  } else {
-    console.log('Canvas 合同通过：12 个结果图场景保留冻结 hash；12 个 LED 场景通过完整当前状态、分页布局、Canvas 几何/文案/样式轨迹与生命周期副作用合同；12 个项目场景通过当前模块状态、模块进度绘制和历史记录合同。LED 与项目的旧 hash 均保留为历史差异证据，不代表当前等价。')
+    console.log(compareBefore
+      ? '12 个结果图场景通过冻结源码差分；12 个 LED 场景通过当前语义检查。'
+      : 'Canvas 合同通过：12 个结果图场景与冻结原源码等价（忽略已契约化触感差异）；12 个 LED 场景通过当前生命周期、分页布局、Canvas 绘制与失败处理合同。退役项目长图的 fixture 行仅作为历史数据保留。')
   }
 } finally {
   Date.now = originalDateNow
@@ -1194,6 +846,8 @@ try {
   else global.wx = originalWx
   if (originalPage === undefined) delete global.Page
   else global.Page = originalPage
+  if (originalGetCurrentPages === undefined) delete global.getCurrentPages
+  else global.getCurrentPages = originalGetCurrentPages
   isolatedModules.forEach((filename) => {
     delete require.cache[filename]
     const original = originalModuleEntries.get(filename)

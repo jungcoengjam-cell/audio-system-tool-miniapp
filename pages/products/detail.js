@@ -1,5 +1,6 @@
 const { getProductDetail, markProductViewed } = require('../../utils/products')
 const { readPreferences, writePreferencesDetailed } = require('../../utils/preferences')
+const { vibrate } = require('../../utils/haptics')
 const {
   inspectDmxPreferences,
   readDmxPreferencesStatus,
@@ -184,7 +185,9 @@ Page({
   selectDmxImportMode(event) {
     const channelCount = String(event.currentTarget.dataset.channelCount || '')
     if (!this.data.dmxImportModes.some((mode) => String(mode.channelCount) === channelCount)) return
+    const changed = channelCount !== this.data.dmxImportChannelCount
     this.setData({ dmxImportChannelCount: channelCount, dmxImportError: '' })
+    if (changed) vibrate('light')
   },
 
   onDmxImportFixtureCountInput(event) {
@@ -195,7 +198,9 @@ Page({
     const action = event.currentTarget.dataset.action
     if (!['append', 'replace'].includes(action)) return
     if (action === 'append' && !this.data.dmxImportGroupsReadable) return
+    const changed = action !== this.data.dmxImportAction
     this.setData({ dmxImportAction: action, dmxImportError: '' })
+    if (changed) vibrate('light')
   },
 
   closeDmxProductImport() {
@@ -242,6 +247,7 @@ Page({
       this.setData({ dmxImportSubmitting: false, dmxImportError: result.error })
       return
     }
+    vibrate('medium')
     this._dmxImportOpenedSignature = ''
     this.setData({ dmxImportVisible: false })
     wx.navigateTo({ url: `${CALCULATOR_PATHS.dmxAddress}?lightingCatalogImport=1` })

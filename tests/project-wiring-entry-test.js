@@ -55,12 +55,18 @@ const toolsDefinition = loadPage('pages/tools/tools.js', {
 })
 const { CATEGORY_FILTERS, getTool, getTools } = require('../utils/tool-registry')
 const { TOOL_VISIBILITY_KEY } = require('../utils/tool-visibility')
-assert.deepStrictEqual(CATEGORY_FILTERS, ['全部', '布线', '音频', '视频', '灯光', '中控'])
+assert.deepStrictEqual(CATEGORY_FILTERS, ['全部', '布线', '音频', '视频', '灯光', '中控', '资料'])
 assert.deepStrictEqual(getTools('布线').map(({ id }) => id), ['audioWiring', 'projectWiring', 'cable'])
 assert.deepStrictEqual(toolsDefinition.data.categories, CATEGORY_FILTERS)
 assert.strictEqual(getTool('audioWiring').title, '接线助手')
 assert.strictEqual(getTool('projectWiring').title, '通道与线缆')
 assert.strictEqual(getTool('projectWiring').path, '/pages/project-wiring/index')
+assert.deepStrictEqual(getTools('资料').map(({ id }) => id), ['productLibrary'])
+assert.strictEqual(getTool('productLibrary').title, '产品资料库')
+assert.strictEqual(getTool('productLibrary').path, '/pages/products/library')
+assert.strictEqual(Object.hasOwn(getTool('productLibrary'), 'basis'), false)
+const libraryIconPath = path.join(root, 'assets', 'home', 'module-library-catalog.png')
+assert(fs.existsSync(libraryIconPath), '产品资料库入口专属 PNG 文件缺失')
 const projectWiringImagePath = path.join(root, 'assets', 'home', 'module-project-wiring-catalog.png')
 assert(fs.existsSync(projectWiringImagePath), '通道与线缆入口专属图片文件缺失')
 
@@ -215,8 +221,7 @@ assert(projectDetailWxml.includes('{{item.endpointSummary}}') && projectDetailWx
 
 let detailWorkspace = { ok: true, projects: [], records: [], activeProject: null }
 const detailSnapshotOptions = []
-const detailEffects = { activate: 0, draft: 0, recordEditor: 0, delete: 0, update: 0, actionSheet: 0, modal: 0, clipboard: 0, image: 0, navigate: 0, navigateBack: 0 }
-let detailReportExport = null
+const detailEffects = { activate: 0, draft: 0, recordEditor: 0, delete: 0, update: 0, actionSheet: 0, modal: 0, navigate: 0, navigateBack: 0 }
 const detailUrls = []
 const detailActionSheets = []
 const detailProject = { id: 'detail-project', name: '详情存储测试', createdAt: 1, updatedAt: 2 }
@@ -242,18 +247,12 @@ global.wx = {
   setNavigationBarTitle() {},
   showToast() {},
   showModal() { detailEffects.modal += 1 },
-  showLoading() {},
-  hideLoading() { detailEffects.hideLoading = (detailEffects.hideLoading || 0) + 1 },
   navigateTo({ url }) { detailEffects.navigate += 1; detailUrls.push(url) },
   navigateBack() { detailEffects.navigateBack += 1 },
   showActionSheet(options) { detailEffects.actionSheet += 1; detailActionSheets.push(options) },
-  setClipboardData() { detailEffects.clipboard += 1 },
-  createCanvasContext: () => ({}),
-  canvasToTempFilePath() {},
 }
 try {
   const detailDefinition = loadPage('pages/records/project.js', {
-    '../../data/app-meta': { APP_VERSION: 'test', PRODUCT_DATA_DATE: 'test' },
     '../../utils/performance': { printPerformanceSummary() {}, startMeasurement: () => () => null },
     '../../utils/haptics': { vibrate() {} },
     '../../utils/records': detailRecordsApi,
@@ -264,20 +263,6 @@ try {
     '../dmx-layout/lighting-workspace': {
       readLightingWorkspace: () => ({ ok: true, scheme: { fixtures: [] }, revision: 1 }),
       calculateScheme: () => ({ ok: true, valid: true, result: { fixtures: [] } }),
-    },
-    '../../utils/report-canvas': { drawAndExportReport: (page, options) => { detailReportExport = options } },
-    '../../utils/report-image-actions': {
-      previewGeneratedImage() { detailEffects.image += 1 },
-      saveGeneratedImage() { detailEffects.image += 1 },
-      shareGeneratedImage() { detailEffects.image += 1 },
-    },
-    './project-report': {
-      REPORT_CANVAS_ID: 'test-canvas',
-      REPORT_WIDTH: 720,
-      buildProjectReportPayload: () => ({ groups: [] }),
-      calculateProjectReportHeight: () => 1200,
-      drawProjectReport() {},
-      getExportDimensions: () => ({}),
     },
   })
   detailWorkspace = { ok: true, projects: [detailProject], records: [detailRecord], activeProject: detailProject }
@@ -301,23 +286,16 @@ try {
   detailActionSheets.at(-1).success({ tapIndex: 1 })
   assert.strictEqual(detailUrls.at(-1), '/pages/project-wiring/index?id=detail-project',
     '项目添加菜单的线路入口保持项目上下文')
-  detailPage.data.reportImagePath = '/tmp/previous-report.png'
-  detailPage.generateProjectReportImage()
-  assert.ok(detailReportExport && detailReportExport.isCurrent(), '报告生成回调初始有效')
-  const isCurrentReport = detailReportExport.isCurrent
-  detailPage.data.reportPreviewVisible = true
+  const navigationsBeforeStorageFailure = detailEffects.navigate
   detailWorkspace = { ok: false, error: '本地读取失败', projects: [detailProject], records: [detailRecord], activeProject: detailProject }
   detailPage.onShow()
   assert.strictEqual(detailSnapshotOptions.at(-1).forceRefresh, true, '返回详情页时重新验证本地存储')
   assert.strictEqual(detailPage.data.project.id, detailProject.id, '读取失败保留上次成功项目')
   assert.strictEqual(detailPage.data.records.length, 1, '读取失败保留上次成功记录')
-  assert.strictEqual(detailPage.data.reportImagePath, '/tmp/previous-report.png', '读取失败保留上次报告')
-  assert.strictEqual(detailPage.data.reportPreviewVisible, true, '读取失败保留预览状态')
   assert.strictEqual(detailPage.data.workspaceError, '本地读取失败')
-  assert.strictEqual(detailPage.data.isGeneratingReport, false, '读取失败停止报告生成')
-  assert.strictEqual(isCurrentReport(), false, '读取失败使过期报告回调失效')
-  assert.strictEqual(detailPage.reportPendingSignature, '', '读取失败清除待完成报告签名')
-  assert.ok(detailEffects.hideLoading > 0, '读取失败关闭生成提示')
+  detailPage.openProjectReport()
+  assert.strictEqual(detailEffects.navigate, navigationsBeforeStorageFailure,
+    '本地读取失败时正式项目 PDF 报告入口不会导航')
 
   detailPage.startEditProject()
   detailPage.openProjectModule({ currentTarget: { dataset: { module: 'limiter' } } })
@@ -329,15 +307,10 @@ try {
   detailPage.confirmDeleteProject()
   detailPage.saveProjectDetails()
   detailPage.onProjectItemTap({ currentTarget: { dataset: { id: detailRecord.id } } })
-  detailPage.copyProject()
-  detailPage.generateProjectReportImage()
-  detailPage.saveProjectReportImage()
-  detailPage.shareProjectReportImage()
-  detailPage.previewProjectReportImage()
   assert.deepStrictEqual(detailEffects, {
     activate: 0, draft: 0, recordEditor: 0, delete: 0, update: 0, actionSheet: 2, modal: 0,
-    clipboard: 0, image: 0, navigate: 3, navigateBack: 0, hideLoading: detailEffects.hideLoading,
-  }, '读取失败期间阻止项目资料写入、删除、弹层、记录编辑、复制、导出和导航')
+    navigate: 3, navigateBack: 0,
+  }, '读取失败期间阻止项目资料写入、删除、弹层、记录编辑和导航')
 
   detailWorkspace = { ok: true, projects: [detailProject], records: [detailRecord], activeProject: detailProject }
   detailPage.retryWorkspace()
@@ -571,13 +544,8 @@ function runProjectDetailSwipeDeletionRegression() {
     delete require.cache[recordsModulePath]
     actualRecords = require('../utils/records')
     const definition = loadPage('pages/records/project.js', {
-      '../../data/app-meta': { APP_VERSION: 'test', PRODUCT_DATA_DATE: 'test' },
       '../../utils/performance': { printPerformanceSummary() {}, startMeasurement: () => () => null },
       '../../utils/haptics': { vibrate() {} },
-      '../../utils/report-canvas': { drawAndExportReport() {} },
-      '../../utils/report-image-actions': {
-        previewGeneratedImage() {}, saveGeneratedImage() {}, shareGeneratedImage() {},
-      },
       '../../utils/records': actualRecords,
       '../../utils/result-record-context': {
         openProjectDraft() {},
@@ -586,10 +554,6 @@ function runProjectDetailSwipeDeletionRegression() {
       '../dmx-layout/lighting-workspace': {
         readLightingWorkspace() { return { ok: true, exists: false, scheme: null, revision: 0 } },
         calculateScheme() { return null },
-      },
-      './project-report': {
-        REPORT_CANVAS_ID: 'report', REPORT_WIDTH: 320, buildProjectReportPayload() {},
-        calculateProjectReportHeight() {}, drawProjectReport() {}, getExportDimensions() {},
       },
     })
     function createPage() {
@@ -1132,19 +1096,10 @@ function runProjectDetailLightingSwipeRegression() {
       const projectAFixtures = seedLighting('project-a', 'fixture-a')
       seedLighting('project-b', 'fixture-b')
       const definition = loadPage('pages/records/project.js', {
-        '../../data/app-meta': { APP_VERSION: 'test', PRODUCT_DATA_DATE: 'test' },
         '../../utils/performance': { printPerformanceSummary() {}, startMeasurement: () => () => null },
         '../../utils/haptics': { vibrate() {} },
-        '../../utils/report-canvas': { drawAndExportReport() {} },
-        '../../utils/report-image-actions': {
-          previewGeneratedImage() {}, saveGeneratedImage() {}, shareGeneratedImage() {},
-        },
         '../../utils/records': actualRecords,
         '../../utils/result-record-context': { openProjectDraft() {}, openRecordEditor() { return true } },
-        './project-report': {
-          REPORT_CANVAS_ID: 'report', REPORT_WIDTH: 320, buildProjectReportPayload() {},
-          calculateProjectReportHeight() {}, drawProjectReport() {}, getExportDimensions() {},
-        },
       })
       const page = instantiate(definition)
       page.setData = function setNestedData(patch, callback) {

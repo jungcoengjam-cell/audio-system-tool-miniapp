@@ -283,8 +283,13 @@ function testProjectKeyboardEventsAndMetadataIdentity() {
 
     assert.equal(records.deleteProject(firstProjectId), true)
     const afterDelete = records.getRecords()[0]
-    assert.equal(afterDelete.projectIds.includes(firstProjectId), false)
-    assert.equal(afterDelete.projectMetadata[firstProjectId], undefined)
+    assert.equal(afterDelete.projectIds.includes(firstProjectId), true,
+      'recoverable project deletion preserves record associations')
+    assert.equal(afterDelete.projectMetadata[firstProjectId].name, '小厅主扩',
+      'recoverable project deletion preserves project metadata')
+    assert.equal(records.getProjects().some((project) => project.id === firstProjectId), false)
+    assert(records.getRecoveryEntries().some((entry) => entry.kind === 'project'
+      && entry.targetId === firstProjectId), 'deleted project should remain recoverable')
     assert.equal(records.getProjectRecordView(afterDelete, secondProjectId).projectNote, '第二项目私有备注')
 
     assert.equal(page.continueAfterProjectSave(), true)

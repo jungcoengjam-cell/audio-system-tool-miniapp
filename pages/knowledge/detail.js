@@ -1,5 +1,6 @@
 const { findKnowledgeById } = require('../../data/knowledge')
 const { demos } = require('./demo-scenes')
+const { vibrate } = require('../../utils/haptics')
 
 const DEMO_STEP_MS = 2400
 Page({
@@ -163,26 +164,34 @@ Page({
   },
 
   toggleDemoPlayback() {
+    const previous = Boolean(this.data.demoPlaying)
     if (this.data.demoPlaying) this.pauseDemo()
     else this.playDemo()
+    if (this.data.demoPlaying !== previous && !this.destroyed && this.pageVisible) vibrate('light')
   },
 
   selectDemoStep(event) {
     const index = Number(event.currentTarget.dataset.index)
     if (!this.data.demo?.steps[index]) return
+    const changed = index !== this.data.demoIndex || this.data.demoPlaying
     clearTimeout(this.demoTimer)
     this.userPaused = true
     this.resumeIntent = false
     this.setData({ demoIndex: index, demoFrame: this.data.demo.steps[index], demoPlaying: false })
+    if (changed && !this.destroyed && this.pageVisible) vibrate('light')
   },
 
   replayDemo() {
+    const previousIndex = this.data.demoIndex
+    const previousPlaying = this.data.demoPlaying
     this.userPaused = false
     this.resumeIntent = !this.pageVisible || !this.cardVisible
     clearTimeout(this.demoTimer)
     if (!this.data.demo) return
     this.setData({ demoIndex: 0, demoFrame: this.data.demo.steps[0], demoPlaying: false })
     if (this.pageVisible && this.cardVisible) this.playDemo()
+    if ((previousIndex !== this.data.demoIndex || previousPlaying !== this.data.demoPlaying)
+      && !this.destroyed && this.pageVisible) vibrate('light')
   },
 
 
@@ -203,10 +212,12 @@ Page({
       return
     }
     this.startPrincipleAnimation()
+    if (!this.destroyed && this.pageVisible) vibrate('light')
   },
 
   toggleFormula() {
     this.setData({ formulaExpanded: !this.data.formulaExpanded })
+    if (!this.destroyed && this.pageVisible) vibrate('light')
   },
 
   openRelatedTool() {

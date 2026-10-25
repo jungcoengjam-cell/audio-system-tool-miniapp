@@ -51,8 +51,25 @@ if (projectRecords.length !== count
   throw new Error(`Project record fixture is incomplete: ${projectRecords.length}/${page.data.records.length}/${groupedProjectRecordCount}/${count}`)
 }
 const projectViewBytes = bytes(page.lastPatch)
-const clipboard = page.getProjectReportText()
-if (!clipboard.includes('500') || !clipboard.includes('#200')) throw new Error('Full report content is missing')
+const reportModel = require(path.join(root, 'pages/records/report-model'))
+const reportSource = reportModel.loadProjectReportSource(project.id)
+if (!reportSource.ok) throw new Error(`Project PDF report source failed: ${reportSource.error}`)
+const reportSections = reportModel.getProjectReportSections(reportSource)
+const reportIds = reportSections.flatMap((section) => section.items.map((item) => item.id))
+const reportPayload = reportModel.buildReportPayload(reportSource, reportIds)
+if (!reportPayload || reportPayload.selectedItems.length !== count) {
+  throw new Error(`Project PDF report is incomplete: ${reportPayload?.selectedItems.length || 0}/${count}`)
+}
+const expectedResults = new Map(projectRecords.map((record) => [record.id, record.resultText]))
+if (reportPayload.selectedItems.some((item) => expectedResults.get(item.record.id) !== item.record.resultText)) {
+  throw new Error('Project PDF report snapshot changed a complete saved result')
+}
+const completeResultText = reportPayload.selectedItems.map((item) => item.record.resultText).join('\n')
+if (!completeResultText.includes('500') || !completeResultText.includes('#200')) {
+  throw new Error('Project PDF report snapshot is missing full DMX result content')
+}
+const pdfReportText = reportPayload.pages.flatMap((reportPage) => reportPage.lines)
+  .map((line) => line.text).join('\n')
 require(path.join(root, 'pages/projects/projects'))
 page.onShow()
 const projectIndex = page.data.projects.find((item) => item.id === project.id)
@@ -64,4 +81,4 @@ if (favoriteCount !== count || page.data.favorites.length !== count
 console.log(JSON.stringify({ records: count, fixturesPerRecord: 500, storedBytes,
   projectRecordCount: projectRecords.length, groupedProjectRecordCount,
   favoriteCount, projectIndexRecordCount: projectIndex.recordCount,
-  projectViewBytes, favoritesViewBytes: bytes(page.lastPatch), textReportBytes: Buffer.byteLength(clipboard) }))
+  projectViewBytes, favoritesViewBytes: bytes(page.lastPatch), pdfReportTextBytes: Buffer.byteLength(pdfReportText) }))

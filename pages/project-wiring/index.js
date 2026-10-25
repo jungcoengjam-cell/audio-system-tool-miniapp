@@ -15,68 +15,29 @@ const {
   saveProjectWiring,
 } = require('../../utils/records')
 const { shareGeneratedImage } = require('../../utils/report-image-actions')
+const { vibrate } = require('../../utils/haptics')
+const { isPerformanceMeasurementEnabled, startMeasurement } = require('../../utils/performance')
 
-const REPORT_CANVAS_ID = 'wiringReportCanvas'
 const CONNECTOR_PICKER_OPTIONS = [{ id: '', label: '待确认' }, ...CONNECTOR_OPTIONS]
 const CUSTOM_CONNECTOR_INDEX = CONNECTOR_PICKER_OPTIONS.findIndex((option) => option.id === 'custom')
 const BATCH_CONNECTOR_OPTIONS = CONNECTOR_PICKER_OPTIONS
-const CABLE_SPEC_OPTIONS = {
-  balanced: [],
-  unbalanced: [],
-  speaker: ['RVV 2×1.5 mm²', 'RVV 2×2.5 mm²'],
-}
-const DEFAULT_AUDIO_SPEC = 'RVPE 2×0.5 mm²'
 const EXPORT_TYPES = [
   { id: 'lines', label: '线路表' },
   { id: 'materials', label: '材料表' },
   { id: 'labels', label: '双端线号' },
   { id: 'project', label: '接线清单' },
 ]
-const DRAFT_FIELDS = new Set([
-  'purpose', 'fromDevice', 'fromPort', 'toDevice', 'toPort', 'buildType', 'cableType',
-  'spec', 'connectorA', 'connectorB', 'lengthText', 'status', 'notes',
-])
-const REQUIRED_ROUTE_FIELDS = [
-  { field: 'fromDevice', label: '来源设备', target: 'wiring-field-from-device' },
-  { field: 'fromPort', label: '来源端口', target: 'wiring-field-from-port' },
-  { field: 'toDevice', label: '去向设备', target: 'wiring-field-to-device' },
-  { field: 'toPort', label: '去向端口', target: 'wiring-field-to-port' },
-]
-const ROUTE_ENDPOINT_FIELDS = ['fromDevice', 'fromPort', 'toDevice', 'toPort']
-
-function optionIndex(options, id, fallback = 0) {
-  const found = options.findIndex((option) => option.id === id)
-  return found >= 0 ? found : Math.min(fallback, Math.max(options.length - 1, 0))
-}
-
-function getCableSpecOptions(cableType) {
-  return CABLE_SPEC_OPTIONS[cableType] || []
-}
-
-function getDefaultSpec(cableType) {
-  return ['balanced', 'unbalanced'].includes(cableType) ? DEFAULT_AUDIO_SPEC : ''
-}
-
-function getCableSpecOptionViews(cableType) {
-  return getCableSpecOptions(cableType).map((value) => {
-    const match = String(value).match(/^(\S+)\s+(.+)$/)
-    return {
-      value,
-      model: match ? match[1] : value,
-      size: match ? match[2] : '',
-    }
-  })
-}
-
-function findOptionId(options, pattern, fallback) {
-  const option = options.find((item) => pattern.test(item.label))
-  return option ? option.id : fallback
-}
-
-function connectorPickerIndex(value) {
-  const exact = CONNECTOR_PICKER_OPTIONS.findIndex((option) => option.id === value)
-  return exact >= 0 ? exact : CUSTOM_CONNECTOR_INDEX
-}
+const {
+  createLineEditor,
+  DEFAULT_AUDIO_SPEC,
+  ROUTE_ENDPOINT_FIELDS,
+  optionIndex,
+  getCableSpecOptions,
+  getDefaultSpec,
+  getCableSpecOptionViews,
+  safeToast,
+} = require('./line-editor')
+const { createDeviceEditor } = require('./device-editor')
 
 function optionLabel(options, id, fallback = '待确认') {
   const option = options.find((item) => item.id === id)
@@ -85,34 +46,6 @@ function optionLabel(options, id, fallback = '待确认') {
 
 function sameRouteEndpoints(left, right) {
   return ROUTE_ENDPOINT_FIELDS.every((field) => String(left && left[field] || '').trim() === String(right && right[field] || '').trim())
-}
-
-function uniqueValues(lines, fields, limit = 8) {
-  const values = []
-  const seen = new Set()
-  lines.forEach((line) => fields.forEach((field) => {
-    const value = String(line[field] || '').trim()
-    if (value && !seen.has(value)) {
-      seen.add(value)
-      values.push(value)
-    }
-  }))
-  return values.slice(0, limit)
-}
-
-function formatCode(value) {
-  return `A${String(Math.max(1, Number(value) || 1)).padStart(3, '0')}`
-}
-
-function getNextPreviewCode(schedule) {
-  const used = new Set(schedule.lines.map((line) => String(line.code || '').toLocaleLowerCase()))
-  let number = schedule.nextNumber
-  let code = formatCode(number)
-  while (used.has(code.toLocaleLowerCase())) {
-    number += 1
-    code = formatCode(number)
-  }
-  return code
 }
 
 function decorateLine(line) {
@@ -135,10 +68,6 @@ function decorateLine(line) {
 
 function hasMissingProject(error) {
   return /不存在|已删除|缺少项目|项目编号/i.test(String(error || ''))
-}
-
-function safeToast(title) {
-  if (typeof wx !== 'undefined' && typeof wx.showToast === 'function') wx.showToast({ title, icon: 'none' })
 }
 
 const pageDefinition = {
@@ -222,43 +151,6 @@ const pageDefinition = {
     reportSaveError: '',
   },
 
-  onLoad(options = {}) {
-    this.projectId = typeof options.id === 'string' ? options.id : ''
-    this._destroyed = false
-    this._hidden = false
-    this._skipNextShowRefresh = true
-    this._searchTimer = null
-    this._searchRevision = 0
-    this._reportRevision = 0
-    this._projectLoadRevision = 0
-    this._projectPickerRevision = 0
-    this._reportSignature = ''
-    this._reportPending = false
-    this._reportSaveJobRevision = 0
-    this._reportSaveJob = null
-    this._reportSaveInFlight = null
-    this._reportSavedPages = new Map()
-    this._schedule = emptySchedule()
-    this._draftBaseline = ''
-    this._draftTouched = false
-    this._draftIsCopy = false
-    this._batchCommand = null
-    this._batchDirty = false
-    const formViewport = this.getFormWindowMetrics()
-    this._formViewportBaselineHeight = formViewport.windowHeight
-    this._formViewportScreenWidth = formViewport.screenWidth
-    this._formKeyboardHeight = 0
-    this._formInputId = ''
-    this._formScrollRevision = 0
-    this._formScrollTimer = null
-    this._formBlurTimer = null
-    if (this.projectId) {
-      this.refreshProjectWiring()
-      return
-    }
-    this.openInitialProject(null)
-  },
-
   openInitialProject(project) {
     if (this._destroyed) return
     if (project && project.id) {
@@ -269,35 +161,6 @@ const pageDefinition = {
     this.projectId = ''
     this.setData({ loading: false, selectionRequired: true, project: null, loadError: '' })
     this.openProjectPicker()
-  },
-
-  onShow() {
-    this._hidden = false
-    if (!this.data.editorVisible && !this.data.batchVisible) this.updateFormViewportBaseline()
-    if (this._skipNextShowRefresh) {
-      this._skipNextShowRefresh = false
-      return
-    }
-    if (!this.data.editorVisible && !this.data.batchVisible && this.projectId) this.refreshProjectWiring()
-  },
-
-  onHide() {
-    this._hidden = true
-    this.clearFormKeyboardViewport()
-    this._formInputId = ''
-    if (this._formBlurTimer) clearTimeout(this._formBlurTimer)
-    this._formBlurTimer = null
-    this.invalidateExport(false)
-  },
-
-  onUnload() {
-    this._destroyed = true
-    this._hidden = true
-    this.resetFormKeyboardAvoidance(false)
-    this._searchRevision += 1
-    if (this._searchTimer) clearTimeout(this._searchTimer)
-    this._searchTimer = null
-    this.invalidateExport(false)
   },
 
   getFormWindowMetrics() {
@@ -807,342 +670,6 @@ const pageDefinition = {
     this.setData({ searchText: '', visibleLines: this.filterLines('') })
   },
 
-  makeDefaultDraft() {
-    return {
-      purpose: '',
-      fromDevice: '',
-      fromPort: '',
-      toDevice: '',
-      toPort: '',
-      buildType: 'finished',
-      cableType: 'balanced',
-      spec: DEFAULT_AUDIO_SPEC,
-      connectorA: findOptionId(CONNECTOR_OPTIONS, /XLR\s*母/, 'xlrFemale'),
-      connectorB: findOptionId(CONNECTOR_OPTIONS, /XLR\s*公/, 'xlrMale'),
-      lengthText: '',
-      status: 'pending',
-      notes: '',
-    }
-  },
-
-  getHistoryData(draft) {
-    const lines = this._schedule.lines
-    return {
-      fromDeviceHistory: uniqueValues(lines, ['fromDevice', 'toDevice']),
-      fromPortHistory: uniqueValues(draft.fromDevice
-        ? lines.filter((line) => line.fromDevice === draft.fromDevice || line.toDevice === draft.fromDevice)
-        : lines, ['fromPort', 'toPort']),
-      toDeviceHistory: uniqueValues(lines, ['toDevice', 'fromDevice']),
-      toPortHistory: uniqueValues(draft.toDevice
-        ? lines.filter((line) => line.toDevice === draft.toDevice || line.fromDevice === draft.toDevice)
-        : lines, ['toPort', 'fromPort']),
-    }
-  },
-
-  setDraft(draft, { isNew = false, isCopy = false, touched = false } = {}) {
-    this.beginFormKeyboardAvoidance('editor')
-    const normalizedDraft = { ...this.makeDefaultDraft(), ...draft }
-    const existingLine = !isNew && normalizedDraft.id
-      ? this._schedule.lines.find((line) => line.id === normalizedDraft.id)
-      : null
-    this._draftBaseline = existingLine ? JSON.stringify(existingLine) : ''
-    this._draftTouched = touched
-    this._draftIsCopy = isCopy
-    this._draftDefaultSpec = isNew && !isCopy
-    const knownConnectorIds = new Set(CONNECTOR_OPTIONS.filter((option) => option.id !== 'custom').map((option) => option.id))
-    const customConnectorA = normalizedDraft.connectorA && normalizedDraft.connectorA !== 'custom' && !knownConnectorIds.has(normalizedDraft.connectorA)
-      ? normalizedDraft.connectorA : ''
-    const customConnectorB = normalizedDraft.connectorB && normalizedDraft.connectorB !== 'custom' && !knownConnectorIds.has(normalizedDraft.connectorB)
-      ? normalizedDraft.connectorB : ''
-    this._customConnectors = { connectorA: customConnectorA, connectorB: customConnectorB }
-    this._connectorTouched = { connectorA: false, connectorB: false }
-    this._optionIndexes = {
-      buildType: optionIndex(BUILD_OPTIONS, normalizedDraft.buildType),
-      cableType: optionIndex(CABLE_OPTIONS, normalizedDraft.cableType),
-      connectorA: connectorPickerIndex(normalizedDraft.connectorA),
-      connectorB: connectorPickerIndex(normalizedDraft.connectorB),
-      status: optionIndex(STATUS_OPTIONS, normalizedDraft.status),
-    }
-    this.setData({
-      editorVisible: true,
-      draftIsNew: isNew,
-      draftCode: normalizedDraft.code || getNextPreviewCode(this._schedule),
-      draft: normalizedDraft,
-      specOptions: getCableSpecOptions(normalizedDraft.cableType),
-      specOptionViews: getCableSpecOptionViews(normalizedDraft.cableType),
-      formScrollTarget: '',
-      formScrollTop: 0,
-      buildIndex: this._optionIndexes.buildType,
-      cableIndex: this._optionIndexes.cableType,
-      connectorAIndex: this._optionIndexes.connectorA,
-      connectorBIndex: this._optionIndexes.connectorB,
-      customConnectorA,
-      customConnectorB,
-      statusIndex: this._optionIndexes.status,
-      formError: '',
-      formFieldErrors: {},
-      saveError: '',
-      saving: false,
-      ...this.getHistoryData(normalizedDraft),
-    })
-  },
-
-  openNewLine() {
-    if (!this.data.project || this.data.loading) return
-    this.invalidateExport(false)
-    this._draftIsCopy = false
-    this.setDraft(this.makeDefaultDraft(), { isNew: true })
-  },
-
-  editLine(event) {
-    const id = event.currentTarget.dataset.id
-    const line = this._schedule.lines.find((item) => item.id === id)
-    if (!line) return
-    this.invalidateExport(false)
-    this.setDraft({ ...line }, { isNew: false })
-  },
-
-  onDraftInput(event) {
-    const field = event.currentTarget.dataset.field
-    if (!DRAFT_FIELDS.has(field) || !this.data.draft) return
-    const value = event.detail.value === undefined ? '' : String(event.detail.value)
-    if (field === 'spec') this._draftDefaultSpec = false
-    this._draftTouched = true
-    const draft = { ...this.data.draft, [field]: value }
-    const formFieldErrors = { ...this.data.formFieldErrors }
-    delete formFieldErrors[field]
-    this.setData({
-      draft,
-      ...(field === 'fromDevice' || field === 'fromPort' || field === 'toDevice' || field === 'toPort'
-        ? this.getHistoryData(draft)
-        : {}),
-      formError: '',
-      formFieldErrors,
-      saveError: '',
-      formScrollTarget: '',
-    })
-  },
-
-  chooseSpecPreset(event) {
-    const value = String(event.currentTarget.dataset.value || '')
-    if (!this.data.draft || !this.data.specOptions.includes(value)) return
-    this.onDraftInput({ currentTarget: { dataset: { field: 'spec' } }, detail: { value } })
-  },
-
-  chooseHistoryValue(event) {
-    const field = event && event.currentTarget && event.currentTarget.dataset && event.currentTarget.dataset.field
-    const historyByField = {
-      fromDevice: 'fromDeviceHistory',
-      fromPort: 'fromPortHistory',
-      toDevice: 'toDeviceHistory',
-      toPort: 'toPortHistory',
-    }
-    if (!Object.prototype.hasOwnProperty.call(historyByField, field)) return
-    const historyField = historyByField[field]
-    if (!historyField || !this.data.draft || this.data.saving || !event.detail) return
-    const rawIndex = event.detail.value
-    if (typeof rawIndex !== 'number' && typeof rawIndex !== 'string') return
-    if (rawIndex === null || rawIndex === undefined || (typeof rawIndex === 'string' && rawIndex.trim() === '')) return
-    const index = Number(rawIndex)
-    const history = this.data[historyField]
-    if (!Array.isArray(history) || !Number.isInteger(index) || index < 0 || index >= history.length) return
-    const value = history[index]
-    this._draftTouched = true
-    const draft = { ...this.data.draft, [field]: value }
-    const formFieldErrors = { ...this.data.formFieldErrors }
-    delete formFieldErrors[field]
-    this.setData({ draft, ...this.getHistoryData(draft), formError: '', formFieldErrors, saveError: '' })
-  },
-
-  onOptionChange(event) {
-    const field = event.currentTarget.dataset.field
-    const optionsByField = {
-      buildType: BUILD_OPTIONS,
-      cableType: CABLE_OPTIONS,
-      connectorA: CONNECTOR_PICKER_OPTIONS,
-      connectorB: CONNECTOR_PICKER_OPTIONS,
-      status: STATUS_OPTIONS,
-    }
-    const options = optionsByField[field]
-    const index = Number(event.detail.value)
-    if (!options || !Number.isInteger(index) || !options[index]) return
-    this._draftTouched = true
-    let draft = { ...this.data.draft, [field]: options[index].id }
-    const changes = {}
-    if (field === 'cableType') {
-      changes.specOptions = getCableSpecOptions(draft.cableType)
-      changes.specOptionViews = getCableSpecOptionViews(draft.cableType)
-      if (this._draftDefaultSpec) draft.spec = getDefaultSpec(draft.cableType)
-    }
-    if (field === 'cableType' && this.data.draftIsNew && options[index].id !== 'balanced') {
-      ;['connectorA', 'connectorB'].forEach((connectorField) => {
-        if (!this._connectorTouched[connectorField] && ['xlrFemale', 'xlrMale'].includes(draft[connectorField])) {
-          draft[connectorField] = ''
-          this._optionIndexes[connectorField] = optionIndex(CONNECTOR_PICKER_OPTIONS, '')
-          changes[connectorField === 'connectorA' ? 'connectorAIndex' : 'connectorBIndex'] = this._optionIndexes[connectorField]
-          changes[connectorField === 'connectorA' ? 'customConnectorA' : 'customConnectorB'] = ''
-        }
-      })
-    }
-    if (field === 'connectorA' || field === 'connectorB') {
-      this._connectorTouched[field] = true
-      if (options[index].id === 'custom') draft[field] = this._customConnectors[field] || ''
-      else {
-        draft[field] = options[index].id
-        this._customConnectors[field] = ''
-        changes[field === 'connectorA' ? 'customConnectorA' : 'customConnectorB'] = ''
-      }
-    }
-    this._optionIndexes[field] = index
-    const indexField = {
-      buildType: 'buildIndex', cableType: 'cableIndex', connectorA: 'connectorAIndex',
-      connectorB: 'connectorBIndex', status: 'statusIndex',
-    }[field]
-    this.setData({ draft, [indexField]: index, ...changes, formError: '', saveError: '' })
-  },
-
-  onCustomConnectorInput(event) {
-    const field = event.currentTarget.dataset.field
-    if (!['connectorA', 'connectorB'].includes(field)) return
-    const value = String(event.detail.value || '')
-    this._connectorTouched[field] = true
-    this._customConnectors[field] = value
-    this._draftTouched = true
-    this.setData({
-      draft: { ...this.data.draft, [field]: value },
-      [field === 'connectorA' ? 'customConnectorA' : 'customConnectorB']: value,
-    })
-  },
-
-  hasUnsavedDraft() {
-    if (!this._draftTouched) return false
-    if (this.data.draftIsNew || !this._draftBaseline) return true
-    const baseline = JSON.parse(this._draftBaseline)
-    return [...DRAFT_FIELDS].some((field) => this.data.draft[field] !== baseline[field])
-  },
-
-  requestCloseEditor() {
-    if (this.data.saving) return
-    if (!this.hasUnsavedDraft()) {
-      this.closeEditor()
-      return
-    }
-    wx.showModal({
-      title: '放弃未保存修改？',
-      content: '关闭后，本次填写的线路内容不会保存。',
-      confirmText: '放弃修改',
-      confirmColor: '#d70015',
-      success: ({ confirm }) => {
-        if (confirm && !this._destroyed) this.closeEditor()
-      },
-    })
-  },
-
-  closeEditor() {
-    this.resetFormKeyboardAvoidance()
-    this._draftTouched = false
-    this._draftBaseline = ''
-    this.setData({ editorVisible: false, draft: null, formError: '', formFieldErrors: {}, saveError: '', saving: false })
-  },
-
-  showMissingRouteFields(missingFields) {
-    const formFieldErrors = {}
-    missingFields.forEach(({ field, label }) => { formFieldErrors[field] = `请填写${label}` })
-    const firstMissing = missingFields[0]
-    if (!firstMissing) return
-    this.setData({
-      formError: `还缺少：${missingFields.map(({ label }) => label).join('、')}。`,
-      formFieldErrors,
-      formScrollTarget: '',
-    }, () => {
-      if (this._destroyed || this._hidden || !this.data.editorVisible) return
-      this.setData({ formScrollTop: 0, formScrollTarget: firstMissing.target })
-    })
-  },
-
-  saveLine() {
-    const draft = this.data.draft
-    if (!draft || this.data.saving) return
-    const missingFields = REQUIRED_ROUTE_FIELDS.filter(({ field }) => !String(draft[field] || '').trim())
-    if (missingFields.length) {
-      this.showMissingRouteFields(missingFields)
-      return
-    }
-    const line = { ...draft }
-    if (this.data.draftIsNew) {
-      delete line.id
-      delete line.code
-    }
-    this.saveCommand({ type: 'upsert', line }, (result) => {
-      const savedLine = result.schedule.lines.find((item) => item.id === (line.id || result.lineIds?.[0]))
-      this.closeEditor()
-      this.acceptSavedSchedule(result)
-      if (savedLine) {
-        const label = require('./workspace-model').circleLabel(savedLine, result.schedule)
-        wx.showToast({ title: `${label} 已保存`, icon: 'success' })
-      }
-    })
-  },
-
-  deleteLine() {
-    if (this.data.draftIsNew || !this.data.draft || this.data.saving) return
-    const code = require('./workspace-model').circleLabel(this.data.draft, this._schedule)
-    wx.showModal({
-      title: '删除线路？',
-      content: `将从本项目布线表中删除 ${code}。`,
-      confirmText: '删除',
-      confirmColor: '#d70015',
-      success: ({ confirm }) => {
-        if (!confirm || this._destroyed) return
-        this.saveCommand({ type: 'delete', id: this.data.draft.id }, (result) => {
-          this.closeEditor()
-          this.acceptSavedSchedule(result)
-          wx.showToast({ title: '线路已删除', icon: 'success' })
-        })
-      },
-    })
-  },
-
-  duplicateLine() {
-    if (this.data.draftIsNew || !this.data.draft || this.data.saving) return
-    const duplicate = { ...this.data.draft, id: '', code: '', status: 'pending' }
-    this._draftIsCopy = true
-    this.setDraft(duplicate, { isNew: true, isCopy: true, touched: true })
-    safeToast('复制内容已打开为新线路，原线路未修改；请确认两端端口后保存')
-  },
-
-  saveCommand(command, onSuccess) {
-    if (!this.projectId || !this.data.project || this.data.saving) return false
-    this.invalidateExport(true)
-    this.setData({ saving: true, saveError: '', formError: '', batchError: '' })
-    let result
-    try {
-      result = saveProjectWiring(this.projectId, command, this._schedule.revision)
-    } catch (error) {
-      result = { ok: false, error: error && error.message ? error.message : '保存失败，请重试。' }
-    }
-    const handleResult = (response) => {
-      if (this._destroyed) return
-      if (!response || response.ok !== true || !response.schedule) {
-        const error = response && response.error ? String(response.error) : '保存失败，请重试。'
-        this.setData({
-          saving: false,
-          saveError: this.data.editorVisible ? error : '',
-          batchError: this.data.batchVisible ? error : '',
-        })
-        if (!this.data.editorVisible && !this.data.batchVisible) safeToast(error)
-        return
-      }
-      onSuccess(response)
-    }
-    if (result && typeof result.then === 'function') result.then(handleResult).catch((error) => handleResult({
-      ok: false,
-      error: error && error.message ? error.message : '保存失败，请重试。',
-    }))
-    else handleResult(result)
-    return true
-  },
-
   acceptSavedSchedule(result) {
     this._loadedSignature = ''
     this.applyLoadResult({
@@ -1401,6 +928,7 @@ const pageDefinition = {
       data: text,
       success: () => {
         if (this._destroyed || revision !== this._schedule.revision) return
+        if (!this._hidden) vibrate('medium')
         safeToast('布线清单已复制')
       },
       fail: () => {
@@ -1409,412 +937,29 @@ const pageDefinition = {
     })
   },
 
-  selectExportType(event) {
-    const index = Number(event.detail.value)
-    if (!Number.isInteger(index) || !EXPORT_TYPES[index]) return
-    if (index === this.data.exportTypeIndex) return
-    this.invalidateExport(true)
-    this.setData({ exportTypeIndex: index, reportImages: [], reportImagePath: '', reportPreviewVisible: false })
-  },
-
-  invalidateExport(clearImages) {
-    const wasRunning = Boolean(this._reportSaveJob)
-    this.cancelReportSaveJob()
-    const wasPending = Boolean(this._reportPending)
-    this._reportRevision = (this._reportRevision || 0) + 1
-    this._reportPending = false
-    if (wasPending) {
-      if (typeof wx !== 'undefined' && typeof wx.hideLoading === 'function') wx.hideLoading()
-    }
-    const changes = {
-      reportPreviewVisible: false,
-      reportSaveRunning: false,
-      reportSaveInFlight: Boolean(this._reportSaveInFlight),
-    }
-    if (!clearImages && (wasRunning || this._reportSaveInFlight)) {
-      changes.reportSaveMessage = this.getInactiveReportSaveMessage()
-    }
-    if (clearImages) {
-      this._reportSignature = ''
-      if (this._reportSavedPages) this._reportSavedPages.clear()
-      changes.reportImages = []
-      changes.reportImagePath = ''
-      changes.reportSavedPageIndices = []
-      changes.reportSaveMessage = ''
-      changes.reportSaveError = ''
-      changes.reportSaveAllLabel = '保存全部0张'
-    }
-    if (this.data && !this._destroyed) this.setData(changes)
-  },
-
-  generateExport(typeOverride = '') {
-    if (!this.data.project || !this._schedule.lines.length || this.data.loading || this.data.saving) {
-      safeToast(this.data.project ? '请先添加线路，再导出图片' : '请先选择项目')
-      return
-    }
-    const selectedType = EXPORT_TYPES[this.data.exportTypeIndex] && EXPORT_TYPES[this.data.exportTypeIndex].id
-    const type = EXPORT_TYPES.some((option) => option.id === typeOverride)
-      ? typeOverride
-      : (selectedType || 'lines')
-    const expectedProjectId = this.projectId
-    const expectedScheduleRevision = this._schedule.revision
-    const signature = `${expectedProjectId}:${expectedScheduleRevision}:${type}`
-    if (signature === this._reportSignature && this.data.reportImages.length) {
-      this.syncReportSaveView()
-      this.showReportPage(0)
-      return
-    }
-    let reportModule
-    try {
-      reportModule = require('./report')
-    } catch (error) {
-      safeToast('图片报告模块暂不可用')
-      return
-    }
-    if (!reportModule || typeof reportModule.buildScheduleReportPages !== 'function'
-      || typeof reportModule.drawScheduleReport !== 'function') {
-      safeToast('图片报告模块暂不可用')
-      return
-    }
-    if (typeof wx.createCanvasContext !== 'function' || typeof wx.canvasToTempFilePath !== 'function') {
-      safeToast('当前微信版本暂不支持生成图片')
-      return
-    }
-    let report
-    try {
-      report = reportModule.buildScheduleReportPages(this.data.project.name, this._schedule, type)
-    } catch (error) {
-      safeToast('图片清单生成失败，请重试')
-      return
-    }
-    const pages = report && Array.isArray(report.pages) ? report.pages : []
-    if (!pages.length) {
-      safeToast('暂无线路可导出')
-      return
-    }
-    this.invalidateExport(true)
-    const revision = this._reportRevision
-    const pageImages = []
-    const isCurrent = () => !this._destroyed && !this._hidden && this._reportRevision === revision
-      && this.projectId === expectedProjectId
-      && this._schedule.revision === expectedScheduleRevision
-      && !this.data.editorVisible && !this.data.batchVisible
-    this._reportPending = true
-    if (typeof wx.showLoading === 'function') wx.showLoading({ title: '正在生成图片', mask: true })
-
-    const finish = (error) => {
-      if (!isCurrent()) return
-      this._reportPending = false
-      if (typeof wx.hideLoading === 'function') wx.hideLoading()
-      if (error) {
-        this.setData({ reportImages: [], reportImagePath: '', reportPreviewVisible: false })
-        safeToast(error)
-        return
-      }
-      this._reportSignature = signature
-      this.setData({
-        reportImages: pageImages,
-        reportPageIndex: 0,
-        reportSaveMessage: '',
-        reportSaveError: '',
-      }, () => {
-        if (!isCurrent()) return
-        this.syncReportSaveView()
-        this.showReportPage(0)
-      })
-    }
-
-    const exportPage = (index) => {
-      if (!isCurrent()) return
-      if (index >= pages.length) {
-        finish('')
-        return
-      }
-      const page = pages[index]
-      const width = Number(page.width) || 720
-      const height = Number(page.height) || 400
-      this.setData({ reportCanvasWidth: width, reportCanvasHeight: height }, () => {
-        if (!isCurrent()) return
-        try {
-          const context = wx.createCanvasContext(REPORT_CANVAS_ID, this)
-          reportModule.drawScheduleReport(context, page, { theme: 'light' })
-          context.draw(false, () => {
-            if (!isCurrent()) return
-            wx.canvasToTempFilePath({
-              canvasId: REPORT_CANVAS_ID,
-              x: 0,
-              y: 0,
-              width,
-              height,
-              destWidth: width * 2,
-              destHeight: height * 2,
-              fileType: 'png',
-              quality: 1,
-              success: ({ tempFilePath }) => {
-                if (!isCurrent()) return
-                if (!tempFilePath) {
-                  finish('图片生成失败，请重试')
-                  return
-                }
-                pageImages.push({ path: tempFilePath, title: page.title || report.title || '布线清单' })
-                exportPage(index + 1)
-              },
-              fail: () => {
-                if (isCurrent()) finish('图片生成失败，请重试')
-              },
-            }, this)
-          })
-        } catch (error) {
-          if (isCurrent()) finish('图片生成失败，请重试')
-        }
-      })
-    }
-    exportPage(0)
-  },
-
-  showReportPage(index) {
-    const item = this.data.reportImages[index]
-    if (!item) return
-    this.setData({
-      reportPageIndex: index,
-      reportPageTitle: item.title,
-      reportImagePath: item.path,
-      reportPreviewVisible: true,
-    })
-    this.syncReportSaveView()
-  },
-
-  onReportPageSwipe(event) {
-    const index = Number(event && event.detail && event.detail.current)
-    if (this._destroyed || this._hidden || !this.data.reportPreviewVisible || !Number.isSafeInteger(index)
-      || index < 0 || index >= this.data.reportImages.length) return false
-    if (index === this.data.reportPageIndex) return true
-    this.showReportPage(index)
-    return true
-  },
-
-  previousReportPage() {
-    if (this.data.reportPageIndex <= 0) return
-    this.showReportPage(this.data.reportPageIndex - 1)
-  },
-
-  nextReportPage() {
-    if (this.data.reportPageIndex >= this.data.reportImages.length - 1) return
-    this.showReportPage(this.data.reportPageIndex + 1)
-  },
-
-  closeReportPreview() {
-    const wasRunning = Boolean(this._reportSaveJob)
-    this.cancelReportSaveJob()
-    this.setData({
-      reportPreviewVisible: false,
-      reportSaveRunning: false,
-      reportSaveInFlight: Boolean(this._reportSaveInFlight),
-      ...(wasRunning || this._reportSaveInFlight
-        ? { reportSaveMessage: this.getInactiveReportSaveMessage() }
-        : {}),
-    })
-  },
-
-  previewReportImage() {
-    const urls = this.data.reportImages.map((image) => image.path).filter(Boolean)
-    if (!this.data.reportImagePath || !urls.length || typeof wx.previewImage !== 'function') return
-    wx.previewImage({ current: this.data.reportImagePath, urls })
-  },
-
-  saveReportImage() {
-    this.startReportSaveJob([this.data.reportPageIndex], 'single')
-  },
-
-  getReportSavedPageSet(signature = this._reportSignature) {
-    if (!signature) return new Set()
-    if (!this._reportSavedPages) this._reportSavedPages = new Map()
-    if (!this._reportSavedPages.has(signature)) this._reportSavedPages.set(signature, new Set())
-    return this._reportSavedPages.get(signature)
-  },
-
-  syncReportSaveView(extra = {}) {
-    if (!this.data || this._destroyed) return
-    const total = this.data.reportImages.length
-    const saved = this.getReportSavedPageSet()
-    const reportSavedPageIndices = [...saved].filter((index) => index >= 0 && index < total).sort((a, b) => a - b)
-    const remaining = Math.max(0, total - reportSavedPageIndices.length)
-    const reportSaveAllLabel = total > 0 && remaining === 0
-      ? `全部已保存${total}张`
-      : (reportSavedPageIndices.length ? `继续保存剩余${remaining}张` : `保存全部${total}张`)
-    const currentMessage = String(this.data.reportSaveMessage || '')
-    const staleActivityMessage = /^(准备保存|正在保存第|图片保存正在进行|当前图片保存请求仍在处理中|已停止后续保存；当前页请求无法取消|已停止后续请求)/.test(currentMessage)
-    const reportSaveMessage = !this._reportSaveJob && staleActivityMessage
-      ? this.getInactiveReportSaveMessage()
-      : currentMessage
-    this.setData({
-      reportSavedPageIndices,
-      reportSaveAllLabel,
-      reportSaveInFlight: Boolean(this._reportSaveInFlight),
-      reportSaveMessage,
-      ...extra,
-    })
-  },
-
-  getInactiveReportSaveMessage() {
-    if (this._reportSaveInFlight) {
-      return '已停止后续请求；当前图片保存无法取消，仍可能完成。完成后可继续。'
-    }
-    const total = this.data && Array.isArray(this.data.reportImages) ? this.data.reportImages.length : 0
-    const saved = this.getReportSavedPageSet().size
-    const remaining = Math.max(0, total - saved)
-    if (!remaining) return `已保存 ${saved} / ${total} 张。`
-    return `已停止后续请求；已保存 ${saved} / ${total} 张，可继续保存剩余 ${remaining} 张。`
-  },
-
-  isCurrentReportSaveJob(job) {
-    return Boolean(job && this._reportSaveJob === job && !job.cancelled && !this._destroyed && !this._hidden
-      && this._reportSignature === job.signature && this._reportRevision === job.reportRevision
-      && this.data.reportPreviewVisible && !this.data.editorVisible && !this.data.batchVisible)
-  },
-
-  cancelReportSaveJob() {
-    const job = this._reportSaveJob
-    if (!job) return
-    job.cancelled = true
-    this._reportSaveJob = null
-    this._reportSaveJobRevision = (this._reportSaveJobRevision || 0) + 1
-  },
-
-  saveReportImageFailureMessage(error) {
-    const message = String(error && (error.errMsg || error.message) || '')
-    if (/auth|authorize|permission|deny/i.test(message)) {
-      return '保存权限未开启。请在微信设置中允许保存到相册，再点“继续保存”重试。'
-    }
-    if (/cancel/i.test(message)) return '保存已取消；已完成的图片仍保留，可继续保存剩余页。'
-    return `保存失败${message ? `：${message}` : '，请重试'}；已完成的图片仍保留，可继续保存剩余页。`
-  },
-
-  startReportSaveJob(indices, mode) {
-    if (!this.data.reportPreviewVisible || !this.data.reportImages.length || !this._reportSignature) return
-    if (this._reportSaveJob || this._reportSaveInFlight) {
-      this.syncReportSaveView({
-        reportSaveMessage: this._reportSaveJob
-          ? (this._reportSaveInFlight ? '当前图片保存请求仍在处理中，完成后可继续。' : '图片保存正在进行。')
-          : this.getInactiveReportSaveMessage(),
-      })
-      return
-    }
-    if (typeof wx.saveImageToPhotosAlbum !== 'function') {
-      this.syncReportSaveView({ reportSaveError: '当前微信版本暂不支持保存图片。' })
-      return
-    }
-    const signature = this._reportSignature
-    const saved = this.getReportSavedPageSet(signature)
-    const uniqueIndices = [...new Set(indices)].filter((index) => Number.isInteger(index)
-      && index >= 0 && index < this.data.reportImages.length)
-    const queue = mode === 'single' ? uniqueIndices : uniqueIndices.filter((index) => !saved.has(index))
-    if (!queue.length) {
-      this.syncReportSaveView({
-        reportSaveMessage: mode === 'single' ? '当前页已保存。' : '当前报告所有图片都已保存。',
-        reportSaveError: '',
-      })
-      return
-    }
-    const job = {
-      id: ++this._reportSaveJobRevision,
-      signature,
-      savedSet: saved,
-      reportRevision: this._reportRevision,
-      queue,
-      position: 0,
-      mode,
-      cancelled: false,
-    }
-    this._reportSaveJob = job
-    this.syncReportSaveView({
-      reportSaveRunning: true,
-      reportSaveError: '',
-      reportSaveMessage: `准备保存 ${queue.length} 张图片…`,
-    })
-    this.runNextReportSavePage(job)
-  },
-
-  runNextReportSavePage(job) {
-    if (!this.isCurrentReportSaveJob(job)) return
-    if (job.position >= job.queue.length) {
-      const savedCount = this.getReportSavedPageSet(job.signature).size
-      this._reportSaveJob = null
-      this.syncReportSaveView({
-        reportSaveRunning: false,
-        reportSaveError: '',
-        reportSaveMessage: `已保存 ${savedCount} / ${this.data.reportImages.length} 张。`,
-      })
-      return
-    }
-    const index = job.queue[job.position]
-    const image = this.data.reportImages[index]
-    if (!image || !image.path) {
-      this._reportSaveJob = null
-      this.syncReportSaveView({
-        reportSaveRunning: false,
-        reportSaveError: `第 ${index + 1} 张没有可保存的图片路径；可继续重试。`,
-      })
-      return
-    }
-    const request = { job, index, done: false }
-    this._reportSaveInFlight = request
-    this.syncReportSaveView({ reportSaveInFlight: true, reportSaveMessage: `正在保存第 ${index + 1} / ${this.data.reportImages.length} 张…` })
-    const finish = (error) => {
-      if (request.done) return
-      request.done = true
-      if (this._reportSaveInFlight === request) this._reportSaveInFlight = null
-      if (!error && this._reportSignature === job.signature
-        && this.getReportSavedPageSet(job.signature) === job.savedSet) job.savedSet.add(index)
-      if (!this.isCurrentReportSaveJob(job)) return
-      if (error) {
-        this._reportSaveJob = null
-        this.syncReportSaveView({
-          reportSaveRunning: false,
-          reportSaveError: this.saveReportImageFailureMessage(error),
-          reportSaveMessage: `已保存 ${this.getReportSavedPageSet(job.signature).size} / ${this.data.reportImages.length} 张。`,
-        })
-        return
-      }
-      job.position += 1
-      this.syncReportSaveView({ reportSaveInFlight: false })
-      this.runNextReportSavePage(job)
-    }
-    try {
-      wx.saveImageToPhotosAlbum({
-        filePath: image.path,
-        success: () => finish(null),
-        fail: (error) => finish(error || { errMsg: '保存失败，请重试' }),
-      })
-    } catch (error) {
-      finish(error || { errMsg: '保存失败，请重试' })
-    }
-  },
-
-  saveAllReportImages() {
-    this.startReportSaveJob(this.data.reportImages.map((_, index) => index), 'all')
-  },
-
-  stopReportSaveJob() {
-    if (!this._reportSaveJob) return
-    this.cancelReportSaveJob()
-    const message = this._reportSaveInFlight
-      ? '已停止后续保存；当前页请求无法取消，可能仍会保存。完成后可继续。'
-      : '已停止保存，可继续保存剩余图片。'
-    this.syncReportSaveView({
-      reportSaveRunning: false,
-      reportSaveError: '',
-      reportSaveMessage: message,
-    })
-  },
-
-  shareReportImage() {
-    shareGeneratedImage(this.data.reportImagePath)
-  },
-
   stopEvent() {},
   preventTouchMove() {},
 }
 
 const { createWorkspaceUI } = require('./workspace-ui')
-Page({ ...pageDefinition, ...createWorkspaceUI(pageDefinition) })
+const { createReportController } = require('./report-controller')
+const { createPageLifecycle } = require('./page-lifecycle')
+
+const workspaceUI = createWorkspaceUI(pageDefinition)
+const editorDependencies = { applyScheduleChange, saveProjectWiring }
+const deviceEditor = createDeviceEditor(pageDefinition, editorDependencies)
+const lineEditor = createLineEditor(pageDefinition, editorDependencies)
+
+Page({
+  ...pageDefinition,
+  ...workspaceUI,
+  ...deviceEditor,
+  ...lineEditor,
+  ...createReportController({ exportTypes: EXPORT_TYPES, safeToast, vibrate, shareGeneratedImage }),
+  ...createPageLifecycle({
+    emptySchedule,
+    resetFormKeyboardAvoidance: pageDefinition.resetFormKeyboardAvoidance,
+    isPerformanceMeasurementEnabled,
+    startMeasurement,
+  }),
+})

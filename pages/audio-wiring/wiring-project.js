@@ -263,7 +263,7 @@ const methods = {
       return false
     }
     this.setData({ currentFavorite })
-    vibrate('medium')
+    vibrate('light')
     const title = wasFavorite
       ? (currentFavorite ? '当前兼容方案仍已收藏' : '已取消收藏')
       : '已收藏常用'

@@ -746,6 +746,10 @@ Page({
       viewMode: 'connectors',
       face: 'solder',
     }
+    const changed = this.data.outputId !== preferences.outputId || this.data.inputId !== preferences.inputId
+      || this.data.viewMode !== preferences.viewMode || this.data.face !== preferences.face
+      || Boolean(this.data.manualSelected && (this.data.manualSelected.output || this.data.manualSelected.input))
+      || Boolean(this.data.model || this.data.resultReportImagePath || this.data.resultReportPreviewVisible)
     if (!this._wiringStorageAvailable || typeof wx.setStorageSync !== 'function') {
       wx.showToast({ title: '重置未保存，请检查存储后重试', icon: 'none' })
       return false
@@ -763,7 +767,7 @@ Page({
     this._restoredReviewSides = { output: false, input: false }
     const model = null
     const reportOptions = getReportOptions({ ...preferences, theme: this.data.theme })
-    vibrate('light')
+    if (changed && this._pageVisible && !this._pageUnloaded) vibrate('light')
     this.setData({
       ...preferences,
       model,
@@ -1079,6 +1083,7 @@ Page({
         || this.data.selectorClosing || !this._pageVisible || this._pageUnloaded) return
       this.closeEndpointSelector()
     })
+    vibrate('light')
     this.persistWiringPreferences()
     syncPageFavorite(this)
     return true
@@ -1103,6 +1108,7 @@ Page({
       syncPageFavorite(this)
       this.renderDiagram()
     })
+    vibrate('light')
   },
 
   selectConnectorFace(event) {
@@ -1123,6 +1129,7 @@ Page({
       syncPageFavorite(this)
       this.renderDiagram()
     })
+    vibrate('light')
   },
 
   onDiagramTap(event) {
@@ -1190,6 +1197,7 @@ Page({
       resultReportCanvasHeight: getSafeReportHeight(EXPORT_WIDTH, model, this.data.resultReportCanvasHeight,
         getReportOptions({ ...this.data, selectedId })),
     }, () => this.renderDiagram())
+    vibrate('light')
   },
 
   copyConnection() {
@@ -1213,11 +1221,14 @@ Page({
     const lifecycle = this._wiringLifecycle
     const token = lifecycle && lifecycle.currentToken()
     const isCurrent = () => !lifecycle || lifecycle.isCurrent(token)
-    vibrate('medium')
     try {
       wx.setClipboardData({
         data: text,
-        success: () => { if (isCurrent()) wx.showToast({ title: '接法已复制', icon: 'success' }) },
+        success: () => {
+          if (!isCurrent()) return
+          if (this._pageVisible && !this._pageUnloaded) vibrate('medium')
+          wx.showToast({ title: '接法已复制', icon: 'success' })
+        },
         fail: () => { if (isCurrent()) wx.showToast({ title: '复制失败，请重试', icon: 'none' }) },
       })
     } catch (error) {
@@ -1234,12 +1245,13 @@ Page({
     }
     if (this.data.isGeneratingResultReport || this._reportPending) return
     if (this.data.resultReportImagePath) {
-      vibrate('light')
+      const previewWasHidden = !this.data.resultReportPreviewVisible
       this.clearResultReportPreviewCloseTimer()
       this.invalidateDiagramRender()
       this._reportPreviewLayoutRevision = (this._reportPreviewLayoutRevision || 0) + 1
       this.setData({ resultReportPreviewVisible: true, resultReportPreviewClosing: false, resultReportPreviewStyle: '' },
         () => this.updateResultReportPreviewLayout())
+      if (previewWasHidden && this._pageVisible && !this._pageUnloaded) vibrate('light')
       return
     }
     if (typeof wx.createCanvasContext !== 'function' || typeof wx.canvasToTempFilePath !== 'function') {
@@ -1247,7 +1259,6 @@ Page({
       return
     }
 
-    vibrate('medium')
     this.clearResultReportPreviewCloseTimer()
     const width = EXPORT_WIDTH
     const reportOptions = getReportOptions(this.data)
@@ -1296,6 +1307,7 @@ Page({
                         wx.showToast({ title: '图片生成失败，请重试', icon: 'none' })
                         return
                       }
+                      if (this._pageVisible && !this._pageUnloaded) vibrate('medium')
                       this.finishWiringGeneration(revision, {
                         resultReportImagePath: tempFilePath,
                         resultReportPreviewVisible: true,
@@ -1430,7 +1442,7 @@ Page({
   closeResultReportPreview(immediate) {
     if (!this.data.resultReportPreviewVisible
       || (this.data.resultReportPreviewClosing && immediate !== true)) return false
-    vibrate('light')
+    if (immediate !== true && this._pageVisible && !this._pageUnloaded) vibrate('light')
     const closeRevision = this.clearResultReportPreviewCloseTimer()
     const layoutRevision = this._reportPreviewLayoutRevision = (this._reportPreviewLayoutRevision || 0) + 1
     const hide = () => {

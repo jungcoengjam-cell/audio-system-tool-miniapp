@@ -1,4 +1,7 @@
 @import "../../styles/homepage.wxss";
+.basis-visibility-warning{display:flex;box-sizing:border-box;min-height:44px;margin:12rpx 0;padding:10rpx 14rpx;align-items:center;border:1rpx solid var(--theme-divider);border-radius:16rpx;background:var(--theme-warning-soft);color:var(--theme-warning);font-size:14px;line-height:1.45}
+.basis-empty-state{padding:30rpx 18rpx}
+.basis-settings-button{width:100%;max-width:220px;min-height:44px;margin:16rpx 0 0;font-size:14px}
 .home-basis-list{display:flex;margin-top:22rpx;flex-direction:column;gap:12rpx}
 .home-basis-row{display:flex;box-sizing:border-box;width:100%;min-height:144rpx;padding:18rpx 20rpx 16rpx;flex-direction:column;border:1rpx solid var(--theme-divider);border-radius:22rpx;background:var(--theme-surface);box-shadow:0 5rpx 16rpx var(--theme-shadow);text-decoration:none;transition:opacity .14s ease,transform .14s ease}
 .home-basis-card-heading{display:flex;min-width:0;align-items:center}

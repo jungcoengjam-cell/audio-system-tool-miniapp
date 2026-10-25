@@ -9,6 +9,7 @@ const {
   removeFavorite,
 } = require('../../utils/records')
 const { openRecordEditor } = require('../../utils/result-record-context')
+const { vibrate } = require('../../utils/haptics')
 const { amplifiers, speakers } = require('../../data/equipment')
 const { cameras } = require('../../data/cameras')
 const { amplifierInputStages } = require('../../data/amplifier-input-stages')
@@ -114,12 +115,24 @@ Page({
   },
 
   onLoad(options = {}) {
+    this._unloaded = false
+    this._pageVisible = true
     this.favoriteId = String(options.id || '')
     this.refresh({ forceRefresh: true })
   },
 
+  onUnload() {
+    this._unloaded = true
+    this._pageVisible = false
+  },
+
   onShow() {
+    this._pageVisible = true
     if (this.favoriteId) this.refresh({ forceRefresh: true })
+  },
+
+  onHide() {
+    this._pageVisible = false
   },
 
   refresh(options = {}) {
@@ -177,16 +190,21 @@ Page({
   },
 
   copyParameters() {
-    if (!this.data.favorite) return
+    const favorite = this.data.favorite
+    if (!favorite) return
     wx.setClipboardData({
-      data: this.data.favorite.parametersText,
-      success: () => wx.showToast({ title: '参数已复制', icon: 'none' }),
+      data: favorite.parametersText,
+      success: () => {
+        if (this._pageVisible && !this._unloaded && this.data.favorite?.id === favorite.id) vibrate('medium')
+        wx.showToast({ title: '参数已复制', icon: 'none' })
+      },
       fail: () => wx.showToast({ title: '复制失败，请重试', icon: 'none' }),
     })
   },
 
   toggleRawParameters() {
     this.setData({ rawParametersVisible: !this.data.rawParametersVisible })
+    vibrate('light')
   },
 
   openManageMenu() {
@@ -212,6 +230,7 @@ Page({
           wx.showToast({ title: '操作失败，请重试', icon: 'none' })
           return
         }
+        if (this._pageVisible && !this._unloaded && this.data.favorite?.id === favorite.id) vibrate('medium')
         wx.navigateBack()
       },
     })

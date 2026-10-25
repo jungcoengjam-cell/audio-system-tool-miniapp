@@ -2,7 +2,7 @@ const assert = require('node:assert/strict')
 const fs = require('node:fs')
 const Module = require('node:module')
 const path = require('node:path')
-const { createRuntime, makeFixture, clone, root } = require('./project-wiring-redesign-2026-10-16/runtime.cjs')
+const { createRuntime: createRuntimeFixture, makeFixture, clone, root } = require('./project-wiring-redesign-2026-10-16/runtime.cjs')
 const projectRecords = require('../utils/records')
 const { evidenceRoot } = require('./project-wiring-redesign-2026-10-16/module-refinements-support.cjs')
 
@@ -11,6 +11,16 @@ const activeKey = 'audioTool.activeProject.v1'
 const preferenceKey = 'audioTool.projectWiring.view.v1'
 const recordsPath = path.join(root, 'utils/records.js')
 const checks = []
+
+function createRuntime() {
+  const env = createRuntimeFixture()
+  // Interaction cases start with current storage; legacy cases set their own schema below.
+  Object.assign(env.storage, {
+    'audioTool.storageSchemaVersion': 4,
+    'audioTool.records.v1': [], 'audioTool.favorites.v1': [], 'audioTool.recovery.v1': [],
+  })
+  return env
+}
 
 function check(name, fn) { checks.push({ name, fn }) }
 function currentProject(env) { return env.storage[projectKey].find((item) => item.id === 'qa-project-1') }
@@ -117,12 +127,24 @@ check('deleted remembered ID clears to tab-only and a second relaunch does not a
 })
 
 check('preference read/write failures stay nonfatal and do not alter project records', () => {
+  const missingPreference = createRuntime()
+  missingPreference.storage[activeKey] = 'qa-project-2'
+  const unselectedPage = missingPreference.page()
+  assert.equal(unselectedPage.data.project, null)
+  assert.equal(unselectedPage.data.selectionRequired, true)
+  assert.equal(unselectedPage.data.projectPickerVisible, true)
+  assert.equal(missingPreference.storage[activeKey], 'qa-project-2')
+  assertNoProjectWrites(missingPreference)
+
   const readFailure = createRuntime()
   seedSecondProject(readFailure)
   readFailure.failPreferenceReads(true)
   readFailure.storage[activeKey] = 'qa-project-2'
   const fallbackPage = readFailure.page()
-  assert.equal(fallbackPage.data.project.id, 'qa-project-2')
+  assert.equal(fallbackPage.data.project, null)
+  assert.equal(fallbackPage.data.selectionRequired, true)
+  assert.equal(fallbackPage.data.projectPickerVisible, true)
+  assert.equal(readFailure.storage[activeKey], 'qa-project-2')
   assertNoProjectWrites(readFailure)
 
   const writeFailure = createRuntime()
@@ -321,7 +343,7 @@ check('device confirmation is explicit, cancellation is inert, and duplicate con
   const calls = []
   const page = withWorkspaceRecords((actual) => ({
     saveProjectWiring(...args) { calls.push(args); return actual.saveProjectWiring(...args) },
-  }), () => env.page())
+  }), () => env.page({ id: 'qa-project-1' }))
   const before = clone(currentProject(env).wiringSchedule)
   page.deleteWorkspaceRecord(deviceEvent(page, 'device', 'receiver-1'))
   const prompt = env.events.modals.at(-1)
@@ -348,14 +370,14 @@ check('unconnected device uses an explicit empty cascade set and stale revisions
   const env = createRuntime()
   const project = currentProject(env)
   project.wiringSchedule.devices.push({ id: 'unused-1', type: 'amplifier', name: 'Unused' })
-  const page = env.page()
+  const page = env.page({ id: 'qa-project-1' })
   page.deleteWorkspaceRecord(deviceEvent(page, 'device', 'unused-1'))
   assert.match(env.events.modals.at(-1).content, /Unused/)
   env.respondModal(true)
   assert.equal(currentProject(env).wiringSchedule.devices.some((device) => device.id === 'unused-1'), false)
 
   const stale = createRuntime()
-  const stalePage = stale.page()
+  const stalePage = stale.page({ id: 'qa-project-1' })
   stalePage.deleteWorkspaceRecord({ currentTarget: { dataset: { deleteType: 'line', id: 'qa-line-1', revision: stalePage._schedule.revision - 1 } } })
   assert.equal(stale.events.modals.length, 0)
   assert.equal(stale.events.writes.filter((write) => write.key === projectKey).length, 0)
@@ -363,7 +385,7 @@ check('unconnected device uses an explicit empty cascade set and stale revisions
 
 check('a target deleted externally before confirmation cannot cascade into other records', () => {
   const env = createRuntime()
-  const page = env.page()
+  const page = env.page({ id: 'qa-project-1' })
   page.deleteWorkspaceRecord(deviceEvent(page, 'device', 'receiver-1'))
   const modal = env.events.modals.at(-1)
   const exactIds = page._schedule.lines.filter((line) => line.fromDeviceId === 'receiver-1' || line.toDeviceId === 'receiver-1').map((line) => line.id)
@@ -388,7 +410,7 @@ check('save failure keeps the row and data intact so a fresh confirmation can re
       calls.push(args)
       return fail ? { ok: false, error: 'QA save failure' } : actual.saveProjectWiring(...args)
     },
-  }), () => env.page())
+  }), () => env.page({ id: 'qa-project-1' }))
   const before = clone(currentProject(env).wiringSchedule)
   page.deleteWorkspaceRecord(deviceEvent(page, 'device', 'unused-1'))
   env.respondModal(true)
@@ -414,7 +436,7 @@ check('legacy same-name endpoint deletes only its exact legacy line IDs', () => 
   const calls = []
   const page = withWorkspaceRecords((actual) => ({
     saveProjectWiring(...args) { calls.push(args); return actual.saveProjectWiring(...args) },
-  }), () => env.page())
+  }), () => env.page({ id: 'qa-project-1' }))
   const legacyId = `legacy:${JSON.stringify(deviceName)}`
   page.deleteWorkspaceRecord(deviceEvent(page, 'device', legacyId))
   const prompt = env.events.modals.at(-1)
@@ -432,7 +454,7 @@ check('filtered later line group deletes by stable line ID, not source group ind
   const calls = []
   const page = withWorkspaceRecords((actual) => ({
     saveProjectWiring(...args) { calls.push(args); return actual.saveProjectWiring(...args) },
-  }), () => env.page())
+  }), () => env.page({ id: 'qa-project-1' }))
   page.onWorkspaceTab({ currentTarget: { dataset: { tab: 'lines' } } })
   page.applySearch({ detail: { value: 'A004' } })
   assert.equal(page.data.groups.length, 1)
@@ -462,7 +484,7 @@ check('filtered later line group deletes by stable line ID, not source group ind
 
 check('row gesture keeps an unmoved child tap and suppresses post-scroll detail taps', () => {
   const env = createRuntime()
-  const page = env.page()
+  const page = env.page({ id: 'qa-project-1' })
   page.onWorkspaceTab({ currentTarget: { dataset: { tab: 'lines' } } })
   const group = page.data.groups[0]
   const id = group.lines[0].id
@@ -481,7 +503,7 @@ check('row gesture keeps an unmoved child tap and suppresses post-scroll detail 
 
 check('swipe direction lock, one-open-row rule, cancel, and tab/search/form/share/lifecycle cleanup', () => {
   const env = createRuntime()
-  const page = env.page()
+  const page = env.page({ id: 'qa-project-1' })
   const deviceGesture = (id, startX = 200, startY = 100) => ({
     currentTarget: { dataset: { swipeType: 'device', swipeId: id, revision: page._schedule.revision } },
     touches: [{ clientX: startX, clientY: startY }],
@@ -547,7 +569,7 @@ check('delete confirmation is invalidated by hide/project switch and unload call
   const calls = []
   const page = withWorkspaceRecords((actual) => ({
     saveProjectWiring(...args) { calls.push(args); return actual.saveProjectWiring(...args) },
-  }), () => env.page())
+  }), () => env.page({ id: 'qa-project-1' }))
   page.deleteWorkspaceRecord(deviceEvent(page, 'device', 'receiver-1'))
   const hiddenModal = env.events.modals.at(-1)
   page.onHide()
@@ -586,7 +608,7 @@ check('async save invalidates exports; hide-show-load race refreshes current pro
       saveCalls++
       return new Promise((resolve) => { resolveSave = () => resolve(actual.saveProjectWiring(...args)) })
     },
-  }), () => env.page())
+  }), () => env.page({ id: 'qa-project-1' }))
   page._reportSignature = 'qa-project-1:0:lines'
   page._reportPending = true
   const reportRevision = page._reportRevision

@@ -1,5 +1,6 @@
 'use strict'
 
+const { vibrate } = require('../../utils/haptics')
 const {
   getProjects,
   getRecoveryEntries,
@@ -53,7 +54,17 @@ Page({
   },
 
   onShow() {
+    this._pageVisible = true
     this.refresh()
+  },
+
+  onHide() {
+    this._pageVisible = false
+  },
+
+  onUnload() {
+    this._unloaded = true
+    this._pageVisible = false
   },
 
   refresh() {
@@ -108,6 +119,7 @@ Page({
             wx.showToast({ title: '恢复失败，记录仍保留在恢复区', icon: 'none' })
             return
           }
+          if (this._pageVisible && !this._unloaded) vibrate('medium')
           this.refresh()
           wx.showToast({ title: `已恢复到${project.name}`, icon: 'none' })
         },
@@ -118,6 +130,7 @@ Page({
       wx.showToast({ title: '恢复失败，内容仍保留在恢复区', icon: 'none' })
       return
     }
+    if (this._pageVisible && !this._unloaded) vibrate('medium')
     this.refresh()
     wx.showToast({ title: '已恢复', icon: 'none' })
   },
@@ -135,6 +148,7 @@ Page({
           wx.showToast({ title: '备份恢复失败，当前内容未被替换', icon: 'none' })
           return
         }
+        if (this._pageVisible && !this._unloaded) vibrate('medium')
         wx.showToast({ title: '原始数据已还原', icon: 'none' })
         wx.navigateBack()
       },
@@ -144,6 +158,7 @@ Page({
   resumeSession(event) {
     const id = String(event.currentTarget.dataset.id || '')
     if (!resumeResultEditor(id)) wx.showToast({ title: '草稿恢复失败，请重试', icon: 'none' })
+    else if (this._pageVisible && !this._unloaded) vibrate('medium')
   },
 
   completeSessionRestore(event) {
@@ -152,6 +167,7 @@ Page({
       wx.showToast({ title: '临时输入恢复失败，原备份仍保留', icon: 'none' })
       return false
     }
+    if (this._pageVisible && !this._unloaded) vibrate('medium')
     this.refresh()
     wx.showToast({ title: '已恢复原临时输入', icon: 'none' })
     return true
@@ -170,6 +186,7 @@ Page({
           wx.showToast({ title: '操作失败，草稿仍保留', icon: 'none' })
           return
         }
+        if (this._pageVisible && !this._unloaded) vibrate('medium')
         this.refresh()
       },
     })

@@ -4,7 +4,13 @@
       <view class="home-title home-main-title">计算依据</view>
     </view>
 
-    <view class="home-basis-list">
+    <view wx:if="{{visibilityError}}" class="basis-visibility-warning">{{visibilityError}}</view>
+    <view wx:if="{{visibilityReady && !basisTools.length}}" class="home-empty-state basis-empty-state">
+      <view class="home-empty-title">暂无显示的计算依据</view>
+      <view class="home-empty-copy">可以在设置中重新打开对应工具。</view>
+      <button class="home-secondary-button basis-settings-button" bindtap="openSettings">打开设置</button>
+    </view>
+    <view wx:if="{{visibilityReady && basisTools.length}}" class="home-basis-list">
       <navigator wx:for="{{basisTools}}" wx:key="id" class="home-basis-row" url="{{item.path}}" hover-class="home-pressed" aria-label="查看{{item.title}}计算依据：{{item.summary}}">
         <view class="home-basis-card-heading">
           <view class="home-basis-icon-wrap"><image class="home-basis-icon" src="{{item.icon}}" mode="aspectFit" lazy-load aria-hidden="true" /></view>

@@ -118,26 +118,6 @@ function assertCachedReportReuse(reportPage, label, methodName = 'generateReport
   assert.equal(hideLoadingCount, hideCount, `${label}重复隐藏 loading`)
 }
 
-function seedProject() {
-  storage.set('audioTool.storageSchemaVersion', 4)
-  storage.set('audioTool.projects.v1', [{ id: 'p', name: 'P', createdAt: 1, updatedAt: 1 }])
-  storage.set('audioTool.records.v1', [{
-    id: 'r', module: 'limiter', title: 'R', summary: 'S', preferences: { speakerModel: 'S' },
-    resultText: 'R', projectIds: ['p'], favorite: false, createdAt: 1, updatedAt: 1,
-  }])
-  storage.set('audioTool.favorites.v1', [])
-  storage.set('audioTool.recovery.v1', [])
-}
-
-function loadProject() {
-  resetRuntime()
-  installRuntime()
-  seedProject()
-  const project = fresh('pages/records/project.js')
-  project.onLoad({ id: 'p' })
-  return project
-}
-
 function checkLedInitialCacheAndFailure() {
   const led = loadLed()
   generateLedReport(led)
@@ -217,69 +197,6 @@ function checkLedStaleCallbackAndNewLoading() {
   inputLed.cancelInputCalculation()
 }
 
-function checkProjectInitialCacheFailureAndMissing() {
-  const project = loadProject()
-  project.generateProjectReportImage()
-  completeCurrentExport('temp://project-first.png')
-  assert.equal(project.data.reportImagePath, 'temp://project-first.png')
-  assertCachedReportReuse(project, '项目报告相同输入', 'generateProjectReportImage')
-
-  const failedProject = loadProject()
-  failedProject.generateProjectReportImage()
-  const toastCount = toasts.length
-  completeCurrentExport()
-  assert.equal(failedProject.data.isGeneratingReport, false)
-  assert.equal(toasts.length, toastCount + 1)
-  const retryShowCount = showLoadingCount
-  failedProject.generateProjectReportImage()
-  assert.equal(showLoadingCount, retryShowCount + 1, '项目报告失败后不能重试')
-  completeCurrentExport('temp://project-retry.png')
-  assert.equal(failedProject.data.reportImagePath, 'temp://project-retry.png')
-
-  const missingProject = loadProject()
-  missingProject.generateProjectReportImage()
-  drawCallbacks.shift()()
-  const oldExport = exportsQueue.shift()
-  require('../utils/records').deleteProject('p')
-  missingProject.refresh()
-  oldExport.success({ tempFilePath: 'temp://missing-old.png' })
-  assert.equal(missingProject.data.missing, true)
-  assert.equal(missingProject.data.reportImagePath, '')
-  assert.equal(missingProject.data.isGeneratingReport, false)
-}
-
-function checkProjectSourceChangesInvalidateOldCallbacks() {
-  const removedRecordProject = loadProject()
-  const records = require('../utils/records')
-  removedRecordProject.generateProjectReportImage()
-  drawCallbacks.shift()()
-  const oldSuccess = exportsQueue.shift()
-  assert.equal(records.removeRecordFromProject('r', 'p'), true)
-  removedRecordProject.refresh()
-  oldSuccess.success({ tempFilePath: 'temp://removed-record-old.png' })
-  assert.equal(removedRecordProject.data.reportImagePath, '')
-  assert.equal(removedRecordProject.data.isGeneratingReport, false)
-
-  const updatedProject = loadProject()
-  updatedProject.generateProjectReportImage()
-  drawCallbacks.shift()()
-  const oldFailure = exportsQueue.shift()
-  const currentRecords = require('../utils/records')
-  assert.equal(currentRecords.updateProject('p', { venueName: 'Changed' })?.venueName, 'Changed')
-  updatedProject.refresh()
-  updatedProject.generateProjectReportImage()
-  assert.equal(updatedProject.data.isGeneratingReport, true)
-  const newShowLoadingCount = showLoadingCount
-  const newHideLoadingCount = hideLoadingCount
-  oldFailure.fail({ errMsg: 'old export failed' })
-  assert.equal(updatedProject.data.isGeneratingReport, true)
-  assert.equal(showLoadingCount, newShowLoadingCount)
-  assert.equal(hideLoadingCount, newHideLoadingCount)
-  completeCurrentExport('temp://updated-project-new.png')
-  assert.equal(updatedProject.data.reportImagePath, 'temp://updated-project-new.png')
-  assert.equal(updatedProject.data.isGeneratingReport, false)
-}
-
 function checkProjectsFavoriteStates() {
   resetRuntime()
   installRuntime()
@@ -354,8 +271,6 @@ function checkProjectsFavoriteStates() {
 try {
   checkLedInitialCacheAndFailure()
   checkLedStaleCallbackAndNewLoading()
-  checkProjectInitialCacheFailureAndMissing()
-  checkProjectSourceChangesInvalidateOldCallbacks()
   checkProjectsFavoriteStates()
   console.log('report lifecycle regression passed')
 } finally {
