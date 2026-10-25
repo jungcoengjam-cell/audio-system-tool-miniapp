@@ -371,7 +371,7 @@ const gainProjectMethods = createGainProjectMethods({
 })
 
 Page({
-  ...createEditorNavigationMethods(),
+  ...createEditorNavigationMethods(requestEditorLeave),
   data: {
     amplifierCategories,
     ...buildAmplifierState(-1),

@@ -76,6 +76,10 @@ Page({
     }
     const lighting = getLightingContexts()
     const lightingRows = lighting.ok ? lighting.rows : []
+    const lightingByProject = new Map()
+    lightingRows.forEach((row) => {
+      if (!lightingByProject.has(row.id)) lightingByProject.set(row.id, row)
+    })
     const lightingWarning = lighting.ok ? '' : '灯位统计暂不可用；项目内原始灯光数据仍保留。'
     const recordCounts = Object.create(null)
     snapshot.projects.forEach((project) => { recordCounts[project.id] = 0 })
@@ -85,7 +89,7 @@ Page({
       })
     })
     const projects = snapshot.projects.map((project) => {
-      const context = lightingRows.find((item) => item.id === project.id)
+      const context = lightingByProject.get(project.id)
       const wiringCount = projectLines(project)
       const lightingCount = context?.hasLighting && Number(context.revision) > 0 ? 1 : 0
       return {

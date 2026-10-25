@@ -483,7 +483,7 @@ function addCameraMountGuidance(result) {
 }
 
 Page({
-  ...createEditorNavigationMethods(),
+  ...createEditorNavigationMethods(requestEditorLeave),
   data: {
     inputTabs: CAMERA_INPUT_TABS,
     inputTabIndex: 0,

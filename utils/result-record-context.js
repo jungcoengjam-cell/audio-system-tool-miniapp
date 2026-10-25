@@ -236,7 +236,7 @@ function attachResultEditor(page, moduleKey, options = {}) {
   return session
 }
 
-function createEditorNavigationMethods() {
+function createEditorNavigationMethods(requestEditorLeave) {
   return {
     onEditorNavigationBeforeLeave() {
       if (this._editorGuardClosingForNavigation) return
@@ -256,7 +256,7 @@ function createEditorNavigationMethods() {
       this._editorNativeLeavePending = false
       if (!nativeBack || !this._resultEditorSession) return
       this.setData({ editorGuardArmed: false }, () => {
-        require('./result-record-actions').requestEditorLeave(this, { nativeBack: true })
+        requestEditorLeave(this, { nativeBack: true })
       })
     },
   }

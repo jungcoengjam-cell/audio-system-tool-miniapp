@@ -427,7 +427,7 @@ function buildSelectorOptions(options, side, outputId) {
 }
 
 Page({
-  ...createEditorNavigationMethods(),
+  ...createEditorNavigationMethods(requestEditorLeave),
   data: {
     outputOptions: OUTPUT_OPTIONS,
     inputOptions: INPUT_OPTIONS,

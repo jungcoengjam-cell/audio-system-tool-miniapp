@@ -46,7 +46,6 @@ function prepareReportImagePlan(items, projectName, measureContext) {
 
 function asSelectionSections(source, selectedIds = [], extraErrors = {}) {
   const selected = new Set(selectedIds)
-  const items = getProjectReportSections(source).flatMap((section) => section.items)
   const errors = extraErrors || {}
   return getProjectReportSections(source).map((section) => ({
     key: section.key,

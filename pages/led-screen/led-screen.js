@@ -360,7 +360,7 @@ function buildPreferences(state) {
 finishLedScreenModuleLoad()
 
 Page({
-  ...createEditorNavigationMethods(),
+  ...createEditorNavigationMethods(requestEditorLeave),
   ...ledOperationMethods,
   ...ledProjectMethods,
   data: {

@@ -8,10 +8,6 @@ const ACTIVE_PROJECT_KEY = 'audioTool.activeProject.v1'
 const STORAGE_SCHEMA_KEY = 'audioTool.storageSchemaVersion'
 const STORAGE_SCHEMA_VERSION = 4
 const projectWiring = require('./project-wiring')
-const storageValueCache = new Map()
-const storageReadFailures = new Set()
-let mutationDepth = 0
-let mutationReadFailed = false
 let normalizedRecordSource
 let normalizedRecords = []
 let recordSignatureIndex = new Map()
@@ -22,71 +18,28 @@ let normalizedFavorites = []
 let normalizedRecoverySource
 let normalizedRecoveryEntries = []
 let storageMigrationError = ''
+const migrationState = {
+  get error() { return storageMigrationError },
+  set error(value) { storageMigrationError = value },
+}
+
+const { createRecordStorage } = require('./record-storage')
+const {
+  withStorageMutation,
+  wrapMutation,
+  readStorageValue,
+  readValueResult,
+  readValue,
+  writeValue,
+  writeValuesAtomically,
+  readRawStorageValue,
+  removeStorageValue,
+  storageValueCache,
+  storageReadFailures,
+} = createRecordStorage({ getWx: () => wx, getMigrationError: () => storageMigrationError })
 
 const { MODULES, LEGACY_MODULES, getModuleMetadata } = require('./record-modules')
-
-function withStorageMutation(operation) {
-  const outer = mutationDepth === 0
-  if (outer) mutationReadFailed = false
-  mutationDepth += 1
-  try {
-    return operation()
-  } finally {
-    mutationDepth -= 1
-    if (outer) mutationReadFailed = false
-  }
-}
-
-function wrapMutation(operation) {
-  return (...args) => withStorageMutation(() => operation(...args))
-}
-
-function readStorageValue(key, fallback) {
-  try {
-    const value = wx.getStorageSync(key)
-    return { ok: true, value: value === undefined || value === null || value === '' ? fallback : value }
-  } catch (error) {
-    storageReadFailures.add(key)
-    if (mutationDepth > 0) mutationReadFailed = true
-    return { ok: false, value: fallback }
-  }
-}
-
-function readValueResult(key, fallback) {
-  if (storageValueCache.has(key)) return { ok: true, value: storageValueCache.get(key) }
-  const result = readStorageValue(key, fallback)
-  if (result.ok) storageValueCache.set(key, result.value)
-  return result
-}
-
-function readValue(key, fallback) {
-  return readValueResult(key, fallback).value
-}
-
-function writeValue(key, value, allowMigrationError = false) {
-  if (mutationReadFailed || (storageMigrationError && !allowMigrationError)) return false
-  try {
-    wx.setStorageSync(key, value)
-    storageValueCache.set(key, value)
-    return true
-  } catch (error) {
-    return false
-  }
-}
-
-function writeValuesAtomically(writes) {
-  if (mutationReadFailed) return false
-  const completed = []
-  for (const write of writes) {
-    if (writeValue(write.key, write.value)) {
-      completed.push(write)
-      continue
-    }
-    completed.reverse().forEach((item) => writeValue(item.key, item.previousValue))
-    return false
-  }
-  return true
-}
+const { createRecordMigration } = require('./record-migration')
 
 function createId(prefix) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
@@ -223,29 +176,6 @@ function findRawSnapshotById(key, id) {
   return { ok: true, item: result.value.find((item) => item?.id === id) || null }
 }
 
-function readRawStorageValue(key) {
-  try {
-    const value = wx.getStorageSync(key)
-    const present = value !== undefined && value !== null && value !== ''
-    return { ok: true, present, value: present ? value : undefined }
-  } catch (error) {
-    storageReadFailures.add(key)
-    if (mutationDepth > 0) mutationReadFailed = true
-    return { ok: false, present: false, value: undefined }
-  }
-}
-
-function removeStorageValue(key) {
-  try {
-    if (typeof wx.removeStorageSync === 'function') wx.removeStorageSync(key)
-    else wx.setStorageSync(key, '')
-    storageValueCache.delete(key)
-    return true
-  } catch (error) {
-    return false
-  }
-}
-
 function captureStorageSnapshot(keys) {
   const values = {}
   for (const key of keys) {
@@ -345,140 +275,54 @@ function makeIndependentDataSnapshot(snapshot) {
   }
 }
 
-function getMigrationBackupEntries() {
-  const result = readRawStorageValue(MIGRATION_BACKUPS_KEY)
-  if (!result.ok) return null
-  if (!result.present) return []
-  return result.value?.version === 1 && Array.isArray(result.value.entries) ? result.value.entries : null
-}
-
-function completeStorageMigration(backupId) {
-  const entries = getMigrationBackupEntries()
-  if (!entries) {
-    storageMigrationError = '迁移备份格式异常，已阻止项目数据写入。'
-    return false
-  }
-  const backup = entries.find((item) => item.id === backupId && item.version === 1)
-  if (!backup) {
-    storageMigrationError = '找不到迁移前备份，已阻止项目数据写入。'
-    return false
-  }
-  const next = makeIndependentDataSnapshot(backup)
-  if (!next) {
-    storageMigrationError = '现有项目数据格式需要人工检查；原始数据与备份均已保留。'
-    return false
-  }
-  const writeSnapshot = Object.fromEntries(Object.entries(next).map(([key, value]) => [key, { present: true, value }]))
-  if (!writeRawSnapshot(writeSnapshot)) {
-    storageMigrationError = '项目数据迁移未完成；原始备份已保留，请重试。'
-    return false
-  }
-  normalizedRecordSource = undefined
-  normalizedProjectSource = undefined
-  normalizedFavoriteSource = undefined
-  normalizedRecoverySource = undefined
-  if (!removeStorageValue(MIGRATION_JOURNAL_KEY)) {
-    storageMigrationError = '项目数据已迁移，但迁移状态未能清理；请重试读取。'
-    return false
-  }
-  return true
-}
-
-function ensureStorageSchema() {
-  storageMigrationError = ''
-  const journalResult = readRawStorageValue(MIGRATION_JOURNAL_KEY)
-  if (!journalResult.ok) {
-    storageMigrationError = '读取项目数据迁移状态失败，请重试。'
-    return false
-  }
-  if (journalResult.present) {
-    if (journalResult.value?.version !== 1 || typeof journalResult.value.backupId !== 'string') {
-      storageMigrationError = '项目数据迁移状态格式异常，已阻止写入。'
-      return false
-    }
-    return completeStorageMigration(journalResult.value.backupId)
-  }
-
-  const schemaResult = readRawStorageValue(STORAGE_SCHEMA_KEY)
-  if (!schemaResult.ok) {
-    storageMigrationError = '读取项目数据版本失败，请重试。'
-    return false
-  }
-  const storedSchemaVersion = schemaResult.present ? Number(schemaResult.value) : 1
-  if (!Number.isSafeInteger(storedSchemaVersion) || storedSchemaVersion < 1) {
-    storageMigrationError = '项目数据版本格式异常，已阻止写入。'
-    return false
-  }
-  if (storedSchemaVersion > STORAGE_SCHEMA_VERSION) {
-    storageMigrationError = `项目数据来自较新版本（${storedSchemaVersion}），当前版本仅允许只读访问。`
-    return false
-  }
-  if (storedSchemaVersion === STORAGE_SCHEMA_VERSION) {
-    const projects = readValueResult(PROJECTS_KEY, undefined)
-    const records = readValueResult(RECORDS_KEY, undefined)
-    const favorites = readValueResult(FAVORITES_KEY, undefined)
-    const recovery = readValueResult(RECOVERY_KEY, undefined)
-    const validUniqueIds = (items) => Array.isArray(items)
-      && items.every((item) => typeof item?.id === 'string' && item.id)
-      && new Set(items.map((item) => item.id)).size === items.length
-    const projectRows = projects.ok ? projects.value : null
-    const recordRows = records.ok ? records.value : null
-    const favoriteRows = favorites.ok ? favorites.value : null
-    const recoveryRows = recovery.ok ? recovery.value : null
-    const validRecoveryKinds = new Set(['project', 'record', 'favorite', 'record-project-link', 'legacy-recent'])
-    const healthy = validUniqueIds(projectRows)
-      && projectRows.every((item) => normalizeProject(item))
-      && validUniqueIds(recordRows)
-      && recordRows.every((item) => normalizeRecord(item) && Array.isArray(item.projectIds)
-        && item.projectIds.length > 0 && item.favorite !== true)
-      && validUniqueIds(favoriteRows)
-      && favoriteRows.every((item) => normalizeFavorite(item))
-      && validUniqueIds(recoveryRows)
-      && recoveryRows.every((entry) => isPlainObject(entry) && validRecoveryKinds.has(entry.kind)
-        && isPlainObject(entry.snapshot) && typeof entry.snapshot.id === 'string' && entry.snapshot.id
-        && typeof entry.targetId === 'string' && entry.targetId)
-    if (!healthy) {
-      storageMigrationError = '项目、计算记录或收藏数据格式异常；已阻止写入，原始数据仍保留。'
-      return false
-    }
-    return true
-  }
-
-  const storageKeys = [STORAGE_SCHEMA_KEY, PROJECTS_KEY, RECORDS_KEY, FAVORITES_KEY, RECOVERY_KEY, ACTIVE_PROJECT_KEY]
-  const captured = captureStorageSnapshot(storageKeys)
-  if (!captured.ok) {
-    storageMigrationError = '读取完整项目数据失败，已阻止迁移。'
-    return false
-  }
-  const entries = getMigrationBackupEntries()
-  if (!entries) {
-    storageMigrationError = '迁移备份格式异常，已阻止项目数据写入。'
-    return false
-  }
-  const sameBackup = entries.find((item) => item.migration === 'independent-favorites-v1'
-    && item.schemaVersionBefore === storedSchemaVersion
-    && JSON.stringify(item.storage) === JSON.stringify(captured.values))
-  let backup = sameBackup
-  if (!backup) {
-    backup = {
-      id: createId('storage-backup'),
-      version: 1,
-      migration: 'independent-favorites-v1',
-      schemaVersionBefore: storedSchemaVersion,
-      createdAt: Date.now(),
-      storage: captured.values,
-    }
-    if (!writeValue(MIGRATION_BACKUPS_KEY, { version: 1, entries: [backup, ...entries] })) {
-      storageMigrationError = '创建迁移前备份失败；项目数据未修改。'
-      return false
-    }
-  }
-  if (!writeValue(MIGRATION_JOURNAL_KEY, { version: 1, backupId: backup.id })) {
-    storageMigrationError = '保存项目数据迁移状态失败；原始数据与备份均已保留。'
-    return false
-  }
-  return completeStorageMigration(backup.id)
-}
+const {
+  ensureStorageSchema,
+  getStorageMigrationBackups,
+  restoreStorageMigrationBackup,
+} = createRecordMigration({
+  ACTIVE_PROJECT_KEY,
+  FAVORITES_KEY,
+  MIGRATION_BACKUPS_KEY,
+  MIGRATION_JOURNAL_KEY,
+  PROJECTS_KEY,
+  RECORDS_KEY,
+  RECOVERY_KEY,
+  STORAGE_SCHEMA_KEY,
+  STORAGE_SCHEMA_VERSION,
+  captureStorageSnapshot,
+  cloneStorageValue,
+  createId,
+  Date: { now: () => Date.now() },
+  invalidateNormalizedSources() {
+    normalizedRecordSource = undefined
+    normalizedProjectSource = undefined
+    normalizedFavoriteSource = undefined
+    normalizedRecoverySource = undefined
+  },
+  isPlainObject,
+  makeIndependentDataSnapshot,
+  normalizeFavorite,
+  normalizeProject,
+  normalizeRecord,
+  readRawStorageValue,
+  readValueResult,
+  removeStorageValue,
+  resetNormalizedState() {
+    normalizedRecordSource = undefined
+    normalizedProjectSource = undefined
+    normalizedFavoriteSource = undefined
+    normalizedRecoverySource = undefined
+    normalizedRecords = []
+    normalizedProjects = []
+    normalizedFavorites = []
+    normalizedRecoveryEntries = []
+    recordSignatureIndex = new Map()
+  },
+  state: migrationState,
+  storageValueCache,
+  writeRawSnapshot,
+  writeValue,
+})
 
 function readNormalizedRecords() {
   const result = readValueResult(RECORDS_KEY, [])
@@ -1247,58 +1091,6 @@ function restoreRecoveryEntry(recoveryId, targetProjectId) {
   writes.push({ key: RECOVERY_KEY, value: remainingEntries, previousValue: recoveryEntries })
   if (!writeValuesAtomically(writes)) return false
   normalizedRecoverySource = undefined
-  return true
-}
-
-function getStorageMigrationBackups() {
-  const entries = getMigrationBackupEntries()
-  if (!entries) return { ok: false, error: '读取迁移备份失败或备份格式异常。', backups: [] }
-  return {
-    ok: true,
-    error: '',
-    backups: entries.map((entry) => ({
-      id: entry.id,
-      migration: entry.migration,
-      schemaVersionBefore: entry.schemaVersionBefore,
-      createdAt: entry.createdAt,
-    })),
-  }
-}
-
-function isValidRawMigrationSnapshot(snapshot) {
-  const keys = [STORAGE_SCHEMA_KEY, PROJECTS_KEY, RECORDS_KEY, FAVORITES_KEY, RECOVERY_KEY, ACTIVE_PROJECT_KEY]
-  return isPlainObject(snapshot) && keys.every((key) => (
-    isPlainObject(snapshot[key])
-      && typeof snapshot[key].present === 'boolean'
-      && (!snapshot[key].present || cloneStorageValue(snapshot[key].value) !== null)
-  )) && Object.keys(snapshot).every((key) => keys.includes(key))
-}
-
-function restoreStorageMigrationBackup(backupId) {
-  const entries = getMigrationBackupEntries()
-  const backup = entries?.find((entry) => entry.id === backupId && entry.version === 1)
-  if (!backup || !isValidRawMigrationSnapshot(backup.storage)) return false
-  const journalBefore = readRawStorageValue(MIGRATION_JOURNAL_KEY)
-  if (!journalBefore.ok) return false
-  const current = captureStorageSnapshot([...Object.keys(backup.storage), MIGRATION_JOURNAL_KEY])
-  if (!current.ok) return false
-  if (!writeRawSnapshot(backup.storage, { allowMigrationError: true })) return false
-  if (!removeStorageValue(MIGRATION_JOURNAL_KEY)) {
-    writeRawSnapshot(current.values, { allowMigrationError: true })
-    return false
-  }
-  storageMigrationError = ''
-  normalizedRecordSource = undefined
-  normalizedProjectSource = undefined
-  normalizedFavoriteSource = undefined
-  normalizedRecoverySource = undefined
-  normalizedRecords = []
-  normalizedProjects = []
-  normalizedFavorites = []
-  normalizedRecoveryEntries = []
-  recordSignatureIndex = new Map()
-  ;[STORAGE_SCHEMA_KEY, RECORDS_KEY, PROJECTS_KEY, FAVORITES_KEY, RECOVERY_KEY, ACTIVE_PROJECT_KEY]
-    .forEach((key) => storageValueCache.delete(key))
   return true
 }
 

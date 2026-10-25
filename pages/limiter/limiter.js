@@ -263,7 +263,7 @@ const limiterProjectMethods = createLimiterProjectMethods({
 })
 
 Page({
-  ...createEditorNavigationMethods(),
+  ...createEditorNavigationMethods(requestEditorLeave),
   data: {
     selectedAmplifier: null, selectedSpeaker: null,
     counts: [1, 2, 3, 4],

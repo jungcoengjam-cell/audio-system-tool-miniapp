@@ -123,7 +123,7 @@ const cableProjectMethods = createCableProjectMethods({
   })
 
 Page({
-  ...createEditorNavigationMethods(),
+  ...createEditorNavigationMethods(requestEditorLeave),
   data: {
     modes: [
       { key: 'constant', label: '定压广播', subtitle: '100 V 广播喇叭线' },

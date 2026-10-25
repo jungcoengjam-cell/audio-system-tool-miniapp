@@ -211,7 +211,7 @@ const splProjectMethods = createSplProjectMethods({
 })
 
 Page({
-  ...createEditorNavigationMethods(),
+  ...createEditorNavigationMethods(requestEditorLeave),
   data: {
     selectedSpeaker: speakerOptions[defaultSpeakerIndex],
     speakerCategories,
