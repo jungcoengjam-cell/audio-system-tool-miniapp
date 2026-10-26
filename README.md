@@ -156,7 +156,6 @@ audio-system-tool-miniapp/
 │   ├── spl.js              # 声压级计算逻辑
 │   ├── cable.js            # 线材选型逻辑
 │   ├── dmx-address.js      # DMX 分组、跨域与连续编址逻辑
-│   ├── record-comparison.js # 同模块计算记录差异对比
 │   └── products.js         # 产品检索、详情与最近查看
 ├── tests/
 │   └── release-check.js    # 发布前自动回归与数据检查
