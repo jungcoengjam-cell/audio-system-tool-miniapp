@@ -676,10 +676,10 @@ Page({
       `${wiringCount} 条线路`,
       `${project.hasLighting ? 1 : 0} 个灯位方案${lightingCount ? `（${lightingCount} 个灯位）` : ''}`,
     ].join('、')
-    wx.showModal({
+    const modalOptions = {
       title: '移入回收站？',
       content: `“${project.name}”及${details}将移入回收站，可在“项目与记录 > 回收站”恢复。独立收藏不会删除。`,
-      confirmText: '移入回收站',
+      confirmText: '移入',
       confirmColor: '#ff3b30',
       success: ({ confirm }) => {
         if (!confirm || this.projectId !== projectId || this.data.project?.id !== projectId) return
@@ -691,7 +691,13 @@ Page({
         wx.showToast({ title: '已移入回收站', icon: 'none' })
         wx.navigateBack({ delta: 1 })
       },
-    })
+      fail: () => wx.showToast({ title: '确认失败，请重试', icon: 'none' }),
+    }
+    try {
+      wx.showModal(modalOptions)
+    } catch (error) {
+      wx.showToast({ title: '确认失败，请重试', icon: 'none' })
+    }
   },
 
   openProjectLighting(event) {

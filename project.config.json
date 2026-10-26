@@ -2,6 +2,13 @@
   "compileType": "miniprogram",
   "projectname": "audio-system-tool-miniapp",
   "libVersion": "3.16.2",
+  "watchOptions": {
+    "ignore": [
+      "docs/**",
+      "tests/**",
+      "tmp/**"
+    ]
+  },
   "packOptions": {
     "ignore": [
       { "type": "file", "value": ".gitignore" },

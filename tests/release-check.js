@@ -482,6 +482,7 @@ const auditRegressionScripts = [
   'project-wiring-report-lifecycle-regression.cjs',
   'project-wiring-report-test.js',
   'project-wiring-entry-test.js',
+  'project-delete-modal-regression.cjs',
   'homepage-refactor-2026-10-18/navigation-basis-behavior.cjs',
   'homepage-refactor-2026-10-18/revision-2/settings-visibility.cjs',
   'venue-removal-2026-10-15/removal-regression.cjs',
