@@ -12,6 +12,11 @@ const beforeRoot = path.join(root, 'tmp/architecture-continuation-2026-10-25/bef
 const phase2BeforeRoot = path.join(root, 'tmp/architecture-continuation-2026-10-25/phase2-migration/before')
 const currentRecordsPath = path.join(root, 'utils/records.js')
 const currentRecordsRequire = createRequire(currentRecordsPath)
+const intentionalRecoveryExports = new Set([
+  'permanentlyDeleteRecoveryEntry',
+  'processRecoveryRetention',
+  'RECOVERY_RETENTION_MS',
+])
 const keys = {
   schema: 'audioTool.storageSchemaVersion',
   projects: 'audioTool.projects.v1',
@@ -145,7 +150,8 @@ function runScenario(version, initial, execute, failureRules = [], platformOptio
     const api = realm.requireRecords()
     const outcome = execute({ api, platform, realm })
     return {
-      exports: Object.keys(api).sort(),
+      // The frozen comparison covers the pre-existing API; recovery retention is tested separately.
+      exports: Object.keys(api).filter((key) => !intentionalRecoveryExports.has(key)).sort(),
       outcome: copy(outcome),
       trace: clone(platform.trace),
       storage: platform.snapshot(),
@@ -255,7 +261,7 @@ function runInstanceIsolationAndDynamicWx(version) {
     return {
       sameBeforeClear: repeatedRequire === firstApi,
       isolatedAfterClear: secondApi !== firstApi,
-      exports: Object.keys(firstApi).sort(),
+      exports: Object.keys(firstApi).filter((key) => !intentionalRecoveryExports.has(key)).sort(),
       firstRead: copy(firstRead),
       cachedFirstRead: copy(cachedFirstRead),
       secondInstanceRead: copy(secondInstanceRead),
@@ -338,7 +344,8 @@ const expectedDigests = {
   readFailureAndRetry: '91bfa543347f610e10586dcb1e5a840f326a7c19b3972f8af342d2cf5668208f',
   cacheRefresh: '8fbe1c0335b87305afa42dfa18b9a98c711e50d533924d51aef94bfc65932e0d',
   instanceIsolationAndDynamicWx: '4f8061f03a4a1af9137cf4b076ed78296249b8e858445900de2ec3b96cb4297d',
-  recoveryRetry: 'f0f09a7e3a9bb693cc40199222ca50db7bb2c1e5308e57a1b2a0421906d527c0',
+  // Restore now re-reads RECOVERY_KEY before writing so stale cached rows cannot be dropped.
+  recoveryRetry: 'efb5b8a61137270dd07f5787c7def033b25519975acb77f3eea83fec492a15d1',
 }
 const expectedPhase2Digests = {
   rawWriteAndRollbackFailure: '5d3b07b6f08119c7cf92a6c68d1f7207c9ac3df73a82d9ee166a626033014eb7',

@@ -7,6 +7,8 @@ const MIGRATION_JOURNAL_KEY = 'audioTool.storageMigrationJournal.v1'
 const ACTIVE_PROJECT_KEY = 'audioTool.activeProject.v1'
 const STORAGE_SCHEMA_KEY = 'audioTool.storageSchemaVersion'
 const STORAGE_SCHEMA_VERSION = 4
+const RECOVERY_RETENTION_MS = 30 * 24 * 60 * 60 * 1000
+const RECOVERY_KINDS = new Set(['project', 'record', 'favorite', 'record-project-link', 'legacy-recent'])
 const projectWiring = require('./project-wiring')
 let normalizedRecordSource
 let normalizedRecords = []
@@ -631,6 +633,83 @@ function appendRecoveryEntry(kind, targetId, snapshot, extra = {}) {
   return { entries: [entry, ...entries], entry, alreadyPresent: false }
 }
 
+function isRetentionEligibleRecoveryEntry(entry) {
+  return isPlainObject(entry)
+    && RECOVERY_KINDS.has(entry.kind)
+    && typeof entry.id === 'string' && Boolean(entry.id)
+    && typeof entry.targetId === 'string' && Boolean(entry.targetId)
+    && isPlainObject(entry.snapshot)
+    && typeof entry.snapshot.id === 'string' && Boolean(entry.snapshot.id)
+}
+
+function processRecoveryRetention(now = Date.now()) {
+  if (!Number.isFinite(now) || now < 0) {
+    return { ok: false, error: '回收站清理时间无效，内容未删除。', removedCount: 0 }
+  }
+  if (!ensureStorageSchema()) {
+    return { ok: false, error: storageMigrationError || '读取回收站失败，内容未删除。', removedCount: 0 }
+  }
+
+  const stored = readRawStorageValue(RECOVERY_KEY)
+  if (!stored.ok || (stored.present && !Array.isArray(stored.value))) {
+    return { ok: false, error: '读取回收站失败，内容未删除；请重试。', removedCount: 0 }
+  }
+
+  let changed = false
+  let removedCount = 0
+  const nextEntries = []
+  for (const entry of stored.present ? stored.value : []) {
+    if (!isRetentionEligibleRecoveryEntry(entry)) {
+      nextEntries.push(entry)
+      continue
+    }
+
+    const isLegacyRecent = entry.kind === 'legacy-recent'
+    let retainedFrom = isLegacyRecent ? entry.retentionStartedAt : entry.deletedAt
+    if (!Number.isFinite(retainedFrom) || retainedFrom < 0) {
+      retainedFrom = now
+      nextEntries.push({
+        ...entry,
+        deletedAt: now,
+        ...(isLegacyRecent ? { retentionStartedAt: now } : {}),
+      })
+      changed = true
+      continue
+    }
+
+    let currentEntry = entry
+    if (isLegacyRecent && entry.deletedAt !== retainedFrom) {
+      currentEntry = { ...entry, deletedAt: retainedFrom }
+      changed = true
+    }
+    if (now - retainedFrom >= RECOVERY_RETENTION_MS) {
+      removedCount += 1
+      changed = true
+      continue
+    }
+    nextEntries.push(currentEntry)
+  }
+
+  if (!changed) return { ok: true, error: '', removedCount: 0 }
+  if (!writeValue(RECOVERY_KEY, nextEntries)) {
+    return { ok: false, error: '回收站到期内容清理失败，内容仍保留；请重试。', removedCount: 0 }
+  }
+  normalizedRecoverySource = undefined
+  return { ok: true, error: '', removedCount }
+}
+
+function permanentlyDeleteRecoveryEntry(recoveryId) {
+  if (typeof recoveryId !== 'string' || !recoveryId || !ensureStorageSchema()) return false
+  const stored = readRawStorageValue(RECOVERY_KEY)
+  if (!stored.ok || !stored.present || !Array.isArray(stored.value)) return false
+  const index = stored.value.findIndex((entry) => entry?.id === recoveryId)
+  if (index < 0) return false
+  const nextEntries = stored.value.filter((entry, entryIndex) => entryIndex !== index)
+  if (!writeValue(RECOVERY_KEY, nextEntries)) return false
+  normalizedRecoverySource = undefined
+  return true
+}
+
 function removeFavorite(favoriteId) {
   const favorites = getFavorites()
   const favorite = favorites.find((item) => item.id === favoriteId)
@@ -969,7 +1048,16 @@ function removeRecordFromProject(recordId, projectId) {
 }
 
 function restoreRecoveryEntry(recoveryId, targetProjectId) {
-  const recoveryEntries = getRecoveryEntries()
+  if (typeof recoveryId !== 'string' || !recoveryId || !ensureStorageSchema()) return false
+  const recoveryResult = readRawStorageValue(RECOVERY_KEY)
+  if (!recoveryResult.ok || !recoveryResult.present || !Array.isArray(recoveryResult.value)) {
+    storageValueCache.delete(RECOVERY_KEY)
+    normalizedRecoverySource = undefined
+    return false
+  }
+  const recoveryEntries = recoveryResult.value
+  storageValueCache.set(RECOVERY_KEY, recoveryEntries)
+  normalizedRecoverySource = undefined
   const entry = recoveryEntries.find((item) => item.id === recoveryId)
   if (!entry || !isPlainObject(entry.snapshot)) return false
   const remainingEntries = recoveryEntries.filter((item) => item.id !== recoveryId)
@@ -1162,6 +1250,9 @@ module.exports = {
   getStorageMigrationBackups,
   getStorageHealth,
   getWorkspaceSnapshot,
+  permanentlyDeleteRecoveryEntry: wrapMutation(permanentlyDeleteRecoveryEntry),
+  processRecoveryRetention: wrapMutation(processRecoveryRetention),
+  RECOVERY_RETENTION_MS,
   prepareProjectModule: wrapMutation(prepareProjectModule),
   removeRecordFromProject: wrapMutation(removeRecordFromProject),
   removeRecord: wrapMutation(removeRecord),

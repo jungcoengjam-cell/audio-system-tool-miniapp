@@ -143,7 +143,7 @@ Page({
     }
     const favorite = (snapshot.favorites || []).find((item) => item.id === this.favoriteId)
     if (!favorite) {
-      this.setData({ favorite: null, workspaceError: '此收藏不存在，或已移入恢复区。' })
+      this.setData({ favorite: null, workspaceError: '此收藏不存在，或已移入回收站。' })
       return false
     }
     const metadata = getModuleMetadata(favorite.module)
@@ -209,7 +209,7 @@ Page({
 
   openManageMenu() {
     wx.showActionSheet({
-      itemList: ['移入恢复区'],
+      itemList: ['移入回收站'],
       success: ({ tapIndex }) => {
         if (tapIndex === 0) this.removeCurrentFavorite()
       },
@@ -220,9 +220,9 @@ Page({
     const favorite = this.data.favorite
     if (!favorite) return
     wx.showModal({
-      title: '移入恢复区？',
-      content: '收藏快照会从常用列表移出，之后仍可在恢复区还原。项目计算记录不会受影响。',
-      confirmText: '移入恢复区',
+      title: '移入回收站？',
+      content: '收藏快照会从常用列表移出，之后仍可在回收站还原。项目计算记录不会受影响。',
+      confirmText: '移入回收站',
       cancelText: '取消',
       success: ({ confirm }) => {
         if (!confirm) return

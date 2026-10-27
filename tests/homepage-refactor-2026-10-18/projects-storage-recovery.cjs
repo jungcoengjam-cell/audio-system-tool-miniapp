@@ -22,7 +22,7 @@ const favorite = {
   ...record, id: 'favorite-one', favorite: true, projectIds: [], originProjectIds: [project.id],
 }
 
-function setup({ projects = [project], records = [record], favorites = [favorite], extra = {} } = {}) {
+function setup({ projects = [project], records = [record], favorites = [favorite], extra = {}, failReadKeys = [] } = {}) {
   const storage = new Map(Object.entries(clone({
     [schema]: 4,
     [projectKey]: projects,
@@ -32,9 +32,13 @@ function setup({ projects = [project], records = [record], favorites = [favorite
     ...extra,
   })))
   const failKeys = new Set()
+  const failReads = new Set(failReadKeys)
   const toasts = []
   global.wx = {
-    getStorageSync: (key) => clone(storage.get(key)),
+    getStorageSync: (key) => {
+      if (failReads.has(key)) throw new Error(`injected read failure: ${key}`)
+      return clone(storage.get(key))
+    },
     setStorageSync: (key, value) => {
       if (failKeys.has(key)) throw new Error(`injected failure: ${key}`)
       storage.set(key, clone(value))
@@ -46,7 +50,7 @@ function setup({ projects = [project], records = [record], favorites = [favorite
   delete require.cache[recordsPath]
   delete require.cache[actionsPath]
   return {
-    storage, failKeys, toasts,
+    storage, failKeys, failReads, toasts,
     api: require(recordsPath),
     actions: require(actionsPath),
   }
@@ -146,6 +150,192 @@ for (const kind of ['project', 'record', 'favorite']) {
     assert.equal(fixture.storage.get(targetKey)[0].resultText, conflict.resultText)
   }, results)
 }
+
+run('restore uses the current recovery list and preserves rows added after the cache was filled', () => {
+  const restoreEntry = {
+    id: 'restore-stale-cache', kind: 'project', targetId: 'restore-project', deletedAt: 100,
+    snapshot: { id: 'restore-project', name: '恢复项目', createdAt: 90, updatedAt: 100 },
+  }
+  const concurrentEntry = {
+    id: 'added-after-cache', kind: 'record', targetId: 'other-record', deletedAt: 101,
+    snapshot: { id: 'other-record' },
+  }
+  const fixture = setup({ extra: { [recoveryKey]: [restoreEntry] } })
+  assert.equal(fixture.api.getWorkspaceSnapshot({ forceRefresh: true }).ok, true)
+  fixture.storage.set(recoveryKey, [restoreEntry, concurrentEntry])
+
+  assert.equal(fixture.api.restoreRecoveryEntry(restoreEntry.id), true)
+  assert.deepEqual(fixture.storage.get(recoveryKey), [concurrentEntry])
+  assert.equal(fixture.storage.get(projectKey).some((item) => item.id === restoreEntry.snapshot.id), true)
+}, results)
+
+run('restore does not write from cached rows when reading the raw recovery list fails', () => {
+  const row = {
+    id: 'restore-read-failure', kind: 'project', targetId: 'restore-project', deletedAt: 100,
+    snapshot: { id: 'restore-project', name: '恢复项目', createdAt: 90, updatedAt: 100 },
+  }
+  const concurrentEntry = {
+    id: 'added-before-read-failure', kind: 'record', targetId: 'other-record', deletedAt: 101,
+    snapshot: { id: 'other-record' },
+  }
+  const fixture = setup({ extra: { [recoveryKey]: [row] } })
+  assert.equal(fixture.api.getWorkspaceSnapshot({ forceRefresh: true }).ok, true)
+  fixture.storage.set(recoveryKey, [row, concurrentEntry])
+  const before = clone(Object.fromEntries(fixture.storage))
+  fixture.failReads.add(recoveryKey)
+
+  assert.equal(fixture.api.restoreRecoveryEntry(row.id), false)
+  assert.deepEqual(clone(Object.fromEntries(fixture.storage)), before)
+
+  fixture.failReads.clear()
+  assert.equal(fixture.api.removeFavorite(favorite.id), true)
+  assert.equal(fixture.storage.get(recoveryKey).some((item) => item.id === concurrentEntry.id), true)
+}, results)
+
+run('a failed restore keeps its fresh recovery list for subsequent mutations', () => {
+  const row = {
+    id: 'restore-write-failure', kind: 'project', targetId: 'restore-project', deletedAt: 100,
+    snapshot: { id: 'restore-project', name: '恢复项目', createdAt: 90, updatedAt: 100 },
+  }
+  const concurrentEntry = {
+    id: 'added-before-write-failure', kind: 'record', targetId: 'other-record', deletedAt: 101,
+    snapshot: { id: 'other-record' },
+  }
+  const fixture = setup({ extra: { [recoveryKey]: [row] } })
+  assert.equal(fixture.api.getWorkspaceSnapshot({ forceRefresh: true }).ok, true)
+  fixture.storage.set(recoveryKey, [row, concurrentEntry])
+  fixture.failKeys.add(projectKey)
+
+  assert.equal(fixture.api.restoreRecoveryEntry(row.id), false)
+  assert.deepEqual(fixture.storage.get(recoveryKey), [row, concurrentEntry])
+  fixture.failKeys.clear()
+  assert.equal(fixture.api.removeFavorite(favorite.id), true)
+  assert.equal(fixture.storage.get(recoveryKey).some((item) => item.id === concurrentEntry.id), true)
+}, results)
+
+run('recovery retention removes only expired raw entries and preserves extended rows', () => {
+  const thirtyDays = 30 * 24 * 60 * 60 * 1000
+  const now = 1_000_000_000_000
+  const expired = {
+    id: 'expired-row', kind: 'record', targetId: 'expired-record', deletedAt: now - thirtyDays - 1,
+    snapshot: { id: 'expired-record' },
+  }
+  const recent = {
+    id: 'recent-row', kind: 'favorite', targetId: 'recent-favorite', deletedAt: now - thirtyDays + 1,
+    snapshot: { id: 'recent-favorite' }, opaqueFutureField: { version: 2 },
+  }
+  const fixture = setup({ extra: { [recoveryKey]: [expired, recent] } })
+  const result = fixture.api.processRecoveryRetention(now)
+  assert.deepEqual(result, { ok: true, error: '', removedCount: 1 })
+  assert.deepEqual(fixture.storage.get(recoveryKey), [recent], 'the raw survivor is preserved byte-for-byte as data')
+}, results)
+
+run('legacy recent entries start their 30-day clock on first maintenance, not their old updatedAt', () => {
+  const thirtyDays = 30 * 24 * 60 * 60 * 1000
+  const now = 1_000_000_000_000
+  const legacy = {
+    id: 'legacy-row', kind: 'legacy-recent', targetId: 'legacy-result', deletedAt: 1,
+    snapshot: { id: 'legacy-result' },
+  }
+  const fixture = setup({ extra: { [recoveryKey]: [legacy] } })
+  assert.deepEqual(fixture.api.processRecoveryRetention(now), { ok: true, error: '', removedCount: 0 })
+  assert.equal(fixture.storage.get(recoveryKey)[0].deletedAt, now)
+  assert.equal(fixture.storage.get(recoveryKey)[0].retentionStartedAt, now)
+  assert.deepEqual(fixture.api.processRecoveryRetention(now + thirtyDays - 1).removedCount, 0)
+  assert.deepEqual(fixture.api.processRecoveryRetention(now + thirtyDays).removedCount, 1)
+  assert.deepEqual(fixture.storage.get(recoveryKey), [])
+}, results)
+
+run('missing recovery timestamps begin at first maintenance', () => {
+  const now = 1_000_000_000_000
+  const missingDate = { id: 'undated-row', kind: 'project', targetId: 'project-old', snapshot: { id: 'project-old' } }
+  const fixture = setup({ extra: { [recoveryKey]: [missingDate] } })
+  assert.equal(fixture.api.processRecoveryRetention(now).ok, true)
+  assert.equal(fixture.storage.get(recoveryKey)[0].deletedAt, now)
+}, results)
+
+run('a missing recovery key in an otherwise valid v4 store is treated as empty', () => {
+  const fixture = setup({ extra: { [recoveryKey]: undefined } })
+  assert.equal(fixture.storage.has(recoveryKey), false)
+  assert.deepEqual(fixture.api.processRecoveryRetention(1_000_000_000_000), { ok: true, error: '', removedCount: 0 })
+  assert.equal(fixture.storage.has(recoveryKey), false, 'an empty recovery key stays absent')
+  assert.deepEqual(fixture.api.getRecoveryEntries(), [])
+}, results)
+
+run('a future deletion timestamp is preserved when the device clock moves backward', () => {
+  const now = 1_000_000_000_000
+  const future = {
+    id: 'future-row', kind: 'record', targetId: 'future-record', deletedAt: now + 60_000,
+    snapshot: { id: 'future-record' },
+  }
+  const fixture = setup({ extra: { [recoveryKey]: [future] } })
+  assert.deepEqual(fixture.api.processRecoveryRetention(now), { ok: true, error: '', removedCount: 0 })
+  assert.deepEqual(fixture.storage.get(recoveryKey), [future])
+}, results)
+
+run('retention read and write failures report failure and preserve stored entries', () => {
+  const thirtyDays = 30 * 24 * 60 * 60 * 1000
+  const now = 1_000_000_000_000
+  const expired = {
+    id: 'expired-row', kind: 'record', targetId: 'expired-record', deletedAt: now - thirtyDays - 1,
+    snapshot: { id: 'expired-record' },
+  }
+  const readFailure = setup({ extra: { [recoveryKey]: [expired] }, failReadKeys: [recoveryKey] })
+  assert.equal(readFailure.api.processRecoveryRetention(now).ok, false)
+  assert.deepEqual(readFailure.storage.get(recoveryKey), [expired])
+
+  const writeFailure = setup({ extra: { [recoveryKey]: [expired] } })
+  writeFailure.failKeys.add(recoveryKey)
+  const result = writeFailure.api.processRecoveryRetention(now)
+  assert.equal(result.ok, false)
+  assert.match(result.error, /仍保留/)
+  assert.deepEqual(writeFailure.storage.get(recoveryKey), [expired])
+}, results)
+
+run('permanent deletion removes one recovery copy without touching related stores', () => {
+  const first = {
+    id: 'first-row', kind: 'favorite', targetId: 'first-favorite', deletedAt: 100,
+    snapshot: { id: 'first-favorite' }, opaqueFutureField: { keep: true },
+  }
+  const second = { id: 'second-row', kind: 'record', targetId: 'second-record', deletedAt: 101, snapshot: { id: 'second-record' } }
+  const fixture = setup({ extra: { [recoveryKey]: [first, second] } })
+  const otherStores = [projectKey, recordKey, favoriteKey].map((key) => [key, clone(fixture.storage.get(key))])
+  assert.equal(fixture.api.permanentlyDeleteRecoveryEntry(first.id), true)
+  assert.deepEqual(fixture.storage.get(recoveryKey), [second])
+  otherStores.forEach(([key, value]) => assert.deepEqual(fixture.storage.get(key), value))
+
+  const beforeFailure = clone(fixture.storage.get(recoveryKey))
+  fixture.failKeys.add(recoveryKey)
+  assert.equal(fixture.api.permanentlyDeleteRecoveryEntry(second.id), false)
+  assert.deepEqual(fixture.storage.get(recoveryKey), beforeFailure)
+}, results)
+
+run('recovery page asks before permanently deleting and describes the copy scope', () => {
+  const row = { id: 'confirm-row', kind: 'favorite', targetId: 'confirm-favorite', deletedAt: 100, snapshot: { id: 'confirm-favorite' } }
+  const fixture = setup({ extra: { [recoveryKey]: [row] } })
+  const pagePath = require.resolve('../../pages/projects/recovery')
+  const originalPage = global.Page
+  let definition
+  global.Page = (value) => { definition = value }
+  delete require.cache[pagePath]
+  require(pagePath)
+  if (originalPage === undefined) delete global.Page
+  else global.Page = originalPage
+
+  let modal
+  global.wx.showModal = (options) => { modal = options }
+  const page = { _pageVisible: false, _unloaded: false, refresh() {}, setData() {} }
+  const event = { currentTarget: { dataset: { id: row.id } } }
+  definition.permanentlyDeleteEntry.call(page, event)
+  assert.equal(modal.confirmText, '永久删除')
+  assert.match(modal.content, /迁移前备份/)
+  modal.success({ confirm: false })
+  assert.deepEqual(fixture.storage.get(recoveryKey), [row], 'cancel leaves the recovery row intact')
+
+  definition.permanentlyDeleteEntry.call(page, event)
+  modal.success({ confirm: true })
+  assert.deepEqual(fixture.storage.get(recoveryKey), [])
+}, results)
 
 run('favorite load preflight blocks unsupported models without changing preferences or navigation', () => {
   const fixture = setup()

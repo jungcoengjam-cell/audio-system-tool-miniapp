@@ -6,6 +6,9 @@ const {
   getRecoveryEntries,
   getStorageMigrationBackups,
   getWorkspaceSnapshot,
+  permanentlyDeleteRecoveryEntry,
+  processRecoveryRetention,
+  RECOVERY_RETENTION_MS,
   restoreRecoveryEntry,
   restoreStorageMigrationBackup,
 } = require('../../utils/records')
@@ -31,13 +34,17 @@ function formatTime(value) {
 function decorateRecoveryEntry(entry) {
   const snapshot = entry.snapshot || {}
   const kind = entry.kind
+  const retainedFrom = kind === 'legacy-recent' ? entry.retentionStartedAt : entry.deletedAt
   return {
     id: entry.id,
     kind,
     kindLabel: KIND_LABELS[kind] || '已移除内容',
     title: snapshot.name || snapshot.title || snapshot.summary || snapshot.module || '已保存内容',
     summary: snapshot.summary || snapshot.resultText || entry.projectId || '',
-    timeText: formatTime(entry.deletedAt),
+    timeText: formatTime(retainedFrom),
+    expiryText: Number.isFinite(retainedFrom)
+      ? `保留至 ${formatTime(retainedFrom + RECOVERY_RETENTION_MS)}`
+      : '打开回收站后开始计算保留时间',
     canRestoreDirectly: kind !== 'legacy-recent',
   }
 }
@@ -68,6 +75,7 @@ Page({
   },
 
   refresh() {
+    const retention = processRecoveryRetention()
     const snapshot = getWorkspaceSnapshot({ forceRefresh: true })
     const recoveryEntries = snapshot.ok ? snapshot.recoveryEntries.map(decorateRecoveryEntry) : getRecoveryEntries().map(decorateRecoveryEntry)
     const backupResult = getStorageMigrationBackups()
@@ -90,7 +98,9 @@ Page({
         projectId: session.projectId,
       })) : [],
       projects: snapshot.ok ? snapshot.projects : getProjects(),
-      error: snapshot.ok ? '' : snapshot.error || '恢复内容读取失败；请重试。',
+      error: retention.ok
+        ? snapshot.ok ? '' : snapshot.error || '回收站内容读取失败；请重试。'
+        : retention.error || '回收站维护失败；内容仍保留，请重试。',
       backupError: backupResult.ok ? '' : backupResult.error,
       sessionError: sessionResult.ok ? '' : sessionResult.error,
     })
@@ -116,7 +126,7 @@ Page({
           const project = projects[tapIndex]
           if (!project) return
           if (!restoreRecoveryEntry(id, project.id)) {
-            wx.showToast({ title: '恢复失败，记录仍保留在恢复区', icon: 'none' })
+            wx.showToast({ title: '恢复失败，记录仍保留在回收站', icon: 'none' })
             return
           }
           if (this._pageVisible && !this._unloaded) vibrate('medium')
@@ -127,12 +137,34 @@ Page({
       return
     }
     if (!restoreRecoveryEntry(id)) {
-      wx.showToast({ title: '恢复失败，内容仍保留在恢复区', icon: 'none' })
+      wx.showToast({ title: '恢复失败，内容仍保留在回收站', icon: 'none' })
       return
     }
     if (this._pageVisible && !this._unloaded) vibrate('medium')
     this.refresh()
     wx.showToast({ title: '已恢复', icon: 'none' })
+  },
+
+  permanentlyDeleteEntry(event) {
+    const id = String(event.currentTarget.dataset.id || '')
+    if (!id) return
+    wx.showModal({
+      title: '永久删除这条内容？',
+      content: '此操作无法撤销，只删除回收站中的这条副本。其他项目、收藏或迁移前备份中若有独立副本，不会随之删除。',
+      confirmText: '永久删除',
+      cancelText: '取消',
+      success: ({ confirm }) => {
+        if (!confirm) return
+        if (!permanentlyDeleteRecoveryEntry(id)) {
+          wx.showToast({ title: '删除失败，内容仍保留在回收站', icon: 'none' })
+          this.refresh()
+          return
+        }
+        if (this._pageVisible && !this._unloaded) vibrate('medium')
+        this.refresh()
+        wx.showToast({ title: '已永久删除', icon: 'none' })
+      },
+    })
   },
 
   restoreBackup(event) {

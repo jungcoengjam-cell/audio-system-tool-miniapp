@@ -105,7 +105,7 @@ function createRecordMigration(runtime) {
       const projectRows = projects.ok ? projects.value : null
       const recordRows = records.ok ? records.value : null
       const favoriteRows = favorites.ok ? favorites.value : null
-      const recoveryRows = recovery.ok ? recovery.value : null
+      const recoveryRows = recovery.ok ? (recovery.value === undefined ? [] : recovery.value) : null
       const validRecoveryKinds = new Set(['project', 'record', 'favorite', 'record-project-link', 'legacy-recent'])
       const healthy = validUniqueIds(projectRows)
         && projectRows.every((item) => normalizeProject(item))

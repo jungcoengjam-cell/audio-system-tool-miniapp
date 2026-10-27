@@ -1,8 +1,8 @@
 <scroll-view class="home-scroll recovery-scroll" scroll-y enhanced show-scrollbar="{{false}}">
   <view class="home-page recovery-page">
     <view class="home-header home-header-stacked">
-      <view class="home-title">恢复区</view>
-      <view class="home-subtitle">已移除内容和中断编辑会一直保留，直到你选择恢复或放弃</view>
+      <view class="home-title">回收站</view>
+      <view class="home-subtitle">已移除内容保留 30 天，到期后打开回收站时自动清理。中断草稿和迁移备份仍按原方式保留。</view>
     </view>
     <view wx:if="{{error}}" class="home-panel recovery-error">
       <view class="home-empty-state-title">{{error}}</view>
@@ -18,7 +18,11 @@
         </view>
         <view class="recovery-card-title">{{item.title}}</view>
         <view wx:if="{{item.summary}}" class="recovery-card-summary">{{item.summary}}</view>
-        <button class="home-secondary-button recovery-action" data-id="{{item.id}}" bindtap="restoreEntry">{{item.kind === 'legacy-recent' ? '选择项目并恢复' : '恢复'}}</button>
+        <view class="recovery-date recovery-expiry">{{item.expiryText}}</view>
+        <view class="recovery-action-row">
+          <button class="home-secondary-button" data-id="{{item.id}}" bindtap="restoreEntry">{{item.kind === 'legacy-recent' ? '选择项目并恢复' : '恢复'}}</button>
+          <button class="home-secondary-button recovery-permanent-button" data-id="{{item.id}}" bindtap="permanentlyDeleteEntry">永久删除</button>
+        </view>
       </view>
     </view>
 
@@ -48,7 +52,7 @@
     <view wx:if="{{backupError}}" class="recovery-warning">{{backupError}}</view>
 
     <view wx:if="{{!error && !recoveryEntries.length && !sessions.length && !backups.length}}" class="home-empty-state home-panel">
-      <view class="home-empty-state-title">恢复区目前为空</view>
+      <view class="home-empty-state-title">回收站目前为空</view>
       <view class="home-empty-state-copy">移除项目、记录或收藏时，应用会先保存可恢复副本。</view>
     </view>
     <view class="home-bottom-space"></view>

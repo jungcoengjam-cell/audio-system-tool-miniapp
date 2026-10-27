@@ -244,7 +244,7 @@ Page({
     const before = (this._allFavorites || []).some((favorite) => favorite.id === favoriteId)
     const result = toggleFavoriteById(favoriteId)
     if (!before || result) {
-      wx.showToast({ title: '移入恢复区失败，收藏仍然保留', icon: 'none' })
+      wx.showToast({ title: '移入回收站失败，收藏仍然保留', icon: 'none' })
       return false
     }
     vibrate('medium')

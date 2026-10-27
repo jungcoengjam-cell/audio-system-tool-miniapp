@@ -3,7 +3,7 @@
     <view class="home-header home-main-header project-header">
       <view class="home-title home-main-title">项目</view>
       <view class="project-header-actions">
-        <button class="project-recovery-button" hover-class="project-control-pressed" bindtap="openRecovery">恢复 {{recoveryCount}}</button>
+        <button class="project-recovery-button" hover-class="project-control-pressed" bindtap="openRecovery">回收站 {{recoveryCount}}</button>
         <button wx:if="{{tabIndex === 0}}" class="home-primary-button project-create-button" hover-class="project-control-pressed" bindtap="createProject">＋ 新建</button>
       </view>
     </view>

@@ -14,5 +14,7 @@
 .recovery-action{margin:12rpx 0 0}
 .recovery-action-row{margin-top:12rpx}
 .recovery-action-row button{min-width:0;flex:1;margin:0}
+.recovery-permanent-button{color:var(--theme-danger)}
+.recovery-expiry{margin-top:8rpx}
 .recovery-warning,.recovery-error{margin-top:12rpx;padding:18rpx;color:var(--theme-danger);font-size:14px;line-height:1.45}
 @media(max-width:340px){.recovery-card-summary{font-size:14px}.recovery-date{font-size:12px}}
