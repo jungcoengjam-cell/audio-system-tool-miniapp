@@ -1,3 +1,14 @@
+let markToolLoadStage = () => false
+try {
+  const performanceProbe = require('../../utils/performance')
+  if (typeof performanceProbe.markToolLoadStage === 'function') {
+    markToolLoadStage = (route, phase) => {
+      try { return performanceProbe.markToolLoadStage(route, phase) } catch (error) { return false }
+    }
+  }
+  markToolLoadStage('/pages/control-protocol/detail', 'module')
+} catch (error) {}
+
 const { catalog } = require('./runtime-catalog')
 const {
   getReferenceManualDetail,
@@ -160,6 +171,7 @@ Page({
   },
 
   onLoad(options = {}) {
+    markToolLoadStage('/pages/control-protocol/detail', 'onLoad')
     this._pageUnloaded = false
     this._pageHidden = false
     this._viewerState = viewerState.readViewerState(catalog)
@@ -200,6 +212,10 @@ Page({
     if (!fallback || !this.loadDevice(fallback)) {
       this.invalidateDetail('当前没有可查看的协议资料。')
     }
+  },
+
+  onReady() {
+    markToolLoadStage('/pages/control-protocol/detail', 'onReady')
   },
 
   getSheetDuration() {

@@ -24,7 +24,9 @@ const nativeRuntimeByDirectory = {
 }
 const compileOutputRoot = 'tmp/architecture-continuation-2026-10-25/phase7-compile/contract'
 const FIXED_NOW = '2026-10-25T12:34:56.000Z'
-const FROZEN_TRACE_SHA256 = '0a8eb40a2c876f59ea2afc7e66da2bd9ac0151055700facec649bbf19b1756f7'
+// Updated for app.json's Wi-Fi preloadRule; the before/current trace comparison is otherwise identical.
+// Previous trace digest: 0a8eb40a2c876f59ea2afc7e66da2bd9ac0151055700facec649bbf19b1756f7
+const FROZEN_TRACE_SHA256 = '1c3d8d27a747f8967d8c895b3b993bec3ec9bd8ffa3183194d0174e0a098ec0c'
 
 function clone(value) {
   return value === undefined ? undefined : JSON.parse(JSON.stringify(value))

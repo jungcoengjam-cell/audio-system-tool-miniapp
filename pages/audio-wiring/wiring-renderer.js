@@ -838,6 +838,233 @@ const ROUTE_SAMPLE_STEPS = 96
 const ROUTE_PARALLEL_CLEARANCE = 4
 const ROUTE_PARALLEL_MIN_RUN = 6
 const solderGeometryCache = new WeakMap()
+const ON_LOAD_SOLDER_GEOMETRY_SLOTS = 2
+const onLoadSolderGeometryCache = new Map()
+const onLoadSolderGeometryScopes = new WeakMap()
+const SOLDER_GEOMETRY_CACHE_VERSION = 'audio-solder-routes-v1'
+
+function safeSolderCacheValue(value, seen = new WeakSet()) {
+  if (value === null) return 'null;'
+  if (value === undefined) return 'undefined;'
+  if (typeof value === 'string') return `string:${value.length}:${value};`
+  if (typeof value === 'boolean') return value ? 'boolean:1;' : 'boolean:0;'
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value) || Object.is(value, -0)) return null
+    return `number:${String(value)};`
+  }
+  if (typeof value !== 'object') return null
+  if (seen.has(value)) return null
+  seen.add(value)
+
+  try {
+    const prototype = Object.getPrototypeOf(value)
+    if (Array.isArray(value)) {
+      if (prototype !== Array.prototype) return null
+      const lengthDescriptor = Object.getOwnPropertyDescriptor(value, 'length')
+      const length = lengthDescriptor && lengthDescriptor.value
+      if (!Number.isSafeInteger(length) || length < 0) return null
+      const keys = Reflect.ownKeys(value)
+      if (keys.length !== length + 1 || keys[keys.length - 1] !== 'length') return null
+      const items = []
+      for (let index = 0; index < length; index += 1) {
+        if (keys[index] !== String(index)) return null
+        const descriptor = Object.getOwnPropertyDescriptor(value, String(index))
+        if (!descriptor || !Object.prototype.hasOwnProperty.call(descriptor, 'value')
+          || !descriptor.enumerable || !descriptor.configurable || !descriptor.writable) return null
+        const encoded = safeSolderCacheValue(descriptor.value, seen)
+        if (encoded === null) return null
+        items.push(encoded)
+      }
+      return `array:${length}:[${items.join('')}]`
+    }
+
+    if (prototype !== Object.prototype && prototype !== null) return null
+    const keys = Reflect.ownKeys(value)
+    const entries = []
+    for (const key of keys) {
+      if (typeof key !== 'string') return null
+      const descriptor = Object.getOwnPropertyDescriptor(value, key)
+      if (!descriptor || !Object.prototype.hasOwnProperty.call(descriptor, 'value')
+        || !descriptor.enumerable || !descriptor.configurable || !descriptor.writable) return null
+      const encoded = safeSolderCacheValue(descriptor.value, seen)
+      if (encoded === null) return null
+      entries.push(`key:${key.length}:${key}=${encoded}`)
+    }
+    return `object:${prototype === null ? 'null' : 'plain'}:{${entries.join('')}}`
+  } catch (error) {
+    return null
+  }
+}
+
+function registerOnLoadSolderGeometryCacheModel(model) {
+  try {
+    // This is an internal lease for the plain model created by audio-wiring onLoad.
+    // Do not register models from events, records, exports, or caller supplied data.
+    const snapshot = safeSolderCacheValue(model)
+    if (snapshot === null || !model || model.status !== 'ready' || model.supported !== true
+      || !Array.isArray(model.connections) || model.connections.length === 0) return () => {}
+    const token = {}
+    onLoadSolderGeometryScopes.set(model, { token })
+    return () => {
+      try {
+        const current = onLoadSolderGeometryScopes.get(model)
+        if (current && current.token === token) onLoadSolderGeometryScopes.delete(model)
+      } catch (error) {}
+    }
+  } catch (error) {
+    return () => {}
+  }
+}
+
+function getOnLoadSolderGeometryScope(model) {
+  return model && onLoadSolderGeometryScopes.get(model) || null
+}
+
+function snapshotSolderAnchors(anchors) {
+  try {
+    if (!anchors || Object.getPrototypeOf(anchors) !== Map.prototype) return null
+    const entries = []
+    for (const [key, point] of Map.prototype.entries.call(anchors)) {
+      if (typeof key !== 'string' || !point || typeof point !== 'object') return null
+      const prototype = Object.getPrototypeOf(point)
+      if (prototype !== Object.prototype && prototype !== null) return null
+      const readPointProperty = (name, allowMissing = false) => {
+        const descriptor = Object.getOwnPropertyDescriptor(point, name)
+        if (!descriptor) return allowMissing ? { ok: true, value: undefined } : { ok: false }
+        if (!Object.prototype.hasOwnProperty.call(descriptor, 'value')
+          || !descriptor.enumerable || !descriptor.configurable || !descriptor.writable) return { ok: false }
+        return { ok: true, value: descriptor.value }
+      }
+      const x = readPointProperty('x'), y = readPointProperty('y')
+      const photo = readPointProperty('photo', true), routeDirection = readPointProperty('routeDirection', true)
+      if (!x.ok || !y.ok || !photo.ok || !routeDirection.ok
+        || !Number.isFinite(x.value) || !Number.isFinite(y.value)
+        || (photo.value !== undefined && typeof photo.value !== 'boolean')) return null
+      let normalizedDirection = routeDirection.value
+      if (routeDirection.value !== undefined) {
+        const direction = routeDirection.value
+        if (!direction || typeof direction !== 'object') return null
+        const directionPrototype = Object.getPrototypeOf(direction)
+        if (directionPrototype !== Object.prototype && directionPrototype !== null) return null
+        const dx = Object.getOwnPropertyDescriptor(direction, 'x')
+        const dy = Object.getOwnPropertyDescriptor(direction, 'y')
+        if (!dx || !dy || !Object.prototype.hasOwnProperty.call(dx, 'value')
+          || !Object.prototype.hasOwnProperty.call(dy, 'value')
+          || !dx.enumerable || !dx.configurable || !dx.writable
+          || !dy.enumerable || !dy.configurable || !dy.writable
+          || !Number.isFinite(dx.value) || !Number.isFinite(dy.value)) return null
+        normalizedDirection = { x: dx.value, y: dy.value }
+      }
+      entries.push([key, { x: x.value, y: y.value, photo: photo.value, routeDirection: normalizedDirection }])
+    }
+    return safeSolderCacheValue(entries)
+  } catch (error) {
+    return null
+  }
+}
+
+function makeOnLoadSolderGeometryKey(model, width, contentWidth, options, output, input, photoBottom, maxHeight) {
+  const scope = getOnLoadSolderGeometryScope(model)
+  if (!scope || !Number.isFinite(width) || !Number.isFinite(contentWidth) || !Number.isFinite(photoBottom)
+    || !Number.isFinite(maxHeight) || width <= 0 || contentWidth <= 0) return null
+  const routeEndpoints = []
+  for (const connection of model.connections) {
+    if (!connection || typeof connection !== 'object') return null
+    const fromPin = Object.getOwnPropertyDescriptor(connection, 'fromPin')
+    const toPin = Object.getOwnPropertyDescriptor(connection, 'toPin')
+    if (!fromPin || !toPin || !Object.prototype.hasOwnProperty.call(fromPin, 'value')
+      || !Object.prototype.hasOwnProperty.call(toPin, 'value')
+      || typeof fromPin.value !== 'string' || typeof toPin.value !== 'string') return null
+    routeEndpoints.push([fromPin.value, toPin.value])
+  }
+  const connections = safeSolderCacheValue(routeEndpoints)
+  const outputAnchors = snapshotSolderAnchors(output && output.anchors)
+  const inputAnchors = snapshotSolderAnchors(input && input.anchors)
+  if (connections === null || outputAnchors === null || inputAnchors === null) return null
+  const key = safeSolderCacheValue({
+    version: SOLDER_GEOMETRY_CACHE_VERSION,
+    connections,
+    outputAnchors,
+    inputAnchors,
+    width,
+    contentWidth,
+    avoidRail: Boolean(options.avoidRail),
+    photoBottom,
+    maxHeight,
+    theme: options.theme === 'dark' ? 'dark' : 'light',
+  })
+  return key === null ? null : key
+}
+
+function getOnLoadSolderGeometry(key, connections, output, input) {
+  if (key === null) return null
+  const entry = onLoadSolderGeometryCache.get(key)
+  if (!entry) return null
+  onLoadSolderGeometryCache.delete(key)
+  onLoadSolderGeometryCache.set(key, entry)
+  if (!Array.isArray(connections) || entry.curves.length !== connections.length) return null
+
+  const curves = []
+  for (let index = 0; index < connections.length; index += 1) {
+    const connection = connections[index]
+    const from = output.anchors.get(String(connection.fromPin))
+    const to = input.anchors.get(String(connection.toPin))
+    const snapshot = entry.curves[index]
+    if (!from || !to || !snapshot) return null
+    curves.push({
+      from,
+      to,
+      control1: snapshot.control1.slice(),
+      control2: snapshot.control2.slice(),
+      points: snapshot.points.map((point) => point.slice()),
+      cumulativeLengths: snapshot.cumulativeLengths.slice(),
+      score: snapshot.score,
+    })
+  }
+  return { curves, error: '' }
+}
+
+function snapshotSuccessfulSolderRoutes(routeSelection, connections) {
+  if (!routeSelection || routeSelection.error !== '' || !Array.isArray(routeSelection.routes)
+    || routeSelection.routes.length !== connections.length) return null
+  const curves = []
+  for (const route of routeSelection.routes) {
+    const curve = route && route.curve
+    if (!curve || !curve.from || !curve.to || !Number.isFinite(curve.from.x) || !Number.isFinite(curve.from.y)
+      || !Number.isFinite(curve.to.x) || !Number.isFinite(curve.to.y) || !Number.isFinite(curve.score)
+      || !Array.isArray(curve.control1) || curve.control1.length !== 2
+      || !Array.isArray(curve.control2) || curve.control2.length !== 2
+      || !Array.isArray(curve.points) || curve.points.length !== ROUTE_SAMPLE_STEPS + 1
+      || !Array.isArray(curve.cumulativeLengths) || curve.cumulativeLengths.length !== curve.points.length) return null
+    const control1 = curve.control1.slice()
+    const control2 = curve.control2.slice()
+    const points = curve.points.map((point) => Array.isArray(point) ? point.slice() : null)
+    const cumulativeLengths = curve.cumulativeLengths.slice()
+    if (![...control1, ...control2, ...cumulativeLengths, curve.score].every(Number.isFinite)
+      || points.some((point) => !point || point.length !== 2 || !point.every(Number.isFinite))) return null
+    curves.push({ control1, control2, points, cumulativeLengths, score: curve.score })
+  }
+  return curves
+}
+
+function storeOnLoadSolderGeometry(key, routeSelection, connections) {
+  if (key === null) return
+  const curves = snapshotSuccessfulSolderRoutes(routeSelection, connections)
+  if (!curves) return
+  const frozenCurves = curves.map((curve) => Object.freeze({
+    control1: Object.freeze(curve.control1),
+    control2: Object.freeze(curve.control2),
+    points: Object.freeze(curve.points.map((point) => Object.freeze(point))),
+    cumulativeLengths: Object.freeze(curve.cumulativeLengths),
+    score: curve.score,
+  }))
+  const entry = Object.freeze({ curves: Object.freeze(frozenCurves) })
+  if (onLoadSolderGeometryCache.has(key)) onLoadSolderGeometryCache.delete(key)
+  onLoadSolderGeometryCache.set(key, entry)
+  while (onLoadSolderGeometryCache.size > ON_LOAD_SOLDER_GEOMETRY_SLOTS) {
+    onLoadSolderGeometryCache.delete(onLoadSolderGeometryCache.keys().next().value)
+  }
+}
 
 function rotateDirection(direction, degrees) {
   const angle = Math.atan2(direction.y, direction.x) + ((degrees * Math.PI) / 180)
@@ -1117,6 +1344,7 @@ function addCrossingGaps(routes) {
 }
 
 function solderWiringLayout(width, model, options = {}) {
+  const onLoadCacheScope = getOnLoadSolderGeometryScope(model)
   const supported = Boolean(model && model.supported && Array.isArray(model.connections))
   const hasDualPhoto = ['rcaStereo', 'tsStereo'].includes(model && model.output && model.output.id) ||
     ['rcaStereo', 'tsStereo'].includes(model && model.input && model.input.id) ||
@@ -1148,8 +1376,26 @@ function solderWiringLayout(width, model, options = {}) {
   const routeKey = `${width}:${options.avoidRail ? 1 : 0}`
   let cachedGeometry = routeCache.get(routeKey)
   if (!cachedGeometry) {
-    const routeSelection = selectSolderRoutes(connections, output, input, contentWidth, photoBottom + 100)
-    cachedGeometry = { curves: routeSelection.routes.map((route) => route.curve), error: routeSelection.error }
+    const maxHeight = photoBottom + 100
+    let crossModelKey = null
+    if (onLoadCacheScope) {
+      try {
+        crossModelKey = makeOnLoadSolderGeometryKey(model, width, contentWidth, options,
+          output, input, photoBottom, maxHeight)
+      } catch (error) {}
+    }
+    try {
+      cachedGeometry = getOnLoadSolderGeometry(crossModelKey, connections, output, input)
+    } catch (error) {
+      cachedGeometry = null
+    }
+    if (!cachedGeometry) {
+      const routeSelection = selectSolderRoutes(connections, output, input, contentWidth, maxHeight)
+      cachedGeometry = { curves: routeSelection.routes.map((route) => route.curve), error: routeSelection.error }
+      try {
+        storeOnLoadSolderGeometry(crossModelKey, routeSelection, connections)
+      } catch (error) {}
+    }
     if (cacheable) routeCache.set(routeKey, cachedGeometry)
   }
   const routingError = cachedGeometry.error
@@ -1543,4 +1789,5 @@ module.exports = {
   getWiringHitAreas,
   drawWiringReport,
   getReportHeight,
+  registerOnLoadSolderGeometryCacheModel,
 }

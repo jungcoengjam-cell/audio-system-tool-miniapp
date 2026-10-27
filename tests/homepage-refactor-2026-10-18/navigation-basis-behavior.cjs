@@ -41,7 +41,7 @@ for (const tool of registry.getTools()) {
   assert.ok(pageAvailable(tool.path), `${tool.id} route must exist in app.json: ${tool.path}`)
   if (MODULES[tool.id]) assert.equal(tool.path, MODULES[tool.id].path, `${tool.id} must reuse records registry route`)
 }
-assert.equal(registry.getTool('controlProtocol').path, '/pages/control-protocol/index')
+assert.equal(registry.getTool('controlProtocol').path, '/pages/control-protocol/detail')
 assert.equal(registry.getTool('projectWiring').path, '/pages/project-wiring/index')
 assert.equal(registry.getTool('unknown'), null)
 

@@ -1,3 +1,14 @@
+let markToolLoadStage = () => false
+try {
+  const performanceProbe = require('../../utils/performance')
+  if (typeof performanceProbe.markToolLoadStage === 'function') {
+    markToolLoadStage = (route, phase) => {
+      try { return performanceProbe.markToolLoadStage(route, phase) } catch (error) { return false }
+    }
+  }
+  markToolLoadStage('/pages/project-wiring/index', 'module')
+} catch (error) {}
+
 const {
   BUILD_OPTIONS,
   CABLE_OPTIONS,
@@ -961,5 +972,6 @@ Page({
     resetFormKeyboardAvoidance: pageDefinition.resetFormKeyboardAvoidance,
     isPerformanceMeasurementEnabled,
     startMeasurement,
+    markToolLoadStage,
   }),
 })

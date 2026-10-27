@@ -1,3 +1,14 @@
+let markToolLoadStage = () => false
+try {
+const performanceProbe = require('../../utils/performance')
+if (typeof performanceProbe.markToolLoadStage === 'function') {
+markToolLoadStage = (route, phase) => {
+try { return performanceProbe.markToolLoadStage(route, phase) } catch (error) { return false }
+}
+}
+markToolLoadStage('/pages/dmx-address/dmx-address', 'module')
+} catch (error) {}
+
 const {
 calculateDmxAddressPlan,
 MAX_GROUPS,
@@ -395,6 +406,7 @@ fixtureAddPreview: null,
 },
 ...sheetLifecycleMethods,
 onLoad(options = {}) {
+markToolLoadStage('/pages/dmx-address/dmx-address', 'onLoad')
 this._nextGroupId = 1
 this._selectedUniverseLabel = 'A'
 this._expandedUniverseLabels = new Set()
@@ -473,6 +485,9 @@ return
 }
 }
 this.applyWorkspaceState(loaded, 'onLoad', { coldInitialization: true, initialViewportMetrics })
+},
+onReady() {
+markToolLoadStage('/pages/dmx-address/dmx-address', 'onReady')
 },
 switchWorkspace(event) {
 const workspace = event.currentTarget.dataset.workspace === 'plan' ? 'plan' : 'config'

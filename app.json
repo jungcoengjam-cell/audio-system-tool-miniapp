@@ -56,6 +56,17 @@
       ]
     }
   ],
+  "preloadRule": {
+    "pages/tools/tools": {
+      "network": "wifi",
+      "packages": [
+        "pages/audio-wiring",
+        "pages/project-wiring",
+        "pages/dmx-address",
+        "pages/control-protocol"
+      ]
+    }
+  },
   "window": {
     "navigationBarTextStyle": "@navTextColor",
     "navigationBarTitleText": "音频工具",

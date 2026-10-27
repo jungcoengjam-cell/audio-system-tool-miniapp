@@ -32,7 +32,7 @@ function readWorkspaceViewPreference() {
   }
 }
 
-function createPageLifecycle({ emptySchedule, resetFormKeyboardAvoidance, isPerformanceMeasurementEnabled, startMeasurement }) {
+function createPageLifecycle({ emptySchedule, resetFormKeyboardAvoidance, isPerformanceMeasurementEnabled, startMeasurement, markToolLoadStage = () => false }) {
   function initializePageState(options = {}) {
     this.projectId = typeof options.id === 'string' ? options.id : ''
     this._destroyed = false
@@ -101,6 +101,7 @@ function createPageLifecycle({ emptySchedule, resetFormKeyboardAvoidance, isPerf
 
   return {
     onLoad(options = {}) {
+      markToolLoadStage('/pages/project-wiring/index', 'onLoad')
       this._collapsedGroups = new Set()
       this._draftPairSerial = 0
       this._workspaceSuppressedTouches = Object.create(null)
@@ -169,6 +170,10 @@ function createPageLifecycle({ emptySchedule, resetFormKeyboardAvoidance, isPerf
       this._workspaceInitializationOnly = true
       initializePageState.call(this, { ...options, id: INITIALIZE_ONLY_ROUTE_ID })
       this.finishMissingWorkspaceResume()
+    },
+
+    onReady() {
+      markToolLoadStage('/pages/project-wiring/index', 'onReady')
     },
 
     onShow() {

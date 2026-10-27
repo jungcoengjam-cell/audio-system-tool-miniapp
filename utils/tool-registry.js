@@ -107,7 +107,7 @@ const TOOLS = Object.freeze([
   },
   {
     id: 'controlProtocol', title: '控制协议', category: '中控', subtitle: '查看型号对应的接线与协议资料',
-    icon: '/assets/home/module-control-protocol-catalog.png', path: '/pages/control-protocol/index',
+    icon: '/assets/home/module-control-protocol-catalog.png', path: '/pages/control-protocol/detail',
   },
   {
     id: 'productLibrary', title: '产品资料库', category: '资料', subtitle: '查阅产品规格与资料',

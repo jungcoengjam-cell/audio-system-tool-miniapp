@@ -1,3 +1,14 @@
+let markToolLoadStage = () => false
+try {
+  const performanceProbe = require('../../utils/performance')
+  if (typeof performanceProbe.markToolLoadStage === 'function') {
+    markToolLoadStage = (route, phase) => {
+      try { return performanceProbe.markToolLoadStage(route, phase) } catch (error) { return false }
+    }
+  }
+  markToolLoadStage('/pages/audio-wiring/index', 'module')
+} catch (error) {}
+
 const {
   OUTPUT_OPTIONS,
   INPUT_OPTIONS,
@@ -11,6 +22,7 @@ const {
   getWiringHitAreas,
   drawWiringReport,
   getReportHeight,
+  registerOnLoadSolderGeometryCacheModel,
 } = require('./wiring-renderer')
 const { vibrate } = require('../../utils/haptics')
 const {
@@ -85,10 +97,12 @@ function commitIfWiringTaskCurrent(page, token, commit) {
 }
 
 function getWindowWidth() {
+  markToolLoadStage('/pages/audio-wiring/index', 'audioWindowInfoStart')
   try {
     const info = typeof wx.getWindowInfo === 'function' ? wx.getWindowInfo() : wx.getSystemInfoSync()
     if (info && Number(info.windowWidth) > 0) return Number(info.windowWidth)
   } catch (error) {}
+  finally { markToolLoadStage('/pages/audio-wiring/index', 'audioWindowInfoEnd') }
   return 375
 }
 
@@ -263,21 +277,33 @@ function getModelDisplayInfo(model) {
   }
 }
 
-function getSafeDiagramHeight(width, model, options, fallback) {
-  if (!model || !model.supported) return fallback
+function getSafeDiagramHeight(width, model, options, fallback, timingStage) {
+  if (timingStage) markToolLoadStage('/pages/audio-wiring/index', `${timingStage}Start`)
+  if (!model || !model.supported) {
+    if (timingStage) markToolLoadStage('/pages/audio-wiring/index', `${timingStage}End`)
+    return fallback
+  }
   try {
     return getDiagramHeight(width, model, { ...options, avoidRail: true })
   } catch (error) {
     return fallback
+  } finally {
+    if (timingStage) markToolLoadStage('/pages/audio-wiring/index', `${timingStage}End`)
   }
 }
 
-function getSafeReportHeight(width, model, fallback, options = {}) {
-  if (!model || !model.supported) return fallback
+function getSafeReportHeight(width, model, fallback, options = {}, timingStage) {
+  if (timingStage) markToolLoadStage('/pages/audio-wiring/index', `${timingStage}Start`)
+  if (!model || !model.supported) {
+    if (timingStage) markToolLoadStage('/pages/audio-wiring/index', `${timingStage}End`)
+    return fallback
+  }
   try {
     return getReportHeight(width, model, options)
   } catch (error) {
     return fallback
+  } finally {
+    if (timingStage) markToolLoadStage('/pages/audio-wiring/index', `${timingStage}End`)
   }
 }
 
@@ -467,7 +493,10 @@ Page({
   },
 
   onLoad(options = {}) {
+    markToolLoadStage('/pages/audio-wiring/index', 'onLoad')
+    markToolLoadStage('/pages/audio-wiring/index', 'audioEditorAttachStart')
     attachResultEditor(this, 'audioWiring', options)
+    markToolLoadStage('/pages/audio-wiring/index', 'audioEditorAttachEnd')
     this._wiringLifecycle = createWiringLifecycle()
     this._pageVisible = false
     this._pageReady = false
@@ -501,6 +530,7 @@ Page({
       wiringStorageWarning = '当前环境无法记住接口和视角；本次设置仍可使用。'
     } else {
       try {
+        markToolLoadStage('/pages/audio-wiring/index', 'audioPreferenceReadStart')
         const stored = wx.getStorageSync(WIRING_PREFERENCE_STORAGE_KEY)
         if (stored !== undefined && stored !== null && stored !== '') {
           if (isValidWiringPreferences(stored)) {
@@ -519,40 +549,60 @@ Page({
         }
       } catch (error) {
         wiringStorageWarning = '读取上次设置失败；本次仍可使用，但设置可能无法记住。'
+      } finally {
+        markToolLoadStage('/pages/audio-wiring/index', 'audioPreferenceReadEnd')
       }
     }
+    markToolLoadStage('/pages/audio-wiring/index', 'audioModelBuildStart')
     const outputId = preferences.outputId
     const inputId = canonicalVisibleInputId(preferences.inputId)
     const selections = getFixedWiringSelections(outputId, inputId)
     const model = getSafeWiringModel(outputId, inputId, selections, null)
+    markToolLoadStage('/pages/audio-wiring/index', 'audioModelBuildEnd')
+    markToolLoadStage('/pages/audio-wiring/index', 'audioThemeStart')
     const theme = getCurrentTheme()
+    markToolLoadStage('/pages/audio-wiring/index', 'audioThemeEnd')
+    markToolLoadStage('/pages/audio-wiring/index', 'audioDataPrepareStart')
     const reportOptions = getReportOptions({ ...preferences, showRestoredHint, theme })
-    this.setData({
-      outputId,
-      inputId,
-      outputEndpoint: getEndpointCard(getEndpointOption(OUTPUT_OPTIONS, outputId)),
-      inputEndpoint: getEndpointCard(model && model.input ? model.input : getEndpointOption(INPUT_OPTIONS, inputId)),
-      manualSelected: preferences.manualSelected,
-      selections,
-      showRestoredHint,
-      wiringStorageWarning,
-      model,
-      supported: Boolean(model && model.status === 'ready' && model.supported),
-      wiringStatus: model ? model.status : 'incomplete',
-      ...getModelDisplayInfo(model),
-      outputOptions: OUTPUT_OPTIONS,
-      inputOptions: INPUT_OPTIONS,
-      viewMode: 'connectors',
-      face: 'solder',
-      hasBothEndpoints: Boolean(outputId && inputId),
-      theme,
-      diagramCanvasWidth,
-      diagramCanvasHeight: getSafeDiagramHeight(diagramCanvasWidth, model, { ...reportOptions, showTitle: false }, 340),
-      resultReportCanvasHeight: getSafeReportHeight(EXPORT_WIDTH, model, 960, reportOptions),
-    }, () => captureEditorBaseline(this))
+    const setDataMethod = this.setData
+    const endOnLoadGeometryCacheScope = registerOnLoadSolderGeometryCacheModel(model)
+    let initialData
+    try {
+      initialData = {
+        outputId,
+        inputId,
+        outputEndpoint: getEndpointCard(getEndpointOption(OUTPUT_OPTIONS, outputId)),
+        inputEndpoint: getEndpointCard(model && model.input ? model.input : getEndpointOption(INPUT_OPTIONS, inputId)),
+        manualSelected: preferences.manualSelected,
+        selections,
+        showRestoredHint,
+        wiringStorageWarning,
+        model,
+        supported: Boolean(model && model.status === 'ready' && model.supported),
+        wiringStatus: model ? model.status : 'incomplete',
+        ...getModelDisplayInfo(model),
+        outputOptions: OUTPUT_OPTIONS,
+        inputOptions: INPUT_OPTIONS,
+        viewMode: 'connectors',
+        face: 'solder',
+        hasBothEndpoints: Boolean(outputId && inputId),
+        theme,
+        diagramCanvasWidth,
+        diagramCanvasHeight: getSafeDiagramHeight(diagramCanvasWidth, model, { ...reportOptions, showTitle: false }, 340, 'audioDiagramHeight'),
+        resultReportCanvasHeight: getSafeReportHeight(EXPORT_WIDTH, model, 960, reportOptions, 'audioReportHeight'),
+      }
+    } finally {
+      endOnLoadGeometryCacheScope()
+    }
+    const onInitialDataSet = () => captureEditorBaseline(this)
+    markToolLoadStage('/pages/audio-wiring/index', 'audioSetDataStart')
+    setDataMethod.call(this, initialData, onInitialDataSet)
+    markToolLoadStage('/pages/audio-wiring/index', 'audioSetDataEnd')
+    markToolLoadStage('/pages/audio-wiring/index', 'onLoadEnd')
   },
 
   onReady() {
+    markToolLoadStage('/pages/audio-wiring/index', 'onReady')
     this._pageReady = true
     if (this._isWiringVisible) this.renderDiagram()
   },

@@ -1,0 +1,237 @@
+{
+  "formatVersion": 1,
+  "method": "Rebuild only PNG IDAT: concatenate original zlib streams, inflate exact scanline bytes, deflate with zlib level 9/default strategy, merge IDAT chunks, recompute IDAT CRC. Every non-IDAT chunk is byte-identical and in the same relative order.",
+  "independentPixelValidation": "Pillow decoded each saved original and repacked PNG; 384x384 RGBA bytes matched exactly for all three assets. Per-image decoded RGBA SHA-256 values are recorded below.",
+  "assets": {
+    "pages/audio-wiring/assets/solder/xlr-male-rear.png": {
+      "originalBytes": 202819,
+      "originalSha256": "76012ce49f38d8b1e90fde1167604779f3b9bf0b73b1e340d12aad1674343414",
+      "repackedBytes": 194180,
+      "repackedSha256": "76b46609b4f3f99c1b56360418517ec64d2fa2ac5856daddfe375dfc72f2c525",
+      "savedBytes": 8639,
+      "originalIdatChunks": 25,
+      "repackedIdatChunks": 1,
+      "rawScanlineBytes": 590208,
+      "rawScanlineSha256": "1c56081d1cc3c64475bf5692843f730f4bc5cf6478a055478fff76167fbb0d98",
+      "ihdr": {
+        "width": 384,
+        "height": 384,
+        "bitDepth": 8,
+        "colorType": 6
+      },
+      "rgba": {
+        "width": 384,
+        "height": 384,
+        "mode": "RGBA",
+        "rgbaBytes": 589824,
+        "rgbaSha256": "aa0487fef9b3cb0d108669373c94e393ee7536714e880f09b66e772f708778d2"
+      },
+      "originalChunkTypes": [
+        "IHDR",
+        "sBIT",
+        "sRGB",
+        "IDAT",
+        "IDAT",
+        "IDAT",
+        "IDAT",
+        "IDAT",
+        "IDAT",
+        "IDAT",
+        "IDAT",
+        "IDAT",
+        "IDAT",
+        "IDAT",
+        "IDAT",
+        "IDAT",
+        "IDAT",
+        "IDAT",
+        "IDAT",
+        "IDAT",
+        "IDAT",
+        "IDAT",
+        "IDAT",
+        "IDAT",
+        "IDAT",
+        "IDAT",
+        "IDAT",
+        "IDAT",
+        "IEND"
+      ],
+      "repackedChunkTypes": [
+        "IHDR",
+        "sBIT",
+        "sRGB",
+        "IDAT",
+        "IEND"
+      ],
+      "nonIdatChunks": [
+        {
+          "type": "IHDR",
+          "rawChunkSha256": "019d90c4c4232a2c2972f5d082aba98a3ca8ec9a3f5baedea8fc05f6a66f10f4"
+        },
+        {
+          "type": "sBIT",
+          "rawChunkSha256": "47d6cccb00363722eaf33822dcfc516565ed929cb3c5cd67d48596428aadb731"
+        },
+        {
+          "type": "sRGB",
+          "rawChunkSha256": "7326c3fbfb5f9a4371ef87da7398e61e8f89fb6f3306ad299c6a52b86942ed49"
+        },
+        {
+          "type": "IEND",
+          "rawChunkSha256": "819e72ef0050676b86160b6fbd0b39b47fbb13a8e10e69c299cbe1ad848d23df"
+        }
+      ],
+      "nonIdatChunksSha256": "f900e0e961aba7485205914506f60828bce93bdb4dbef369b6e588e01a8ba80c"
+    },
+    "pages/audio-wiring/assets/solder/xlr-female-rear.png": {
+      "originalBytes": 153045,
+      "originalSha256": "5725700f31750dcf3b681c4ac17539db8a8af26b882bdc5b1e934d8596ec3122",
+      "repackedBytes": 147522,
+      "repackedSha256": "c263dc86170901ddbe48de75ea857cd0944a0f6c8634f0072dabff99004f0ceb",
+      "savedBytes": 5523,
+      "originalIdatChunks": 19,
+      "repackedIdatChunks": 1,
+      "rawScanlineBytes": 590208,
+      "rawScanlineSha256": "a9aaba6a8442c8e12b3c6d945054d40611f836784b1eef3cf45637ecbfa3ba9e",
+      "ihdr": {
+        "width": 384,
+        "height": 384,
+        "bitDepth": 8,
+        "colorType": 6
+      },
+      "rgba": {
+        "width": 384,
+        "height": 384,
+        "mode": "RGBA",
+        "rgbaBytes": 589824,
+        "rgbaSha256": "1dcd00ca78bc31b181d50f0e836077612157f82f9cf7596128a0d3af70a718dd"
+      },
+      "originalChunkTypes": [
+        "IHDR",
+        "sBIT",
+        "sRGB",
+        "IDAT",
+        "IDAT",
+        "IDAT",
+        "IDAT",
+        "IDAT",
+        "IDAT",
+        "IDAT",
+        "IDAT",
+        "IDAT",
+        "IDAT",
+        "IDAT",
+        "IDAT",
+        "IDAT",
+        "IDAT",
+        "IDAT",
+        "IDAT",
+        "IDAT",
+        "IDAT",
+        "IDAT",
+        "IEND"
+      ],
+      "repackedChunkTypes": [
+        "IHDR",
+        "sBIT",
+        "sRGB",
+        "IDAT",
+        "IEND"
+      ],
+      "nonIdatChunks": [
+        {
+          "type": "IHDR",
+          "rawChunkSha256": "019d90c4c4232a2c2972f5d082aba98a3ca8ec9a3f5baedea8fc05f6a66f10f4"
+        },
+        {
+          "type": "sBIT",
+          "rawChunkSha256": "47d6cccb00363722eaf33822dcfc516565ed929cb3c5cd67d48596428aadb731"
+        },
+        {
+          "type": "sRGB",
+          "rawChunkSha256": "7326c3fbfb5f9a4371ef87da7398e61e8f89fb6f3306ad299c6a52b86942ed49"
+        },
+        {
+          "type": "IEND",
+          "rawChunkSha256": "819e72ef0050676b86160b6fbd0b39b47fbb13a8e10e69c299cbe1ad848d23df"
+        }
+      ],
+      "nonIdatChunksSha256": "f900e0e961aba7485205914506f60828bce93bdb4dbef369b6e588e01a8ba80c"
+    },
+    "pages/audio-wiring/assets/solder/ts-solder-open.png": {
+      "originalBytes": 146003,
+      "originalSha256": "642d23e3de52269bb0ad2cbf8b03fd56b450d3c54732657f8e6458dc0ba05ddc",
+      "repackedBytes": 142246,
+      "repackedSha256": "6afebe4a9dda83ab3d2a7dffb156fe3e026ce94c2229e22830cf262ac86cc179",
+      "savedBytes": 3757,
+      "originalIdatChunks": 18,
+      "repackedIdatChunks": 1,
+      "rawScanlineBytes": 590208,
+      "rawScanlineSha256": "7f0728ceb5719a30a46ac2baee3c0ad8330c4c91073ece5952377023df0134d9",
+      "ihdr": {
+        "width": 384,
+        "height": 384,
+        "bitDepth": 8,
+        "colorType": 6
+      },
+      "rgba": {
+        "width": 384,
+        "height": 384,
+        "mode": "RGBA",
+        "rgbaBytes": 589824,
+        "rgbaSha256": "d71ee35239f7ce3fcb281c6bd52a733ec588abca3987bf0c4e76e05ff2fa2860"
+      },
+      "originalChunkTypes": [
+        "IHDR",
+        "sBIT",
+        "sRGB",
+        "IDAT",
+        "IDAT",
+        "IDAT",
+        "IDAT",
+        "IDAT",
+        "IDAT",
+        "IDAT",
+        "IDAT",
+        "IDAT",
+        "IDAT",
+        "IDAT",
+        "IDAT",
+        "IDAT",
+        "IDAT",
+        "IDAT",
+        "IDAT",
+        "IDAT",
+        "IDAT",
+        "IEND"
+      ],
+      "repackedChunkTypes": [
+        "IHDR",
+        "sBIT",
+        "sRGB",
+        "IDAT",
+        "IEND"
+      ],
+      "nonIdatChunks": [
+        {
+          "type": "IHDR",
+          "rawChunkSha256": "019d90c4c4232a2c2972f5d082aba98a3ca8ec9a3f5baedea8fc05f6a66f10f4"
+        },
+        {
+          "type": "sBIT",
+          "rawChunkSha256": "47d6cccb00363722eaf33822dcfc516565ed929cb3c5cd67d48596428aadb731"
+        },
+        {
+          "type": "sRGB",
+          "rawChunkSha256": "7326c3fbfb5f9a4371ef87da7398e61e8f89fb6f3306ad299c6a52b86942ed49"
+        },
+        {
+          "type": "IEND",
+          "rawChunkSha256": "819e72ef0050676b86160b6fbd0b39b47fbb13a8e10e69c299cbe1ad848d23df"
+        }
+      ],
+      "nonIdatChunksSha256": "f900e0e961aba7485205914506f60828bce93bdb4dbef369b6e588e01a8ba80c"
+    }
+  }
+}

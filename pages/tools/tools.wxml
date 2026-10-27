@@ -20,7 +20,7 @@
       <button class="home-secondary-button" bindtap="openSettings">管理工具显示</button>
     </view>
     <view class="home-tool-grid" aria-label="工具目录">
-      <navigator wx:for="{{tools}}" wx:key="id" class="home-tool-card" url="{{item.path}}" hover-class="home-pressed" aria-label="打开{{item.title}}，{{item.subtitle}}">
+      <navigator wx:for="{{tools}}" wx:key="id" class="home-tool-card" url="{{item.path}}" data-load-route="{{item.path}}" bindtap="onToolNavigationTap" hover-class="home-pressed" aria-label="打开{{item.title}}，{{item.subtitle}}">
         <view class="home-tool-icon-wrap"><image class="home-tool-icon" src="{{item.icon}}" mode="aspectFit" lazy-load aria-hidden="true" /></view>
         <view class="home-tool-title">
           <block wx:if="{{item.id === 'projectWiring'}}">
