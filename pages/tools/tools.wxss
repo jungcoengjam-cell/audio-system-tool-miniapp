@@ -1,7 +1,7 @@
 @import "../../styles/homepage.wxss";
 
-.home-header-action{display:flex;box-sizing:border-box;width:88rpx;height:88rpx;min-width:44px;min-height:44px;margin-right:-12rpx;align-items:center;justify-content:center;border-radius:999rpx;color:var(--theme-text)}
-.tools-settings-glyph{font-size:38rpx;line-height:1}
+.home-header-action{display:flex;box-sizing:border-box;width:48px;height:48px;min-width:44px;min-height:44px;margin-right:-12rpx;align-items:center;justify-content:center;border-radius:999rpx;color:var(--theme-text)}
+.tools-settings-glyph{font-family:inherit;font-size:32px;font-weight:400;line-height:1}
 .home-category-strip{height:54px;margin:16rpx -4rpx 12rpx;white-space:nowrap}
 .home-category-track{display:inline-flex;box-sizing:border-box;min-width:100%;height:54px;padding:5px 4rpx;align-items:center;gap:12rpx}
 .tools-visibility-warning{display:flex;box-sizing:border-box;min-height:44px;margin:0 0 12rpx;padding:10rpx 14rpx;align-items:center;border:1rpx solid var(--theme-divider);border-radius:16rpx;background:var(--theme-warning-soft);color:var(--theme-warning);font-size:14px;line-height:1.45}
