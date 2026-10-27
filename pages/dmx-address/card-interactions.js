@@ -145,7 +145,7 @@ function createDmxCardInteractionMethods(runtime) {
       return patch
     },
     openFloatingCard(event) {
-      if (!this._pageAlive || !this._pageVisible) return
+      if (!this._pageAlive || !this._pageVisible || this._floatingClosing) return
       if (Date.now() < (Number(this._suppressFloatingOpenUntil) || 0)) return
       const index = Number(event.currentTarget.dataset.index)
       const group = this.data.groupCards[index]
@@ -170,6 +170,7 @@ function createDmxCardInteractionMethods(runtime) {
         this.setData({
           floatingGroup: group,
           floatingVisible: true,
+          floatingClosing: false,
           floatingSwipeOffset: 0,
           floatingSwipeDragging: false,
           floatingStyle: `left:${origin.left}px;top:${origin.top}px;width:${origin.width}px;height:${origin.height}px;`,
@@ -214,7 +215,7 @@ function createDmxCardInteractionMethods(runtime) {
       query.select(`#fixture-card-${index}`).boundingClientRect(reposition).exec()
     },
     closeFloatingCard(options = {}) {
-      if (!this.data.floatingGroup) return
+      if (!this.data.floatingGroup || this._floatingClosing) return
       this.cancelFloatingTransition()
       this._floatingClosing = true
       this._floatingTouchStart = null
@@ -224,10 +225,11 @@ function createDmxCardInteractionMethods(runtime) {
       if (!origin) {
         this._floatingClosing = false
         this._floatingOrigin = null
-        this.setData({ floatingGroup: null, floatingVisible: false, floatingStyle: '', floatingSwipeOffset: 0, floatingSwipeDragging: false })
+        this.setData({ floatingGroup: null, floatingVisible: false, floatingClosing: false, floatingStyle: '', floatingSwipeOffset: 0, floatingSwipeDragging: false })
         return
       }
       this.setData({
+        floatingClosing: true,
         floatingStyle: `left:${origin.left}px;top:${origin.top}px;width:${origin.width}px;height:${origin.height}px;`,
         floatingSwipeOffset: 0,
         floatingSwipeDragging: false,
@@ -237,7 +239,7 @@ function createDmxCardInteractionMethods(runtime) {
         if (!this._pageAlive || !this._pageVisible || transitionId !== this._floatingTransitionId) return
         this._floatingClosing = false
         this._floatingOrigin = null
-        this.setData({ floatingGroup: null, floatingVisible: false, floatingStyle: '', floatingSwipeOffset: 0, floatingSwipeDragging: false })
+        this.setData({ floatingGroup: null, floatingVisible: false, floatingClosing: false, floatingStyle: '', floatingSwipeOffset: 0, floatingSwipeDragging: false })
       }, 230)
     },
     cancelFloatingTransition() {
@@ -252,7 +254,7 @@ function createDmxCardInteractionMethods(runtime) {
         this._suppressFloatingOpenUntil = Date.now() + 550
         return
       }
-      if (!this._pageAlive || !this._pageVisible || !this.data.floatingGroup || isGestureIgnored(event)) {
+      if (!this._pageAlive || !this._pageVisible || !this.data.floatingGroup || this._floatingClosing || isGestureIgnored(event)) {
         this._floatingTouchStart = null
         return
       }

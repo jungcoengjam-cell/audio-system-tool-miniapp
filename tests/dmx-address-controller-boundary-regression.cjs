@@ -11,7 +11,10 @@ const root = path.resolve(__dirname, '..')
 const currentPagePath = path.join(root, 'pages/dmx-address/dmx-address.js')
 const beforePagePath = path.join(root, 'tmp/architecture-continuation-2026-10-25/before/pages/dmx-address/dmx-address.js')
 const frozenTracePath = path.join(root, 'tmp/architecture-continuation-2026-10-25/phase4-dmx/before-event-trace.json')
-const FROZEN_BASELINE_SHA256 = '5645869d4b3ef2e8f8a38e8dfd577fae0332c27ff96b880f81b12bdecd47c262'
+// The prior hash remains as history; this trace now includes the approved 230ms floating-card close lifecycle.
+// Previous pre-animation trace: 5645869d4b3ef2e8f8a38e8dfd577fae0332c27ff96b880f81b12bdecd47c262
+const PRE_ANIMATION_BASELINE_SHA256 = '5645869d4b3ef2e8f8a38e8dfd577fae0332c27ff96b880f81b12bdecd47c262'
+const FROZEN_BASELINE_SHA256 = 'a3c24736ac20acf9dffc9a255d58f0e1f3448cd1114124b65f3486d7cfa32e88'
 
 function clone(value) {
   return value === undefined ? undefined : JSON.parse(JSON.stringify(value))
@@ -305,7 +308,7 @@ function runGroupScenario(page, runtime) {
   return { phases, patches: page._qaPatches }
 }
 
-function runFloatingScenario(page, runtime) {
+function runFloatingScenario(page, runtime, verifyAnimationLifecycle) {
   const timerEventStart = runtime.timerEvents.length
   const wxEventStart = runtime.wxEvents.length
   runtime.clock.now = 2000
@@ -342,10 +345,24 @@ function runFloatingScenario(page, runtime) {
   const openingTimer = page._floatingTransitionTimer
   page.closeFloatingCard()
   const closingTimer = page._floatingTransitionTimer
-  page.openFloatingCard({ currentTarget: { dataset: { index: 0 } } })
-  const reopenedQuery = runtime.selectorQueries.shift()
-  runtime.timerB.run(openingTimer, true)
-  runtime.timerB.run(closingTimer, true)
+  let reopenedQuery
+  if (verifyAnimationLifecycle) {
+    page.openFloatingCard({ currentTarget: { dataset: { index: 0 } } })
+    assert.equal(page._floatingClosing, true)
+    assert.equal(runtime.selectorQueries.length, 0, 'opening is ignored during the floating-card close animation')
+    runtime.timerB.run(openingTimer, true)
+    runtime.timerB.run(closingTimer, true)
+    assert.equal(page.data.floatingVisible, false)
+    assert.equal(page._floatingClosing, false)
+    page.openFloatingCard({ currentTarget: { dataset: { index: 0 } } })
+    reopenedQuery = runtime.selectorQueries.shift()
+    assert.ok(reopenedQuery, 'a fresh open can start after the close animation completes')
+  } else {
+    page.openFloatingCard({ currentTarget: { dataset: { index: 0 } } })
+    reopenedQuery = runtime.selectorQueries.shift()
+    runtime.timerB.run(openingTimer, true)
+    runtime.timerB.run(closingTimer, true)
+  }
   if (reopenedQuery.callback) {
     reopenedQuery.callbackRan = true
     reopenedQuery.callback({ left: 12, top: 34, width: 190, height: 120 })
@@ -387,7 +404,7 @@ function runScenario(sourcePath) {
     const group = runGroupScenario(groupPage, runtime)
 
     const floatingPage = makePage(runtime.definition, 'floating')
-    const floating = runFloatingScenario(floatingPage, runtime)
+    const floating = runFloatingScenario(floatingPage, runtime, sourcePath === currentPagePath)
 
     return { sheet, group, floating }
   } finally {
@@ -407,14 +424,20 @@ if (process.argv.includes('--capture-before')) {
   fs.writeFileSync(frozenTracePath, `${JSON.stringify(trace, null, 2)}\n`, 'utf8')
   console.log(JSON.stringify({ captured: frozenTracePath, sha256: actualDigest }, null, 2))
 } else {
-  assert.equal(actualDigest, FROZEN_BASELINE_SHA256, 'DMX controller event trace changed from the frozen pre-extraction page')
+  assert.equal(actualDigest, FROZEN_BASELINE_SHA256, 'DMX controller event trace changed from the approved animation lifecycle')
   if (process.argv.includes('--compare-before')) {
     const beforeTrace = runScenario(beforePagePath)
-    assert.deepEqual(trace, beforeTrace, 'current DMX controller trace differs from the original Page')
+    assert.equal(digest(beforeTrace), PRE_ANIMATION_BASELINE_SHA256, 'historical pre-animation trace changed')
+    assert.deepEqual(trace.sheet, beforeTrace.sheet, 'unrelated sheet lifecycle behavior changed')
+    assert.deepEqual(trace.group, beforeTrace.group, 'unrelated group gesture behavior changed')
+    assert.deepEqual(trace.floating.selectors, beforeTrace.floating.selectors, 'floating-card selector queries changed')
+    assert.deepEqual(trace.floating.wxEvents, beforeTrace.floating.wxEvents, 'floating-card platform calls changed')
+    assert.deepEqual(trace.floating.state, beforeTrace.floating.state, 'floating-card final state changed')
     console.log(JSON.stringify({
       currentSha256: actualDigest,
       beforeSha256: digest(beforeTrace),
-      matchedBefore: true,
+      unaffectedFlowsMatched: true,
+      approvedDifference: 'ignore reopen during floating-card close animation',
     }, null, 2))
   } else {
     console.log(JSON.stringify({ sha256: actualDigest, frozenTrace: 'matched' }, null, 2))

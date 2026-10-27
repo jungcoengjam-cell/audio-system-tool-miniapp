@@ -116,7 +116,7 @@
     bind:clickoverlay="onPageContainerClickOverlay">
     <view class="page-container-sheet-content {{projectKeyboardActive ? 'project-keyboard-open' : ''}}" catchtouchmove="preventTouchMove"><include src="./limiter-overlays.wxml" /></view>
   </page-container>
-  <view wx:if="{{!pageContainerSupported && (selectorVisible || detailsVisible || shareSheetVisible || projectSheetVisible)}}" class="sheet-mask {{projectKeyboardActive ? 'project-keyboard-open' : ''}}" catchtap="onPageContainerClickOverlay" catchtouchmove="preventTouchMove">
+  <view wx:if="{{!pageContainerSupported && (selectorVisible || detailsVisible || shareSheetVisible || projectSheetVisible)}}" class="sheet-mask {{projectKeyboardActive ? 'project-keyboard-open' : ''}} {{pageContainerFallbackClosing ? 'sheet-mask-closing' : ''}}" catchtap="onPageContainerClickOverlay" catchtouchmove="preventTouchMove">
     <include src="./limiter-overlays.wxml" />
   </view>
 

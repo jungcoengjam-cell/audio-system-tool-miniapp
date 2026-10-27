@@ -51,6 +51,7 @@ const {
 const DEFAULT_AMPLIFIER_MODEL = 'TC-X2200B'
 const PREFERENCE_KEY = 'audioTool.gainStructure.preferences'
 const SELECTOR_BATCH_SIZE = 60
+const PAGE_CONTAINER_FALLBACK_TRANSITION_DURATION = 180
 
 const targetPeaks = [
   { value: -3, label: '-3 dBFS', description: '较高输出' },
@@ -401,6 +402,7 @@ Page({
     isCheckingResultReportCache: false,
     ...createGainProjectData(),
     pageContainerSupported: false,
+    pageContainerFallbackClosing: false,
     ...createResultReportData(),
   },
 
@@ -417,6 +419,8 @@ Page({
     this._projectRequestId = 0
     this._projectSavePending = false
     this._pageContainerEpoch = 0
+    this._pageContainerFallbackCloseRevision = 0
+    this._pageContainerFallbackCloseTimer = null
     this._activePageContainerOverlay = null
     this._pageContainerLeave = null
     this._inputRevision = 0
@@ -485,6 +489,9 @@ Page({
 
   onHide() {
     this._pageVisible = false
+    this.cancelPageContainerFallbackClose()
+    this._activePageContainerOverlay = null
+    this._pageContainerLeave = null
     this._projectRequestId = (this._projectRequestId || 0) + 1
     this._projectSavePending = false
     this._projectSnapshotForSave = null
@@ -502,6 +509,7 @@ Page({
       projectSheetVisible: false,
       isSavingProject: false,
       selectorVisible: false,
+      pageContainerFallbackClosing: false,
       resultReportPreviewVisible: false,
     })
   },
@@ -512,6 +520,9 @@ Page({
     this._projectSavePending = false
     this._projectSnapshotForSave = null
     this._isUnloaded = true
+    this.cancelPageContainerFallbackClose()
+    this._activePageContainerOverlay = null
+    this._pageContainerLeave = null
     this.resetProjectKeyboardState({ hideKeyboard: true, updateView: false })
     cancelResultReportGeneration(this)
     printPerformanceSummary('增益架构/')
@@ -527,6 +538,8 @@ Page({
   },
 
   openPageContainerOverlay(name) {
+    this.cancelPageContainerFallbackClose()
+    if (this.data.pageContainerFallbackClosing) this.setData({ pageContainerFallbackClosing: false })
     this._pageContainerEpoch = (this._pageContainerEpoch || 0) + 1
     this._activePageContainerOverlay = { name, epoch: this._pageContainerEpoch }
     this._pageContainerLeave = null
@@ -537,6 +550,65 @@ Page({
     this._pageContainerEpoch = (this._pageContainerEpoch || 0) + 1
     this._activePageContainerOverlay = null
     this._pageContainerLeave = null
+    return true
+  },
+
+  cancelPageContainerFallbackClose() {
+    this._pageContainerFallbackCloseRevision = (this._pageContainerFallbackCloseRevision || 0) + 1
+    clearTimeout(this._pageContainerFallbackCloseTimer)
+    this._pageContainerFallbackCloseTimer = null
+    return this._pageContainerFallbackCloseRevision
+  },
+
+  closePageContainerOverlay(name, changes, afterFallbackClose) {
+    if (this._isUnloaded || !this.data) return false
+    const supported = this.data.pageContainerSupported
+    const active = this._activePageContainerOverlay
+    const leaveStarted = active?.name === name && this.onPageContainerBeforeLeave()
+    const fallbackEpoch = !supported && leaveStarted ? active.epoch : null
+    if (!supported && fallbackEpoch != null) {
+      if (this.data.pageContainerFallbackClosing) return false
+      const closeRevision = this.cancelPageContainerFallbackClose()
+      this.setData({ pageContainerFallbackClosing: true }, () => {
+        if (this._isUnloaded || !this._pageVisible || closeRevision !== this._pageContainerFallbackCloseRevision
+          || this._pageContainerLeave?.epoch !== fallbackEpoch || !this.data.pageContainerFallbackClosing) return
+        const timer = setTimeout(() => {
+          if (this._pageContainerFallbackCloseTimer !== timer || this._isUnloaded || !this._pageVisible
+            || closeRevision !== this._pageContainerFallbackCloseRevision
+            || this._pageContainerLeave?.epoch !== fallbackEpoch || !this.data.pageContainerFallbackClosing) return
+          this._pageContainerFallbackCloseTimer = null
+          this.setData({ ...changes, pageContainerFallbackClosing: false }, () => {
+            if (this._isUnloaded || closeRevision !== this._pageContainerFallbackCloseRevision) return
+            if (this._activePageContainerOverlay?.epoch === fallbackEpoch
+              && !this.data.selectorVisible && !this.data.shareSheetVisible && !this.data.projectSheetVisible) {
+              this._activePageContainerOverlay = null
+            }
+            if (this._pageContainerLeave?.epoch === fallbackEpoch) this._pageContainerLeave = null
+            afterFallbackClose?.()
+          })
+        }, PAGE_CONTAINER_FALLBACK_TRANSITION_DURATION)
+        this._pageContainerFallbackCloseTimer = timer
+      })
+      return true
+    }
+    if (supported) this.clearPageContainerOverlay(name)
+    if (name === 'project') {
+      this._projectRequestId = (this._projectRequestId || 0) + 1
+      this._projectSavePending = false
+      this._projectSnapshotForSave = null
+    }
+    this.setData(changes, () => {
+      if (!supported && fallbackEpoch != null) {
+        if (this._activePageContainerOverlay?.epoch === fallbackEpoch
+          && !this.data.selectorVisible && !this.data.shareSheetVisible && !this.data.projectSheetVisible) {
+          this._activePageContainerOverlay = null
+        }
+        if (this._pageContainerLeave?.epoch === fallbackEpoch) this._pageContainerLeave = null
+        afterFallbackClose?.()
+      } else if (!supported) {
+        afterFallbackClose?.()
+      }
+    })
     return true
   },
 
@@ -599,9 +671,9 @@ Page({
   },
 
   closeAmplifierSelector() {
-    this.clearPageContainerOverlay('selector')
+    if (!this.data.selectorVisible) return false
     this._selectorMatches = []
-    this.setData({ selectorVisible: false, selectorItems: [], selectorTotalCount: 0 })
+    return this.closePageContainerOverlay('selector', { selectorVisible: false, selectorItems: [], selectorTotalCount: 0 })
   },
 
   stopTap() {},
@@ -670,22 +742,17 @@ Page({
     const amplifierIndex = Number(event?.currentTarget?.dataset?.index)
     if (!validIndex(amplifiers, amplifierIndex)) return false
     if (amplifierIndex === this.data.amplifierIndex) {
-      this.clearPageContainerOverlay('selector')
-      this._selectorMatches = []
-      this.setData({ selectorVisible: false, selectorItems: [], selectorTotalCount: 0 })
-      return true
+      return this.closeAmplifierSelector()
     }
     vibrate('light')
     this._selectorMatches = []
+    this.closePageContainerOverlay('selector', { selectorVisible: false, selectorItems: [], selectorTotalCount: 0 })
     const amplifierState = buildAmplifierState(amplifierIndex)
     this.commitCalculatedState({
       ...amplifierState,
       activeGroup: !amplifierState.showPowerContext && this.data.activeGroup === 'load'
         ? 'amplifier'
         : this.data.activeGroup,
-      selectorVisible: false,
-      selectorItems: [],
-      selectorTotalCount: 0,
     }, 'amplifier', {
       loadReminderActive: amplifierState.showPowerContext,
     })
@@ -693,12 +760,15 @@ Page({
   },
 
   openAmplifierDetail(event) {
-    this.clearPageContainerOverlay('selector')
+    const url = `/pages/products/detail?type=amplifier&model=${encodeURIComponent(event.currentTarget.dataset.model)}`
     this._selectorMatches = []
-    this.setData({ selectorVisible: false, selectorItems: [], selectorTotalCount: 0 })
-    wx.navigateTo({
-      url: `/pages/products/detail?type=amplifier&model=${encodeURIComponent(event.currentTarget.dataset.model)}`,
-    })
+    const changes = { selectorVisible: false, selectorItems: [], selectorTotalCount: 0 }
+    if (this.data.pageContainerSupported) {
+      this.closePageContainerOverlay('selector', changes)
+      wx.navigateTo({ url })
+      return
+    }
+    this.closePageContainerOverlay('selector', changes, () => wx.navigateTo({ url }))
   },
 
   setSelectionAndCalculate(key, index) {
@@ -757,7 +827,7 @@ Page({
     const hasInputChange = semanticKeys.some((key) => this.data[key] !== pageState[key])
     if (hasInputChange) this._inputRevision = (this._inputRevision || 0) + 1
     const inputRevision = this._inputRevision || 0
-    if (hasInputChange) this.clearPageContainerOverlay()
+    if (hasInputChange && !this.data.pageContainerFallbackClosing) this.clearPageContainerOverlay()
     const hasDraftInputs = Boolean(this.data.hasDraftInputs || hasInputChange)
     let result = this.data.result
     let hint = this.data.outputHint
@@ -915,8 +985,7 @@ Page({
       this._reportCacheCheckRevision = 0
       if (wasGenerating) this.resultReportSignature = ''
     }
-    this.clearPageContainerOverlay('share')
-    this.setData({
+    this.closePageContainerOverlay('share', {
       shareSheetVisible: false,
       isCheckingResultReportCache: false,
       resultReportPreviewVisible: false,

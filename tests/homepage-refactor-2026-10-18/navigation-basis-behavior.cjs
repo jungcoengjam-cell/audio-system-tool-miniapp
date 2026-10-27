@@ -17,6 +17,7 @@ function pageAvailable(route) {
 
 assert.deepEqual(app.tabBar.list.map(({ text }) => text), ['工具', '项目', '依据'])
 assert.deepEqual(app.tabBar.list.map(({ pagePath }) => `/${pagePath}`), navigation.PRIMARY_TABS.map(({ route }) => route))
+assert.equal(app.pages[0], 'pages/tools/tools', 'ordinary app launch opens the tools tab')
 assert.equal(app.tabBar.list[2].pagePath, 'pages/index/index', 'the established index route remains the basis tab')
 assert.ok(app.pages.includes('pages/settings/settings'))
 assert.ok(pageAvailable('/pages/basis/detail'))
@@ -181,12 +182,12 @@ globalThis.wx = {
   switchTab: ({ url }) => switchCalls.push(url),
 }
 assert.deepEqual(appState.globalData.primaryNavigation, {
-  launchPath: 'pages/tools/tools', restoreAllowed: true, restoreChecked: false,
+  launchPath: 'pages/tools/tools', restoreAllowed: false, restoreChecked: true,
 })
 assert.equal(navigation.activatePrimaryTab('tools'), true, 'first ordinary default launch remains on tools')
 assert.deepEqual(switchCalls, [])
 assert.equal(saved.get(navigation.STORAGE_KEY), 'tools')
-assert.equal(navigation.activatePrimaryTab('projects'), true, 'a user-selected tab becomes the preference')
+assert.equal(navigation.activatePrimaryTab('projects'), true, 'a user-selected tab is still recorded')
 assert.equal(saved.get(navigation.STORAGE_KEY), 'projects')
 assert.equal(navigation.activatePrimaryTab('projects'), true, 'returning to the selected tab is not redirected')
 assert.deepEqual(switchCalls, [])
@@ -194,14 +195,14 @@ assert.deepEqual(switchCalls, [])
 saved.set(navigation.STORAGE_KEY, 'basis')
 appState = launchApp({ path: 'pages/tools/tools', scene: 1005 })
 switchCalls.length = 0
-assert.equal(navigation.activatePrimaryTab('tools'), false, 'a later ordinary default launch restores the last valid tab')
-assert.deepEqual(switchCalls, ['/pages/index/index'])
-assert.equal(saved.get(navigation.STORAGE_KEY), 'basis', 'restore does not overwrite the preference before the tab is shown')
+assert.equal(navigation.activatePrimaryTab('tools'), true, 'every ordinary default launch stays on tools')
+assert.deepEqual(switchCalls, [], 'the previously selected tab is not restored on launch')
+assert.equal(saved.get(navigation.STORAGE_KEY), 'tools', 'the active tools tab is recorded after launch')
 assert.equal(navigation.activatePrimaryTab('basis'), true)
 assert.equal(saved.get(navigation.STORAGE_KEY), 'basis')
 assert.equal(navigation.activatePrimaryTab('projects'), true)
 assert.equal(navigation.activatePrimaryTab('projects'), true, 'returning from another page keeps the selected tab')
-assert.deepEqual(switchCalls, ['/pages/index/index'])
+assert.deepEqual(switchCalls, [])
 
 saved.set(navigation.STORAGE_KEY, 'basis')
 appState = launchApp({ path: 'pages/camera/camera', scene: 1007 })
@@ -237,7 +238,7 @@ assert.deepEqual(switchCalls, [])
 assert.equal(saved.get(navigation.STORAGE_KEY), 'tools')
 
 assert.equal(navigation.initializePrimaryNavigation({}).restoreAllowed, false, 'missing launch path fails closed')
-assert.equal(navigation.initializePrimaryNavigation({ path: 'pages/tools/tools', scene: 9999 }).restoreAllowed, true, 'path-based default restore does not rely on an incomplete scene allowlist')
+assert.equal(navigation.initializePrimaryNavigation({ path: 'pages/tools/tools', scene: 9999 }).restoreAllowed, false, 'ordinary launch never restores a previously selected tab')
 
 saved.set(navigation.STORAGE_KEY, 'legacy-page-route')
 appState = launchApp({ path: 'pages/tools/tools', scene: 1001 })

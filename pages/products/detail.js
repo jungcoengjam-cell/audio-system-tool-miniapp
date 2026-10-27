@@ -82,6 +82,7 @@ Page({
   data: {
     product: null,
     dmxImportVisible: false,
+    dmxImportClosing: false,
     dmxImportModes: [],
     dmxImportChannelCount: '',
     dmxImportFixtureCount: '1',
@@ -95,6 +96,11 @@ Page({
   },
 
   onLoad(options = {}) {
+    this._dmxImportPageVisible = true
+    this._dmxImportUnloaded = false
+    this._dmxImportCloseRevision = 0
+    this._dmxImportCloseTimer = null
+    this._dmxImportNavigatePending = false
     const type = ['amplifier', 'speaker', 'camera', 'lighting'].includes(options.type)
       ? options.type
       : 'speaker'
@@ -110,6 +116,39 @@ Page({
     this.setData({ product: projectProductDetail(product) })
     wx.setNavigationBarTitle({ title: product ? product.model : '产品资料' })
     if (product) markProductViewed(type, model)
+  },
+
+  onShow() {
+    this._dmxImportPageVisible = true
+    this.navigateToPendingDmxImport()
+  },
+
+  onHide() {
+    this._dmxImportPageVisible = false
+    this.cancelDmxProductImportClose()
+    this._dmxImportOpenedSignature = ''
+    this.setData({
+      dmxImportVisible: false,
+      dmxImportClosing: false,
+      dmxImportSubmitting: false,
+    })
+    this._dmxImportSubmitting = false
+  },
+
+  onUnload() {
+    this._dmxImportPageVisible = false
+    this._dmxImportUnloaded = true
+    this.cancelDmxProductImportClose()
+    this._dmxImportOpenedSignature = ''
+    this._dmxImportSubmitting = false
+    this._dmxImportNavigatePending = false
+  },
+
+  navigateToPendingDmxImport() {
+    if (!this._dmxImportNavigatePending || !this._dmxImportPageVisible || this._dmxImportUnloaded) return false
+    this._dmxImportNavigatePending = false
+    wx.navigateTo({ url: `${CALCULATOR_PATHS.dmxAddress}?lightingCatalogImport=1` })
+    return true
   },
 
   openCalculator(event) {
@@ -149,11 +188,13 @@ Page({
   },
 
   openDmxProductImport(product = this._productDetail) {
+    if (this._dmxImportNavigatePending) return false
     if (!product || product.type !== 'lighting' || !Array.isArray(product.channelModes)
       || !product.channelModes.length) {
       wx.showToast({ title: '该灯具没有可用的厂家 DMX 通道模式', icon: 'none' })
       return
     }
+    this.cancelDmxProductImportClose()
     const read = readDmxPreferencesStatus()
     if (!read.ok) {
       wx.showToast({ title: read.error, icon: 'none' })
@@ -164,6 +205,7 @@ Page({
     this._dmxImportOpenedSignature = JSON.stringify(read.preferences)
     this.setData({
       dmxImportVisible: true,
+      dmxImportClosing: false,
       dmxImportModes: product.channelModes.map((channelCount) => ({
         channelCount,
         label: `${channelCount} CH`,
@@ -203,22 +245,60 @@ Page({
     if (changed) vibrate('light')
   },
 
-  closeDmxProductImport() {
-    if (this._dmxImportSubmitting) return
+  cancelDmxProductImportClose() {
+    this._dmxImportCloseRevision = (this._dmxImportCloseRevision || 0) + 1
+    clearTimeout(this._dmxImportCloseTimer)
+    this._dmxImportCloseTimer = null
+    return this._dmxImportCloseRevision
+  },
+
+  closeDmxProductImport(options = {}) {
+    const force = options && options.force === true
+    const immediate = options && options.immediate === true
+    const afterClose = options && typeof options.afterClose === 'function' ? options.afterClose : null
+    if (this._dmxImportSubmitting && !force) return false
+    if (!this.data.dmxImportVisible) return false
+    if (this.data.dmxImportClosing && !immediate) return false
+    const closeRevision = this.cancelDmxProductImportClose()
     this._dmxImportOpenedSignature = ''
-    this.setData({
-      dmxImportVisible: false,
-      dmxImportChannelCount: '',
-      dmxImportFixtureCount: '1',
-      dmxImportAction: '',
-      dmxImportError: '',
+    const finishClose = () => {
+      if (this._dmxImportUnloaded || closeRevision !== this._dmxImportCloseRevision) return
+      this._dmxImportCloseTimer = null
+      this.setData({
+        dmxImportVisible: false,
+        dmxImportClosing: false,
+        dmxImportSubmitting: false,
+        dmxImportChannelCount: '',
+        dmxImportFixtureCount: '1',
+        dmxImportAction: '',
+        dmxImportError: '',
+      }, () => {
+        if (!this._dmxImportUnloaded && closeRevision === this._dmxImportCloseRevision) afterClose?.()
+      })
+    }
+    if (immediate || !this._dmxImportPageVisible || this._dmxImportUnloaded) {
+      finishClose()
+      return true
+    }
+    this.setData({ dmxImportClosing: true }, () => {
+      if (this._dmxImportUnloaded || !this._dmxImportPageVisible
+        || closeRevision !== this._dmxImportCloseRevision || !this.data.dmxImportVisible
+        || !this.data.dmxImportClosing) return
+      const timer = setTimeout(() => {
+        if (this._dmxImportCloseTimer !== timer || this._dmxImportUnloaded || !this._dmxImportPageVisible
+          || closeRevision !== this._dmxImportCloseRevision || !this.data.dmxImportVisible
+          || !this.data.dmxImportClosing) return
+        finishClose()
+      }, 180)
+      this._dmxImportCloseTimer = timer
     })
+    return true
   },
 
   stopDmxImportTap() {},
 
   confirmDmxProductImport() {
-    if (this._dmxImportSubmitting || !this.data.dmxImportVisible) return
+    if (this._dmxImportSubmitting || !this.data.dmxImportVisible || this.data.dmxImportClosing) return
     this._dmxImportSubmitting = true
     this.setData({ dmxImportSubmitting: true, dmxImportError: '' })
     const product = this._productDetail
@@ -248,9 +328,13 @@ Page({
       return
     }
     vibrate('medium')
+    this._dmxImportSubmitting = false
     this._dmxImportOpenedSignature = ''
-    this.setData({ dmxImportVisible: false })
-    wx.navigateTo({ url: `${CALCULATOR_PATHS.dmxAddress}?lightingCatalogImport=1` })
+    this._dmxImportNavigatePending = true
+    this.closeDmxProductImport({
+      force: true,
+      afterClose: () => this.navigateToPendingDmxImport(),
+    })
   },
 
   openDmxChannelGuide() {

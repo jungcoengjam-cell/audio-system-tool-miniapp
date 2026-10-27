@@ -124,8 +124,8 @@
     </view>
   </scroll-view>
 
-  <view wx:if="{{selectorVisible}}" class="selector-mask" catchtap="closeCameraSelector">
-    <view class="selector-panel" catchtap="stopTap">
+  <view wx:if="{{selectorVisible}}" class="selector-mask {{selectorClosing ? 'selector-closing' : ''}}" catchtap="closeCameraSelector">
+    <view class="selector-panel {{selectorClosing ? 'selector-panel-closing' : ''}}" catchtap="stopTap">
       <view class="selector-header"><view class="selector-title">选择摄像机型号</view><button class="selector-close" aria-label="关闭型号选择" catchtap="closeCameraSelector">×</button></view>
       <input class="selector-search" value="{{selectorKeyword}}" placeholder="输入型号，例如 TV-620、TS-0663" confirm-type="search" bindinput="onSelectorInput" />
       <view class="selector-count">共 {{selectorItems.length}} 个型号</view>

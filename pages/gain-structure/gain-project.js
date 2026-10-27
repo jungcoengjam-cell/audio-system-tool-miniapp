@@ -537,9 +537,8 @@ function createGainProjectMethods(runtime = {}) {
       if (!this.data.projectSheetVisible) return false
       this.invalidateProjectSave({ updateView: false })
       this._projectSnapshotForSave = null
-      this.clearPageContainerOverlay('project')
       const keyboard = this.resetProjectKeyboardState({ hideKeyboard: true, updateView: false })
-      this.setData({
+      this.closePageContainerOverlay('project', {
         projectSheetVisible: false,
         projectStep: 'select',
         isSavingProject: false,

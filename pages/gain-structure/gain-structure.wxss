@@ -304,3 +304,12 @@ SOFTWARE.
 .project-panel.project-keyboard-open{min-height:0;padding-bottom:16rpx}
 .project-panel.project-keyboard-open .project-sheet-body{max-height:55vh}
 .project-panel.project-keyboard-open .project-note{height:84px}
+.sheet-mask{animation:page-container-mask-in 180ms ease-out both}
+.sheet-mask .sheet-panel{animation:page-container-sheet-in 180ms cubic-bezier(.2,.72,.25,1) both}
+.sheet-mask.sheet-mask-closing{animation:page-container-mask-out 180ms ease-in both}
+.sheet-mask.sheet-mask-closing .sheet-panel{animation:page-container-sheet-out 180ms ease-in both;pointer-events:none}
+@keyframes page-container-mask-in{from{opacity:0}to{opacity:1}}
+@keyframes page-container-mask-out{from{opacity:1}to{opacity:0}}
+@keyframes page-container-sheet-in{from{transform:translateY(calc(100% + env(safe-area-inset-bottom)))}to{transform:translateY(0)}}
+@keyframes page-container-sheet-out{from{transform:translateY(0)}to{transform:translateY(calc(100% + env(safe-area-inset-bottom)))}}
+@media(prefers-reduced-motion:reduce){.sheet-mask,.sheet-mask .sheet-panel,.sheet-mask.sheet-mask-closing,.sheet-mask.sheet-mask-closing .sheet-panel{animation-duration:1ms!important;animation-iteration-count:1!important}}

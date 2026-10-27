@@ -184,12 +184,19 @@ button.camera-action-button:focus-visible{outline:2px solid #60a5fa;outline-offs
 .selector-empty{padding:24px 16px;color:var(--theme-text-secondary);font-size:14px;line-height:1.45;text-align:center}
 @keyframes camera-selector-mask-in{from{opacity:0}to{opacity:1}}
 @keyframes camera-selector-sheet-in{from{transform:translateY(calc(100% + env(safe-area-inset-bottom)))}to{transform:translateY(0)}}
+.selector-panel{animation-duration:180ms}
+.selector-mask.selector-closing{animation:camera-selector-mask-out 180ms ease-in both}
+.selector-closing .selector-panel{animation:camera-selector-sheet-out 180ms ease-in both;pointer-events:none}
+@keyframes camera-selector-mask-out{from{opacity:1}to{opacity:0}}
+@keyframes camera-selector-sheet-out{from{transform:translateY(0)}to{transform:translateY(calc(100% + env(safe-area-inset-bottom)))}}
 
 /* Cable-matched share preview sheet. */
 @keyframes camera-report-sheet-in{from{transform:translateY(calc(100% + 16rpx + env(safe-area-inset-bottom)))}to{transform:translateY(0)}}
 @keyframes camera-report-sheet-out{from{transform:translateY(0)}to{transform:translateY(calc(100% + 16rpx + env(safe-area-inset-bottom)))}}
-.page-root .result-report-preview-overlay{z-index:1000;padding:32rpx 20rpx calc(16rpx + env(safe-area-inset-bottom));background:rgba(18,20,27,.52);opacity:1;animation:none}
-.page-root.camera-report-preview-closing .result-report-preview-overlay{opacity:1;animation:none}
+@keyframes camera-overlay-in{from{opacity:0}to{opacity:1}}
+@keyframes camera-overlay-out{from{opacity:1}to{opacity:0}}
+.page-root .result-report-preview-overlay{z-index:1000;padding:32rpx 20rpx calc(16rpx + env(safe-area-inset-bottom));background:rgba(18,20,27,.52);opacity:1;animation:camera-overlay-in 180ms ease-out both}
+.page-root.camera-report-preview-closing .result-report-preview-overlay{opacity:1;animation:camera-overlay-out 320ms ease-in both}
 .page-root.camera-report-preview-closing .result-report-preview-sheet{animation-name:camera-report-sheet-out;animation-timing-function:ease-in;pointer-events:none}
 .page-root .result-report-preview-sheet{box-sizing:border-box;height:auto;max-height:var(--camera-report-sheet-max-height,86vh);padding:20rpx 18rpx 16rpx;border:1px solid var(--theme-divider);border-radius:28px;background:var(--theme-surface);box-shadow:0 20px 65px rgba(0,0,0,.22);animation:camera-report-sheet-in 320ms cubic-bezier(.2,.72,.25,1) both}
 .page-root .result-report-preview-header{flex:none;padding:0 2px 12px}
@@ -208,8 +215,8 @@ button.camera-action-button:focus-visible{outline:2px solid #60a5fa;outline-offs
 /* Project sheets match the Cable project list and confirmation layouts. */
 @keyframes camera-project-sheet-in{from{transform:translateY(calc(100% + env(safe-area-inset-bottom)))}to{transform:translateY(0)}}
 @keyframes camera-project-sheet-out{from{transform:translateY(0)}to{transform:translateY(calc(100% + env(safe-area-inset-bottom)))}}
-.camera-project-overlay{position:fixed;z-index:1100;inset:0;display:flex;box-sizing:border-box;padding:0;align-items:flex-end;justify-content:center;background:rgba(18,20,27,.55);opacity:1;animation:none}
-.camera-project-overlay.camera-project-dialog-closing{opacity:1;animation:none;pointer-events:auto}
+.camera-project-overlay{position:fixed;z-index:1100;inset:0;display:flex;box-sizing:border-box;padding:0;align-items:flex-end;justify-content:center;background:rgba(18,20,27,.55);opacity:1;animation:camera-overlay-in 180ms ease-out both}
+.camera-project-overlay.camera-project-dialog-closing{opacity:1;animation:camera-overlay-out 320ms ease-in both;pointer-events:auto}
 .camera-project-dialog-closing .camera-project-sheet{animation-name:camera-project-sheet-out;animation-timing-function:ease-in;pointer-events:none}
 .camera-project-sheet{display:flex;box-sizing:border-box;width:100%;max-height:90vh;min-height:0;padding:22rpx 22rpx calc(18rpx + env(safe-area-inset-bottom));flex-direction:column;overflow:hidden;border:1px solid var(--theme-divider);border-radius:28px 28px 0 0;background:var(--theme-surface);color:var(--theme-text);box-shadow:0 12px 36px rgba(0,0,0,.2);animation:camera-project-sheet-in 320ms cubic-bezier(.2,.72,.25,1) both}
 .camera-project-keyboard-open{padding:4px 22rpx}
@@ -261,6 +268,9 @@ button.camera-action-button:focus-visible{outline:2px solid #60a5fa;outline-offs
 }
 @media(prefers-reduced-motion:reduce){
   .selector-mask,.selector-panel,.camera-project-sheet{animation-duration:1ms}
+  .selector-mask.selector-closing,.selector-closing .selector-panel{animation-duration:1ms!important}
+  .page-root .result-report-preview-overlay,.page-root.camera-report-preview-closing .result-report-preview-overlay,
+  .camera-project-overlay,.camera-project-overlay.camera-project-dialog-closing{animation-duration:1ms!important}
   .camera-preview-tab,button.camera-action-button,.camera-project-row,.camera-project-button{transition-duration:1ms}
 }
 

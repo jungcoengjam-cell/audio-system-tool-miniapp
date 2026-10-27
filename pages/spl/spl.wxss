@@ -130,8 +130,8 @@
 .meeting-text{font-size:11px}
 .equipment-placeholder{color:var(--theme-text-tertiary);font-size:14px}
 
-.spl-overlay{padding:0;opacity:1;animation:none}
-.spl-overlay.spl-closing{padding:0;opacity:1;animation:none;pointer-events:auto}
+.spl-overlay{padding:0;opacity:1;animation:spl-overlay-in 180ms ease-out both}
+.spl-overlay.spl-closing{padding:0;opacity:1;animation:spl-overlay-out 320ms ease-in both;pointer-events:auto}
 .spl-sheet{width:100%;max-height:90vh;padding:15px 16px calc(12px + env(safe-area-inset-bottom));border-radius:24px 24px 0 0;animation:spl-sheet-slide-in 320ms cubic-bezier(.2,.72,.25,1) both}
 .spl-sheet.spl-sheet-closing{animation:spl-sheet-slide-out 320ms ease-in both;pointer-events:none}
 .share-panel{height:auto;max-height:90vh;min-height:0}
@@ -145,6 +145,15 @@
 .project-panel.project-keyboard-open{padding-bottom:12px}
 @keyframes spl-sheet-slide-in{from{transform:translateY(calc(100% + env(safe-area-inset-bottom)))}to{transform:translateY(0)}}
 @keyframes spl-sheet-slide-out{from{transform:translateY(0)}to{transform:translateY(calc(100% + env(safe-area-inset-bottom)))}}
+@keyframes spl-overlay-in{from{opacity:0}to{opacity:1}}
+@keyframes spl-overlay-out{from{opacity:1}to{opacity:0}}
+.selector-mask{animation:spl-selector-mask-in 180ms ease-out both}
+.selector-mask.selector-closing{animation:spl-selector-mask-out 180ms ease-in both}
+.selector-panel{animation:spl-sheet-slide-in 180ms cubic-bezier(.2,.72,.25,1) both}
+.selector-panel.selector-panel-closing{animation:spl-sheet-slide-out 180ms ease-in both;pointer-events:none}
+@keyframes spl-selector-mask-in{from{opacity:0}to{opacity:1}}
+@keyframes spl-selector-mask-out{from{opacity:1}to{opacity:0}}
+@media(prefers-reduced-motion:reduce){.selector-mask,.selector-panel,.selector-mask.selector-closing,.selector-panel.selector-panel-closing,.spl-overlay,.spl-overlay.spl-closing{animation-duration:.01ms!important;animation-iteration-count:1!important}}
 
 @media(max-width:360px){
   .result-grid{margin-top:68px}

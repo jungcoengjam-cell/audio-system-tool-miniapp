@@ -71,8 +71,8 @@
 .field-error-group{box-sizing:border-box;margin-top:8px;padding:8px 10px;border-radius:11px;background:rgba(198,58,50,.09);color:var(--theme-danger);font-size:12px;line-height:1.45;overflow-wrap:anywhere}
 
 .result-report-canvas-offscreen{position:fixed;z-index:-1;top:0;left:-10000px;pointer-events:none;opacity:0}
-.page-root .result-report-preview-overlay{z-index:1000;padding:32rpx 20rpx calc(16rpx + env(safe-area-inset-bottom));background:rgba(18,20,27,.52);opacity:1;animation:none}
-.page-root.result-report-preview-closing .result-report-preview-overlay{opacity:1;animation:none}
+.page-root .result-report-preview-overlay{z-index:1000;padding:32rpx 20rpx calc(16rpx + env(safe-area-inset-bottom));background:rgba(18,20,27,.52);opacity:1;animation:cable-overlay-in 180ms ease-out both}
+.page-root.result-report-preview-closing .result-report-preview-overlay{opacity:1;animation:cable-overlay-out 320ms ease-in both}
 .page-root.result-report-preview-closing .result-report-preview-sheet{animation-name:cable-report-sheet-out;animation-timing-function:ease-in;pointer-events:none}
 .page-root .result-report-preview-sheet{box-sizing:border-box;height:auto;max-height:var(--cable-report-sheet-max-height,86vh);padding:20rpx 18rpx 16rpx;border:1px solid var(--theme-divider);border-radius:28px;background:var(--theme-surface);box-shadow:0 20px 65px rgba(0,0,0,.22);animation:cable-report-sheet-in 320ms cubic-bezier(.2,.72,.25,1) both}
 .page-root .result-report-preview-header{flex:none;padding:0 2px 12px}
@@ -87,10 +87,12 @@
 .page-root .result-report-preview-action-primary{background:var(--theme-primary-fill);color:#fff}
 .page-root .result-report-preview-action-secondary{background:var(--theme-control);color:var(--theme-accent-text)}
 
-.cable-project-overlay{position:fixed;z-index:1100;inset:0;display:flex;box-sizing:border-box;padding:0;align-items:flex-end;justify-content:center;background:rgba(18,20,27,.55);opacity:1;animation:none}
+.cable-project-overlay{position:fixed;z-index:1100;inset:0;display:flex;box-sizing:border-box;padding:0;align-items:flex-end;justify-content:center;background:rgba(18,20,27,.55);opacity:1;animation:cable-overlay-in 180ms ease-out both}
 .project-sheet{animation:cable-project-sheet-in 320ms cubic-bezier(.2,.72,.25,1) both}
-.cable-project-overlay.project-dialog-closing{opacity:1;animation:none;pointer-events:auto}
+.cable-project-overlay.project-dialog-closing{opacity:1;animation:cable-overlay-out 320ms ease-in both;pointer-events:auto}
 .project-dialog-closing .project-sheet{animation-name:cable-project-sheet-out;animation-timing-function:ease-in;pointer-events:none}
+@keyframes cable-overlay-in{from{opacity:0}to{opacity:1}}
+@keyframes cable-overlay-out{from{opacity:1}to{opacity:0}}
 @keyframes cable-report-sheet-in{from{transform:translateY(calc(100% + 16rpx + env(safe-area-inset-bottom)))}to{transform:translateY(0)}}
 @keyframes cable-report-sheet-out{from{transform:translateY(0)}to{transform:translateY(calc(100% + 16rpx + env(safe-area-inset-bottom)))}}
 @keyframes cable-project-sheet-in{from{transform:translateY(calc(100% + env(safe-area-inset-bottom)))}to{transform:translateY(0)}}
@@ -166,6 +168,8 @@
   .project-sheet,.page-root .result-report-preview-sheet{animation:none;transform:none}
   .project-dialog-closing .project-sheet{animation:none;transform:translateY(calc(100% + env(safe-area-inset-bottom)))}
   .page-root.result-report-preview-closing .result-report-preview-sheet{animation:none;transform:translateY(calc(100% + 16rpx + env(safe-area-inset-bottom)))}
+  .page-root .result-report-preview-overlay,.page-root.result-report-preview-closing .result-report-preview-overlay,
+  .cable-project-overlay,.cable-project-overlay.project-dialog-closing{animation-duration:.01ms!important}
 }
 @media (prefers-color-scheme: dark){
   .page-root{background:var(--theme-page-bg);color:var(--theme-text)}

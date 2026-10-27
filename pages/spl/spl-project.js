@@ -486,7 +486,7 @@ function createSplProjectMethods(runtime = {}) {
     },
 
     closeProjectSheet() {
-      if (!this.data.projectSheetVisible) return false
+      if (!this.data.projectSheetVisible || this.data.projectSheetClosing) return false
       this.invalidateProjectSave({ updateView: false })
       this._projectSnapshotForSave = null
       const closeRevision = (this._projectCloseRevision || 0) + 1

@@ -167,7 +167,7 @@
     <view class="pending-confirm {{!pendingChange.valid ? 'is-disabled' : ''}}" bindtap="confirmPendingChange">添加灯组</view>
   </view>
 
-  <view wx:if="{{floatingVisible && floatingGroup}}" class="floating-backdrop" bindtap="closeFloatingCard"></view>
+  <view wx:if="{{floatingVisible && floatingGroup}}" class="floating-backdrop {{floatingClosing ? 'floating-backdrop-closing' : ''}}" bindtap="closeFloatingCard"></view>
   <view wx:if="{{floatingVisible && floatingGroup}}" class="floating-card {{floatingSwipeDragging ? 'floating-card-gesture-dragging' : ''}}" style="{{floatingStyle}}; transform: translateX({{floatingSwipeOffset}}px); --group-color: {{floatingGroup.color}}; --group-tint: {{floatingGroup.chipTint}};" bindtouchstart="onFloatingTouchStart" bindtouchmove="onFloatingTouchMove" bindtouchend="onFloatingTouchEnd" bindtouchcancel="onFloatingTouchCancel">
       <view class="fixture-card-main floating-card-main">
         <view class="fixture-thumb"><image class="fixture-sprite" src="/assets/lighting/fixture-types.png" mode="scaleToFill" style="transform: translateX({{floatingGroup.spriteOffset}});" /></view>

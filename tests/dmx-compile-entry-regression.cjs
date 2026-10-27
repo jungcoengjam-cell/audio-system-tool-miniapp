@@ -36,13 +36,40 @@ function digest(value) {
   return crypto.createHash('sha256').update(JSON.stringify(value)).digest('hex')
 }
 
+function normalizeAuthorizedAnimationSource(relativePath, source) {
+  const replaceExactlyOnce = (marker, replacement) => {
+    const occurrences = source.split(marker).length - 1
+    assert.equal(occurrences, 1, `${relativePath}: expected one authorized animation marker`)
+    source = source.replace(marker, replacement)
+  }
+
+  if (relativePath === 'pages/dmx-address/dmx-address.wxml') {
+    replaceExactlyOnce(
+      `class="floating-backdrop {{floatingClosing ? 'floating-backdrop-closing' : ''}}"`,
+      'class="floating-backdrop"',
+    )
+  } else if (relativePath === 'pages/dmx-address/dmx-address.wxss') {
+    replaceExactlyOnce(
+      '.floating-backdrop.floating-backdrop-closing{animation:backdrop-out .23s ease-in both}\n',
+      '',
+    )
+    replaceExactlyOnce('@keyframes backdrop-out{from{opacity:1}to{opacity:0}}\n', '')
+    replaceExactlyOnce(
+      '.floating-backdrop,.floating-backdrop.floating-backdrop-closing,.floating-card,.fixture-card,.address-chip,.add-group-button',
+      '.floating-backdrop,.floating-card,.fixture-card,.address-chip,.add-group-button',
+    )
+  }
+  return source
+}
+
 function buildNormalizedHashMap(traces) {
   const normalizedHashes = new Map()
   const addFileHash = (relativePath) => {
     const contents = fs.readFileSync(path.join(root, relativePath))
     const rawHash = crypto.createHash('sha256').update(contents).digest('hex')
     const lfContents = contents.toString('utf8').replace(/\r\n?/g, '\n')
-    const normalizedHash = crypto.createHash('sha256').update(lfContents).digest('hex')
+    const normalizedContents = normalizeAuthorizedAnimationSource(relativePath, lfContents)
+    const normalizedHash = crypto.createHash('sha256').update(normalizedContents).digest('hex')
     const previous = normalizedHashes.get(rawHash)
     assert.ok(previous === undefined || previous === normalizedHash,
       `conflicting canonical hash for ${relativePath}`)

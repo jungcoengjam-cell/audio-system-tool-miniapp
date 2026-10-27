@@ -201,11 +201,11 @@
 
   <view
     wx:if="{{dmxImportVisible}}"
-    class="dmx-import-overlay"
+    class="dmx-import-overlay {{dmxImportClosing ? 'dmx-import-closing' : ''}}"
     bindtap="closeDmxProductImport"
     catchtouchmove="stopDmxImportTap"
   >
-    <view class="dmx-import-sheet" catchtap="stopDmxImportTap">
+    <view class="dmx-import-sheet {{dmxImportClosing ? 'dmx-import-sheet-closing' : ''}}" catchtap="stopDmxImportTap">
       <view class="dmx-import-handle"></view>
       <view class="dmx-import-header">
         <view class="dmx-import-heading">

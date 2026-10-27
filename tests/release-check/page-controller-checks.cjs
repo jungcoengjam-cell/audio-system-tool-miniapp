@@ -331,6 +331,21 @@ function createPageControllerChecks(context) {
     limiterPage.closeResultReportPreview()
     limiterPage.openSharePreview()
     assert.strictEqual(limiterReportExportCount, 1, '相同限幅器结果没有复用已生成图片')
+    const originalSetTimeoutForLimiterClose = global.setTimeout
+    const originalClearTimeoutForLimiterClose = global.clearTimeout
+    let limiterCloseTimer = null
+    global.setTimeout = (callback, delay, ...args) => {
+      if (delay !== 180) return originalSetTimeoutForLimiterClose(callback, delay, ...args)
+      limiterCloseTimer = { callback, args }
+      return limiterCloseTimer
+    }
+    global.clearTimeout = (timer) => {
+      if (timer === limiterCloseTimer) {
+        limiterCloseTimer = null
+        return
+      }
+      return originalClearTimeoutForLimiterClose(timer)
+    }
     limiterPage.closeSharePreview()
     const thresholdOnlyResult = limiterPage.commitInput({ highPassFrequencyIndex: 0 })
     assert.strictEqual(thresholdOnlyResult.valid, true)
@@ -339,6 +354,14 @@ function createPageControllerChecks(context) {
     assert(limiterPage.getResultText().includes('-19.2 dBFS'))
     assert(!limiterPage.getResultText().includes('Attack：'))
     assert(!limiterPage.getRecordPayload().summary.includes('Attack'))
+    assert.strictEqual(limiterPage.data.pageContainerFallbackClosing, true,
+      '限幅器回退遮罩关闭时必须等待退出动画完成')
+    assert(limiterCloseTimer, '限幅器回退遮罩关闭未安排退出动画计时器')
+    const completedLimiterCloseTimer = limiterCloseTimer
+    limiterCloseTimer = null
+    completedLimiterCloseTimer.callback(...completedLimiterCloseTimer.args)
+    assert.strictEqual(limiterPage.data.pageContainerFallbackClosing, false,
+      '限幅器回退遮罩完成退出动画后仍锁定页面操作')
     delete wx.createCanvasContext
     delete wx.getFileSystemManager
     delete wx.canvasToTempFilePath
@@ -350,12 +373,21 @@ function createPageControllerChecks(context) {
     assert(limiterPage.data.selectorItems.every((item) => !item.stereoPower && !item.source),
       '限幅器功放选择器仍传入完整产品资料')
     limiterPage.openEquipmentDetail({ currentTarget: { dataset: { model: 'TC-2350B' } } })
+    assert.strictEqual(limiterPage.data.pageContainerFallbackClosing, true,
+      '限幅器详情导航必须先开始回退选择器的退出动画')
+    assert.strictEqual(navigatedUrl, '', '限幅器详情导航不得早于回退选择器退出完成')
+    assert(limiterCloseTimer, '限幅器详情导航未等待选择器退出动画计时器')
+    const completedLimiterDetailCloseTimer = limiterCloseTimer
+    limiterCloseTimer = null
+    completedLimiterDetailCloseTimer.callback(...completedLimiterDetailCloseTimer.args)
     assert.strictEqual(navigatedUrl, '/pages/products/detail?type=amplifier&model=TC-2350B')
     limiterPage.openEquipmentSelector({ currentTarget: { dataset: { type: 'speaker' } } })
     assert.strictEqual(limiterPage.data.selectorItems.length, 60, '限幅器音箱选择器未按首批 60 条渲染')
     assert(limiterPage.data.selectorTotalCount > limiterPage.data.selectorItems.length)
     limiterPage.appendSelectorItems()
     assert.strictEqual(limiterPage.data.selectorItems.length, 120, '限幅器音箱选择器滚动后未追加第二批')
+    global.setTimeout = originalSetTimeoutForLimiterClose
+    global.clearTimeout = originalClearTimeoutForLimiterClose
 
     const splPage = loadPage('pages/spl/spl.js')
     assertWxmlHandlers(splPage, 'pages/spl/spl.wxml')
@@ -447,8 +479,30 @@ function createPageControllerChecks(context) {
       '声压级选择器仍传入完整音箱产品资料')
     splPage.appendSelectorItems()
     assert.strictEqual(splPage.data.selectorItems.length, 120, '声压级音箱选择器滚动后未追加第二批')
+    const originalSetTimeoutForSplDetail = global.setTimeout
+    const originalClearTimeoutForSplDetail = global.clearTimeout
+    let splDetailCloseTimer = null
+    global.setTimeout = (callback, delay, ...args) => {
+      if (delay !== 180) return originalSetTimeoutForSplDetail(callback, delay, ...args)
+      splDetailCloseTimer = { callback, args }
+      return splDetailCloseTimer
+    }
+    global.clearTimeout = (timer) => {
+      if (timer === splDetailCloseTimer) {
+        splDetailCloseTimer = null
+        return
+      }
+      return originalClearTimeoutForSplDetail(timer)
+    }
     splPage.openSpeakerDetail({ currentTarget: { dataset: { model: 'TS-803C' } } })
+    assert.strictEqual(splPage.data.selectorClosing, true, '声压级详情导航必须等待选择器退出动画')
+    assert(splDetailCloseTimer, '声压级详情导航未安排选择器退出动画计时器')
+    const completedSplDetailCloseTimer = splDetailCloseTimer
+    splDetailCloseTimer = null
+    completedSplDetailCloseTimer.callback(...completedSplDetailCloseTimer.args)
     assert.strictEqual(navigatedUrl, '/pages/products/detail?type=speaker&model=TS-803C')
+    global.setTimeout = originalSetTimeoutForSplDetail
+    global.clearTimeout = originalClearTimeoutForSplDetail
     splPage.onDistanceInput({ detail: { value: '5' } })
     assert.strictEqual(splPage.data.result.distanceMeters, 4, '声压级输入尚未结束就进行了完整计算')
     splPage.onDistanceBlur()
@@ -577,6 +631,7 @@ function createPageControllerChecks(context) {
     }
     gainPage.onLoad()
     gainPage.setData = gainSetData
+    gainPage.onShow()
     assert.strictEqual(gainPage.getRecordLookupPayload().module, 'gainStructure')
     assert.strictEqual(gainInitializationSetDataCount, 1, '增益结构初始化仍执行多次视图提交')
     assert.strictEqual(storageWriteCount, writesBeforeGainLoad, '增益结构初始化仍把刚读取的偏好重复写回本地')
@@ -669,8 +724,33 @@ function createPageControllerChecks(context) {
     gainPage.openAmplifierSelector()
     assert.strictEqual(gainPage.data.selectorTotalCount, amplifiers.length)
     assert.strictEqual(gainPage.data.selectorItems.length, Math.min(60, amplifiers.length))
+    const originalSetTimeoutForGainClose = global.setTimeout
+    const originalClearTimeoutForGainClose = global.clearTimeout
+    let gainCloseTimer = null
+    global.setTimeout = (callback, delay, ...args) => {
+      if (delay !== 180) return originalSetTimeoutForGainClose(callback, delay, ...args)
+      gainCloseTimer = { callback, args }
+      return gainCloseTimer
+    }
+    global.clearTimeout = (timer) => {
+      if (timer === gainCloseTimer) {
+        gainCloseTimer = null
+        return
+      }
+      return originalClearTimeoutForGainClose(timer)
+    }
     gainPage.closeAmplifierSelector()
+    assert.strictEqual(gainPage.data.pageContainerFallbackClosing, true,
+      '增益架构回退遮罩关闭时必须等待退出动画完成')
+    assert(gainCloseTimer, '增益架构回退遮罩关闭未安排退出动画计时器')
+    const completedGainCloseTimer = gainCloseTimer
+    gainCloseTimer = null
+    completedGainCloseTimer.callback(...completedGainCloseTimer.args)
     assert.strictEqual(gainPage.data.selectorItems.length, 0)
+    assert.strictEqual(gainPage.data.pageContainerFallbackClosing, false,
+      '增益架构回退遮罩完成退出动画后仍锁定页面操作')
+    global.setTimeout = originalSetTimeoutForGainClose
+    global.clearTimeout = originalClearTimeoutForGainClose
 
     const noDefaultIndex = amplifiers.findIndex((item) => item.model === 'TC-2350B')
     gainPage.selectAmplifier({ currentTarget: { dataset: { index: noDefaultIndex } } })
@@ -836,7 +916,7 @@ function createPageControllerChecks(context) {
     'DMX 地址方案仍渲染重复的方案汇总信息')
     assert(dmxWxml.includes('class="fixture-thumb" data-index="{{groupIndex}}" bindtap="openFloatingCard"')
       && dmxWxml.includes('class="address-chips address-chips-preview"')
-      && dmxWxml.includes('class="floating-backdrop" bindtap="closeFloatingCard"')
+      && dmxWxml.includes(`class="floating-backdrop {{floatingClosing ? 'floating-backdrop-closing' : ''}}" bindtap="closeFloatingCard"`)
       && dmxWxml.includes('bindchange="onCardModeChange"')
       && dmxWxml.includes('bindinput="onCardQuantityInput"')
       && dmxWxml.includes('bindblur="onCardQuantityBlur"')
@@ -2186,12 +2266,34 @@ function createPageControllerChecks(context) {
       'V3 摄像机界面不应保留独立完整公式复制入口')
     assert(!Object.prototype.hasOwnProperty.call(cameraPage.data, 'cameras'),
       '摄像机完整产品库仍被放入页面 data')
+    const originalSetTimeoutForCameraClose = global.setTimeout
+    const originalClearTimeoutForCameraClose = global.clearTimeout
+    let cameraCloseTimer = null
+    global.setTimeout = (callback, delay, ...args) => {
+      if (delay !== 180) return originalSetTimeoutForCameraClose(callback, delay, ...args)
+      cameraCloseTimer = { callback, args }
+      return cameraCloseTimer
+    }
+    global.clearTimeout = (timer) => {
+      if (timer === cameraCloseTimer) {
+        cameraCloseTimer = null
+        return
+      }
+      return originalClearTimeoutForCameraClose(timer)
+    }
+    const completeCameraCloseAnimation = () => {
+      assert(cameraCloseTimer, '摄像机选择后未安排退出动画计时器')
+      const timer = cameraCloseTimer
+      cameraCloseTimer = null
+      timer.callback(...timer.args)
+    }
     cameraPage.openCameraSelector()
     assert.strictEqual(cameraPage.data.selectorItems.length, 26, '摄像机选择器未加载完整可选库')
     assert(cameraPage.data.selectorItems.every((item) => !item.views && !item.source),
       '摄像机完整产品参数仍被传入视图层')
     const defaultCameraIndex = cameraPage.data.selectorItems.findIndex((item) => item.model === 'TV-6124HK')
     cameraPage.selectCamera({ currentTarget: { dataset: { index: defaultCameraIndex } } })
+    completeCameraCloseAnimation()
     assert.strictEqual(cameraPage.data.selectedCamera.model, 'TV-6124HK', '选择摄像机后型号展示未同步')
     if (cameraPage.data.viewOptions.length > 1) {
       cameraPage.onViewTap({ currentTarget: { dataset: { index: 1 } } })
@@ -2352,31 +2454,41 @@ function createPageControllerChecks(context) {
     assert(planeCameraText.includes('摄像机安装反算｜垂直平面'))
     assert(planeCameraText.includes('摄像机距目标平面：4.63 m'))
     cameraPage.onSceneModeTap({ currentTarget: { dataset: { index: 0 } } })
+    cameraPage.openCameraSelector()
     const fixedCameraIndex = cameraPage.data.selectorItems.findIndex((item) => item.model === 'TS-0663JP')
     cameraPage.selectCamera({ currentTarget: { dataset: { index: fixedCameraIndex } } })
+    completeCameraCloseAnimation()
     assert.strictEqual(cameraPage.data.selectedCamera.model, 'TS-0663JP', '切换固定安装摄像机后型号展示未同步')
     assert.strictEqual(cameraPage.data.result.mountLabel, '电子云台（固定安装）')
     assert.strictEqual(cameraPage.data.result.requiresInitialAim, true)
     assert(cameraPage.data.result.aimValue.includes('向下'))
+    cameraPage.openCameraSelector()
     const multiViewCameraIndex = cameraPage.data.selectorItems.findIndex((item) => item.model === 'TS-0650JSM')
     cameraPage.selectCamera({ currentTarget: { dataset: { index: multiViewCameraIndex } } })
+    completeCameraCloseAnimation()
     assert.strictEqual(cameraPage.data.selectedCamera.model, 'TS-0650JSM', '切换多视角摄像机后型号展示未同步')
     assert(cameraPage.data.viewOptions.length > 1, '多视角摄像机测试样本未提供多个视角')
     cameraPage.onViewTap({ currentTarget: { dataset: { index: 1 } } })
     assert.strictEqual(cameraPage.data.selectedMountLabel, getCameraMountLabel(findByModel(cameras, 'TS-0650JSM'), 1),
       '多视角摄像机切换视角后安装方式展示未同步')
+    cameraPage.openCameraSelector()
     const fixedHorizontalCameraIndex = cameraPage.data.selectorItems.findIndex((item) => item.model === 'TV-6124UK')
     cameraPage.selectCamera({ currentTarget: { dataset: { index: fixedHorizontalCameraIndex } } })
+    completeCameraCloseAnimation()
     assert.strictEqual(cameraPage.data.selectedCamera.model, 'TV-6124UK', '切换水平视场摄像机后型号展示未同步')
     assert.strictEqual(cameraPage.data.result.mountLabel, '固定式/枪机')
     assert.strictEqual(cameraPage.data.result.horizontalOnly, true)
     assert.strictEqual(cameraPage.data.result.requiresInitialAim, true)
+    cameraPage.openCameraSelector()
     const horizontalCameraIndex = cameraPage.data.selectorItems.findIndex((item) => item.model === 'TV-MU650X')
     cameraPage.selectCamera({ currentTarget: { dataset: { index: horizontalCameraIndex } } })
+    completeCameraCloseAnimation()
     assert.strictEqual(cameraPage.data.selectedCamera.model, 'TV-MU650X', '切换水平预估摄像机后型号展示未同步')
     assert.strictEqual(cameraPage.data.result.horizontalOnly, true)
     assert(cameraPage.data.result.distanceMeaning.includes('非完整安装距离'))
     assert(cameraPage.getResultText().includes('垂直未校核'))
+    global.setTimeout = originalSetTimeoutForCameraClose
+    global.clearTimeout = originalClearTimeoutForCameraClose
     assert.strictEqual(cameraPage.getPreferences().sourceMode, 'library',
       'camera page preferences must remain library-bound after selecting a catalog camera')
     delete wx.createSelectorQuery
@@ -3236,8 +3348,31 @@ function createPageControllerChecks(context) {
     assert.strictEqual(lightingDetailPage.data.dmxImportVisible, true)
     assert(lightingDetailPage.data.dmxImportError, '非法灯具数量未给出校验反馈')
     lightingDetailPage.onDmxImportFixtureCountInput({ detail: { value: '2' } })
+    const originalSetTimeoutForImportClose = global.setTimeout
+    const originalClearTimeoutForImportClose = global.clearTimeout
+    let importCloseTimer = null
+    global.setTimeout = (callback, delay, ...args) => {
+      if (delay !== 180) return originalSetTimeoutForImportClose(callback, delay, ...args)
+      importCloseTimer = { callback, args }
+      return importCloseTimer
+    }
+    global.clearTimeout = (timer) => {
+      if (timer === importCloseTimer) {
+        importCloseTimer = null
+        return
+      }
+      return originalClearTimeoutForImportClose(timer)
+    }
     lightingDetailPage.closeDmxProductImport()
+    assert.strictEqual(lightingDetailPage.data.dmxImportClosing, true,
+      '取消 DMX 导入必须等待关闭动画完成')
+    assert(importCloseTimer, '取消 DMX 导入未安排关闭动画计时器')
+    const completedImportCloseTimer = importCloseTimer
+    importCloseTimer = null
+    completedImportCloseTimer.callback(...completedImportCloseTimer.args)
     assert.strictEqual(lightingDetailPage.data.dmxImportVisible, false)
+    global.setTimeout = originalSetTimeoutForImportClose
+    global.clearTimeout = originalClearTimeoutForImportClose
     assert.strictEqual(storageWriteCount, cancelFixtureCount, 'cancelling DMX product import must not write preferences')
     assert.deepStrictEqual(storage.get(dmxPreferencesKey).groups, [existingDmxGroup, unrelatedDmxGroup],
       'cancelling DMX product import must preserve existing groups')
@@ -3253,8 +3388,32 @@ function createPageControllerChecks(context) {
       'DMX product import must require an explicit append or replace choice')
     assert.strictEqual(lightingDetailPage.data.dmxImportVisible, true)
     lightingDetailPage.selectDmxImportAction({ currentTarget: { dataset: { action: 'append' } } })
+    const originalSetTimeoutForSavedImport = global.setTimeout
+    const originalClearTimeoutForSavedImport = global.clearTimeout
+    let savedImportCloseTimer = null
+    global.setTimeout = (callback, delay, ...args) => {
+      if (delay !== 180) return originalSetTimeoutForSavedImport(callback, delay, ...args)
+      savedImportCloseTimer = { callback, args }
+      return savedImportCloseTimer
+    }
+    global.clearTimeout = (timer) => {
+      if (timer === savedImportCloseTimer) {
+        savedImportCloseTimer = null
+        return
+      }
+      return originalClearTimeoutForSavedImport(timer)
+    }
     lightingDetailPage.confirmDmxProductImport()
+    assert.strictEqual(lightingDetailPage.data.dmxImportClosing, true,
+      '保存 DMX 导入后必须完成关闭动画再跳转')
+    assert.strictEqual(navigatedUrl, '', '保存 DMX 导入后导航不得早于关闭动画')
+    assert(savedImportCloseTimer, '保存 DMX 导入未安排关闭动画计时器')
+    const completedSavedImportCloseTimer = savedImportCloseTimer
+    savedImportCloseTimer = null
+    completedSavedImportCloseTimer.callback(...completedSavedImportCloseTimer.args)
     assertLightingCatalogImportRoute(navigatedUrl)
+    global.setTimeout = originalSetTimeoutForSavedImport
+    global.clearTimeout = originalClearTimeoutForSavedImport
     assert.strictEqual(storageWriteCount, writesBeforeDmxImportAppend + 1)
     let importedDmxPreferences = storage.get(dmxPreferencesKey)
     assert.strictEqual(importedDmxPreferences.groups.length, 3)
@@ -3279,8 +3438,29 @@ function createPageControllerChecks(context) {
     lightingDetailPage.selectDmxImportMode({ currentTarget: { dataset: { channelCount: 18 } } })
     lightingDetailPage.onDmxImportFixtureCountInput({ detail: { value: '3' } })
     lightingDetailPage.selectDmxImportAction({ currentTarget: { dataset: { action: 'replace' } } })
+    const originalSetTimeoutForReplaceImport = global.setTimeout
+    const originalClearTimeoutForReplaceImport = global.clearTimeout
+    let replaceImportCloseTimer = null
+    global.setTimeout = (callback, delay, ...args) => {
+      if (delay !== 180) return originalSetTimeoutForReplaceImport(callback, delay, ...args)
+      replaceImportCloseTimer = { callback, args }
+      return replaceImportCloseTimer
+    }
+    global.clearTimeout = (timer) => {
+      if (timer === replaceImportCloseTimer) {
+        replaceImportCloseTimer = null
+        return
+      }
+      return originalClearTimeoutForReplaceImport(timer)
+    }
     lightingDetailPage.confirmDmxProductImport()
+    assert(replaceImportCloseTimer, '替换导入未安排关闭动画计时器')
+    const completedReplaceImportCloseTimer = replaceImportCloseTimer
+    replaceImportCloseTimer = null
+    completedReplaceImportCloseTimer.callback(...completedReplaceImportCloseTimer.args)
     assertLightingCatalogImportRoute(navigatedUrl)
+    global.setTimeout = originalSetTimeoutForReplaceImport
+    global.clearTimeout = originalClearTimeoutForReplaceImport
     assert.strictEqual(storageWriteCount, writesBeforeDmxImportReplace + 1)
     importedDmxPreferences = storage.get(dmxPreferencesKey)
     assert.strictEqual(importedDmxPreferences.groups.length, 1,

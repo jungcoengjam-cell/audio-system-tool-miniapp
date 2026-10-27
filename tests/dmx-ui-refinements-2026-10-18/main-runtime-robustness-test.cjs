@@ -33,8 +33,11 @@ async function main() {
       assert(oldResizeQuery, 'resize must request a fresh source rectangle')
       page.closeFloatingCard()
       page.openFloatingCard(runtime.event({ index: 1 }))
+      assert.equal(runtime.selectors.length, 0, 'opening another card is ignored while the floating card is closing')
+      await wait(260)
+      page.openFloatingCard(runtime.event({ index: 1 }))
       const newOpenQuery = runtime.selectors.shift()
-      assert(newOpenQuery, 'new card must request its own source rectangle')
+      assert(newOpenQuery, 'new card must request its own source rectangle after close completes')
       newOpenQuery.run(runtime.rect)
       await wait(35)
       const beforeLateResult = { style: page.data.floatingStyle, origin: JSON.stringify(page._floatingOrigin), groupId: page.data.floatingGroup._lightingGroupId }

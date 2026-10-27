@@ -32,6 +32,19 @@ function withoutHomepageEditorSurfaces(source) {
     .replace(/^[ \t]*<page-container\b(?=[^>]*class="editor-navigation-guard")[^>]*(?:\/>|>\s*<\/page-container>)[ \t]*(?:\r?\n)?/gm, '')
 }
 
+// The animation lifecycle update adds only these two reactive class tokens to
+// the approved SPL selector. Strip exactly those tokens when checking the
+// frozen production markup hash; all other WXML changes still fail the hash.
+function withoutSplSelectorAnimationClasses(source) {
+  const maskClass = `class="selector-mask {{selectorClosing ? 'selector-closing' : ''}}"`
+  const panelClass = `class="selector-panel {{selectorClosing ? 'selector-panel-closing' : ''}}"`
+  assert.equal(source.split(maskClass).length - 1, 1, 'SPL selector mask closing class must occur exactly once')
+  assert.equal(source.split(panelClass).length - 1, 1, 'SPL selector panel closing class must occur exactly once')
+  return source
+    .replace(maskClass, 'class="selector-mask"')
+    .replace(panelClass, 'class="selector-panel"')
+}
+
 function expandIncludes(source, fromFile, stack = []) {
   return source.replace(/<include\s+src="([^"]+)"\s*\/>/g, (_match, includePath) => {
     const resolved = path.resolve(path.dirname(fromFile), includePath)
@@ -316,8 +329,9 @@ for (const [relativePath, expectedHash] of Object.entries({
     'SPL local report must use the 750px cable-report side margin and card padding')
     const approvedSplHash = baseline.approvedSplRefactorExpandedWxmlSha256
     assert.match(approvedSplHash || '', /^[0-9a-f]{64}$/, 'missing approved SPL refactor WXML hash')
-    assert.equal(sha256(Buffer.from(hashInput)), approvedSplHash,
-      'expanded SPL WXML changed after its explicitly approved refactor')
+    const splMarkupWithoutAnimationTokens = withoutSplSelectorAnimationClasses(hashInput)
+    assert.equal(sha256(Buffer.from(splMarkupWithoutAnimationTokens)), approvedSplHash,
+      'expanded SPL WXML changed beyond the approved selector animation class tokens')
     continue
   }
   if (relativePath === 'pages/gain-structure/gain-structure.wxml') {

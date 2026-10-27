@@ -14,7 +14,7 @@ const {
 const { vibrate } = require('../../utils/haptics')
 const { OUTPUT_OPTIONS, INPUT_OPTIONS } = require('./wiring-model')
 
-const PROJECT_CLOSE_DURATION = 260
+const PROJECT_CLOSE_DURATION = 320
 
 const initialData = {
   projectDialogVisible: false,

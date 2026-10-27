@@ -230,11 +230,17 @@ function testEmptyAndRealInputEvents() {
       assert.equal(writes.length, writesBeforeBadSelectorEvents)
     }
     page.closeEquipmentSelector()
+    assert.equal(page.data.pageContainerFallbackClosing, true,
+      'selector close remains visible while the fallback exit animation runs')
+    clock.advance(180)
+    assert.equal(page.data.selectorVisible, false, 'selector is removed after the fallback exit animation')
     page.selectEquipment({ currentTarget: { dataset: { index: firstSelectorIndex } } })
     assert.equal(page.data.amplifierIndex, -1, 'a queued selector tap after close cannot alter the draft')
     selectModel(page, 'amplifier', 'TC-2350B')
+    clock.advance(180)
     assert.equal(page.data.selectedAmplifier.model, 'TC-2350B', 'first amplifier selection updates the rendered model')
     selectModel(page, 'speaker', 'TS-803C')
+    clock.advance(180)
     assert.equal(page.data.selectedSpeaker.model, 'TS-803C', 'first speaker selection updates the rendered model')
     page.onGroupTap({ currentTarget: { dataset: { group: 'load' } } })
     assert.equal(page.data.countIndex, 0)
@@ -305,6 +311,7 @@ function testEmptyAndRealInputEvents() {
     page.openCalculationDetails({ currentTarget: { dataset: { type: 'calculation' } } })
     clock.advance(7000)
     page.closeDetails()
+    clock.advance(180)
     assert.equal(page._reminderRemainingMs, remaining, 'details overlay time does not count as visible reminder time')
     clock.advance(5000)
     const visibleRemaining = remaining - 5000
@@ -457,7 +464,7 @@ function testFavoriteRenderingAcrossInvalidResult() {
 
 function testProjectSnapshotAndContinuation() {
   const context = bootPage({ seedPreferences: true })
-  const { page, storage, modals } = context
+  const { page, storage, modals, clock } = context
   try {
     page.onShow()
     assert.equal(page.data.wiringIndex, -1, 'restored count-one parallel does not masquerade as a user wiring choice')
@@ -525,6 +532,7 @@ function testProjectSnapshotAndContinuation() {
 
     const before = page.getRecordPayload()
     page.continueAfterProjectSave()
+    clock.advance(180)
     assert.equal(page.data.projectSheetVisible, false)
     assert.deepEqual(page.getRecordPayload(), before, 'Continue keeps current inputs and result')
     assert.equal(page._lastProjectTarget.id, projectA.id, 'Continue retains destination for the next configuration')
@@ -533,6 +541,7 @@ function testProjectSnapshotAndContinuation() {
     assert.equal(page.data.projectTargetId, projectA.id)
     assert.equal(page.data.projectConfigName, '手动名称')
     page.closeProjectSheet()
+    clock.advance(180)
 
     let shareArgs
     page.openSharePreview()
@@ -553,6 +562,7 @@ function testProjectSnapshotAndContinuation() {
     assert.match(context.toasts.at(-1).title, /长按图片转发/, 'unsupported devices keep the shared helper long-press fallback')
     context.wx.showShareImageMenu = originalShareMenu
     page.closeSharePreview()
+    clock.advance(180)
     let accessResult
     page.setData({ resultReportImagePath: 'temp://missing.png' })
     page.resultReportSignature = page.getResultReportSignature()
@@ -580,7 +590,7 @@ function testProjectSnapshotAndContinuation() {
 
 function testProjectMetadataProjectionInPage() {
   const context = bootPage({ seedPreferences: true })
-  const { page, storage, modals } = context
+  const { page, storage, modals, clock } = context
   try {
     page.onShow()
     const records = require('../../utils/records')
@@ -620,6 +630,7 @@ function testProjectMetadataProjectionInPage() {
     assert.equal(savedRecord.projectMetadata[orphanProject.id].name, payload.title, 'saving adds canonical metadata for the selected project')
     assert.equal(records.getFavoriteByPayload(payload), null, 'a project record is not fabricated as a standalone favorite')
     page.closeProjectSheet()
+    clock.advance(180)
 
     const inheritedProject = records.createProject('原型元数据项目')
     assert(inheritedProject)
@@ -645,7 +656,7 @@ function testProjectMetadataProjectionInPage() {
 
 function testPendingReportCallbacksAreInvalidated() {
   const context = bootPage({ seedPreferences: true })
-  const { page, wx, shareCalls } = context
+  const { page, wx, shareCalls, clock } = context
   const originalContext = wx.createCanvasContext
   const originalExport = wx.canvasToTempFilePath
   const drawCallbacks = []
@@ -668,6 +679,7 @@ function testPendingReportCallbacksAreInvalidated() {
     assert.equal(context.loadingCalls.length, 0, 'local report generation uses the in-sheet spinner only')
     assert.equal(page.data.isGeneratingResultReport, true)
     page.closeSharePreview()
+    clock.advance(180)
     assert.equal(page.data.isGeneratingResultReport, false)
     drawCallbacks.shift()()
     assert.equal(exportCount, 0, 'closing the share sheet invalidates a pending canvas callback')
@@ -908,8 +920,9 @@ function testPageContainerOverlayOpenerMatrix() {
     for (const activeName of Object.keys(openers)) {
       for (const attemptedName of Object.keys(openers)) {
         const context = bootPage({ seedPreferences: true, pageContainerSupport: native })
-        const { page } = context
+        const { page, clock } = context
         try {
+          page.onShow()
           openers[activeName](page)
           assert.equal(page._activePageContainerOverlay?.name, activeName)
           const epoch = page._activePageContainerOverlay.epoch
@@ -924,6 +937,11 @@ function testPageContainerOverlayOpenerMatrix() {
           }[activeName]
           close.call(page)
           if (native) page.onPageContainerAfterLeave()
+          else {
+            assert.equal(page.data.pageContainerFallbackClosing, true,
+              `fallback ${activeName} exposes its closing state during the exit animation`)
+            clock.advance(180)
+          }
           assert.deepEqual(visible(page), [false, false, false, false])
         } finally { context.close() }
       }
@@ -935,8 +953,9 @@ function testSelectorLeaveOwnership() {
   for (const native of [false, true]) {
     for (const selectDifferent of [false, true]) {
       const context = bootPage({ seedPreferences: true, pageContainerSupport: native })
-      const { page } = context
+      const { page, clock } = context
       try {
+        page.onShow()
         page.openEquipmentSelector({ currentTarget: { dataset: { type: 'amplifier' } } })
         const currentIndex = page.data.amplifierIndex
         const item = selectDifferent
@@ -945,7 +964,12 @@ function testSelectorLeaveOwnership() {
         assert(item, 'the selector exposes the chosen model for changed and same-value events')
         const priorModel = page.data.selectedAmplifier.model
         page.selectEquipment({ currentTarget: { dataset: { index: String(item.index) } } })
-        assert.equal(page.data.selectorVisible, false)
+        if (native) assert.equal(page.data.selectorVisible, false)
+        else {
+          assert.equal(page.data.pageContainerFallbackClosing, true)
+          clock.advance(180)
+          assert.equal(page.data.selectorVisible, false)
+        }
         if (selectDifferent) assert.notEqual(page.data.selectedAmplifier.model, priorModel)
         else assert.equal(page.data.selectedAmplifier.model, priorModel)
         if (native) {
@@ -966,11 +990,18 @@ function testImplicitOverlayCloseReleasePaths() {
   for (const native of [false, true]) {
     const projectContext = bootPage({ seedPreferences: true, pageContainerSupport: native })
     try {
-      const { page } = projectContext
+      const { page, clock } = projectContext
+      page.onShow()
       page.openProjectSheet()
       assert.equal(page.data.projectSheetVisible, true)
       page.commitInput({ modeIndex: page.data.modeIndex === 0 ? 1 : 0 })
-      assert.equal(page.data.projectSheetVisible, false, 'a calculation update closes a stale project snapshot')
+      if (native) assert.equal(page.data.projectSheetVisible, false, 'a calculation update closes a stale project snapshot')
+      else {
+        assert.equal(page.data.pageContainerFallbackClosing, true,
+          'a calculation update closes the fallback project sheet with its exit animation')
+        clock.advance(180)
+        assert.equal(page.data.projectSheetVisible, false, 'a calculation update closes a stale project snapshot')
+      }
       if (native) {
         assert.equal(page._activePageContainerOverlay?.name, 'project')
         assert.equal(page._pageContainerLeave?.fallback, false)
@@ -982,11 +1013,18 @@ function testImplicitOverlayCloseReleasePaths() {
 
     const resetContext = bootPage({ seedPreferences: true, pageContainerSupport: native })
     try {
-      const { page } = resetContext
+      const { page, clock } = resetContext
+      page.onShow()
       page.openCalculationDetails({ currentTarget: { dataset: { type: 'calculation' } } })
       const persisted = page.clearDraft()
       assert.equal(persisted, true)
-      assert.equal(page.data.detailsVisible, false)
+      if (native) assert.equal(page.data.detailsVisible, false)
+      else {
+        assert.equal(page.data.pageContainerFallbackClosing, true,
+          'reset closes the fallback details sheet with its exit animation')
+        clock.advance(180)
+        assert.equal(page.data.detailsVisible, false)
+      }
       if (native) {
         assert.equal(page._activePageContainerOverlay?.name, 'details')
         page.onPageContainerAfterLeave()
@@ -999,8 +1037,9 @@ function testImplicitOverlayCloseReleasePaths() {
 
 function testFallbackDeferredLeaveAndUnloadGuards() {
   const context = bootPage({ seedPreferences: true })
-  const { page, wx, writes, modals } = context
+  const { page, wx, writes, modals, clock } = context
   try {
+    page.onShow()
     page.openEquipmentSelector({ currentTarget: { dataset: { type: 'amplifier' } } })
     const selectedIndex = page.data.amplifierIndex
     const callbacks = []
@@ -1010,26 +1049,33 @@ function testFallbackDeferredLeaveAndUnloadGuards() {
       if (callback) callbacks.push(callback)
     }
     page.selectEquipment({ currentTarget: { dataset: { index: String(selectedIndex) } } })
-    assert.equal(page.data.selectorVisible, false)
+    assert.equal(page.data.selectorVisible, true, 'fallback selector stays mounted while its close animation runs')
+    assert.equal(page.data.pageContainerFallbackClosing, true)
     assert.equal(page._activePageContainerOverlay?.name, 'selector', 'fallback selection keeps its lock until rendered')
     const leavingEpoch = page._pageContainerLeave?.epoch
     assert.equal(page._pageContainerLeave?.fallback, true)
     page.openProjectSheet()
     assert.equal(page.data.projectSheetVisible, false, 'fallback render callback must run before another opener')
-    callbacks.at(-1)()
+    callbacks.splice(0).forEach((callback) => callback())
+    clock.advance(180)
+    assert.equal(page.data.selectorVisible, false)
+    callbacks.splice(0).forEach((callback) => callback())
     assert.equal(page._activePageContainerOverlay, null)
     assert.equal(page._pageContainerLeave, null)
 
     page.openCalculationDetails({ currentTarget: { dataset: { type: 'calculation' } } })
     const detailsEpoch = page._activePageContainerOverlay.epoch
     assert.notEqual(detailsEpoch, leavingEpoch)
-    callbacks.at(-1)()
+    callbacks.splice(0).forEach((callback) => callback())
     assert.equal(page._activePageContainerOverlay?.epoch, detailsEpoch,
       'a duplicate callback from the old fallback render cannot clear a newer overlay')
     page.closeDetails()
     assert.equal(page._activePageContainerOverlay?.name, 'details', 'fallback X-close retains ownership through render')
     assert.equal(page._pageContainerLeave?.fallback, true)
-    callbacks.at(-1)()
+    callbacks.splice(0).forEach((callback) => callback())
+    clock.advance(180)
+    assert.equal(page.data.detailsVisible, false)
+    callbacks.splice(0).forEach((callback) => callback())
     assert.equal(page._activePageContainerOverlay, null)
     page.setData = setData
 

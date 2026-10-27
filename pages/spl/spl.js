@@ -55,6 +55,7 @@ const DEFAULT_SPEAKER_MODEL = 'TS-803C'
 const PREFERENCE_KEY = 'audioTool.spl.preferences'
 const INPUT_CALCULATION_DELAY = 160
 const SHEET_TRANSITION_DURATION = 320
+const SELECTOR_TRANSITION_DURATION = 180
 const SELECTOR_BATCH_SIZE = 60
 const SPEAKER_COUNTS = [1, 2, 3, 4, 6, 8, 12, 16]
 const COUNT_PICKER_OPTIONS = ['请选择数量', ...SPEAKER_COUNTS.map((count) => `${count} 只`)]
@@ -247,6 +248,7 @@ Page({
     currentFavorite: false,
     distanceError: '',
     selectorVisible: false,
+    selectorClosing: false,
     selectorKeyword: '',
     selectorCategoryIndex: 0,
     selectorItems: [],
@@ -267,6 +269,8 @@ Page({
     this._pageVisible = false
     this._favoriteSyncedSinceLoad = false
     this._isUnloaded = false
+    this._selectorCloseRevision = 0
+    this._selectorCloseTimer = null
     this._inputRevision = 0
     this._projectRequestId = 0
     this._projectKeyboardEpisode = 0
@@ -349,6 +353,8 @@ Page({
 
   onHide() {
     this._pageVisible = false
+    this.cancelSpeakerSelectorClose()
+    this.setData({ selectorVisible: false, selectorClosing: false, selectorItems: [], selectorTotalCount: 0 })
     if (this._previewImageOpening) return
     this._shareCloseRevision = (this._shareCloseRevision || 0) + 1
     this._projectCloseRevision = (this._projectCloseRevision || 0) + 1
@@ -374,6 +380,7 @@ Page({
   onUnload() {
     this._pageVisible = false
     this._isUnloaded = true
+    this.cancelSpeakerSelectorClose()
     this._shareCloseRevision = (this._shareCloseRevision || 0) + 1
     this._projectCloseRevision = (this._projectCloseRevision || 0) + 1
     this.cancelDistanceCalculation()
@@ -428,7 +435,8 @@ Page({
   },
 
   openSpeakerSelector() {
-    if (this.data.selectorVisible || this.data.shareSheetVisible || this.data.projectSheetVisible) return false
+    if (this._isUnloaded || this.data.selectorVisible || this.data.shareSheetVisible || this.data.projectSheetVisible) return false
+    this.cancelSpeakerSelectorClose()
     const keyword = this.data.speakerKeyword
     const categoryIndex = this.data.speakerCategoryIndex
 
@@ -445,6 +453,7 @@ Page({
     const finishViewUpdate = startMeasurement('声压级/设备搜索视图更新', { source: 'open' })
     this.setData({
       selectorVisible: true,
+      selectorClosing: false,
       selectorKeyword: keyword,
       selectorCategoryIndex: categoryIndex,
       selectorItems: visibleItems,
@@ -455,14 +464,41 @@ Page({
     }))
   },
 
-  closeSpeakerSelector() {
+  cancelSpeakerSelectorClose() {
+    this._selectorCloseRevision = (this._selectorCloseRevision || 0) + 1
+    clearTimeout(this._selectorCloseTimer)
+    this._selectorCloseTimer = null
+    return this._selectorCloseRevision
+  },
+
+  closeSpeakerSelector(immediate = false, afterClose) {
+    if (!this.data.selectorVisible) return false
+    if (this.data.selectorClosing && immediate !== true) return false
+    const closeRevision = this.cancelSpeakerSelectorClose()
     this._selectorMatches = []
-    this.setData({ selectorVisible: false, selectorItems: [], selectorTotalCount: 0 })
+    if (immediate === true || this._isUnloaded || !this._pageVisible) {
+      this.setData({ selectorVisible: false, selectorClosing: false, selectorItems: [], selectorTotalCount: 0 }, afterClose)
+      return true
+    }
+    this.setData({ selectorClosing: true }, () => {
+      if (this._isUnloaded || !this._pageVisible || closeRevision !== this._selectorCloseRevision
+        || !this.data.selectorVisible || !this.data.selectorClosing) return
+      const timer = setTimeout(() => {
+        if (this._selectorCloseTimer !== timer || this._isUnloaded || !this._pageVisible
+          || closeRevision !== this._selectorCloseRevision
+          || !this.data.selectorVisible || !this.data.selectorClosing) return
+        this._selectorCloseTimer = null
+        this.setData({ selectorVisible: false, selectorClosing: false, selectorItems: [], selectorTotalCount: 0 }, afterClose)
+      }, SELECTOR_TRANSITION_DURATION)
+      this._selectorCloseTimer = timer
+    })
+    return true
   },
 
   stopTap() {},
 
   onSelectorInput(event) {
+    if (this.data.selectorClosing) return
     this.refreshSelector({
       keyword: event.detail.value,
       categoryIndex: this.data.selectorCategoryIndex,
@@ -470,6 +506,7 @@ Page({
   },
 
   onSelectorCategoryTap(event) {
+    if (this.data.selectorClosing) return
     const categoryIndex = Number(event.currentTarget.dataset.index)
     if (categoryIndex !== this.data.selectorCategoryIndex) vibrate('light')
     this.refreshSelector({
@@ -505,6 +542,7 @@ Page({
   },
 
   appendSelectorItems() {
+    if (this.data.selectorClosing) return
     const selectorMatches = this._selectorMatches || []
     const rendered = this.data.selectorItems.length
     if (rendered >= selectorMatches.length) return
@@ -517,23 +555,22 @@ Page({
   },
 
   selectSpeaker(event) {
+    if (this.data.selectorClosing) return
     const speakerIndex = Number(event.currentTarget.dataset.index)
     if (speakerIndex !== this.data.speakerIndex) vibrate('light')
-    this._selectorMatches = []
+    this.closeSpeakerSelector()
     this.commitCalculatedState({
       speakerIndex,
-      selectorVisible: false,
-      selectorItems: [],
-      selectorTotalCount: 0,
     })
   },
 
   openSpeakerDetail(event) {
+    if (this.data.selectorClosing) return
     const model = event.currentTarget.dataset.model
-    this._selectorMatches = []
-    this.setData({ selectorVisible: false, selectorItems: [], selectorTotalCount: 0 })
-    wx.navigateTo({
-      url: `/pages/products/detail?type=speaker&model=${encodeURIComponent(model)}`,
+    this.closeSpeakerSelector(false, () => {
+      wx.navigateTo({
+        url: `/pages/products/detail?type=speaker&model=${encodeURIComponent(model)}`,
+      })
     })
   },
 
@@ -747,6 +784,7 @@ Page({
   closeSharePreview({ silent = false } = {}) {
     if (!this.data.shareSheetVisible && !this.data.isGeneratingResultReport
       && !this.data.isCheckingResultReportCache) return false
+    if (!silent && this.data.shareSheetClosing) return false
     if (this.data.isGeneratingResultReport || this.data.isCheckingResultReportCache) {
       cancelResultReportGeneration(this)
       this._reportCacheCheckRevision = 0
@@ -1096,6 +1134,7 @@ Page({
       wx.showToast({ title: '清空失败，请重试', icon: 'none' })
       return false
     }
+    this.closeSpeakerSelector()
     this.beginInputRevision()
     this._selectorMatches = []
     this._lastProjectTarget = null
@@ -1107,13 +1146,10 @@ Page({
       distanceText: '',
       summationModeIndex: 0,
       showSummationMode: false,
-      selectorVisible: false,
       speakerKeyword: '',
       speakerCategoryIndex: 0,
       selectorKeyword: '',
       selectorCategoryIndex: 0,
-      selectorItems: [],
-      selectorTotalCount: 0,
       currentFavorite: false,
       canUseResultActions: false,
       isCalculationPending: false,

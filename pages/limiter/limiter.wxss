@@ -316,3 +316,12 @@ SOFTWARE.
   .reminder-strip{background:var(--theme-warning-soft);color:var(--theme-warning)}
   .icon-bookmark-active{background:var(--theme-accent);color:#fff}
 }
+.sheet-mask{animation:limiter-page-container-mask-in 180ms ease-out both}
+.sheet-mask .sheet-panel{animation:limiter-page-container-sheet-in 180ms cubic-bezier(.2,.72,.25,1) both}
+.sheet-mask.sheet-mask-closing{animation:limiter-page-container-mask-out 180ms ease-in both}
+.sheet-mask.sheet-mask-closing .sheet-panel{animation:limiter-page-container-sheet-out 180ms ease-in both;pointer-events:none}
+@keyframes limiter-page-container-mask-in{from{opacity:0}to{opacity:1}}
+@keyframes limiter-page-container-mask-out{from{opacity:1}to{opacity:0}}
+@keyframes limiter-page-container-sheet-in{from{transform:translateY(calc(100% + env(safe-area-inset-bottom)))}to{transform:translateY(0)}}
+@keyframes limiter-page-container-sheet-out{from{transform:translateY(0)}to{transform:translateY(calc(100% + env(safe-area-inset-bottom)))}}
+@media(prefers-reduced-motion:reduce){.sheet-mask,.sheet-mask .sheet-panel,.sheet-mask.sheet-mask-closing,.sheet-mask.sheet-mask-closing .sheet-panel{animation-duration:1ms!important;animation-iteration-count:1!important}}

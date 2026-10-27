@@ -162,8 +162,8 @@
     </view>
   </view>
 
-  <view wx:if="{{selectorVisible}}" class="selector-mask" catchtap="closeSpeakerSelector">
-    <view class="selector-panel" catchtap="stopTap">
+  <view wx:if="{{selectorVisible}}" class="selector-mask {{selectorClosing ? 'selector-closing' : ''}}" catchtap="closeSpeakerSelector">
+    <view class="selector-panel {{selectorClosing ? 'selector-panel-closing' : ''}}" catchtap="stopTap">
       <view class="selector-header">
         <view class="selector-title">选择音箱型号</view>
         <button class="selector-close" aria-label="关闭" catchtap="closeSpeakerSelector">×</button>

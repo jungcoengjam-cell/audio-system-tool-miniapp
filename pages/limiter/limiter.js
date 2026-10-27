@@ -31,6 +31,7 @@ const { calculateResultReportHeight, drawResultReport } = require('./limiter-rep
 
 const PREFERENCE_KEY = 'audioTool.limiter.preferences'
 const SELECTOR_BATCH_SIZE = 60
+const PAGE_CONTAINER_FALLBACK_TRANSITION_DURATION = 180
 const REMINDER_DURATION = 15000
 const INPUT_FIELDS = ['amplifierIndex', 'speakerIndex', 'countIndex', 'wiringIndex', 'modeIndex', 'sensitivityIndex', 'highPassFrequencyIndex']
 const GROUPS = [
@@ -292,6 +293,7 @@ Page({
     attackText: '— ms', releaseText: '— ms', highPassText: '未选择', timingReady: false,
     result: null, hasValidResult: false, canReset: false, currentFavorite: false,
     pageContainerSupported: false,
+    pageContainerFallbackClosing: false,
     detailsVisible: false, detailsTitle: '', detailsText: '',
     shareSheetVisible: false,
     ...createLimiterProjectData(),
@@ -332,6 +334,9 @@ Page({
     this._reportCacheCheckRevision = 0
     this._lastProjectTarget = null
     this._pageContainerEpoch = 0
+    this._pageContainerFallbackCloseRevision = 0
+    this._pageContainerFallbackCloseTimer = null
+    this._pendingPageContainerFallbackClose = null
     this._activePageContainerOverlay = null
     this._pageContainerLeave = null
     let pageContainerSupported = false
@@ -372,6 +377,17 @@ Page({
 
   onHide() {
     this._pageVisible = false
+    const pendingFallbackClose = this._pendingPageContainerFallbackClose
+    this.cancelPageContainerFallbackClose()
+    this._pendingPageContainerFallbackClose = null
+    if (pendingFallbackClose) {
+      this._pageContainerLeave = null
+      this._activePageContainerOverlay = null
+      this.setData({ ...pendingFallbackClose.changes, pageContainerFallbackClosing: false })
+    } else if (this.data.pageContainerFallbackClosing) {
+      this._pageContainerLeave = null
+      this.setData({ pageContainerFallbackClosing: false })
+    }
     this.resetProjectKeyboardState({ hideKeyboard: true })
     this.pauseReminderClock()
     this.cancelPendingImageWork()
@@ -395,6 +411,8 @@ Page({
   onUnload() {
     this._isUnloaded = true
     this._pageVisible = false
+    this.cancelPageContainerFallbackClose()
+    this._pendingPageContainerFallbackClose = null
     this.resetProjectKeyboardState({ hideKeyboard: true, updateView: false })
     this.pauseReminderClock()
     this._reminderEpoch += 1
@@ -412,6 +430,12 @@ Page({
   },
 
   openPageContainerOverlay(name) {
+    this.cancelPageContainerFallbackClose()
+    this._pendingPageContainerFallbackClose = null
+    if (this.data.pageContainerFallbackClosing) {
+      this._pageContainerLeave = null
+      this.setData({ pageContainerFallbackClosing: false })
+    }
     const epoch = (this._pageContainerEpoch || 0) + 1
     this._pageContainerEpoch = epoch
     this._activePageContainerOverlay = { name, epoch }
@@ -471,8 +495,15 @@ Page({
     this.resumeReminderClock()
   },
 
-  closePageContainerOverlay(name, changes) {
-    if (this._isUnloaded || !this.data) return
+  cancelPageContainerFallbackClose() {
+    this._pageContainerFallbackCloseRevision = (this._pageContainerFallbackCloseRevision || 0) + 1
+    clearTimeout(this._pageContainerFallbackCloseTimer)
+    this._pageContainerFallbackCloseTimer = null
+    return this._pageContainerFallbackCloseRevision
+  },
+
+  closePageContainerOverlay(name, changes, afterFallbackClose) {
+    if (this._isUnloaded || !this.data) return false
     const supported = this.data.pageContainerSupported
     const active = this._activePageContainerOverlay
     const leaveStarted = active?.name === name && this.preparePageContainerLeave()
@@ -482,10 +513,36 @@ Page({
       this._projectSavePending = false
       this._projectSnapshotForSave = null
     }
+    if (!supported && fallbackEpoch != null) {
+      if (this.data.pageContainerFallbackClosing) return false
+      const closeRevision = this.cancelPageContainerFallbackClose()
+      const pendingClose = { changes, epoch: fallbackEpoch }
+      this._pendingPageContainerFallbackClose = pendingClose
+      this.setData({ pageContainerFallbackClosing: true }, () => {
+        if (this._isUnloaded || !this._pageVisible || closeRevision !== this._pageContainerFallbackCloseRevision
+          || this._pageContainerLeave?.epoch !== fallbackEpoch || !this.data.pageContainerFallbackClosing) return
+        const timer = setTimeout(() => {
+          if (this._pageContainerFallbackCloseTimer !== timer || this._isUnloaded || !this._pageVisible
+            || closeRevision !== this._pageContainerFallbackCloseRevision
+            || this._pageContainerLeave?.epoch !== fallbackEpoch || !this.data.pageContainerFallbackClosing) return
+          this._pageContainerFallbackCloseTimer = null
+          this.setData({ ...changes, pageContainerFallbackClosing: false }, () => {
+            if (this._isUnloaded || closeRevision !== this._pageContainerFallbackCloseRevision) return
+            if (this._pendingPageContainerFallbackClose === pendingClose) this._pendingPageContainerFallbackClose = null
+            this.finishFallbackPageContainerLeave(fallbackEpoch)
+            afterFallbackClose?.()
+          })
+        }, PAGE_CONTAINER_FALLBACK_TRANSITION_DURATION)
+        this._pageContainerFallbackCloseTimer = timer
+      })
+      return true
+    }
     this.setData(changes, () => {
       if (!supported && fallbackEpoch != null) this.finishFallbackPageContainerLeave(fallbackEpoch)
       else if (!supported) this.resumeReminderClock()
+      if (!supported && fallbackEpoch == null) afterFallbackClose?.()
     })
+    return true
   },
 
   onPageContainerBeforeLeave() {
@@ -615,12 +672,15 @@ Page({
     const closingOverlay = closingName && active?.name === closingName && this.preparePageContainerLeave()
     const fallbackClosingEpoch = closingOverlay && !this.data.pageContainerSupported
       ? this._pageContainerLeave?.epoch : null
+    const fallbackCloseStarted = fallbackClosingEpoch != null
+      && this.closePageContainerOverlay(closingName, { ...closeSelector, ...closeProject })
     this._selectorMatches = []
     if (Object.keys(closeProject).length) this.resetProjectKeyboardState({ hideKeyboard: true })
     if (!changed.length) {
       const resumePicker = this._pickerOverlayOpen
       this._pickerOverlayOpen = false
       if (Object.keys(closeSelector).length || Object.keys(closeProject).length) {
+        if (fallbackCloseStarted) return this.data.result
         this.setData({ ...closeSelector, ...closeProject }, () => {
           if (fallbackClosingEpoch != null) this.finishFallbackPageContainerLeave(fallbackClosingEpoch)
           else this.resumeReminderClock()
@@ -647,7 +707,11 @@ Page({
     finishCore({ valid: view.hasValidResult, state: view.calculationState })
     const report = resetStaleResultReport(this, view.hasValidResult ? this.getRecordPayload(next, view.result) : null)
     const finishView = startMeasurement('限幅器/setData视图更新', { source: 'interaction' })
-    this.setData({ ...changes, ...selection, ...closeSelector, ...closeProject, ...view, ...report }, () => {
+    this.setData({
+      ...changes, ...selection,
+      ...(fallbackCloseStarted ? {} : { ...closeSelector, ...closeProject }),
+      ...view, ...report,
+    }, () => {
       if (this._isUnloaded) return
       finishView()
       const write = writePreferencesDetailed(PREFERENCE_KEY, savedDraftPreferences(next))
@@ -663,7 +727,9 @@ Page({
         }
         if (!onlyInitialHpf) this.startReminder(groupFor(changed[0]))
       }
-      if (fallbackClosingEpoch != null) this.finishFallbackPageContainerLeave(fallbackClosingEpoch)
+      if (fallbackCloseStarted) {
+        // The fallback close timer resumes the reminder after the exit animation.
+      } else if (fallbackClosingEpoch != null) this.finishFallbackPageContainerLeave(fallbackClosingEpoch)
       else if (resumePicker || this.canRunReminderClock()) this.resumeReminderClock()
       finishUpdate({ valid: view.hasValidResult, persisted: write.ok })
     })
@@ -754,8 +820,15 @@ Page({
     if (!this.data.selectorVisible || this._isUnloaded || this._pageContainerLeave) return
     const model = event.currentTarget.dataset.model
     const type = this.data.selectorType === 'amplifier' ? 'amplifier' : 'speaker'
-    this.closeEquipmentSelector()
-    wx.navigateTo({ url: `/pages/products/detail?type=${type}&model=${encodeURIComponent(model)}` })
+    this._selectorMatches = []
+    const changes = { selectorVisible: false, selectorItems: [], selectorTotalCount: 0 }
+    const url = `/pages/products/detail?type=${type}&model=${encodeURIComponent(model)}`
+    if (this.data.pageContainerSupported) {
+      this.closePageContainerOverlay('selector', changes)
+      wx.navigateTo({ url })
+      return
+    }
+    this.closePageContainerOverlay('selector', changes, () => wx.navigateTo({ url }))
   },
 
   getPreferences(state = this.data) {
@@ -1013,9 +1086,15 @@ Page({
   clearDraft() {
     if (this._isUnloaded) return false
     const active = this._activePageContainerOverlay
-    const closingOverlay = active && this.preparePageContainerLeave()
-    const fallbackClosingEpoch = closingOverlay && !this.data.pageContainerSupported
-      ? this._pageContainerLeave?.epoch : null
+    const supported = this.data.pageContainerSupported
+    let fallbackClosePending = Boolean(!supported && active && this.data.pageContainerFallbackClosing
+      && this._pageContainerLeave?.epoch === active.epoch)
+    if (active && (supported || (this._pageVisible && !fallbackClosePending))) {
+      this.closePageContainerOverlay(active.name, {
+        selectorVisible: false, detailsVisible: false, shareSheetVisible: false, projectSheetVisible: false,
+      })
+      fallbackClosePending = Boolean(!supported && this.data.pageContainerFallbackClosing)
+    }
     this._inputRevision += 1
     this._projectRequestId += 1
     this._projectSavePending = false
@@ -1049,9 +1128,15 @@ Page({
     this._reportCacheCheckRevision = 0
     const view = resultView({ ...this.data, ...empty })
     const persisted = removePreferences(PREFERENCE_KEY)
-    this.setData({ ...empty, ...view }, () => {
-      if (fallbackClosingEpoch != null) this.finishFallbackPageContainerLeave(fallbackClosingEpoch)
-      else this.resumeReminderClock()
+    const closingOverlayVisibility = fallbackClosePending && active ? {
+      selectorVisible: active.name === 'selector',
+      detailsVisible: active.name === 'details',
+      shareSheetVisible: active.name === 'share',
+      projectSheetVisible: active.name === 'project',
+      pageContainerFallbackClosing: true,
+    } : {}
+    this.setData({ ...empty, ...view, ...closingOverlayVisibility }, () => {
+      if (!fallbackClosePending) this.resumeReminderClock()
     })
     if (!persisted) wx.showToast({ title: '当前计算已清空，但本地草稿未能删除；重新打开可能恢复上次输入。', icon: 'none' })
     return persisted

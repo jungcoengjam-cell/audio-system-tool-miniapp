@@ -136,17 +136,50 @@ function checkDmxDestinationImport(url, detail) {
   }
 }
 
+function confirmDmxImportAfterCloseAnimation() {
+  const originalSetTimeout = global.setTimeout
+  const originalClearTimeout = global.clearTimeout
+  let closeTimer = null
+  global.setTimeout = (callback, delay, ...args) => {
+    if (delay !== 180) return originalSetTimeout(callback, delay, ...args)
+    closeTimer = { callback, args }
+    return closeTimer
+  }
+  global.clearTimeout = (timer) => {
+    if (timer === closeTimer) {
+      closeTimer = null
+      return
+    }
+    return originalClearTimeout(timer)
+  }
+  try {
+    const previousNavigationCount = navigations.length
+    productDetailPage.confirmDmxProductImport()
+    assert.equal(productDetailPage.data.dmxImportClosing, true, 'DMX import must remain open during its exit animation')
+    assert.equal(navigations.length, previousNavigationCount, 'DMX import must navigate after the exit animation')
+    assert(closeTimer, 'DMX import confirmation did not schedule its exit animation')
+    const timer = closeTimer
+    closeTimer = null
+    timer.callback(...timer.args)
+  } finally {
+    global.setTimeout = originalSetTimeout
+    global.clearTimeout = originalClearTimeout
+  }
+}
+
 calculatorCases.forEach(([module, detail]) => {
   if (module === 'dmxAddress') storage.delete('audioTool.dmxAddress.preferences')
   productDetailPage._productDetail = detail
   storageFailure = false
+  if (module === 'dmxAddress') productDetailPage.onShow()
   productDetailPage.openCalculator({ currentTarget: { dataset: { module } } })
   if (module === 'dmxAddress') {
     assert.equal(productDetailPage.data.dmxImportVisible, true, 'DMX 带入先打开确认面板')
     productDetailPage.selectDmxImportMode({
       currentTarget: { dataset: { channelCount: String(detail.channelModes[0]) } },
     })
-    productDetailPage.confirmDmxProductImport()
+    productDetailPage.selectDmxImportAction({ currentTarget: { dataset: { action: 'replace' } } })
+    confirmDmxImportAfterCloseAnimation()
     checkDmxDestinationImport(navigations[navigations.length - 1], detail)
   }
   const navigationCount = navigations.length
@@ -177,7 +210,7 @@ calculatorCases.forEach(([module, detail]) => {
       currentTarget: { dataset: { channelCount: String(detail.channelModes[0]) } },
     })
     productDetailPage.selectDmxImportAction({ currentTarget: { dataset: { action: 'append' } } })
-    productDetailPage.confirmDmxProductImport()
+    confirmDmxImportAfterCloseAnimation()
   }
   assert.equal(navigations.length, navigationCount + 1, `${module} 未变化偏好不应阻止导航`)
   storageFailure = true
@@ -210,7 +243,7 @@ calculatorCases.forEach(([module, detail]) => {
     assert.match(productDetailPage.data.dmxImportError, /保存失败/)
   } else assert.equal(toastTitles.at(-1), '设置保存失败，请重试')
   storageFailure = false
-  if (module === 'dmxAddress') productDetailPage.confirmDmxProductImport()
+  if (module === 'dmxAddress') confirmDmxImportAfterCloseAnimation()
   else productDetailPage.openCalculator({ currentTarget: { dataset: { module } } })
   assert.equal(navigations.length, failedNavigationCount + 1, `${module} 写入失败后无法重试`)
 })

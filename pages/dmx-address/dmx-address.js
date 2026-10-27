@@ -396,6 +396,7 @@ selectedUniverseFixtures: [],
 selectedUniverseLabel: 'A',
 floatingGroup: null,
 floatingVisible: false,
+floatingClosing: false,
 floatingStyle: '',
 floatingSwipeOffset: 0,
 floatingSwipeDragging: false,
@@ -548,7 +549,7 @@ this.resetTouchGestures(true)
 if (wasClosing) {
 this._floatingClosing = false
 this._floatingOrigin = null
-this.setData({ floatingGroup: null, floatingVisible: false, floatingStyle: '', floatingSwipeOffset: 0, floatingSwipeDragging: false })
+this.setData({ floatingGroup: null, floatingVisible: false, floatingClosing: false, floatingStyle: '', floatingSwipeOffset: 0, floatingSwipeDragging: false })
 }
 this.updateViewportMetrics(event.size || {}, () => {
 if (!this._pageAlive || !this._pageVisible || resizeToken !== this._viewportUpdateToken) return
@@ -610,6 +611,7 @@ removedDetailsExpanded: false,
 fixtureAddPreview: null,
 floatingGroup: null,
 floatingVisible: false,
+floatingClosing: false,
 floatingStyle: '',
 swipedGroupIndex: -1,
 }
@@ -1038,10 +1040,10 @@ this._modalEpoch += 1
 this.resetTouchGestures(true)
 this.pauseDeleteUndoExpiry()
 this.cancelFloatingTransition()
-if (this._floatingClosing) {
 this._floatingClosing = false
 this._floatingOrigin = null
-this.setData({ floatingGroup: null, floatingVisible: false, floatingStyle: '', floatingSwipeOffset: 0, floatingSwipeDragging: false })
+if (this.data.floatingGroup || this.data.floatingVisible || this.data.floatingClosing) {
+this.setData({ floatingGroup: null, floatingVisible: false, floatingClosing: false, floatingStyle: '', floatingSwipeOffset: 0, floatingSwipeDragging: false })
 }
 this.flushScheduledCalculation()
 this.flushFixtureProgressWrite()

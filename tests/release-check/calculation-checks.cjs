@@ -155,7 +155,7 @@ function createCalculationChecks(context) {
   }
 
   function checkData() {
-    assert.strictEqual(APP_VERSION, '6.0.0')
+    assert.strictEqual(APP_VERSION, '6.0.1')
     assert.strictEqual(PRODUCT_DATA_DATE, '2026-09-01')
     assert.strictEqual(fs.readFileSync(path.join(root, 'VERSION'), 'utf8').trim(), APP_VERSION)
     assert(Object.isFrozen(PRODUCT_COUNTS), '产品资料库数量统计必须冻结')

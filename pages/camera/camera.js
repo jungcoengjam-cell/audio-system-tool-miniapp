@@ -47,6 +47,7 @@ const PREFERENCE_KEY = 'audioTool.camera.preferences'
 const DEFAULT_MODEL = 'TV-6124HK'
 const CANVAS_WIDTH = 640
 const CANVAS_HEIGHT = 500
+const CAMERA_SELECTOR_TRANSITION_DURATION = 180
 function getCurrentTheme() {
   try {
     const appInfo = typeof wx.getAppBaseInfo === 'function' ? wx.getAppBaseInfo() : null
@@ -543,6 +544,7 @@ Page({
     inputErrors: {},
     currentFavorite: false,
     selectorVisible: false,
+    selectorClosing: false,
     selectorKeyword: '',
     selectorItems: [],
     operationSnapshot: null,
@@ -557,6 +559,8 @@ Page({
     const finishInitialization = startMeasurement('摄像机/初始化总耗时')
     this._pageVisible = false
     this._cameraUnloaded = false
+    this._cameraSelectorCloseRevision = 0
+    this._cameraSelectorCloseTimer = null
     this._themeChangeHandler = ({ theme } = {}) => this.onThemeChange({ theme })
     if (typeof wx.onThemeChange === 'function') wx.onThemeChange(this._themeChangeHandler)
     const preferences = readPreferences(PREFERENCE_KEY)
@@ -674,6 +678,7 @@ Page({
   onHide() {
     this._pageVisibilityRevision = (this._pageVisibilityRevision || 0) + 1
     this._pageVisible = false
+    this.closeCameraSelector(true)
     this.cancelCameraProjectForHide()
     cancelResultReportGeneration(this)
     cancelCameraReportUi(this)
@@ -686,6 +691,7 @@ Page({
     this._cameraUnloaded = true
     this._pageVisibilityRevision = (this._pageVisibilityRevision || 0) + 1
     this._pageVisible = false
+    this.cancelCameraSelectorClose()
     this.cancelCameraProjectForHide()
     this.invalidatePreviewCanvas()
     this.cancelPendingCalculation()
@@ -852,6 +858,7 @@ Page({
     this._pendingInputValues = {}
     this.invalidatePreviewCanvas()
     this.cancelCameraProjectForHide()
+    this.closeCameraSelector()
     clearCameraResultReport(this)
 
     const resetState = { ...buildDefaultCameraState(), ...CLEARED_CAMERA_INPUTS }
@@ -862,7 +869,6 @@ Page({
       previewViewIndex: 0,
       legacyCustomUnsupported: false,
       operationUnsupportedMessage: '',
-      selectorVisible: false,
       selectorKeyword: '',
       selectorItems: [],
       result: null,
@@ -999,18 +1005,52 @@ Page({
     runIfCurrent()
   },
 
-  openCameraSelector() {
-    this.setData({ selectorVisible: true, selectorKeyword: '', selectorItems: cameraOptions })
+  cancelCameraSelectorClose() {
+    this._cameraSelectorCloseRevision = (this._cameraSelectorCloseRevision || 0) + 1
+    clearTimeout(this._cameraSelectorCloseTimer)
+    this._cameraSelectorCloseTimer = null
+    return this._cameraSelectorCloseRevision
   },
-  closeCameraSelector() { this.setData({ selectorVisible: false }) },
+
+  openCameraSelector() {
+    if (this._cameraUnloaded) return false
+    this.cancelCameraSelectorClose()
+    this.setData({ selectorVisible: true, selectorClosing: false, selectorKeyword: '', selectorItems: cameraOptions })
+    return true
+  },
+
+  closeCameraSelector(immediate = false) {
+    if (!this.data.selectorVisible) return false
+    if (this.data.selectorClosing && immediate !== true) return false
+    const closeRevision = this.cancelCameraSelectorClose()
+    if (immediate === true || this._cameraUnloaded || !this._pageVisible) {
+      this.setData({ selectorVisible: false, selectorClosing: false })
+      return true
+    }
+    this.setData({ selectorClosing: true }, () => {
+      if (this._cameraUnloaded || !this._pageVisible || closeRevision !== this._cameraSelectorCloseRevision
+        || !this.data.selectorVisible || !this.data.selectorClosing) return
+      const timer = setTimeout(() => {
+        if (this._cameraSelectorCloseTimer !== timer || this._cameraUnloaded || !this._pageVisible
+          || closeRevision !== this._cameraSelectorCloseRevision
+          || !this.data.selectorVisible || !this.data.selectorClosing) return
+        this._cameraSelectorCloseTimer = null
+        this.setData({ selectorVisible: false, selectorClosing: false })
+      }, CAMERA_SELECTOR_TRANSITION_DURATION)
+      this._cameraSelectorCloseTimer = timer
+    })
+    return true
+  },
   stopTap() {},
 
   onSelectorInput(event) {
+    if (this.data.selectorClosing) return
     const selectorKeyword = event.detail.value
     this.setData({ selectorKeyword, selectorItems: filterCameras(cameraOptions, selectorKeyword) })
   },
 
   selectCamera(event) {
+    if (this.data.selectorClosing) return
     const cameraIndex = Number(event.currentTarget.dataset.index)
     const camera = selectableCameras[cameraIndex]
     if (!camera) return
@@ -1018,6 +1058,7 @@ Page({
     if (this.getOperationSnapshot()?.active) invalidateOperation(this, 'camera-model-changed')
     this._persistLegacyUnlock = Boolean(this.data.legacyCustomUnsupported)
     this._explicitLibrarySelection = true
+    this.closeCameraSelector()
     try {
       this.commitCalculatedState({
         sourceModeIndex: 0,
@@ -1028,7 +1069,6 @@ Page({
         viewOptions: buildViewOptions(camera),
         viewIndex: 0,
         selectedMountLabel: camera.views[0].mountLabel,
-        selectorVisible: false,
       })
     } finally {
       this._explicitLibrarySelection = false

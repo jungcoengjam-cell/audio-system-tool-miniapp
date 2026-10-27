@@ -19,7 +19,8 @@ assert(floatingMarkup.includes('picker class="fixture-control-picker"'))
 assert(floatingMarkup.includes('bindchange="onCardModeChange"'), 'The expanded catalog card must expose channel-mode selection')
 assert(floatingMarkup.includes('bindinput="onCardQuantityInput"') && floatingMarkup.includes('bindblur="onCardQuantityBlur"'),
   'The expanded catalog card must expose quantity editing and validation')
-assert(wxml.includes('class="floating-backdrop" bindtap="closeFloatingCard"'), 'Outside tap must reach the card close handler')
+assert(wxml.includes('class="floating-backdrop {{floatingClosing ? \'floating-backdrop-closing\' : \'\'}}" bindtap="closeFloatingCard"'),
+  'Outside tap must reach the card close handler while exposing the close animation state')
 const gestureBindings = [
   ['bindtouchstart="onFloatingTouchStart"', 'onFloatingTouchStart'],
   ['bindtouchmove="onFloatingTouchMove"', 'onFloatingTouchMove'],

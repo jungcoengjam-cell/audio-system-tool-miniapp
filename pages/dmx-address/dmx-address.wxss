@@ -204,6 +204,7 @@
 .batch-confirm{display:flex;height:42px;min-height:42px;margin-top:6px;align-items:center;justify-content:center;border-radius:9px;background:#007aff;color:#fff;font-size:13px;font-weight:650}
 .batch-fixture-check{color:var(--accent);font-size:17px;font-weight:700}
 .floating-backdrop{position:fixed;z-index:60;inset:0;animation:backdrop-in .18s ease both}
+.floating-backdrop.floating-backdrop-closing{animation:backdrop-out .23s ease-in both}
 .floating-card{position:fixed;z-index:61;display:flex;box-sizing:border-box;padding:12px 13px 8px;flex-direction:column;overflow:hidden;border:1px solid var(--line);border-radius:15px;background:var(--surface);box-shadow:0 14px 42px rgba(0,0,0,.23);transition:left .23s cubic-bezier(.2,.8,.2,1),top .23s cubic-bezier(.2,.8,.2,1),width .23s cubic-bezier(.2,.8,.2,1),height .23s cubic-bezier(.2,.8,.2,1),border-radius .23s ease,transform .2s ease}
 .floating-card-gesture-dragging{transition:none!important}
 .floating-card-main{flex-shrink:0;padding-top:16px;padding-bottom:9px;border-bottom:1px solid var(--line)}
@@ -260,6 +261,7 @@
 .main-modal-panel.main-modal-card-closing{animation:main-modal-panel-out 180ms ease-in both;pointer-events:none}
 
 @keyframes backdrop-in{from{opacity:0}to{opacity:1}}
+@keyframes backdrop-out{from{opacity:1}to{opacity:0}}
 @keyframes main-modal-backdrop-in{from{opacity:0}to{opacity:1}}
 @keyframes main-modal-backdrop-out{from{opacity:1}to{opacity:0}}
 @keyframes main-modal-bottom-in{from{opacity:0;transform:translate(-50%,12px)}to{opacity:1;transform:translate(-50%,0)}}
@@ -338,7 +340,7 @@
 .fixture-category-active text{opacity:1}
 
 @media (prefers-reduced-motion: reduce){
-  .floating-backdrop,.floating-card,.fixture-card,.address-chip,.add-group-button{animation:none;transition:none}
+  .floating-backdrop,.floating-backdrop.floating-backdrop-closing,.floating-card,.fixture-card,.address-chip,.add-group-button{animation:none;transition:none}
   .main-modal-backdrop,.main-modal-bottom-sheet,.main-modal-center-sheet,.main-modal-panel{animation:none!important;transition:none!important}
   .fixture-card{transition:none!important}
   .fixture-card-pressed,.address-chip:active,.add-group-button:active{transform:none}

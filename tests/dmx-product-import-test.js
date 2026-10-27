@@ -9,6 +9,27 @@ const toasts = []
 let failRead = false
 let failWrite = false
 let page
+const originalSetTimeout = global.setTimeout
+const originalClearTimeout = global.clearTimeout
+let importCloseTimer = null
+global.setTimeout = (callback, delay, ...args) => {
+  if (delay !== 180) return originalSetTimeout(callback, delay, ...args)
+  importCloseTimer = { callback, args }
+  return importCloseTimer
+}
+global.clearTimeout = (timer) => {
+  if (timer === importCloseTimer) {
+    importCloseTimer = null
+    return
+  }
+  return originalClearTimeout(timer)
+}
+function finishImportCloseAnimation() {
+  assert(importCloseTimer, 'successful DMX import must schedule its exit animation')
+  const timer = importCloseTimer
+  importCloseTimer = null
+  timer.callback(...timer.args)
+}
 
 global.Page = (definition) => { page = definition }
 global.wx = {
@@ -38,12 +59,17 @@ const detailPath = require.resolve('../pages/products/detail')
 delete require.cache[detailPath]
 require('../pages/products/detail')
 page.data = { ...page.data }
-page.setData = (patch) => { page.data = { ...page.data, ...patch } }
+page.setData = function setData(patch, callback) {
+  this.data = { ...this.data, ...patch }
+  if (callback) callback()
+}
 
 function reset(productDetail = product) {
+  if (page?._dmxImportCloseTimer) global.clearTimeout(page._dmxImportCloseTimer)
   page.data = {
     product: null,
     dmxImportVisible: false,
+    dmxImportClosing: false,
     dmxImportModes: [],
     dmxImportChannelCount: '',
     dmxImportFixtureCount: '1',
@@ -58,6 +84,11 @@ function reset(productDetail = product) {
   page._productDetail = productDetail
   page._dmxImportSubmitting = false
   page._dmxImportOpenedSignature = ''
+  page._dmxImportPageVisible = true
+  page._dmxImportUnloaded = false
+  page._dmxImportCloseRevision = 0
+  page._dmxImportCloseTimer = null
+  page._dmxImportNavigatePending = false
   writes.length = 0
   routes.length = 0
   toasts.length = 0
@@ -108,6 +139,7 @@ try {
   selectAction('append')
   page.confirmDmxProductImport()
   page.confirmDmxProductImport()
+  finishImportCloseAnimation()
   let saved = storage.get(DMX_PREFERENCES_KEY)
   assert.equal(writes.length, 1, 'duplicate confirm does not write twice')
   assert.equal(routes.length, 1)
@@ -127,6 +159,7 @@ try {
   selectMode(multiModeFixture.channelModes[0])
   selectAction('append')
   page.confirmDmxProductImport()
+  finishImportCloseAnimation()
   saved = storage.get(DMX_PREFERENCES_KEY)
   assert.equal(saved.groups.length, 3, 'same-model import appends again')
   assert.equal(new Set(saved.groups.map((group) => group.id)).size, 3, 'appended group ids remain unique')
@@ -138,6 +171,7 @@ try {
   page.onDmxImportFixtureCountInput({ detail: { value: '4' } })
   selectAction('replace')
   page.confirmDmxProductImport()
+  finishImportCloseAnimation()
   saved = storage.get(DMX_PREFERENCES_KEY)
   assert.equal(saved.groups.length, 1)
   assert.equal(saved.groups[0].fixtureCount, '4')
@@ -150,6 +184,8 @@ try {
   const beforeCancel = JSON.stringify(storage.get(DMX_PREFERENCES_KEY))
   openPanel()
   page.closeDmxProductImport()
+  assert.equal(page.data.dmxImportClosing, true, 'cancel remains visible during its exit animation')
+  finishImportCloseAnimation()
   assert.equal(writes.length, 0, 'cancel performs no write')
   assert.equal(JSON.stringify(storage.get(DMX_PREFERENCES_KEY)), beforeCancel)
 
@@ -162,6 +198,7 @@ try {
   assert.equal(page.data.dmxImportModes[0].channelCount, 8)
   selectMode(8)
   page.confirmDmxProductImport()
+  finishImportCloseAnimation()
   assert.equal(writes.length, 1, 'single-mode fixture still requires an explicit tap')
 
   for (const invalidCount of ['', '0', '201', '1.5', '1e2', '-1']) {
@@ -284,6 +321,8 @@ try {
   console.log('dmx-product-import-test: ok')
 } finally {
   delete require.cache[detailPath]
+  global.setTimeout = originalSetTimeout
+  global.clearTimeout = originalClearTimeout
   if (previousPage === undefined) delete global.Page
   else global.Page = previousPage
   if (previousWx === undefined) delete global.wx

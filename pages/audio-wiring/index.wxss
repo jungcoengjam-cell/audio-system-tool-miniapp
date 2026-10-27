@@ -672,12 +672,12 @@
   padding: 32rpx 20rpx calc(16rpx + env(safe-area-inset-bottom));
   background: rgba(18, 20, 27, .52);
   opacity: 1;
-  animation: none;
+  animation: cable-overlay-in 180ms ease-out both;
 }
 
 .wiring-page.result-report-preview-closing .result-report-preview-overlay {
   opacity: 1;
-  animation: none;
+  animation: cable-overlay-out 320ms ease-in both;
 }
 
 .wiring-page.result-report-preview-closing .result-report-preview-sheet {
@@ -793,7 +793,7 @@
   justify-content: center;
   background: rgba(18, 20, 27, .55);
   opacity: 1;
-  animation: none;
+  animation: cable-overlay-in 180ms ease-out both;
 }
 
 .wiring-page .project-sheet {
@@ -815,7 +815,7 @@
 
 .wiring-page .cable-project-overlay.project-keyboard-open { padding: 0; }
 .wiring-page .project-sheet.project-keyboard-open { padding: 4px 22rpx; }
-.wiring-page .cable-project-overlay.project-dialog-closing { opacity: 1; animation: none; pointer-events: auto; }
+.wiring-page .cable-project-overlay.project-dialog-closing { opacity: 1; animation: cable-overlay-out 320ms ease-in both; pointer-events: auto; }
 .wiring-page .project-dialog-closing .project-sheet { animation-name: cable-project-sheet-out; animation-timing-function: ease-in; pointer-events: none; }
 
 .wiring-page .project-header {
@@ -879,6 +879,8 @@
 .wiring-page .project-button-primary { background: var(--theme-primary-fill); color: #fff; }
 .wiring-page .project-button[disabled] { opacity: .42; }
 
+@keyframes cable-overlay-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes cable-overlay-out { from { opacity: 1; } to { opacity: 0; } }
 @keyframes cable-report-sheet-in { from { transform: translateY(calc(100% + 16rpx + env(safe-area-inset-bottom))); } to { transform: translateY(0); } }
 @keyframes cable-report-sheet-out { from { transform: translateY(0); } to { transform: translateY(calc(100% + 16rpx + env(safe-area-inset-bottom))); } }
 @keyframes cable-project-sheet-in { from { transform: translateY(calc(100% + env(safe-area-inset-bottom))); } to { transform: translateY(0); } }
@@ -903,6 +905,10 @@
     transform: translateY(calc(100% + 16rpx + env(safe-area-inset-bottom)));
   }
   .wiring-page .project-dialog-closing .project-sheet { animation: none; transform: translateY(calc(100% + env(safe-area-inset-bottom))); }
+  .wiring-page .result-report-preview-overlay,
+  .wiring-page.result-report-preview-closing .result-report-preview-overlay,
+  .wiring-page .cable-project-overlay,
+  .wiring-page .cable-project-overlay.project-dialog-closing { animation-duration: .01ms !important; }
 }
 
 @media (max-width: 360px) {

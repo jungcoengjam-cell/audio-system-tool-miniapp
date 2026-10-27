@@ -3,6 +3,7 @@ const crypto = require('crypto')
 const fs = require('fs')
 const Module = require('module')
 const path = require('path')
+const { APP_VERSION, PRODUCT_DATA_DATE } = require('../data/app-meta')
 
 const ROOT = path.resolve(__dirname, '..')
 const BASELINE = path.join(ROOT, 'docs/recovery/package-structure-2026-09-30/before')
@@ -245,7 +246,7 @@ for (const kind of ['led', 'result']) {
   for (const fault of ['create-throws', 'draw-throws', 'export-throws']) cases.push({ kind, outcome: 'success', fault })
 }
 const digest = (value) => crypto.createHash('sha256').update(JSON.stringify(value)).digest('hex')
-const CURRENT_RESULT_REPORT_FOOTER = '版本 6.0.0 · 产品资料 2026-09-01'
+const CURRENT_RESULT_REPORT_FOOTER = `版本 ${APP_VERSION} · 产品资料 ${PRODUCT_DATA_DATE}`
 const FROZEN_RESULT_REPORT_FOOTER = '版本 5.1.0 · 产品资料 2026-09-01'
 function resultTraceWithFrozenFooter(trace, scenario) {
   const expectedDrawCount = scenario.fault === 'create-throws' || scenario.fault === 'draw-throws' ? 0

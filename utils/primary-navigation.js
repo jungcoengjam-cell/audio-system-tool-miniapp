@@ -1,7 +1,6 @@
 'use strict'
 
 const STORAGE_KEY = 'audioTool.primaryTab.v1'
-const DEFAULT_LAUNCH_ROUTE = 'pages/tools/tools'
 const PRIMARY_TABS = Object.freeze([
   { id: 'tools', label: '工具', route: '/pages/tools/tools' },
   { id: 'projects', label: '项目', route: '/pages/projects/projects' },
@@ -25,16 +24,10 @@ function normalizeLaunchPath(value) {
 function initializePrimaryNavigation(options = {}) {
   if (!options || typeof options !== 'object') options = {}
   const launchPath = normalizeLaunchPath(options.path)
-  const query = options.query && typeof options.query === 'object' ? options.query : null
-  const hasQuery = Boolean((query && Object.keys(query).length) || (typeof options.path === 'string' && options.path.includes('?')))
-  // Distinct deep links have a different path or query. A bare deep link to
-  // this exact default route is indistinguishable from ordinary app entry by
-  // path/query alone; avoid maintaining an incomplete scene-value allowlist.
-  const defaultEntry = launchPath === DEFAULT_LAUNCH_ROUTE && !hasQuery
   return {
     launchPath,
-    restoreAllowed: defaultEntry,
-    restoreChecked: !defaultEntry,
+    restoreAllowed: false,
+    restoreChecked: true,
   }
 }
 
@@ -60,10 +53,9 @@ function savePrimaryTab(value) {
 }
 
 /**
- * Call at the top of each primary tab's onShow. Only a default app launch may
- * restore the last valid tab. Explicit page launches keep their route and the
- * next user-selected tab becomes the new preference. This never reads or
- * writes project or calculator state.
+ * Call at the top of each primary tab's onShow. Record the active tab without
+ * replacing the launch route selected by WeChat. This never reads or writes
+ * project or calculator state.
  */
 function activatePrimaryTab(value) {
   const current = resolvePrimaryTab(value)
