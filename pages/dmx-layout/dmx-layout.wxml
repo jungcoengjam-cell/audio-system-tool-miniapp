@@ -42,7 +42,7 @@
     <button class="toolbar-action" bindtap="openLayoutSettings"><view class="toolbar-icon settings-icon"><view></view><view></view><view></view></view><text>布局设置</text></button>
   </view>
 
-  <view wx:if="{{placementVisible}}" class="overlay placement-overlay {{placementClosing ? 'overlay-closing' : ''}}" style="padding-top:{{overlaySafeTop + 12}}px;padding-bottom:{{overlaySafeBottom + 12}}px;" bindtap="closePlacementPanel">
+  <view wx:if="{{placementVisible}}" class="overlay placement-overlay {{placementClosing ? 'overlay-closing' : ''}}" style="padding-top:{{overlaySafeTop + 12}}px;" bindtap="closePlacementPanel">
     <view class="placement-card {{placementClosing ? 'sheet-closing' : ''}}" style="max-height:{{placementCardMaxHeight}}px;" catchtap="stopTap">
       <view class="sheet-handle"></view>
       <view class="placement-heading">
@@ -96,7 +96,7 @@
     </view>
   </view>
 
-  <view wx:if="{{layoutPanelVisible}}" class="overlay settings-overlay {{layoutPanelClosing ? 'overlay-closing' : ''}}" style="padding-top:{{overlaySafeTop + 12}}px;padding-bottom:{{overlaySafeBottom + 12}}px;" bindtap="closeLayoutSettings">
+  <view wx:if="{{layoutPanelVisible}}" class="overlay settings-overlay {{layoutPanelClosing ? 'overlay-closing' : ''}}" style="padding-top:{{overlaySafeTop + 12}}px;" bindtap="closeLayoutSettings">
     <view class="settings-card {{layoutPanelClosing ? 'sheet-closing' : ''}}" catchtap="stopTap">
       <view class="sheet-handle"></view>
       <view class="settings-heading"><view class="settings-title">布局设置</view><button class="sheet-close" bindtap="closeLayoutSettings">取消</button></view>
@@ -161,7 +161,7 @@
   <canvas wx:if="{{exportCanvasActive}}" type="2d" id="dmxLayoutExportCanvas"
     class="export-canvas" style="width:1px;height:1px;"></canvas>
 
-  <view wx:if="{{previewVisible}}" class="export-overlay {{previewClosing ? 'overlay-closing' : ''}}" style="padding-top:{{overlaySafeTop + 12}}px;padding-bottom:{{overlaySafeBottom + 12}}px;">
+  <view wx:if="{{previewVisible}}" class="export-overlay {{previewClosing ? 'overlay-closing' : ''}}" style="padding-top:{{overlaySafeTop + 12}}px;">
     <view class="export-sheet {{previewClosing ? 'sheet-closing' : ''}}">
       <view class="sheet-handle"></view>
       <view class="export-heading"><view class="export-heading-copy"><view class="export-title">灯位图已生成</view><view class="export-subtitle">{{contextLabel}}</view></view><button class="sheet-close" bindtap="closePreview">关闭</button></view>

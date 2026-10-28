@@ -223,8 +223,9 @@ function createLayoutSettingsMethods(dependencies = {}) {
       const guard = this._pendingSettingsGuard
       if (!this.isSettingsIntentValid(guard, true)) {
         this.invalidatePendingSettingsConfirm()
-        this.cancelSheetClose('reduction')
-        this.setData({ reductionConfirm: null, reductionClosing: false })
+        this.beginSheetClose('reduction', 'reductionClosing', () => {
+          this.setData({ reductionConfirm: null, reductionClosing: false })
+        })
         wx.showToast({ title: '布局草稿已变化，请重新应用', icon: 'none' })
         return
       }
@@ -232,8 +233,6 @@ function createLayoutSettingsMethods(dependencies = {}) {
       const removedIds = this._pendingRemovedRodIds || new Set()
       const uniformArrange = Boolean(this._pendingUniformArrange)
       this.invalidatePendingSettingsConfirm()
-      this.cancelSheetClose('reduction')
-      this.setData({ reductionConfirm: null, reductionClosing: false })
       this.applySettingsLayout(next, removedIds, uniformArrange)
     },
     cancelLayoutReduction() {
@@ -298,7 +297,19 @@ function createLayoutSettingsMethods(dependencies = {}) {
       const saved = this.saveLayoutOnly(next)
       this.cancelSheetClose('settings')
       this.cancelSheetClose('reduction')
-      this.setData({ layoutPanelVisible: false, layoutPanelClosing: false, reductionConfirm: null }, () => this.restoreStageCanvas())
+      const closeSettings = () => this.beginSheetClose('settings', 'layoutPanelClosing', () => {
+        this.setData({
+          layoutPanelVisible: false,
+          layoutPanelClosing: false,
+          reductionConfirm: null,
+          reductionClosing: false,
+        }, () => this.restoreStageCanvas())
+      })
+      if (this.data.reductionConfirm && !this.data.reductionClosing) {
+        this.setData({ reductionClosing: true }, closeSettings)
+      } else {
+        closeSettings()
+      }
       if (uniformArrange && saved) {
         this._layoutUndoSnapshot = previousLayout
         this._layoutUndoExpiresAt = Date.now() + 6000

@@ -21,15 +21,19 @@
           <view wx:if="{{feedback === 'restored'}}" class="ts-feedback-note">你已确认恢复。请按现场流程复核相关设备。</view>
           <view wx:if="{{feedback === 'ongoing'}}" class="ts-feedback-note">当前流程暂不能确定故障点，请保留现有设置，记录型号、异常范围与面板提示，联系现场维护人员。</view>
         </view>
-        <button class="ts-path-toggle" data-node="{{node}}" bindtap="togglePath">
+        <button class="ts-path-toggle" data-node="{{node}}" bindtap="togglePath" aria-expanded="{{pathExpanded}}" aria-controls="troubleshoot-path-content">
           <text>排查路径 · {{history.length}}项</text><text>{{pathExpanded ? '收起' : '展开'}} ›</text>
         </button>
-        <view wx:if="{{pathExpanded}}" class="ts-path-list">
-          <button wx:for="{{history}}" wx:key="id" class="ts-path-row" data-node="{{node}}" data-step="{{index}}" bindtap="editStep">
-            <view class="ts-path-question">{{index + 1}}. {{item.question}}</view>
-            <view class="ts-path-answer">答案：{{item.label}}</view>
-            <text class="ts-edit-label">修改 ›</text>
-          </button>
+        <view id="troubleshoot-path-content" class="disclosure-motion {{pathExpanded ? 'disclosure-motion-open' : ''}}" aria-hidden="{{!pathExpanded}}">
+          <view class="disclosure-motion-inner">
+            <view class="ts-path-list">
+              <button wx:for="{{history}}" wx:key="id" class="ts-path-row" data-node="{{node}}" data-step="{{index}}" bindtap="editStep">
+                <view class="ts-path-question">{{index + 1}}. {{item.question}}</view>
+                <view class="ts-path-answer">答案：{{item.label}}</view>
+                <text class="ts-edit-label">修改 ›</text>
+              </button>
+            </view>
+          </view>
         </view>
       </view>
       <view wx:else>

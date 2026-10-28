@@ -29,6 +29,7 @@ const {
   drawLedScreenReport,
 } = require('./report')
 const { createLedProjectData, createLedProjectMethods } = require('./led-project')
+const measure = require('../common/result-card-placeholder')
 const getUnitSpec = (key) => LED_UNIT_SPECS[key] || null
 
 const PREFERENCE_KEY = 'audioTool.ledScreen.preferences'
@@ -393,6 +394,7 @@ Page({
     ],
     pitchIndex: 0,
     result: null,
+    resultAreaStyle: '',
     currentFavorite: false,
     inputError: '',
     inputSuggestion: '',
@@ -457,11 +459,16 @@ Page({
 
   onShow() {
     this._pageVisible = true
+    measure(this)
     if (this.data.result) {
       syncPageFavorite(this)
       this._favoriteSyncedSinceLoad = true
     }
   },
+
+  onReady() { measure(this) },
+
+  onResize() { measure(this) },
 
   getEditorPreferences(state = this.data) {
     return buildPreferences(state)
@@ -684,6 +691,7 @@ Page({
       unitIndex: 0,
       pitchIndex: 0,
       result: null,
+      resultAreaStyle: '',
       currentFavorite: false,
       inputError: '',
       inputSuggestion: '',
@@ -783,6 +791,7 @@ Page({
       this._ledOperationResultGuard = guard
       this.setData({ ...calculated, currentFavorite: false, inputPending: false }, () => {
         if (!this.hasCurrentOperationResult(calculated.result)) return
+        measure(this)
         if (this._pageVisible) syncPageFavorite(this)
       })
       return calculated.result
@@ -807,6 +816,7 @@ Page({
       } : {}),
     }, () => {
       finishViewUpdate()
+      if (calculated.result) measure(this)
       if (calculated.result && this._pageVisible) syncPageFavorite(this)
       finishCalculation({
         valid: Boolean(calculated.result),

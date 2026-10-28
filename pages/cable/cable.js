@@ -27,6 +27,7 @@ const {
 } = require('../../utils/result-record-actions')
 const { attachResultEditor, captureEditorBaseline, createEditorNavigationMethods, finalizeResultEditor } = require('../../utils/result-record-context')
 const { createCableReportMethods } = require('./cable-report')
+const measure = require('../common/result-card-placeholder')
 
 const PREFERENCE_KEY = 'audioTool.cable.preferences'
 const INPUT_CALCULATION_DELAY = 160
@@ -140,6 +141,7 @@ Page({
     professionalPowerText: '300',
     professionalDistanceText: '50',
     result: null,
+    resultAreaStyle: '',
     currentFavorite: false,
     canReset: false,
     preferenceSaveError: '',
@@ -203,6 +205,7 @@ Page({
 
   onShow() {
     this._pageVisible = true
+    measure(this)
     if (this.data.resultReportPreviewVisible) this.updateResultReportPreviewLayout()
     if (this.data.result) {
       syncPageFavorite(this)
@@ -210,7 +213,10 @@ Page({
     }
   },
 
+  onReady() { measure(this) },
+
   onResize() {
+    measure(this)
     if (this.data.resultReportPreviewVisible) this.updateResultReportPreviewLayout()
   },
 
@@ -308,6 +314,7 @@ Page({
       ...resultReportChanges,
     }, () => {
       if (revision !== this._inputRevision) return
+      measure(this)
       if (!calculated.result) return
       if (!options.skipPreferenceWrite) writeCablePreferences(this, buildPreferences(pageState))
       if (this._pageVisible) syncPageFavorite(this)
@@ -410,7 +417,7 @@ Page({
       this._projectFocusContext = null
       if (this.data.projectKeyboardOpen && typeof wx.hideKeyboard === 'function') wx.hideKeyboard()
     }
-    this.setData(this.invalidateResultReportPreview())
+    this.setData({ ...this.invalidateResultReportPreview(), resultAreaStyle: '' })
     vibrate('light')
     return Boolean(this.commitCalculatedState({
       modeIndex: findValueIndex(this.data.modes, DEFAULT_PREFERENCES.mode, (item) => item.key),

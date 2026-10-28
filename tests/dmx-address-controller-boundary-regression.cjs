@@ -14,7 +14,9 @@ const frozenTracePath = path.join(root, 'tmp/architecture-continuation-2026-10-2
 // The prior hash remains as history; this trace now includes the approved 230ms floating-card close lifecycle.
 // Previous pre-animation trace: 5645869d4b3ef2e8f8a38e8dfd577fae0332c27ff96b880f81b12bdecd47c262
 const PRE_ANIMATION_BASELINE_SHA256 = '5645869d4b3ef2e8f8a38e8dfd577fae0332c27ff96b880f81b12bdecd47c262'
-const FROZEN_BASELINE_SHA256 = 'a3c24736ac20acf9dffc9a255d58f0e1f3448cd1114124b65f3486d7cfa32e88'
+// The saveProject key now follows the other sheet keys in tokens/timerHandles.
+// Trace values are unchanged; the scenarios below additionally guard render commit and stale timer ownership.
+const FROZEN_BASELINE_SHA256 = '9cca1937aa601149a7eaef4055552414159d1060d35196ae8345b3df80d67d63'
 
 function clone(value) {
   return value === undefined ? undefined : JSON.parse(JSON.stringify(value))
@@ -344,13 +346,16 @@ function runFloatingScenario(page, runtime, verifyAnimationLifecycle) {
   page.flushCallbacks()
   const openingTimer = page._floatingTransitionTimer
   page.closeFloatingCard()
+  page.flushCallbacks()
   const closingTimer = page._floatingTransitionTimer
   let reopenedQuery
   if (verifyAnimationLifecycle) {
+    assert.ok(closingTimer, 'the floating-card close timer starts after its closing view update commits')
     page.openFloatingCard({ currentTarget: { dataset: { index: 0 } } })
     assert.equal(page._floatingClosing, true)
     assert.equal(runtime.selectorQueries.length, 0, 'opening is ignored during the floating-card close animation')
     runtime.timerB.run(openingTimer, true)
+    assert.equal(page._floatingTransitionTimer, closingTimer, 'a stale opening callback cannot clear the active close timer')
     runtime.timerB.run(closingTimer, true)
     assert.equal(page.data.floatingVisible, false)
     assert.equal(page._floatingClosing, false)

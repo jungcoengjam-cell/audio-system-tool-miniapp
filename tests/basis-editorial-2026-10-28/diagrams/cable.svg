@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="750" height="560" viewBox="0 0 750 560" role="img" aria-labelledby="title desc">
+  <title id="title">线材单程距离、查表与截面公式</title>
+  <desc id="desc">按最远单程米数和设计功率瓦数查公司表，再将功率换算为千瓦、距离换算为千米，复核单芯截面积。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#2867c7"/></marker>
+    <style>
+      text{font-family:Arial,"Microsoft YaHei","PingFang SC",sans-serif}
+      .ink{fill:#17314b}.sub{fill:#536b82}.blue{fill:#2867c7}.green{fill:#16775f}.orange{fill:#c66a15}
+      .hair{stroke:#d6e0ea;stroke-width:2}
+    </style>
+  </defs>
+  <rect width="750" height="560" fill="#f7f9fb"/>
+  <text x="375" y="43" text-anchor="middle" class="blue" font-size="34" font-weight="700">最远单程距离 L（m）</text>
+  <line x1="178" y1="70" x2="568" y2="70" stroke="#2867c7" stroke-width="3" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+  <line x1="178" y1="76" x2="178" y2="108" stroke="#9db0c2" stroke-width="2"/><line x1="568" y1="76" x2="568" y2="108" stroke="#9db0c2" stroke-width="2"/>
+  <rect x="58" y="108" width="112" height="68" fill="#fff" stroke="#7990a6" stroke-width="2.5"/>
+  <circle cx="84" cy="132" r="7" fill="#2867c7"/><path d="M72 154H156M72 164H126" stroke="#9db0c2" stroke-width="3"/>
+  <text x="114" y="210" text-anchor="middle" class="ink" font-size="28" font-weight="700">功放</text>
+  <line x1="170" y1="142" x2="583" y2="142" stroke="#2867c7" stroke-width="9"/>
+  <line x1="170" y1="142" x2="583" y2="142" stroke="#b7d0f3" stroke-width="2" stroke-dasharray="7 8"/>
+  <path d="M603 115L640 141L603 167Z" fill="#e9f1fb" stroke="#2867c7" stroke-width="3"/>
+  <path d="M642 124Q659 141 642 158M651 115Q674 141 651 167" fill="none" stroke="#2867c7" stroke-width="2.5"/>
+  <text x="632" y="210" text-anchor="middle" class="ink" font-size="28" font-weight="700">音箱</text>
+  <line x1="375" y1="146" x2="375" y2="188" stroke="#9db0c2" stroke-width="2" stroke-dasharray="4 5"/>
+  <circle cx="375" cy="210" r="21" fill="#fff" stroke="#d77719" stroke-width="3"/><circle cx="375" cy="210" r="10" fill="#fff4e8" stroke="#d77719" stroke-width="3"/><circle cx="375" cy="210" r="3" fill="#d77719"/>
+  <text x="375" y="258" text-anchor="middle" class="ink" font-size="28" font-weight="700">单芯截面积 S（mm²）</text>
+
+  <line x1="45" y1="280" x2="705" y2="280" class="hair"/>
+  <text x="375" y="301" text-anchor="middle" class="ink" font-size="32" font-weight="700">P表 = 总功率 × 1.5</text>
+  <text x="375" y="343" text-anchor="middle" class="sub" font-size="28" font-weight="700">公司表按距离（m）与设计功率（W）查档</text>
+  <path d="M78 448V369H243" fill="none" stroke="#71879c" stroke-width="3"/><path d="M78 422H243M78 395H243M119 369V448M160 369V448M201 369V448" fill="none" stroke="#d0dce7" stroke-width="2"/>
+  <rect x="161" y="396" width="40" height="26" fill="#e4f2ed" stroke="#16775f" stroke-width="2.5"/>
+  <text x="67" y="397" text-anchor="end" class="green" font-size="26" font-weight="700" transform="rotate(-90 67 397)">W</text>
+  <text x="243" y="477" text-anchor="end" class="blue" font-size="26" font-weight="700">m</text>
+  <text x="298" y="398" class="blue" font-size="28" font-weight="700">距离 L（m） × 功率 P表（W）</text>
+  <text x="298" y="447" class="green" font-size="30" font-weight="700">→ 公司规格档</text>
+  <line x1="45" y1="485" x2="705" y2="485" class="hair"/>
+  <text x="375" y="511" text-anchor="middle" class="ink" font-size="28" font-weight="700">P[kW] = P表[W] ÷ 1000　·　L[km] = L[m] ÷ 1000</text>
+  <text x="375" y="547" text-anchor="middle" class="blue" font-size="34" font-weight="700">S ≥ P × L × 5</text>
+</svg>

@@ -10,26 +10,47 @@
         <view class="basis-detail-heading-main">
           <view class="basis-detail-icon-wrap"><image class="basis-detail-icon" src="{{basisTool.icon}}" mode="aspectFit" aria-hidden="true" /></view>
           <view class="basis-detail-heading-copy">
-            <view class="basis-detail-kicker">{{basisTool.category}} · 计算依据</view>
             <view class="basis-detail-title">{{basisTool.title}}</view>
+            <view class="basis-detail-kicker">{{basisTool.category}} · 计算依据</view>
           </view>
         </view>
         <view class="basis-detail-subtitle">{{presentation.quick.purpose}}</view>
       </view>
 
       <view class="home-panel basis-section basis-figure-panel">
-        <view class="home-section-title"><text class="basis-section-index">01</text>计算示意</view>
+        <view class="basis-section-heading">
+          <view class="home-section-title"><text class="basis-section-index">01</text>计算示意</view>
+        </view>
         <image class="basis-figure" src="{{presentation.figure.src}}" mode="widthFix" aria-label="{{presentation.figure.alt}}" />
         <view class="basis-figure-caption">{{presentation.figure.caption}}</view>
       </view>
 
       <view class="home-panel basis-section basis-method-panel">
         <view class="home-section-title"><text class="basis-section-index">02</text>关键计算关系</view>
-        <view class="basis-quick-method">{{presentation.quick.method}}</view>
-        <view class="basis-parameter-list">
-          <view wx:for="{{presentation.quick.parameters}}" wx:key="label" class="basis-parameter">
+        <view class="basis-formula-hint">长公式可左右滑动阅读</view>
+        <view class="basis-copy-flow basis-quick-method" data-basis-field="quickMethod">
+          <view wx:for="{{presentation.article.quickMethodRows}}" wx:key="id" class="basis-copy-paragraph">
+            <block wx:for="{{item.segments}}" wx:for-item="segment" wx:key="id">
+              <text wx:if="{{segment.type == 'text'}}" class="basis-copy-text">{{segment.text}}</text>
+              <scroll-view wx:else class="basis-formula-scroll" scroll-x="true" show-scrollbar="{{false}}" aria-label="{{segment.text}}">
+                <view class="basis-formula-row"><text class="basis-formula-text" data-basis-formula-id="{{segment.id}}">{{segment.text}}</text></view>
+              </scroll-view>
+            </block>
+          </view>
+        </view>
+        <view class="basis-parameter-table">
+          <view wx:for="{{presentation.article.quickParameterRows}}" wx:key="id" class="basis-parameter">
             <view class="basis-parameter-label">{{item.label}}</view>
-            <view class="basis-parameter-value">{{item.value}}</view>
+            <view class="basis-parameter-value">
+              <view wx:for="{{item.valueRows}}" wx:for-item="valueRow" wx:key="id" class="basis-copy-paragraph">
+                <block wx:for="{{valueRow.segments}}" wx:for-item="segment" wx:key="id">
+                  <text wx:if="{{segment.type == 'text'}}" class="basis-copy-text">{{segment.text}}</text>
+                  <scroll-view wx:else class="basis-formula-scroll basis-formula-scroll-compact" scroll-x="true" show-scrollbar="{{false}}" aria-label="{{segment.text}}">
+                    <view class="basis-formula-row"><text class="basis-formula-text" data-basis-formula-id="{{segment.id}}">{{segment.text}}</text></view>
+                  </scroll-view>
+                </block>
+              </view>
+            </view>
           </view>
         </view>
       </view>
@@ -37,7 +58,16 @@
       <view class="home-panel basis-section basis-source-panel">
         <view class="basis-reference-block">
           <view class="basis-reference-title">来源</view>
-          <view class="basis-reference-copy">{{presentation.quick.source}}</view>
+          <view class="basis-copy-flow basis-reference-copy" data-basis-field="quickSource">
+            <view wx:for="{{presentation.article.quickSourceRows}}" wx:key="id" class="basis-copy-paragraph">
+              <block wx:for="{{item.segments}}" wx:for-item="segment" wx:key="id">
+                <text wx:if="{{segment.type == 'text'}}" class="basis-copy-text">{{segment.text}}</text>
+                <scroll-view wx:else class="basis-formula-scroll basis-formula-scroll-compact" scroll-x="true" show-scrollbar="{{false}}" aria-label="{{segment.text}}">
+                  <view class="basis-formula-row"><text class="basis-formula-text" data-basis-formula-id="{{segment.id}}">{{segment.text}}</text></view>
+                </scroll-view>
+              </block>
+            </view>
+          </view>
         </view>
         <view class="basis-limit-block">
           <view class="basis-reference-title">关键边界</view>
@@ -49,27 +79,67 @@
         {{showFullExplanation ? '收起完整计算说明' : '展开完整计算说明'}}
       </button>
 
-      <view wx:if="{{showFullExplanation}}" id="basis-full-content" class="home-panel basis-section basis-full-panel">
-        <view class="home-section-title"><text class="basis-section-index">03</text>完整计算说明</view>
-        <view class="basis-full-field">
-          <view class="basis-full-label">计算用途</view>
-          <view class="basis-full-copy">{{presentation.completeExplanation.what}}</view>
-        </view>
-        <view class="basis-full-field">
-          <view class="basis-full-label">方法与公式</view>
-          <view class="basis-full-copy">{{presentation.completeExplanation.method}}</view>
-        </view>
-        <view class="basis-full-field">
-          <view class="basis-full-label">参数与单位</view>
-          <view class="basis-full-copy">{{presentation.completeExplanation.inputs}}</view>
-        </view>
-        <view class="basis-full-field">
-          <view class="basis-full-label">来源</view>
-          <view class="basis-full-copy">{{presentation.completeExplanation.sourceSummary}}</view>
-        </view>
-        <view class="basis-full-field basis-full-field-last">
-          <view class="basis-full-label">适用边界</view>
-          <view class="basis-full-copy">{{presentation.completeExplanation.limits}}</view>
+      <view id="basis-full-content" class="disclosure-motion {{showFullExplanation ? 'disclosure-motion-open' : ''}}" aria-hidden="{{!showFullExplanation}}">
+        <view class="disclosure-motion-inner">
+          <view class="home-panel basis-section basis-full-panel">
+            <view class="home-section-title"><text class="basis-section-index">03</text>完整计算说明</view>
+            <view class="basis-full-field">
+              <view class="basis-full-label">计算用途</view>
+              <view class="basis-full-copy" data-basis-field="what">{{presentation.completeExplanation.what}}</view>
+            </view>
+            <view class="basis-full-field">
+              <view class="basis-full-label">方法与公式</view>
+              <view class="basis-copy-flow basis-full-copy" data-basis-field="method">
+                <view wx:for="{{presentation.article.completeExplanation.methodRows}}" wx:key="id" class="basis-copy-paragraph">
+                  <block wx:for="{{item.segments}}" wx:for-item="segment" wx:key="id">
+                    <text wx:if="{{segment.type == 'text'}}" class="basis-copy-text">{{segment.text}}</text>
+                    <scroll-view wx:else class="basis-formula-scroll" scroll-x="true" show-scrollbar="{{false}}" aria-label="{{segment.text}}">
+                      <view class="basis-formula-row"><text class="basis-formula-text" data-basis-formula-id="{{segment.id}}">{{segment.text}}</text></view>
+                    </scroll-view>
+                  </block>
+                </view>
+              </view>
+            </view>
+            <view class="basis-full-field">
+              <view class="basis-full-label">参数与单位</view>
+              <view class="basis-copy-flow basis-full-copy" data-basis-field="inputs">
+                <view wx:for="{{presentation.article.completeExplanation.inputRows}}" wx:key="id" class="basis-copy-paragraph">
+                  <block wx:for="{{item.segments}}" wx:for-item="segment" wx:key="id">
+                    <text wx:if="{{segment.type == 'text'}}" class="basis-copy-text">{{segment.text}}</text>
+                    <scroll-view wx:else class="basis-formula-scroll basis-formula-scroll-compact" scroll-x="true" show-scrollbar="{{false}}" aria-label="{{segment.text}}">
+                      <view class="basis-formula-row"><text class="basis-formula-text" data-basis-formula-id="{{segment.id}}">{{segment.text}}</text></view>
+                    </scroll-view>
+                  </block>
+                </view>
+              </view>
+            </view>
+            <view class="basis-full-field">
+              <view class="basis-full-label">来源</view>
+              <view class="basis-copy-flow basis-full-copy basis-full-reference-copy" data-basis-field="sourceSummary">
+                <view wx:for="{{presentation.article.completeExplanation.sourceRows}}" wx:key="id" class="basis-copy-paragraph">
+                  <block wx:for="{{item.segments}}" wx:for-item="segment" wx:key="id">
+                    <text wx:if="{{segment.type == 'text'}}" class="basis-copy-text">{{segment.text}}</text>
+                    <scroll-view wx:else class="basis-formula-scroll basis-formula-scroll-compact" scroll-x="true" show-scrollbar="{{false}}" aria-label="{{segment.text}}">
+                      <view class="basis-formula-row"><text class="basis-formula-text" data-basis-formula-id="{{segment.id}}">{{segment.text}}</text></view>
+                    </scroll-view>
+                  </block>
+                </view>
+              </view>
+            </view>
+            <view class="basis-full-field basis-full-field-last">
+              <view class="basis-full-label">适用边界</view>
+              <view class="basis-copy-flow basis-full-copy" data-basis-field="limits">
+                <view wx:for="{{presentation.article.completeExplanation.limitRows}}" wx:key="id" class="basis-copy-paragraph">
+                  <block wx:for="{{item.segments}}" wx:for-item="segment" wx:key="id">
+                    <text wx:if="{{segment.type == 'text'}}" class="basis-copy-text">{{segment.text}}</text>
+                    <scroll-view wx:else class="basis-formula-scroll basis-formula-scroll-compact" scroll-x="true" show-scrollbar="{{false}}" aria-label="{{segment.text}}">
+                      <view class="basis-formula-row"><text class="basis-formula-text" data-basis-formula-id="{{segment.id}}">{{segment.text}}</text></view>
+                    </scroll-view>
+                  </block>
+                </view>
+              </view>
+            </view>
+          </view>
         </view>
       </view>
 

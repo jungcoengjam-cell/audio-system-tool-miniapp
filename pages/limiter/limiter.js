@@ -294,6 +294,7 @@ Page({
     result: null, hasValidResult: false, canReset: false, currentFavorite: false,
     pageContainerSupported: false,
     pageContainerFallbackClosing: false,
+    pageContainerClosingOverlay: '',
     detailsVisible: false, detailsTitle: '', detailsText: '',
     shareSheetVisible: false,
     ...createLimiterProjectData(),
@@ -337,6 +338,7 @@ Page({
     this._pageContainerFallbackCloseRevision = 0
     this._pageContainerFallbackCloseTimer = null
     this._pendingPageContainerFallbackClose = null
+    this._pendingPageContainerClose = null
     this._activePageContainerOverlay = null
     this._pageContainerLeave = null
     let pageContainerSupported = false
@@ -378,9 +380,15 @@ Page({
   onHide() {
     this._pageVisible = false
     const pendingFallbackClose = this._pendingPageContainerFallbackClose
+    const pendingNativeClose = this._pendingPageContainerClose
     this.cancelPageContainerFallbackClose()
     this._pendingPageContainerFallbackClose = null
-    if (pendingFallbackClose) {
+    this._pendingPageContainerClose = null
+    if (pendingNativeClose) {
+      this._pageContainerLeave = null
+      this._activePageContainerOverlay = null
+      this.setData({ ...pendingNativeClose.changes, pageContainerClosingOverlay: '' })
+    } else if (pendingFallbackClose) {
       this._pageContainerLeave = null
       this._activePageContainerOverlay = null
       this.setData({ ...pendingFallbackClose.changes, pageContainerFallbackClosing: false })
@@ -432,6 +440,7 @@ Page({
   openPageContainerOverlay(name) {
     this.cancelPageContainerFallbackClose()
     this._pendingPageContainerFallbackClose = null
+    this._pendingPageContainerClose = null
     if (this.data.pageContainerFallbackClosing) {
       this._pageContainerLeave = null
       this.setData({ pageContainerFallbackClosing: false })
@@ -439,6 +448,8 @@ Page({
     const epoch = (this._pageContainerEpoch || 0) + 1
     this._pageContainerEpoch = epoch
     this._activePageContainerOverlay = { name, epoch }
+    this._pageContainerLeave = null
+    if (this.data.pageContainerClosingOverlay) this.setData({ pageContainerClosingOverlay: '' })
   },
 
   isPageActionOccluded({ allowPicker = false } = {}) {
@@ -456,20 +467,26 @@ Page({
       && !this.data.selectorVisible && !this.data.detailsVisible && !this.data.projectSheetVisible
   },
 
-  cancelPendingImageWork() {
+  cancelPendingImageWork({ preservePreview = false } = {}) {
     const pending = this.data.isGeneratingResultReport || this._reportCacheCheckRevision
     this._reportCacheCheckRevision = 0
     if (!pending) return
-    cancelResultReportGeneration(this)
+    if (preservePreview) {
+      this.resultReportRevision = (this.resultReportRevision || 0) + 1
+      this.resultReportPendingSignature = ''
+      if (this.data.isGeneratingResultReport && typeof wx.hideLoading === 'function') wx.hideLoading()
+    } else {
+      cancelResultReportGeneration(this)
+    }
     this.resultReportSignature = ''
-    this.setData({ resultReportImagePath: '', resultReportPreviewVisible: false })
+    if (!preservePreview) this.setData({ resultReportImagePath: '', resultReportPreviewVisible: false })
   },
 
-  cancelOverlayRequests() {
+  cancelOverlayRequests(options = {}) {
     this._projectRequestId += 1
     this._projectSavePending = false
     this._projectSnapshotForSave = null
-    this.cancelPendingImageWork()
+    this.cancelPendingImageWork(options)
   },
 
   preparePageContainerLeave() {
@@ -479,7 +496,12 @@ Page({
     const supported = this.data.pageContainerSupported
     this._pageContainerLeave = { ...active, fallback: !supported }
     this.pauseReminderClock()
-    if (supported) this.cancelOverlayRequests()
+    if (supported) {
+      this.setData({ pageContainerClosingOverlay: active.name })
+      this.cancelOverlayRequests({ preservePreview: active.name === 'share' })
+    } else if (active.name === 'share') {
+      this.cancelPendingImageWork({ preservePreview: true })
+    }
     return true
   },
 
@@ -506,7 +528,8 @@ Page({
     if (this._isUnloaded || !this.data) return false
     const supported = this.data.pageContainerSupported
     const active = this._activePageContainerOverlay
-    const leaveStarted = active?.name === name && this.preparePageContainerLeave()
+    const leaveStarted = active?.name === name
+      && (this.preparePageContainerLeave() || this._pageContainerLeave?.epoch === active.epoch)
     const fallbackEpoch = !supported && leaveStarted ? active.epoch : null
     if (name === 'project') {
       this._projectRequestId += 1
@@ -537,6 +560,25 @@ Page({
       })
       return true
     }
+    if (supported && leaveStarted && this._pageContainerAfterLeaveEpoch !== active.epoch) {
+      const pending = this._pendingPageContainerClose
+      this._pendingPageContainerClose = {
+        name,
+        epoch: active.epoch,
+        changes: { ...(pending?.epoch === active.epoch ? pending.changes : {}), ...changes },
+        afterLeave: afterFallbackClose || (pending?.epoch === active.epoch ? pending.afterLeave : null),
+      }
+      this.setData({ pageContainerClosingOverlay: name })
+      return true
+    }
+    if (supported) {
+      const pending = this._pendingPageContainerClose
+      if (pending && active && pending.epoch === active.epoch) changes = { ...pending.changes, ...changes }
+      this._pendingPageContainerClose = null
+      this._activePageContainerOverlay = null
+      this._pageContainerLeave = null
+      this._pageContainerAfterLeaveEpoch = null
+    }
     this.setData(changes, () => {
       if (!supported && fallbackEpoch != null) this.finishFallbackPageContainerLeave(fallbackEpoch)
       else if (!supported) this.resumeReminderClock()
@@ -555,16 +597,36 @@ Page({
     if (!leaving) return
     const active = this._activePageContainerOverlay
     if (active?.epoch === leaving.epoch && this._pageContainerEpoch === leaving.epoch) {
+      const pending = this._pendingPageContainerClose
+      if (pending?.epoch === leaving.epoch) {
+        this._pendingPageContainerClose = null
+        this.setData({ ...pending.changes, pageContainerClosingOverlay: '' }, () => {
+          if (this._isUnloaded || this._pageContainerEpoch !== leaving.epoch
+            || this._activePageContainerOverlay?.epoch !== leaving.epoch) return
+          this._activePageContainerOverlay = null
+          if (this._pageContainerLeave?.epoch === leaving.epoch) this._pageContainerLeave = null
+          this.resumeReminderClock()
+          pending.afterLeave?.()
+        })
+        return
+      }
       const field = {
         selector: 'selectorVisible', details: 'detailsVisible',
         share: 'shareSheetVisible', project: 'projectSheetVisible',
       }[leaving.name]
       const changes = field && this.data[field] !== false ? { [field]: false } : {}
+      if (leaving.name === 'share') {
+        Object.assign(changes, {
+          isGeneratingResultReport: false,
+          resultReportPreviewVisible: false,
+        })
+      }
       if (leaving.name === 'selector' && (this.data.selectorItems.length || this.data.selectorTotalCount)) {
         Object.assign(changes, { selectorItems: [], selectorTotalCount: 0 })
       }
       if (Object.keys(changes).length) {
-        this.setData(changes, () => {
+        this._pageContainerAfterLeaveEpoch = leaving.epoch
+        this.setData({ ...changes, pageContainerClosingOverlay: '' }, () => {
           if (this._isUnloaded) return
           if (this._pageContainerEpoch === leaving.epoch
             && this._activePageContainerOverlay?.epoch === leaving.epoch
@@ -573,6 +635,8 @@ Page({
             this._activePageContainerOverlay = null
           }
           if (this._pageContainerLeave?.epoch === leaving.epoch) this._pageContainerLeave = null
+          this._pendingPageContainerClose = null
+          this._pageContainerAfterLeaveEpoch = null
           this.resumeReminderClock()
         })
         return
@@ -586,6 +650,8 @@ Page({
       if (this._activePageContainerOverlay?.epoch === leaving.epoch) this._activePageContainerOverlay = null
     }
     if (this._pageContainerLeave?.epoch === leaving.epoch) this._pageContainerLeave = null
+    this._pendingPageContainerClose = null
+    this._pageContainerAfterLeaveEpoch = null
     this.resumeReminderClock()
   },
 
@@ -672,15 +738,18 @@ Page({
     const closingOverlay = closingName && active?.name === closingName && this.preparePageContainerLeave()
     const fallbackClosingEpoch = closingOverlay && !this.data.pageContainerSupported
       ? this._pageContainerLeave?.epoch : null
+    const closeChanges = { ...closeSelector, ...closeProject }
     const fallbackCloseStarted = fallbackClosingEpoch != null
-      && this.closePageContainerOverlay(closingName, { ...closeSelector, ...closeProject })
+      && this.closePageContainerOverlay(closingName, closeChanges)
+    const nativeCloseStarted = Boolean(closingOverlay && this.data.pageContainerSupported
+      && this.closePageContainerOverlay(closingName, closeChanges))
     this._selectorMatches = []
     if (Object.keys(closeProject).length) this.resetProjectKeyboardState({ hideKeyboard: true })
     if (!changed.length) {
       const resumePicker = this._pickerOverlayOpen
       this._pickerOverlayOpen = false
       if (Object.keys(closeSelector).length || Object.keys(closeProject).length) {
-        if (fallbackCloseStarted) return this.data.result
+        if (fallbackCloseStarted || nativeCloseStarted) return this.data.result
         this.setData({ ...closeSelector, ...closeProject }, () => {
           if (fallbackClosingEpoch != null) this.finishFallbackPageContainerLeave(fallbackClosingEpoch)
           else this.resumeReminderClock()
@@ -709,7 +778,7 @@ Page({
     const finishView = startMeasurement('限幅器/setData视图更新', { source: 'interaction' })
     this.setData({
       ...changes, ...selection,
-      ...(fallbackCloseStarted ? {} : { ...closeSelector, ...closeProject }),
+      ...(fallbackCloseStarted || nativeCloseStarted ? {} : closeChanges),
       ...view, ...report,
     }, () => {
       if (this._isUnloaded) return
@@ -823,11 +892,6 @@ Page({
     this._selectorMatches = []
     const changes = { selectorVisible: false, selectorItems: [], selectorTotalCount: 0 }
     const url = `/pages/products/detail?type=${type}&model=${encodeURIComponent(model)}`
-    if (this.data.pageContainerSupported) {
-      this.closePageContainerOverlay('selector', changes)
-      wx.navigateTo({ url })
-      return
-    }
     this.closePageContainerOverlay('selector', changes, () => wx.navigateTo({ url }))
   },
 
@@ -1037,20 +1101,23 @@ Page({
     this.openPageContainerOverlay('share')
     this.pauseReminderClock()
     this.setData({ shareSheetVisible: true }, () => {
-      if (!this._isUnloaded) this.generateResultReportImage()
+      if (!this._isUnloaded && !this._pageContainerLeave) this.generateResultReportImage()
     })
   },
 
   closeSharePreview() {
     if (this._isUnloaded) return
-    this.preparePageContainerLeave()
+    const prepared = this.preparePageContainerLeave()
+    if (!prepared) this.cancelPendingImageWork({ preservePreview: true })
     this._reportCacheCheckRevision = 0
     if (this.data.isGeneratingResultReport) {
-      cancelResultReportGeneration(this)
       this.resultReportSignature = ''
-      this.setData({ resultReportImagePath: '', resultReportPreviewVisible: false })
     }
-    this.closePageContainerOverlay('share', { shareSheetVisible: false })
+    this.closePageContainerOverlay('share', {
+      shareSheetVisible: false,
+      isGeneratingResultReport: false,
+      resultReportPreviewVisible: false,
+    })
   },
 
   retryResultReport() {

@@ -146,7 +146,7 @@
 
   </view>
 
-  <page-container show="{{pageContainerSupported && (selectorVisible || shareSheetVisible || projectSheetVisible)}}" position="bottom" overlay="true" z-index="100" round="{{false}}" close-on-slide-down="{{false}}" overlay-style="background-color: rgba(18, 20, 27, .55);" custom-style="background-color: transparent; padding: 0;" bind:beforeleave="onPageContainerBeforeLeave" bind:afterleave="onPageContainerAfterLeave" bind:clickoverlay="onPageContainerClickOverlay">
+  <page-container show="{{pageContainerSupported && !pageContainerClosingOverlay && (selectorVisible || shareSheetVisible || projectSheetVisible)}}" position="bottom" overlay="true" z-index="100" round="{{false}}" close-on-slide-down="{{false}}" overlay-style="background-color: rgba(18, 20, 27, .55);" custom-style="background-color: transparent; padding: 0;" bind:beforeleave="onPageContainerBeforeLeave" bind:afterleave="onPageContainerAfterLeave" bind:clickoverlay="onPageContainerClickOverlay">
     <view class="page-container-sheet-content {{projectKeyboardActive ? 'project-keyboard-open' : ''}}" catchtouchmove="preventTouchMove"><include src="./gain-overlays.wxml" /></view>
   </page-container>
   <view wx:if="{{!pageContainerSupported && (selectorVisible || shareSheetVisible || projectSheetVisible)}}" class="sheet-mask {{projectKeyboardActive ? 'project-keyboard-open' : ''}} {{shareSheetVisible ? 'share-preview-mask' : ''}} {{pageContainerFallbackClosing ? 'sheet-mask-closing' : ''}}" catchtap="onPageContainerClickOverlay" catchtouchmove="preventTouchMove"><include src="./gain-overlays.wxml" /></view>

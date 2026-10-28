@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="zh-CN" data-ready="false">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>Bottom sheet layout fixture</title>
+  <style>
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+    page { position: relative; display: block; box-sizing: border-box; width: 100vw; height: 100vh; overflow: hidden; }
+    view, scroll-view { display: block; }
+    scroll-view { min-height: 0; overflow: auto; }
+    .qa-long-image { width: 100%; height: 1200px; background: repeating-linear-gradient(135deg, #e7edf4 0 20px, #f7f9fb 20px 40px); }
+    .qa-long-list { min-height: 1300px; background: repeating-linear-gradient(#fff 0 42px, #edf1f6 42px 43px); }
+    .qa-muted { color: #657184; font: 14px/1.5 sans-serif; }
+  </style>
+</head>
+<body>
+  <page id="qa-page"></page>
+  <script src="./bottom-sheet-fixture.js"></script>
+</body>
+</html>

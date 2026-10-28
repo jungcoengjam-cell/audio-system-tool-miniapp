@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="750" height="560" viewBox="0 0 750 560" role="img" aria-labelledby="title desc">
+  <title id="title">DSP 目标与功放满功率输入级对齐</title>
+  <desc id="desc">DSP 目标 dBFS 经本项目设备实测标定换算为 dBu，再与功放满功率输入级的 dBu 比较得到总衰减对齐差值。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="11" markerHeight="11" refX="5" refY="5" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#2867c7"/></marker>
+    <style>
+      text{font-family:Arial,"Microsoft YaHei","PingFang SC",sans-serif}
+      .ink{fill:#17314b}.sub{fill:#536b82}.blue{fill:#2867c7}.green{fill:#16775f}.orange{fill:#c66a15}
+      .hair{stroke:#d6e0ea;stroke-width:2}
+    </style>
+  </defs>
+  <rect width="750" height="560" fill="#f7f9fb"/>
+
+  <!-- DSP target passes through the equipment-specific calibration -->
+  <text x="113" y="62" text-anchor="middle" class="ink" font-size="30" font-weight="700">DSP 目标</text>
+  <rect x="43" y="83" width="140" height="66" fill="#eaf1fc" stroke="#2867c7" stroke-width="2.5"/>
+  <text x="113" y="126" text-anchor="middle" class="blue" font-size="32" font-weight="700">dBFS</text>
+  <line x1="184" y1="116" x2="277" y2="116" stroke="#2867c7" stroke-width="3" marker-end="url(#arrow)"/>
+  <circle cx="375" cy="116" r="68" fill="#fff" stroke="#16775f" stroke-width="3"/>
+  <text x="375" y="104" text-anchor="middle" class="green" font-size="27" font-weight="700">本设备标定</text>
+  <text x="375" y="139" text-anchor="middle" class="green" font-size="30" font-weight="700">+18.4 dBu</text>
+  <line x1="443" y1="116" x2="537" y2="116" stroke="#2867c7" stroke-width="3" marker-end="url(#arrow)"/>
+  <rect x="551" y="83" width="156" height="66" fill="#eaf1fc" stroke="#2867c7" stroke-width="2.5"/>
+  <text x="629" y="109" text-anchor="middle" class="blue" font-size="27" font-weight="700">DSP 目标</text>
+  <text x="629" y="137" text-anchor="middle" class="blue" font-size="27" font-weight="700">dBu</text>
+
+  <!-- The two values enter the same-unit subtraction without assigning either a fixed level -->
+  <line x1="45" y1="188" x2="705" y2="188" class="hair"/>
+  <text x="375" y="232" text-anchor="middle" class="sub" font-size="28" font-weight="700">同单位读数后比较</text>
+  <path d="M64 267H308L344 303" fill="none" stroke="#2867c7" stroke-width="3" marker-end="url(#arrow)"/>
+  <path d="M686 267H442L406 303" fill="none" stroke="#d77719" stroke-width="3" marker-end="url(#arrow)"/>
+  <text x="74" y="262" class="blue" font-size="26" font-weight="700">DSP 目标 dBu</text>
+  <text x="676" y="262" text-anchor="end" class="orange" font-size="26" font-weight="700">功放满功率输入 dBu</text>
+  <path d="M375 287L393 305L375 323L357 305Z" fill="#fff" stroke="#16775f" stroke-width="3"/>
+  <text x="375" y="315" text-anchor="middle" class="green" font-size="23" font-weight="700">−</text>
+  <line x1="375" y1="325" x2="375" y2="354" stroke="#16775f" stroke-width="3" marker-end="url(#arrow)"/>
+  <text x="375" y="390" text-anchor="middle" class="green" font-size="28" font-weight="700">系统对齐差值 · 总衰减核对位置</text>
+  <text x="375" y="455" text-anchor="middle" class="blue" font-size="34" font-weight="700">dBu = dBFS + 18.4</text>
+  <text x="375" y="520" text-anchor="middle" class="ink" font-size="30" font-weight="700">Δ = DSP目标 dBu − 功放满功率输入 dBu</text>
+</svg>

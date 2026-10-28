@@ -53,6 +53,7 @@ const cases = [
       const page = runtime.make('main')
       page.addGroup()
       page.selectFixture(runtime.event({ model: 'TL-SL323' }))
+      await wait(220)
       assert.equal(page.data.pendingChange.kind, 'add')
       assert(page._pendingScheme)
       const before = runtime.workspace.readLightingWorkspace().scheme
@@ -86,6 +87,7 @@ const cases = [
 
       page.addGroup()
       page.selectFixture(runtime.event({ model: 'TL-SL323' }))
+      await wait(220)
       page.onUserCancelPendingChange()
       assert.equal(page._pendingScheme, null, 'Cancel immediately invalidates the candidate')
       const writes = runtime.stats.writes

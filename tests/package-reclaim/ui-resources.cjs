@@ -45,6 +45,48 @@ function withoutSplSelectorAnimationClasses(source) {
     .replace(panelClass, 'class="selector-panel"')
 }
 
+// The input-stability fix adds one exact inline min-height binding to each
+// result card. Assert the binding stays on the matching card, then remove only
+// that attribute before checking the frozen historical markup hashes.
+function withoutResultAreaStyles(source, relativePath) {
+  const bindings = {
+    'pages/cable/cable.wxml': {
+      className: 'result-card result-card-{{calculationState}}',
+      attribute: `style="{{canUseResultActions ? '' : resultAreaStyle}}"`,
+    },
+    'pages/spl/spl.wxml': {
+      className: 'result-card result-card-tabs',
+      attribute: `style="{{canUseResultActions && !isCalculationPending ? '' : resultAreaStyle}}"`,
+    },
+    'pages/led-screen/led-screen.wxml': {
+      className: 'result-card',
+      attribute: `style="{{result && !inputPending && !inputError ? '' : resultAreaStyle}}"`,
+    },
+  }
+  const binding = bindings[relativePath]
+  if (!binding) return source
+  const openingTag = `<view class="${binding.className}" ${binding.attribute}>`
+  assert.equal(source.split(binding.attribute).length - 1, 1,
+    `result-area style binding must occur exactly once: ${relativePath}`)
+  assert.equal(source.split(openingTag).length - 1, 1,
+    `result-area style binding must be attached to its result-card: ${relativePath}`)
+  return source.replace(openingTag, `<view class="${binding.className}">`)
+}
+
+// The approved docked layout sheets move the placement overlay's bottom inset
+// into the sheet itself. Check all three overlay spacing bindings, then restore
+// only those exact attributes to their frozen form for the historical markup hash.
+function withoutDmxLayoutDockedInsets(source) {
+  const current = 'style="padding-top:{{overlaySafeTop + 12}}px;"'
+  const frozen = 'style="padding-top:{{overlaySafeTop + 12}}px;padding-bottom:{{overlaySafeBottom + 12}}px;"'
+  assert.equal(source.split(current).length - 1, 3,
+    'placement, settings, and export overlays must all move the bottom inset into their sheets')
+  assert.match(source, /class="overlay placement-overlay[^\"]*" style="padding-top:\{\{overlaySafeTop \+ 12\}\}px;"/)
+  assert.match(source, /class="overlay settings-overlay[^\"]*" style="padding-top:\{\{overlaySafeTop \+ 12\}\}px;"/)
+  assert.match(source, /class="export-overlay[^\"]*" style="padding-top:\{\{overlaySafeTop \+ 12\}\}px;"/)
+  return source.replaceAll(current, frozen)
+}
+
 function expandIncludes(source, fromFile, stack = []) {
   return source.replace(/<include\s+src="([^"]+)"\s*\/>/g, (_match, includePath) => {
     const resolved = path.resolve(path.dirname(fromFile), includePath)
@@ -70,7 +112,7 @@ for (const [relativePath, expectedHash] of Object.entries({
   const dmxLayoutPages = new Set([
     'pages/dmx-layout/dmx-layout.wxml',
   ])
-  let hashInput = normalizeLineEndings(expanded)
+  let hashInput = withoutResultAreaStyles(normalizeLineEndings(expanded), relativePath)
   if (relativePath === 'pages/cable/cable.wxml') {
     const overlay = read('pages/cable/cable-overlays.wxml')
     const pageController = read('pages/cable/cable.js')
@@ -257,7 +299,7 @@ for (const [relativePath, expectedHash] of Object.entries({
     'the replaced SPL detail drawer must not leave obsolete markup or controller methods')
     assert(controller.includes("resultTab: 'spl'") && controller.includes('onResultTabTap(event)')
       && controller.includes("!['spl', 'distance', 'reference'].includes(tab)")
-      && controller.includes("this.setData({ resultTab: tab })")
+      && controller.includes("this.setData({ resultTab: tab }, () => measure(this))")
       && controller.includes("vibrate('light')"),
     'SPL tab selection must default to the main pane and use the guarded light-haptic controller')
     assert(source.includes('class="page-scroll"') && styles.includes('.page-root{overflow:visible}')
@@ -511,11 +553,19 @@ for (const [relativePath, expectedHash] of Object.entries({
         && hashInput.includes('class="fixture-chip-origin">{{fixture.shortRodName}}</text>'),
       'repair7 layout markup must distinguish selection, placement, and other-rod states with text')
     }
-    assert.equal(sha256(Buffer.from(hashInput)), approvedHash, `approved lighting markup changed: ${relativePath}`)
+    const equivalentHashInput = relativePath === 'pages/dmx-layout/dmx-layout.wxml'
+      ? withoutDmxLayoutDockedInsets(hashInput)
+      : hashInput
+    assert.equal(sha256(Buffer.from(equivalentHashInput)), approvedHash, `approved lighting markup changed: ${relativePath}`)
     continue
   }
   assert.equal(sha256(Buffer.from(hashInput)), expectedHash, `expanded WXML changed: ${relativePath}`)
 }
+
+const ledScreenWxml = 'pages/led-screen/led-screen.wxml'
+withoutResultAreaStyles(normalizeLineEndings(expandIncludes(
+  withoutHomepageEditorSurfaces(read(ledScreenWxml)), path.join(root, ledScreenWxml),
+)), ledScreenWxml)
 
 assert.match(read('pages/common/operation-confirmation.wxml'), /confirmOperationField/,
   'shared operation confirmation template has no real confirm action')

@@ -601,15 +601,21 @@ function createDmxLayoutPage(options = {}) {
       const token = this._sheetCloseTokens[key]
       const visibilityToken = this._visibilityToken
       const contextId = this._contextId
-      this.setData({ [closingField]: true })
-      this._sheetCloseTimers[key] = setTimeout(() => {
-        if (!this._alive || !this._visible
-          || this._visibilityToken !== visibilityToken
-          || this._contextId !== contextId
-          || this._sheetCloseTokens[key] !== token) return
-        this._sheetCloseTimers[key] = null
-        finalize()
-      }, 180)
+      const isCurrentClose = () => this._alive && this._visible
+        && this._visibilityToken === visibilityToken
+        && this._contextId === contextId
+        && this._sheetCloseTokens[key] === token
+        && Boolean(this.data[closingField])
+      this.setData({ [closingField]: true }, () => {
+        if (!isCurrentClose()) return
+        const timer = setTimeout(() => {
+          if (this._sheetCloseTimers[key] !== timer) return
+          this._sheetCloseTimers[key] = null
+          if (!isCurrentClose()) return
+          finalize()
+        }, 180)
+        this._sheetCloseTimers[key] = timer
+      })
     },
 
     invalidatePendingSettingsConfirm() {

@@ -60,24 +60,30 @@ function createDmxSheetLifecycleMethods(runtime) {
       const token = this.clearSheetCloseTimer(key)
       const contextId = this._contextId
       const modalIdentity = this.getSheetModalIdentity(key)
-      this.setData({ [closingField]: true })
-      this._sheetCloseTimers[key] = setTimeout(() => {
-        this._sheetCloseTimers[key] = null
-        if (!this._pageAlive || !this._pageVisible
-          || token !== this._sheetCloseTokens[key]
-          || contextId !== this._contextId
-          || modalIdentity !== this.getSheetModalIdentity(key)
-          || !this.data[closingField]) return
-        finalize?.()
-      }, MAIN_SHEET_CLOSE_MS)
+      const isCurrentClose = () => this._pageAlive && this._pageVisible
+        && token === this._sheetCloseTokens[key]
+        && contextId === this._contextId
+        && modalIdentity === this.getSheetModalIdentity(key)
+        && Boolean(this.data[closingField])
+      this.setData({ [closingField]: true }, () => {
+        if (!isCurrentClose()) return
+        const timer = setTimeout(() => {
+          if (this._sheetCloseTimers[key] !== timer) return
+          this._sheetCloseTimers[key] = null
+          if (!isCurrentClose()) return
+          finalize?.()
+        }, MAIN_SHEET_CLOSE_MS)
+        this._sheetCloseTimers[key] = timer
+      })
       return true
     },
-    clearAllSheetCloseTimers() {
-      ['fixturePicker', 'pendingChange', 'saveProject', 'fixtureChannelGuide', 'resultReportPreview']
+    clearAllSheetCloseTimers({ preserveSaveProjectExit = false } = {}) {
+      ['fixturePicker', 'pendingChange', 'fixtureChannelGuide', 'resultReportPreview',
+        ...(!preserveSaveProjectExit ? ['saveProject'] : [])]
         .forEach((key) => this.clearSheetCloseTimer(key))
     },
-    dismissMainSheetsImmediately({ preserveFixturePicker = false } = {}) {
-      this.clearAllSheetCloseTimers()
+    dismissMainSheetsImmediately({ preserveFixturePicker = false, preserveSaveProjectExit = false } = {}) {
+      this.clearAllSheetCloseTimers({ preserveSaveProjectExit })
       if (!preserveFixturePicker) this.cancelFixtureSearch()
       cancelResultReportGeneration(this)
       if (this.data.pendingChange || this._pendingScheme) this.cancelPendingChange()
@@ -85,10 +91,11 @@ function createDmxSheetLifecycleMethods(runtime) {
         this.clearSheetCloseTimer('fixturePicker')
         this.setData({ fixtureSearchOpen: false, fixtureBatchOpen: false, fixturePickerClosing: false })
       }
-      if (this.data.showSaveNewProject || this.data.saveProjectClosing) this.closeSaveProjectDialog()
+      if (!preserveSaveProjectExit && (this.data.showSaveNewProject || this.data.saveProjectClosing)) this.closeSaveProjectDialog()
       if (this.data.fixtureChannelGuide || this.data.fixtureChannelGuideClosing) this.closeFixtureChannelGuide()
       const closingFlags = {}
       ;['fixturePickerClosing', 'pendingChangeClosing', 'saveProjectClosing', 'fixtureChannelGuideClosing', 'resultReportPreviewClosing']
+        .filter((key) => !(preserveSaveProjectExit && key === 'saveProjectClosing'))
         .forEach((key) => { if (this.data[key]) closingFlags[key] = false })
       if (this.data.resultReportPreviewVisible) closingFlags.resultReportPreviewVisible = false
       if (Object.keys(closingFlags).length) this.setData(closingFlags)

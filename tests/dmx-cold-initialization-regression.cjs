@@ -94,6 +94,40 @@ function loadTrackedPage(env, events) {
   return { page, patches }
 }
 
+function selectFixtureAfterPickerExit(page, select, flushRender = () => {}) {
+  const originalSetTimeout = global.setTimeout
+  const originalClearTimeout = global.clearTimeout
+  const timers = []
+  global.setTimeout = (callback, delay, ...args) => {
+    const timer = { callback, delay, args, cancelled: false }
+    timers.push(timer)
+    return timer
+  }
+  global.clearTimeout = (timer) => {
+    if (timers.includes(timer)) timer.cancelled = true
+    else originalClearTimeout(timer)
+  }
+  try {
+    select()
+    assert.equal(page.data.fixtureSearchOpen, true, 'fixture picker must remain mounted during its exit')
+    assert.equal(page.data.fixturePickerClosing, true, 'fixture picker must enter its closing state')
+    assert.equal(page.data.pendingChange, null, 'selection preview must wait for picker exit')
+    assert.equal(page._sheetCloseTimers?.fixturePicker, null, 'close timer must wait for the setData render callback')
+    flushRender()
+    const timer = page._sheetCloseTimers?.fixturePicker
+    assert(timer, 'fixture picker close timer must start after the render callback')
+    assert.equal(timer.delay, 180, 'fixture picker exit must retain its 180 ms duration')
+    assert.equal(timer.cancelled, false)
+    assert(timers.includes(timer), 'fixture picker close must use the scheduled timer')
+    timer.callback(...timer.args)
+    assert.equal(page.data.fixtureSearchOpen, false, 'fixture picker must unmount after exit')
+    assert.equal(page.data.pendingChange?.kind, 'add', 'selection preview must open after picker exit')
+  } finally {
+    global.setTimeout = originalSetTimeout
+    global.clearTimeout = originalClearTimeout
+  }
+}
+
 function assertColdPatch(page, patches, options = {}) {
   assert.equal(patches.length, 1, `${options.name || 'cold onLoad'} submitted ${patches.length} setData patches`)
   const patch = patches[0]
@@ -317,8 +351,9 @@ async function runCase(name) {
         const groupCount = page.data.groups.length
         page.addGroup()
         assert.equal(page.data.fixtureSearchOpen, true, 'user add-group flow no longer opens the real model picker')
-        page.selectFixture({ currentTarget: { dataset: { model: 'TL-SE3401' } } })
-        assert.equal(page.data.pendingChange?.kind, 'add', 'fixture selection did not open its real confirmation preview')
+        selectFixtureAfterPickerExit(page,
+          () => page.selectFixture({ currentTarget: { dataset: { model: 'TL-SE3401' } } }),
+          () => env.flushNextTicks())
         page.confirmPendingChange()
         assert.equal(page.data.groups.length, groupCount + 1, 'user fixture selection stopped creating a group')
         page.onCardQuantityInput({ currentTarget: { dataset: { index: 0 } }, detail: { value: '5' } })

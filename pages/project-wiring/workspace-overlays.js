@@ -1,6 +1,20 @@
 const WORKSPACE_OVERLAY_OPEN_MS = 300
 const WORKSPACE_OVERLAY_CLOSE_MS = 240
 
+function advanceWorkspaceOverlayToOpening(page, name, epoch, runtime) {
+  const advance = () => {
+    if (page._destroyed || page._workspaceOverlayEpochs[name] !== epoch
+      || !page.data.workspaceOverlayPhases || page.data.workspaceOverlayPhases[name] !== 'preparing') return
+    page.setData({ [`workspaceOverlayPhases.${name}`]: 'opening' }, () => {
+      if (page._destroyed || page._workspaceOverlayEpochs[name] !== epoch
+        || !page.data.workspaceOverlayPhases || page.data.workspaceOverlayPhases[name] !== 'opening') return
+      page.scheduleWorkspaceOverlayPhase(name, 'opening', epoch)
+    })
+  }
+  if (typeof runtime.wx !== 'undefined' && typeof runtime.wx.nextTick === 'function') runtime.wx.nextTick(advance)
+  else runtime.setTimeout(advance, 0)
+}
+
 function createWorkspaceOverlayMethods(base, runtime) {
   const { wx, setTimeout, clearTimeout } = runtime
   return {
@@ -33,19 +47,12 @@ function createWorkspaceOverlayMethods(base, runtime) {
       const alreadyMounted = currentPhase === 'closing' || currentPhase === 'opening' || currentPhase === 'preparing' || this.workspaceOverlayIsVisible(name)
       const epoch = this.prepareWorkspaceOverlayPhase(name)
       const phase = alreadyMounted ? 'opening' : 'preparing'
-      this.setData({ ...changes, [`workspaceOverlayPhases.${name}`]: phase })
-      if (phase === 'preparing') {
-        const advance = () => {
-          if (this._destroyed || this._workspaceOverlayEpochs[name] !== epoch
-            || !this.data.workspaceOverlayPhases || this.data.workspaceOverlayPhases[name] !== 'preparing') return
-          this.setData({ [`workspaceOverlayPhases.${name}`]: 'opening' })
-          this.scheduleWorkspaceOverlayPhase(name, 'opening', epoch)
-        }
-        if (typeof wx !== 'undefined' && typeof wx.nextTick === 'function') wx.nextTick(advance)
-        else setTimeout(advance, 0)
-        return
-      }
-      this.scheduleWorkspaceOverlayPhase(name, 'opening', epoch)
+      this.setData({ ...changes, [`workspaceOverlayPhases.${name}`]: phase }, () => {
+        if (this._destroyed || this._workspaceOverlayEpochs[name] !== epoch
+          || !this.data.workspaceOverlayPhases || this.data.workspaceOverlayPhases[name] !== phase) return
+        if (phase === 'preparing') advanceWorkspaceOverlayToOpening(this, name, epoch, { wx, setTimeout })
+        else this.scheduleWorkspaceOverlayPhase(name, 'opening', epoch)
+      })
     },
 
     endWorkspaceOverlay(name, onFinished, changes = {}) {
@@ -161,21 +168,15 @@ function createWorkspaceOverlayMethods(base, runtime) {
         phases[`workspaceOverlayPhases.${openName}`] = openWasMounted ? 'opening' : 'preparing'
       }
       this.setData(phases, () => {
+        if (this._destroyed) return
         if (closes.length) this.scheduleWorkspaceOverlayClosures(closes, epochs, onClosed)
-      })
-      if (openName) {
+        if (!openName || this._workspaceOverlayEpochs[openName] !== epochs[openName]
+          || !this.data.workspaceOverlayPhases) return
         const phase = openWasMounted ? 'opening' : 'preparing'
-        if (phase === 'preparing') {
-          const advance = () => {
-            if (this._destroyed || this._workspaceOverlayEpochs[openName] !== epochs[openName]
-              || !this.data.workspaceOverlayPhases || this.data.workspaceOverlayPhases[openName] !== 'preparing') return
-            this.setData({ [`workspaceOverlayPhases.${openName}`]: 'opening' })
-            this.scheduleWorkspaceOverlayPhase(openName, 'opening', epochs[openName])
-          }
-          if (typeof wx !== 'undefined' && typeof wx.nextTick === 'function') wx.nextTick(advance)
-          else setTimeout(advance, 0)
-        } else this.scheduleWorkspaceOverlayPhase(openName, 'opening', epochs[openName])
-      }
+        if (this.data.workspaceOverlayPhases[openName] !== phase) return
+        if (phase === 'preparing') advanceWorkspaceOverlayToOpening(this, openName, epochs[openName], { wx, setTimeout })
+        else this.scheduleWorkspaceOverlayPhase(openName, 'opening', epochs[openName])
+      })
       if (!closes.length && typeof onClosed === 'function') onClosed()
     },
 

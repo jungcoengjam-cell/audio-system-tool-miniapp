@@ -385,6 +385,7 @@ childProcess.execFileSync(process.execPath, [path.join(root, 'tests/package-recl
 childProcess.execFileSync(process.execPath, [path.join(root, 'tests/package-reclaim/catalog-equivalence.cjs')], { stdio: 'inherit' })
 childProcess.execFileSync(process.execPath, [path.join(root, 'tests/package-reclaim/catalog-generator-test.cjs')], { stdio: 'inherit' })
 childProcess.execFileSync(process.execPath, [path.join(root, 'tests/package-reclaim/ui-resources.cjs')], { stdio: 'inherit' })
+childProcess.execFileSync(process.execPath, [path.join(root, 'tests/input-layout-stability-2026-10-28.cjs')], { stdio: 'inherit' })
 checkReleasePackageGates()
 checkCatalogSelector()
 checkDmxAddressLazyChannelGuide()
@@ -403,6 +404,12 @@ checkLedScreenPerformanceCoverage()
 checkProjectDetailPerformanceCoverage()
 
 const auditRegressionScripts = [
+  'animation-lifecycle-check.js',
+  'animation-native-page-container-check.cjs',
+  'overlay-render-commit-regression.cjs',
+  'workspace-overlay-commit-timing-check.cjs',
+  'disclosure-motion-regression.cjs',
+  'dmx-modal-animation-2026-10-28/run.cjs',
   'record-module-boundary-test.cjs',
   'audit-runtime-regression.js',
   'homepage-refactor-2026-10-18/storage-adversarial.cjs',

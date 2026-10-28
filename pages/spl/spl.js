@@ -42,6 +42,7 @@ const {
   togglePageFavorite,
 } = require('../../utils/result-record-actions')
 const { attachResultEditor, captureEditorBaseline, createEditorNavigationMethods, finalizeResultEditor } = require('../../utils/result-record-context')
+const measure = require('../common/result-card-placeholder')
 const {
   addRecordToProject,
   createProject,
@@ -241,6 +242,7 @@ Page({
     summationModeIndex: 0,
     resultTab: 'spl',
     result: null,
+    resultAreaStyle: '',
     isCalculationPending: false,
     canReset: true,
     canUseResultActions: false,
@@ -269,6 +271,8 @@ Page({
     this._pageVisible = false
     this._favoriteSyncedSinceLoad = false
     this._isUnloaded = false
+    this._shareCloseTimer = null
+    this._projectCloseTimer = null
     this._selectorCloseRevision = 0
     this._selectorCloseTimer = null
     this._inputRevision = 0
@@ -341,6 +345,7 @@ Page({
 
   onShow() {
     this._pageVisible = true
+    measure(this)
     if (this._previewImageOpening) {
       this._previewImageOpening = false
       this.updateShareImageLayout()
@@ -351,6 +356,8 @@ Page({
     }
   },
 
+  onReady() { measure(this) },
+
   onHide() {
     this._pageVisible = false
     this.cancelSpeakerSelectorClose()
@@ -358,6 +365,8 @@ Page({
     if (this._previewImageOpening) return
     this._shareCloseRevision = (this._shareCloseRevision || 0) + 1
     this._projectCloseRevision = (this._projectCloseRevision || 0) + 1
+    this.clearShareCloseTimer()
+    this.cancelProjectSheetClose()
     this.flushDistanceCalculation()
     this.closeSharePreview({ silent: true })
     this.invalidateProjectSave({ updateView: false })
@@ -383,6 +392,8 @@ Page({
     this.cancelSpeakerSelectorClose()
     this._shareCloseRevision = (this._shareCloseRevision || 0) + 1
     this._projectCloseRevision = (this._projectCloseRevision || 0) + 1
+    this.clearShareCloseTimer()
+    this.cancelProjectSheetClose()
     this.cancelDistanceCalculation()
     cancelResultReportGeneration(this)
     this.invalidateProjectSave({ updateView: false })
@@ -583,6 +594,7 @@ Page({
     this.cancelDistanceCalculation()
     cancelResultReportGeneration(this)
     this._reportCacheCheckRevision = 0
+    this.clearShareCloseTimer()
     this._shareCloseRevision = (this._shareCloseRevision || 0) + 1
     this.resultReportSignature = ''
     this.resultReportPendingSignature = ''
@@ -603,6 +615,7 @@ Page({
       this.invalidateProjectSave({ updateView: false })
       this._projectSnapshotForSave = null
       this._projectCloseRevision = (this._projectCloseRevision || 0) + 1
+      this.cancelProjectSheetClose()
       this.resetProjectKeyboardState({ hideKeyboard: true, updateView: false })
       this.setData({
         projectSheetVisible: false,
@@ -662,6 +675,7 @@ Page({
         catch (error) { isCurrent = false }
       }
       if (calculated.result && isCurrent) {
+        measure(this)
         preferencesChanged = writePreferences(PREFERENCE_KEY, buildPreferences(pageState))
         if (this._pageVisible) syncPageFavorite(this)
       }
@@ -755,7 +769,7 @@ Page({
       || this.data.selectorVisible || this.data.shareSheetVisible || this.data.shareSheetClosing
       || this.data.projectSheetVisible || this.data.projectSheetClosing) return false
     vibrate('light')
-    this.setData({ resultTab: tab })
+    this.setData({ resultTab: tab }, () => measure(this))
     return true
   },
 
@@ -785,8 +799,15 @@ Page({
     if (!this.data.shareSheetVisible && !this.data.isGeneratingResultReport
       && !this.data.isCheckingResultReportCache) return false
     if (!silent && this.data.shareSheetClosing) return false
+    this.clearShareCloseTimer()
     if (this.data.isGeneratingResultReport || this.data.isCheckingResultReportCache) {
-      cancelResultReportGeneration(this)
+      if (silent) {
+        cancelResultReportGeneration(this)
+      } else {
+        this.resultReportRevision = (this.resultReportRevision || 0) + 1
+        this.resultReportPendingSignature = ''
+        if (this.data.isGeneratingResultReport && typeof wx.hideLoading === 'function') wx.hideLoading()
+      }
       this._reportCacheCheckRevision = 0
       this.resultReportSignature = ''
     }
@@ -794,19 +815,26 @@ Page({
     this._shareCloseRevision = closeRevision
     if (!silent) {
       vibrate('light')
-      this.setData({ shareSheetClosing: true })
-      setTimeout(() => {
-        if (this._isUnloaded || this._shareCloseRevision !== closeRevision) return
-        this.setData({
-          shareSheetVisible: false,
-          shareSheetClosing: false,
-          isCheckingResultReportCache: false,
-          resultReportPreviewVisible: false,
-          resultReportError: '',
-          shareImageStyle: 'width:100%;height:100%;',
-          shareImageFrameStyle: '',
-        })
-      }, SHEET_TRANSITION_DURATION)
+      this.setData({ shareSheetClosing: true }, () => {
+        if (this._isUnloaded || this._shareCloseRevision !== closeRevision
+          || !this.data.shareSheetVisible || !this.data.shareSheetClosing) return
+        const timer = setTimeout(() => {
+          if (this._shareCloseTimer === timer) this._shareCloseTimer = null
+          if (this._isUnloaded || this._shareCloseRevision !== closeRevision
+            || !this.data.shareSheetVisible || !this.data.shareSheetClosing) return
+          this.setData({
+            shareSheetVisible: false,
+            shareSheetClosing: false,
+            isCheckingResultReportCache: false,
+            isGeneratingResultReport: false,
+            resultReportPreviewVisible: false,
+            resultReportError: '',
+            shareImageStyle: 'width:100%;height:100%;',
+            shareImageFrameStyle: '',
+          })
+        }, SHEET_TRANSITION_DURATION)
+        this._shareCloseTimer = timer
+      })
       return true
     }
     this.setData({
@@ -819,6 +847,11 @@ Page({
       shareImageFrameStyle: '',
     })
     return true
+  },
+
+  clearShareCloseTimer() {
+    if (this._shareCloseTimer) clearTimeout(this._shareCloseTimer)
+    this._shareCloseTimer = null
   },
 
   closeResultReportPreview() {
@@ -1152,6 +1185,7 @@ Page({
       selectorCategoryIndex: 0,
       currentFavorite: false,
       canUseResultActions: false,
+      resultAreaStyle: '',
       isCalculationPending: false,
       resetError: '',
       isResetPending: false,
@@ -1196,6 +1230,7 @@ Page({
 
   onResize() {
     if (this._isUnloaded || !this._pageVisible) return
+    measure(this)
     if (this.data.shareSheetVisible && this.data.resultReportPreviewVisible) {
       this.updateShareImageLayout()
     }

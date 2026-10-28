@@ -84,7 +84,18 @@ function testGenerationGuard() {
   }
 }
 
-function testHistoricalCustomModelCache() {
+function wait(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+async function waitForFixturePickerExit(main) {
+  await wait(90)
+  assert.equal(main.data.pendingChange, null, 'Confirmation must wait until the fixture picker has exited')
+  await wait(120)
+  assert(main.data.pendingChange?.valid, 'Real catalog replacement must provide a valid preview after picker exit')
+}
+
+async function testHistoricalCustomModelCache() {
   const product = stageLightingProductIndex.get('TL-SL323')
   const r = createRuntime(); r.seed([{ name: '历史自定义灯', fixtureSource: 'custom', fixtureModel: product.model, fixtureCount: '2', channelCount: '8', libraryChannelCount: '2', targetUniverse: 'A' }])
   try {
@@ -95,20 +106,29 @@ function testHistoricalCustomModelCache() {
     assert.equal(main.data.fixtureChannelGuide, null, 'Historical custom result opened an unrelated channel profile')
     const before = clone(r.workspace.readLightingWorkspace().scheme), writes = r.stats.writes
     main.openModelPicker(r.event({ index: 0 })); main.selectFixture(r.event({ model: product.model }))
-    assert(main.data.pendingChange?.valid, 'Real catalog replacement must provide a valid preview')
+    await waitForFixturePickerExit(main)
     assert.equal(r.stats.writes, writes, 'Preview wrote storage')
     main.cancelPendingChange()
     assert.deepEqual(r.workspace.readLightingWorkspace().scheme, before, 'Cancel changed historical data')
-    main.openModelPicker(r.event({ index: 0 })); main.selectFixture(r.event({ model: product.model })); main.confirmPendingChange()
+    main.openModelPicker(r.event({ index: 0 })); main.selectFixture(r.event({ model: product.model }))
+    await waitForFixturePickerExit(main)
+    main.confirmPendingChange()
     assert.equal(main._calculationResult.fixtures[0].fixtureModel, product.model)
     assert.equal(main._calculationResult.fixtures[0].channelCount, product.channelModes[0])
     assert.equal(main._calculationResult.fixtures.length, 2)
   } finally { r.dispose() }
 }
 
-let failures = 0
-for (const test of [testProgressReload, testSettingsAndPan, testGenerationGuard, testHistoricalCustomModelCache]) {
-  try { test(); console.log('PASS ' + test.name) } catch (error) { failures++; console.error('FAIL ' + test.name + '\n' + error.stack) }
+async function run() {
+  let failures = 0
+  for (const test of [testProgressReload, testSettingsAndPan, testGenerationGuard, testHistoricalCustomModelCache]) {
+    try { await test(); console.log('PASS ' + test.name) } catch (error) { failures++; console.error('FAIL ' + test.name + '\n' + error.stack) }
+  }
+  assert.equal(failures, 0, 'audit-dmx-regression: controller failures')
+  console.log('audit-dmx-regression: 4 real-controller checks passed (including 3 selector/export interruption stages)')
 }
-assert.equal(failures, 0, 'audit-dmx-regression: controller failures')
-console.log('audit-dmx-regression: 4 real-controller checks passed (including 3 selector/export interruption stages)')
+
+run().catch(error => {
+  console.error(error.stack || error)
+  process.exitCode = 1
+})

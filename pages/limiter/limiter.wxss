@@ -142,9 +142,9 @@ SOFTWARE.
 .choice-button-active.choice-button-active{border-color:var(--theme-accent);background:linear-gradient(180deg,var(--theme-surface),var(--theme-accent-soft));color:var(--theme-accent-text);font-weight:650}
 .page-container-sheet-content{display:flex;box-sizing:border-box;width:100%;max-height:90vh;flex-direction:column;align-items:stretch;background:transparent}
 .page-container-sheet-content.project-keyboard-open{max-height:100vh}
-.sheet-mask{position:fixed;z-index:100;inset:0;display:flex;box-sizing:border-box;padding:32rpx 20rpx calc(16rpx + env(safe-area-inset-bottom));align-items:flex-end;background:rgba(18,20,27,.55)}
-.sheet-mask.project-keyboard-open{padding:0 20rpx}
-.sheet-panel{display:flex;box-sizing:border-box;width:100%;max-height:90vh;min-height:160rpx;padding:22rpx 22rpx calc(18rpx + env(safe-area-inset-bottom));flex-direction:column;overflow:hidden;border:1rpx solid var(--theme-divider);border-radius:28rpx;background:var(--theme-surface);color:var(--theme-text)}
+.sheet-mask{position:fixed;z-index:100;inset:0;display:flex;box-sizing:border-box;padding:32rpx 0 0;align-items:flex-end;background:rgba(18,20,27,.55)}
+.sheet-mask.project-keyboard-open{padding:0}
+.sheet-panel{display:flex;box-sizing:border-box;width:100%;max-height:90vh;min-height:160rpx;padding:22rpx 22rpx calc(18rpx + env(safe-area-inset-bottom));flex-direction:column;overflow:hidden;border:1rpx solid var(--theme-divider);border-radius:28rpx 28rpx 0 0;border-bottom:0;background:var(--theme-surface);color:var(--theme-text)}
 .sheet-header{display:flex;flex:none;min-height:48rpx;margin-bottom:14rpx;align-items:center;justify-content:space-between;gap:12rpx}
 .sheet-title{color:var(--theme-text);font-size:28rpx;font-weight:700}
 .sheet-subtitle{display:block;margin-top:4rpx;color:var(--theme-text-secondary);font-size:18rpx}

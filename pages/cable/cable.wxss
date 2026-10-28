@@ -71,10 +71,10 @@
 .field-error-group{box-sizing:border-box;margin-top:8px;padding:8px 10px;border-radius:11px;background:rgba(198,58,50,.09);color:var(--theme-danger);font-size:12px;line-height:1.45;overflow-wrap:anywhere}
 
 .result-report-canvas-offscreen{position:fixed;z-index:-1;top:0;left:-10000px;pointer-events:none;opacity:0}
-.page-root .result-report-preview-overlay{z-index:1000;padding:32rpx 20rpx calc(16rpx + env(safe-area-inset-bottom));background:rgba(18,20,27,.52);opacity:1;animation:cable-overlay-in 180ms ease-out both}
+.page-root .result-report-preview-overlay{z-index:1000;padding:32rpx 0 0;background:rgba(18,20,27,.52);opacity:1;animation:cable-overlay-in 180ms ease-out both}
 .page-root.result-report-preview-closing .result-report-preview-overlay{opacity:1;animation:cable-overlay-out 320ms ease-in both}
 .page-root.result-report-preview-closing .result-report-preview-sheet{animation-name:cable-report-sheet-out;animation-timing-function:ease-in;pointer-events:none}
-.page-root .result-report-preview-sheet{box-sizing:border-box;height:auto;max-height:var(--cable-report-sheet-max-height,86vh);padding:20rpx 18rpx 16rpx;border:1px solid var(--theme-divider);border-radius:28px;background:var(--theme-surface);box-shadow:0 20px 65px rgba(0,0,0,.22);animation:cable-report-sheet-in 320ms cubic-bezier(.2,.72,.25,1) both}
+.page-root .result-report-preview-sheet{box-sizing:border-box;height:auto;max-height:var(--cable-report-sheet-max-height,86vh);padding:20rpx 18rpx calc(16rpx + env(safe-area-inset-bottom));border:1px solid var(--theme-divider);border-radius:28px 28px 0 0;border-bottom:0;background:var(--theme-surface);box-shadow:0 20px 65px rgba(0,0,0,.22);animation:cable-report-sheet-in 320ms cubic-bezier(.2,.72,.25,1) both}
 .page-root .result-report-preview-header{flex:none;padding:0 2px 12px}
 .page-root .result-report-preview-title{font-size:17px;font-weight:650}
 .page-root .result-report-preview-subtitle{margin-top:3px;font-size:12px;line-height:1.35}
@@ -98,7 +98,7 @@
 @keyframes cable-project-sheet-in{from{transform:translateY(calc(100% + env(safe-area-inset-bottom)))}to{transform:translateY(0)}}
 @keyframes cable-project-sheet-out{from{transform:translateY(0)}to{transform:translateY(calc(100% + env(safe-area-inset-bottom)))}}
 .cable-project-overlay.project-keyboard-open{padding:0}
-.project-sheet{display:flex;box-sizing:border-box;width:100%;max-height:90vh;min-height:0;padding:22rpx 22rpx calc(18rpx + env(safe-area-inset-bottom));flex-direction:column;overflow:hidden;border:1rpx solid var(--theme-divider);border-radius:28rpx;background:var(--theme-surface);color:var(--theme-text);box-shadow:0 12px 36px rgba(0,0,0,.2)}
+.project-sheet{display:flex;box-sizing:border-box;width:100%;max-height:90vh;min-height:0;padding:22rpx 22rpx calc(18rpx + env(safe-area-inset-bottom));flex-direction:column;overflow:hidden;border:1rpx solid var(--theme-divider);border-radius:28rpx 28rpx 0 0;border-bottom:0;background:var(--theme-surface);color:var(--theme-text);box-shadow:0 12px 36px rgba(0,0,0,.2)}
 .project-sheet.project-keyboard-open{padding:4px 22rpx}
 .project-header{display:flex;box-sizing:border-box;min-height:48rpx;flex:none;margin-bottom:14rpx;align-items:center;justify-content:space-between;gap:12rpx}
 .project-header-copy{min-width:0;flex:1}

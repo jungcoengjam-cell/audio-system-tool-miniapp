@@ -669,7 +669,7 @@
 
 .wiring-page .result-report-preview-overlay {
   z-index: 1000;
-  padding: 32rpx 20rpx calc(16rpx + env(safe-area-inset-bottom));
+  padding: 32rpx 0 0;
   background: rgba(18, 20, 27, .52);
   opacity: 1;
   animation: cable-overlay-in 180ms ease-out both;
@@ -690,9 +690,9 @@
   box-sizing: border-box;
   height: auto;
   max-height: var(--cable-report-sheet-max-height, 86vh);
-  padding: 20rpx 18rpx 16rpx;
+  padding: 20rpx 18rpx calc(16rpx + env(safe-area-inset-bottom));
   border: 1px solid var(--theme-divider);
-  border-radius: 28px;
+  border-radius: 28px 28px 0 0; border-bottom: 0;
   background: var(--theme-surface);
   box-shadow: 0 20px 65px rgba(0, 0, 0, .22);
   animation: cable-report-sheet-in 320ms cubic-bezier(.2, .72, .25, 1) both;
@@ -806,7 +806,7 @@
   flex-direction: column;
   overflow: hidden;
   border: 1rpx solid var(--theme-divider);
-  border-radius: 28rpx;
+  border-radius: 28rpx 28rpx 0 0; border-bottom: 0;
   background: var(--theme-surface);
   color: var(--theme-text);
   box-shadow: 0 12px 36px rgba(0, 0, 0, .2);

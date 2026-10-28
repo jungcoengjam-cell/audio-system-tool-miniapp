@@ -27,9 +27,13 @@
         </view>
         <view class="favorite-data-actions">
           <button class="home-secondary-button favorite-small-button" hover-class="favorite-control-pressed" bindtap="copyParameters">复制原始参数</button>
-          <button class="favorite-raw-toggle" hover-class="favorite-control-pressed" bindtap="toggleRawParameters">{{rawParametersVisible ? '收起原始字段' : '查看原始字段'}}</button>
+          <button class="favorite-raw-toggle" hover-class="favorite-control-pressed" bindtap="toggleRawParameters" aria-expanded="{{rawParametersVisible}}" aria-controls="favorite-raw-content">{{rawParametersVisible ? '收起原始字段' : '查看原始字段'}}</button>
         </view>
-        <view wx:if="{{rawParametersVisible}}" class="favorite-raw-value">{{favorite.parametersText}}</view>
+        <view id="favorite-raw-content" class="disclosure-motion {{rawParametersVisible ? 'disclosure-motion-open' : ''}}" aria-hidden="{{!rawParametersVisible}}">
+          <view class="disclosure-motion-inner">
+            <view class="favorite-raw-value">{{favorite.parametersText}}</view>
+          </view>
+        </view>
       </view>
 
       <view class="home-panel favorite-data-panel">

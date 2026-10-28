@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="750" height="560" viewBox="0 0 750 560" role="img" aria-labelledby="title desc">
+  <title id="title">声压级的 1 米基准、距离衰减与数量叠加</title>
+  <desc id="desc">以声源为中心标出 1 米灵敏度参考点和目标距离 d；按距离衰减，并区分相干与非相干叠加。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="11" markerHeight="11" refX="5" refY="5" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#2867c7"/></marker>
+    <marker id="arrowO" markerWidth="11" markerHeight="11" refX="5" refY="5" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#d77719"/></marker>
+    <style>
+      text{font-family:Arial,"Microsoft YaHei","PingFang SC",sans-serif}
+      .ink{fill:#17314b}.blue{fill:#2867c7}.green{fill:#16775f}.orange{fill:#c66a15}
+      .hair{stroke:#d6e0ea;stroke-width:2}
+    </style>
+  </defs>
+  <rect width="750" height="560" fill="#f7f9fb"/>
+
+  <path d="M77 145L121 120L121 220L77 195Z" fill="#eaf1fc" stroke="#2867c7" stroke-width="3"/>
+  <line x1="70" y1="138" x2="70" y2="202" stroke="#2867c7" stroke-width="6"/>
+  <path d="M126 24A154 154 0 0 1 126 332M126 72A106 106 0 0 1 126 284M126 117A61 61 0 0 1 126 239" fill="none" stroke="#9bb6df" stroke-width="2.5"/>
+  <text x="98" y="254" text-anchor="middle" class="ink" font-size="28" font-weight="700">音箱</text>
+  <line x1="126" y1="170" x2="643" y2="170" stroke="#9db0c2" stroke-width="2.5" stroke-dasharray="7 8"/>
+  <circle cx="280" cy="170" r="9" fill="#16775f" stroke="#fff" stroke-width="2"/>
+  <circle cx="643" cy="170" r="9" fill="#d77719" stroke="#fff" stroke-width="2"/>
+  <text x="280" y="64" text-anchor="middle" class="green" font-size="30" font-weight="700">1 m 参考点</text>
+  <text x="643" y="127" text-anchor="middle" class="orange" font-size="29" font-weight="700">目标 d</text>
+  <line x1="126" y1="232" x2="280" y2="232" stroke="#16775f" stroke-width="3" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+  <text x="203" y="220" text-anchor="middle" class="green" font-size="28" font-weight="700">1 m</text>
+  <line x1="126" y1="270" x2="643" y2="270" stroke="#d77719" stroke-width="2.5" marker-start="url(#arrowO)" marker-end="url(#arrowO)"/>
+  <text x="470" y="304" text-anchor="middle" class="orange" font-size="28" font-weight="700">d（m）从声源起算，d ≥ 1</text>
+
+  <line x1="45" y1="323" x2="705" y2="323" class="hair"/>
+  <text x="375" y="374" text-anchor="middle" class="blue" font-size="30" font-weight="700">SPL₁m = 灵敏度 + 10log₁₀(P额定) + G_sum</text>
+  <text x="375" y="434" text-anchor="middle" class="ink" font-size="35" font-weight="700">SPL(d) = SPL₁m − 20log₁₀(d)</text>
+  <line x1="82" y1="461" x2="668" y2="461" class="hair"/>
+  <text x="375" y="514" text-anchor="middle" class="green" font-size="28" font-weight="700">非相干：10log₁₀(N)　·　相干：20log₁₀(N)</text>
+</svg>

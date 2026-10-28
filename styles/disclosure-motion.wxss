@@ -1,0 +1,5 @@
+.disclosure-motion{display:grid;grid-template-rows:minmax(0,0fr);min-height:0;opacity:0;transition:grid-template-rows 210ms cubic-bezier(.22,1,.36,1),opacity 210ms ease}
+.disclosure-motion-open{grid-template-rows:minmax(0,1fr);opacity:1}
+.disclosure-motion-inner{min-height:0;overflow:hidden}
+.disclosure-motion:not(.disclosure-motion-open){pointer-events:none}
+@media(prefers-reduced-motion:reduce){.disclosure-motion{transition:none!important}}

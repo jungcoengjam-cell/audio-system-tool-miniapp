@@ -24,9 +24,12 @@ const nativeRuntimeByDirectory = {
 }
 const compileOutputRoot = 'tmp/architecture-continuation-2026-10-25/phase7-compile/contract'
 const FIXED_NOW = '2026-10-25T12:34:56.000Z'
-// Updated for app.json's Wi-Fi preloadRule; the before/current trace comparison is otherwise identical.
-// Previous trace digest: 0a8eb40a2c876f59ea2afc7e66da2bd9ac0151055700facec649bbf19b1756f7
-const FROZEN_TRACE_SHA256 = '1c3d8d27a747f8967d8c895b3b993bec3ec9bd8ffa3183194d0174e0a098ec0c'
+// Includes app.json's Wi-Fi preloadRule and the approved disclosure-motion UI source compilation.
+// wcsc adds the shared styles/disclosure-motion.wxss input (-pc 5 -> 6).
+// Authorized UI inputs: app.wxss, pages/dmx-address/dmx-address.wxml/.wxss,
+// pages/dmx-layout/dmx-layout.wxml/.wxss, and styles/disclosure-motion.wxss.
+// Previous trace digest after the Wi-Fi preloadRule: 1c3d8d27a747f8967d8c895b3b993bec3ec9bd8ffa3183194d0174e0a098ec0c
+const FROZEN_TRACE_SHA256 = 'b0ded4aa08fb16dca2c2c39fd5ca935b75c50da9194f0bc1cc7367f5cc82a41a'
 
 function clone(value) {
   return value === undefined ? undefined : JSON.parse(JSON.stringify(value))

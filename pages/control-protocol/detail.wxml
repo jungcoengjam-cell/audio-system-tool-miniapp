@@ -85,16 +85,20 @@
           </view>
         </view>
 
-        <button class="expand-commands" bindtap="toggleManualWrites">
+        <button class="expand-commands" bindtap="toggleManualWrites" aria-expanded="{{showManualWrites}}" aria-controls="control-protocol-manual-write-content">
           {{showManualWrites ? '收起指令' : '其他指令'}}（{{manualWriteCommands.length}}）<view class="expand-chevron {{showManualWrites ? 'expand-chevron-open' : ''}}" aria-hidden="true"></view>
         </button>
-        <view wx:if="{{showManualWrites}}" class="command-list expanded-command-list">
-          <view wx:for="{{manualWriteCommands}}" wx:for-item="command" wx:key="id" class="command-row">
-            <view class="command-copy">
-              <view class="command-label">{{command.label}}</view>
-              <view class="command-frame">{{command.displayFrame}}</view>
+        <view id="control-protocol-manual-write-content" class="disclosure-motion {{showManualWrites ? 'disclosure-motion-open' : ''}}" aria-hidden="{{!showManualWrites}}">
+          <view class="disclosure-motion-inner">
+            <view class="command-list expanded-command-list">
+              <view wx:for="{{manualWriteCommands}}" wx:for-item="command" wx:key="id" class="command-row">
+                <view class="command-copy">
+                  <view class="command-label">{{command.label}}</view>
+                  <view class="command-frame">{{command.displayFrame}}</view>
+                </view>
+                <button class="copy-glyph" aria-label="复制{{command.label}}" data-command-id="{{command.id}}" disabled="{{!command.copyEnabled}}" catchtap="copyManualCommand"><view class="copy-icon" aria-hidden="true"></view></button>
+              </view>
             </view>
-            <button class="copy-glyph" aria-label="复制{{command.label}}" data-command-id="{{command.id}}" disabled="{{!command.copyEnabled}}" catchtap="copyManualCommand"><view class="copy-icon" aria-hidden="true"></view></button>
           </view>
         </view>
       </view>

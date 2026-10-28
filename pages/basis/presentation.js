@@ -48,6 +48,111 @@ function splitMethodGroup(text) {
   return { lead: '', equation: '' }
 }
 
+// These markers split only presentation nodes; they never replace source copy.
+// Keep complete expressions together in the horizontal formula strip, then
+// reassemble each row by concatenating `segments[].text` in order.
+const FORMULA_MARKERS = Object.freeze({
+  quickMethod: Object.freeze({
+    cable: ['P表=总功率×1.5', 'P[kW]=P表[W]÷1000', 'L[km]=距离[m]÷1000', 'S≥P×L×5'],
+    gainStructure: ['dBu = dBFS + 18.4', '系统对齐差值 = DSP 目标 dBu − 功放满功率输入 dBu'],
+    limiter: ['V_target = min(√(P_speaker × Z_total), √(P_amp × Z_total))'],
+    spl: ['1 m 基准 = 灵敏度 + 10 × log₁₀(额定功率) + 叠加增益', '目标 SPL = 1 m 基准 − 20 × log₁₀(距离)'],
+    ledScreen: ['屏体宽高 = 对应方向整数数量 × 单元尺寸', '安装外尺寸 = 净屏尺寸 + 两侧包边', '估算像素 = 净尺寸 ÷ 标称点间距 P'],
+  }),
+  quickParameter: Object.freeze({
+    spl: ['m（≥ 1）'],
+  }),
+  completeMethod: Object.freeze({
+    cable: ['总功率 × 1.5', 'S ≥ P × L × 5'],
+    gainStructure: [
+      'dBu = 电平 dBFS + 18.4',
+      'V_amp = √(P_rated × Z_load)',
+      'V_in = V_amp ÷ 10^(Gain/20)',
+      '系统对齐差值 = DSP 目标 dBu − 功放满功率输入 dBu',
+    ],
+    limiter: [
+      'V_speaker = √(P_speaker_total × Z_total)',
+      'V_amp = √(P_amp_rated × Z_total)',
+      'V_target = min(V_speaker, V_amp)',
+      'V_limiter = V_sensitivity × V_target ÷ V_amp',
+      'dBu = 20 × log10(V_limiter ÷ 0.775)',
+      'Threshold_dBFS = dBu − 18.4',
+    ],
+    spl: [
+      '1 m 基准 = sensitivityDb + 10 × log10(ratedPower) + summationGainDb',
+      '目标距离 SPL = 1 m 基准 − 20 × log10(distanceMeters)',
+      '10 × log10(N)',
+      '20 × log10(N)',
+    ],
+    camera: [
+      'q_right = ((P−C)·r)/((P−C)·f)',
+      'q_up = ((P−C)·u)/((P−C)·f)',
+      '±tan(水平/垂直视场角 ÷ 2)',
+    ],
+    ledScreen: [
+      '屏体宽、高 = 横向、纵向整数数量 × 单元宽、高',
+      '目标比例误差 ≤5%',
+      '含包边安装尺寸 = 净屏尺寸 + 两侧包边',
+      '估算像素 = 净尺寸 ÷ 标称点间距并取最近整数',
+      '最近距离 ≥1.7P',
+    ],
+  }),
+  completeInputs: Object.freeze({
+    spl: ['≥1 m'],
+  }),
+  completeSource: Object.freeze({
+    cable: ['S ≥ P × L × 5'],
+    gainStructure: ['0 dBFS = +18.4 dBu'],
+  }),
+  completeLimits: Object.freeze({
+    ledScreen: ['≥1.7P'],
+  }),
+})
+
+function splitMarkedText(text, markers = []) {
+  const ranges = []
+  for (const marker of markers) {
+    if (!marker) continue
+    let fromIndex = 0
+    while (fromIndex < text.length) {
+      const start = text.indexOf(marker, fromIndex)
+      if (start < 0) break
+      ranges.push({ start, end: start + marker.length })
+      fromIndex = start + marker.length
+    }
+  }
+  ranges.sort((left, right) => left.start - right.start || right.end - left.end)
+
+  const nonOverlapping = []
+  for (const range of ranges) {
+    const previous = nonOverlapping[nonOverlapping.length - 1]
+    if (!previous || range.start >= previous.end) nonOverlapping.push({ ...range })
+  }
+
+  const segments = []
+  let cursor = 0
+  for (const range of nonOverlapping) {
+    while (range.end < text.length && /[，、,；。]/.test(text[range.end])) range.end += 1
+    if (range.start > cursor) segments.push({ type: 'text', text: text.slice(cursor, range.start) })
+    if (range.end > cursor) {
+      segments.push({ type: 'formula', text: text.slice(Math.max(cursor, range.start), range.end) })
+      cursor = range.end
+    }
+  }
+  if (cursor < text.length) segments.push({ type: 'text', text: text.slice(cursor) })
+  return segments.map((segment, index) => ({ id: `segment-${index + 1}`, ...segment }))
+}
+
+function makeMarkedRows(text, markers = [], scope = 'copy') {
+  return splitPreservingPunctuation(text, /[；。]/).map((paragraph, index) => ({
+    id: `${scope}-paragraph-${index + 1}`,
+    segments: splitMarkedText(paragraph, markers).map((segment, segmentIndex) => ({
+      ...segment,
+      id: `${scope}-paragraph-${index + 1}-segment-${segmentIndex + 1}`,
+    })),
+  }))
+}
+
 function sourceTags(sourceSummary) {
   const rules = [
     [/用户设备[^。；]*实测|用户设备按[^。；]*测得/, '用户设备实测'],
@@ -166,6 +271,12 @@ function buildBasisPresentation(tool) {
     text,
     ...splitMethodGroup(text),
   }))
+  const quickMarkers = (field) => (FORMULA_MARKERS[field] && FORMULA_MARKERS[field][tool.id]) || []
+  const quickParameterRows = quick ? quick.parameters.map((parameter, index) => ({
+    id: `parameter-${index + 1}`,
+    label: parameter.label,
+    valueRows: makeMarkedRows(parameter.value, quickMarkers('quickParameter'), `quick-parameter-${index + 1}`),
+  })) : []
   return {
     pathSteps,
     pathRows: Array.from({ length: Math.ceil(pathSteps.length / 2) }, (_, index) => ({
@@ -183,6 +294,17 @@ function buildBasisPresentation(tool) {
       alt: quick.figureAlt,
       caption: quick.figureCaption,
     } : null,
+    article: {
+      quickMethodRows: quick ? makeMarkedRows(quick.method, quickMarkers('quickMethod'), 'quick-method') : [],
+      quickSourceRows: quick ? makeMarkedRows(quick.source, quickMarkers('quickSource'), 'quick-source') : [],
+      quickParameterRows,
+      completeExplanation: {
+        methodRows: makeMarkedRows(basis.method, quickMarkers('completeMethod'), 'complete-method'),
+        inputRows: makeMarkedRows(basis.inputs, quickMarkers('completeInputs'), 'complete-inputs'),
+        sourceRows: makeMarkedRows(basis.sourceSummary, quickMarkers('completeSource'), 'complete-source'),
+        limitRows: makeMarkedRows(basis.limits, quickMarkers('completeLimits'), 'complete-limits'),
+      },
+    },
     completeExplanation: {
       what: basis.what,
       method: basis.method,
@@ -193,4 +315,13 @@ function buildBasisPresentation(tool) {
   }
 }
 
-module.exports = { buildBasisPresentation, makeInputRows, sourceTags, splitPreservingPunctuation, splitLimits, splitMethodGroup }
+module.exports = {
+  buildBasisPresentation,
+  makeInputRows,
+  makeMarkedRows,
+  sourceTags,
+  splitMarkedText,
+  splitPreservingPunctuation,
+  splitLimits,
+  splitMethodGroup,
+}

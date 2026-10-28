@@ -142,6 +142,15 @@ function event(id) { return { currentTarget: { dataset: { id } } } }
 
 function finishProjectClose(pageName, session) {
   if (pageName === 'spl' || pageName === 'camera' || pageName === 'led') session.advanceTimers(400)
+  if (pageName === 'gain') {
+    assert(session.page._pageContainerLeave, 'gain: native close should wait for page-container afterleave')
+    assert.equal(session.page.data.projectSheetVisible, true,
+      'gain: project sheet must remain visible until native afterleave')
+    assert.equal(session.page.data.pageContainerClosingOverlay, 'project',
+      'gain: native project overlay must be marked closing before afterleave')
+    assert.equal(session.page.onPageContainerAfterLeave(), true,
+      'gain: native project close should finalize on afterleave')
+  }
   if (pageName === 'limiter' && session.page._pageContainerLeave) session.page.onPageContainerAfterLeave()
   session.page.flushSetDataCallbacks()
 }

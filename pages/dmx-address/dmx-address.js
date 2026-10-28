@@ -348,6 +348,7 @@ batchSelectedItems: [],
 batchSelectedTotal: 0,
 fixtureChannelGuide: null,
 fixtureChannelGuideDetail: null,
+fixtureChannelGuideDetailExpanded: false,
 fixtureChannelGuideClosing: false,
 resultReportPreviewClosing: false,
 ...createResultReportData(),
@@ -593,7 +594,10 @@ const previousGroupId = previousFixtureSearchGroup?._lightingGroupId
 preservedFixtureSearchGroupIndex = groups.findIndex((group) => group._lightingGroupId === previousGroupId)
 if (!previousGroupId || preservedFixtureSearchGroupIndex < 0) preserveFixturePicker = false
 }
-this.dismissMainSheetsImmediately({ preserveFixturePicker })
+this.dismissMainSheetsImmediately({
+preserveFixturePicker,
+preserveSaveProjectExit: options.preserveSaveProjectExit === true,
+})
 const gesturePatch = this.resetTouchGestures(true, { submit: !coldInitialization })
 this._modalEpoch += 1
 this.cancelFloatingTransition()
@@ -956,10 +960,10 @@ if (!loaded.ok) {
 this.setData({ projectSaveBusy: false, projectSaveError: loaded.error || '项目已保存，但读取确认失败。' })
 return
 }
-this.cancelSheetClose('saveProject', 'saveProjectClosing')
-this.setData({ showSaveNewProject: false, saveProjectClosing: false, projectSaveBusy: false, newProjectName: '', projectSaveError: '', pendingProjectSaveId: '' })
+this.setData({ projectSaveBusy: false })
 this._pendingProjectSave = null
-this.applyWorkspaceState(loaded, 'saveProject')
+this.applyWorkspaceState(loaded, 'saveProject', { preserveSaveProjectExit: true })
+this.beginSheetClose('saveProject', 'saveProjectClosing', () => this.closeSaveProjectDialog())
 if (isPageContextCurrent(this)) vibrate('medium')
 wx.showToast({ title: '灯光方案已保存', icon: 'success' })
 },
@@ -1389,7 +1393,7 @@ fixtureCount: item.quantity,
 changed = true
 this._nextGroupId += 1
 })
-this.closeFixturePicker()
+this.beginSheetClose('fixturePicker', 'fixturePickerClosing', () => this.closeFixturePicker())
 if (skipped.length) wx.showToast({ title: `最多 ${MAX_GROUPS} 组，已跳过 ${skipped.length} 款`, icon: 'none' })
 this.commitCalculation({ groups, activeWorkspace: 'config' })
 if (changed && isPageContextCurrent(this)) vibrate('medium')
@@ -1779,7 +1783,7 @@ const addressText = this._scheme?.preferences?.startAddressText || '1'
 this.setData({
 pendingChange: preserveVisual ? this.data.pendingChange : null,
 pendingChangeClosing: false,
-removedDetailsExpanded: false,
+removedDetailsExpanded: preserveVisual ? this.data.removedDetailsExpanded : false,
 fixtureAddPreview: null,
 groups,
 swipedGroupIndex: -1,
@@ -1798,11 +1802,11 @@ this.setData({ pendingChange: null, pendingChangeClosing: false, removedDetailsE
 },
 reselectPendingFixture() {
 if (this.data.pendingChangeClosing || this.data.pendingChange?.kind !== 'add') return
-this.cancelSheetClose('pendingChange', 'pendingChangeClosing')
+this.beginSheetClose('pendingChange', 'pendingChangeClosing', () => this.finishPendingChangeClose())
 this._pendingScheme = null
 this.cancelFixtureSearch()
 this.resetFixturePicker('search', { fixtureSearchGroupIndex: -1 })
-this.setData({ pendingChange: null, removedDetailsExpanded: false, fixtureAddPreview: null, swipedGroupIndex: -1 })
+this.setData({ swipedGroupIndex: -1 })
 },
 toggleRemovedDetails() {
 if (this.data.pendingChangeClosing || this.data.pendingChange?.kind !== 'delete') return
@@ -1810,7 +1814,6 @@ this.setData({ removedDetailsExpanded: !this.data.removedDetailsExpanded })
 },
 confirmPendingChange() {
 if (this.data.pendingChangeClosing || !this._pendingScheme || !this.data.pendingChange?.valid) return
-this.cancelSheetClose('pendingChange', 'pendingChangeClosing')
 const pending = this.data.pendingChange
 const kind = pending.kind
 const candidate = JSON.parse(JSON.stringify(this._pendingScheme))
@@ -1849,11 +1852,9 @@ this.startDeleteUndoExpiry()
 }
 this._pendingScheme = null
 this.setData({
-pendingChange: null,
-removedDetailsExpanded: false,
-fixtureAddPreview: null,
 contextError: this._unsavedScheme ? '保存未完成，点击重试保存。' : '',
 })
+this.beginSheetClose('pendingChange', 'pendingChangeClosing', () => this.finishPendingChangeClose())
 if (kind === 'add') wx.showToast({ title: '已添加灯组', icon: 'success' })
 if (kind === 'delete') {
 if (!this._unsavedScheme && this._workspaceRevision !== deleteSaveRevision) vibrate('medium')
@@ -2186,13 +2187,14 @@ vibrate('light')
 this.setData({
 fixtureChannelGuide: guide,
 fixtureChannelGuideDetail: null,
+fixtureChannelGuideDetailExpanded: false,
 fixtureChannelGuideClosing: false,
 })
 },
 closeFixtureChannelGuide() {
 this.cancelSheetClose('fixtureChannelGuide', 'fixtureChannelGuideClosing')
 this._fixtureGuideFixture = null
-this.setData({ fixtureChannelGuide: null, fixtureChannelGuideDetail: null, fixtureChannelGuideClosing: false })
+this.setData({ fixtureChannelGuide: null, fixtureChannelGuideDetail: null, fixtureChannelGuideDetailExpanded: false, fixtureChannelGuideClosing: false })
 },
 onUserCloseFixtureChannelGuide() {
 if (!this.data.fixtureChannelGuide || this.data.fixtureChannelGuideClosing) return
@@ -2205,17 +2207,19 @@ const channels = this.data.fixtureChannelGuide?.channels
 if (!Array.isArray(channels) || !Number.isInteger(channelIndex) || !channels[channelIndex]) return
 const channel = channels[channelIndex]
 const current = this.data.fixtureChannelGuideDetail
-const detail = current?.channel === channel.channel
-? null
-: {
+if (this.data.fixtureChannelGuideDetailExpanded && current?.channel === channel.channel) {
+this.setData({ fixtureChannelGuideDetailExpanded: false })
+return
+}
+const detail = {
 ...channel,
 ranges: channel.ranges.map((range) => ({ ...range })),
 }
-this.setData({ fixtureChannelGuideDetail: detail })
+this.setData({ fixtureChannelGuideDetail: detail, fixtureChannelGuideDetailExpanded: true })
 },
 closeFixtureChannelGuideDetail() {
 if (this.data.fixtureChannelGuideClosing) return
-this.setData({ fixtureChannelGuideDetail: null })
+this.setData({ fixtureChannelGuideDetailExpanded: false })
 },
 buildFixtureSelectionPatch(progressKey, selected) {
 const result = this.data.result

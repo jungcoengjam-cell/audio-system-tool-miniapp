@@ -323,6 +323,8 @@ Page({
     this._projectRefreshToken = 0
     this._projectVisible = true
     this._projectDestroyed = false
+    this._renameCloseRevision = (this._renameCloseRevision || 0) + 1
+    this._renameCloseTimer = null
     this._canonicalProjectRecordSnapshots = new Map()
     this._skipNextShowRefresh = true
     this.refresh({ forceRefresh: true })
@@ -343,6 +345,11 @@ Page({
     this._projectInteractionToken = (this._projectInteractionToken || 0) + 1
     invalidateProjectDeletion(this)
     closeProjectSwipe(this)
+    const renameWasClosing = this.data.renameClosing
+    this.cancelRenameProjectClose()
+    if (renameWasClosing && this.data.renameVisible) {
+      this.setData({ renameVisible: false, renameClosing: false })
+    }
   },
 
   onProjectScroll(event) {
@@ -361,7 +368,7 @@ Page({
     this._projectInteractionToken = (this._projectInteractionToken || 0) + 1
     invalidateProjectDeletion(this)
     closeProjectSwipe(this)
-    if (this._renameCloseTimer) clearTimeout(this._renameCloseTimer)
+    this.cancelRenameProjectClose()
     printPerformanceSummary('项目详情/')
   },
 
@@ -630,19 +637,33 @@ Page({
 
   startRenameProject() {
     if (!this.data.project || this.data.workspaceError) return
+    this.cancelRenameProjectClose()
+    this.setData({ renameDraft: this.data.project.name, renameVisible: true, renameClosing: false })
+  },
+
+  cancelRenameProjectClose() {
     if (this._renameCloseTimer) clearTimeout(this._renameCloseTimer)
     this._renameCloseTimer = null
-    this.setData({ renameDraft: this.data.project.name, renameVisible: true, renameClosing: false })
+    this._renameCloseRevision = (this._renameCloseRevision || 0) + 1
   },
 
   closeRenameProject() {
     if (!this.data.renameVisible || this.data.renameClosing) return
-    this.setData({ renameClosing: true })
     if (this._renameCloseTimer) clearTimeout(this._renameCloseTimer)
-    this._renameCloseTimer = setTimeout(() => {
-      this._renameCloseTimer = null
-      this.setData({ renameVisible: false, renameClosing: false })
-    }, 180)
+    this._renameCloseTimer = null
+    const closeRevision = (this._renameCloseRevision || 0) + 1
+    this._renameCloseRevision = closeRevision
+    this.setData({ renameClosing: true }, () => {
+      if (this._projectDestroyed || this._renameCloseRevision !== closeRevision
+        || !this.data.renameVisible || !this.data.renameClosing) return
+      const timer = setTimeout(() => {
+        if (this._renameCloseTimer === timer) this._renameCloseTimer = null
+        if (this._projectDestroyed || this._renameCloseRevision !== closeRevision
+          || !this.data.renameVisible || !this.data.renameClosing) return
+        this.setData({ renameVisible: false, renameClosing: false })
+      }, 180)
+      this._renameCloseTimer = timer
+    })
   },
 
   onRenameInput(event) {

@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="750" height="560" viewBox="0 0 750 560" role="img" aria-labelledby="title desc">
+  <title id="title">LED 净空间、整数行列拼装与包边尺寸</title>
+  <desc id="desc">墙面可用净空间先避开上下预留，净屏按整数行列拼装；每边包边以厘米输入并换算为米计算安装尺寸。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="11" markerHeight="11" refX="5" refY="5" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#2867c7"/></marker>
+    <marker id="arrowO" markerWidth="11" markerHeight="11" refX="5" refY="5" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#d77719"/></marker>
+    <style>
+      text{font-family:Arial,"Microsoft YaHei","PingFang SC",sans-serif}
+      .ink{fill:#17314b}.sub{fill:#536b82}.blue{fill:#2867c7}.green{fill:#16775f}.orange{fill:#c66a15}
+      .hair{stroke:#d6e0ea;stroke-width:2}
+    </style>
+  </defs>
+  <rect width="750" height="560" fill="#f7f9fb"/>
+
+  <!-- wall and reserved strips -->
+  <rect x="42" y="30" width="386" height="422" fill="#fff" stroke="#71879c" stroke-width="3"/>
+  <rect x="45" y="33" width="380" height="62" fill="#edf1f5"/>
+  <rect x="45" y="389" width="380" height="60" fill="#edf1f5"/>
+  <text x="235" y="74" text-anchor="middle" class="sub" font-size="28" font-weight="700">上方预留</text>
+  <text x="235" y="431" text-anchor="middle" class="sub" font-size="28" font-weight="700">下方预留</text>
+  <line x1="82" y1="132" x2="389" y2="132" stroke="#2867c7" stroke-width="3" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+  <text x="235" y="114" text-anchor="middle" class="blue" font-size="26" font-weight="700">可用净宽 W（m）</text>
+  <line x1="68" y1="145" x2="68" y2="378" stroke="#2867c7" stroke-width="3" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+  <text x="94" y="177" class="blue" font-size="26" font-weight="700">净高 H（m）</text>
+
+  <!-- installation margin encloses the net tiled screen -->
+  <rect x="110" y="222" width="262" height="129" fill="#fff1dd" stroke="#d77719" stroke-width="3"/>
+  <rect x="126" y="233" width="230" height="107" fill="#eaf1fc" stroke="#2867c7" stroke-width="3"/>
+  <g stroke="#9ab5df" stroke-width="2">
+    <line x1="183.5" y1="233" x2="183.5" y2="340"/><line x1="241" y1="233" x2="241" y2="340"/><line x1="298.5" y1="233" x2="298.5" y2="340"/>
+    <line x1="126" y1="259.75" x2="356" y2="259.75"/><line x1="126" y1="286.5" x2="356" y2="286.5"/><line x1="126" y1="313.25" x2="356" y2="313.25"/>
+  </g>
+  <rect x="165" y="270" width="152" height="44" fill="#eaf1fc"/>
+  <text x="241" y="301" text-anchor="middle" class="ink" font-size="32" font-weight="700">净屏</text>
+  <text x="110" y="214" class="orange" font-size="26" font-weight="700">包边</text>
+  <line x1="126" y1="363" x2="356" y2="363" stroke="#2867c7" stroke-width="2.5" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+  <text x="241" y="383" text-anchor="middle" class="blue" font-size="25" font-weight="700">净屏宽 / 高</text>
+
+  <line x1="459" y1="30" x2="459" y2="452" class="hair"/>
+  <text x="488" y="62" class="sub" font-size="30" font-weight="700">整数拼装</text>
+  <text x="488" y="111" class="blue" font-size="28" font-weight="700">W净 = n × 单元宽</text>
+  <text x="488" y="154" class="green" font-size="28" font-weight="700">H净 = m × 单元高</text>
+  <text x="488" y="190" class="sub" font-size="26" font-weight="700">n 列 / m 行</text>
+  <text x="488" y="239" class="orange" font-size="28" font-weight="700">W装 = W净 + 2E</text>
+  <text x="488" y="281" class="orange" font-size="28" font-weight="700">H装 = H净 + 2E</text>
+  <text x="488" y="320" class="sub" font-size="26" font-weight="700">E：包边（cm/边）</text>
+  <text x="488" y="356" class="sub" font-size="26" font-weight="700">包边换算为 m</text>
+  <line x1="488" y1="380" x2="718" y2="380" class="hair"/>
+  <text x="488" y="420" class="ink" font-size="27" font-weight="700">像素 ≈ 净尺寸 ÷ P</text>
+  <text x="488" y="450" class="sub" font-size="24" font-weight="700">P：标称点间距</text>
+</svg>

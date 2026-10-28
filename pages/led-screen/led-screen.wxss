@@ -101,7 +101,7 @@
 
 .led-report-overlay{position:fixed;z-index:1200;inset:0;display:flex;box-sizing:border-box;align-items:flex-end;justify-content:center;background:rgba(18,20,27,.55);animation:led-overlay-in 180ms ease-out both}
 .led-report-overlay.report-preview-closing{animation:led-overlay-out 300ms ease-in both}
-.led-report-sheet{display:flex;box-sizing:border-box;width:100%;max-height:90vh;min-height:0;padding:20rpx 22rpx calc(16rpx + env(safe-area-inset-bottom));flex-direction:column;overflow:hidden;border:1rpx solid var(--theme-divider);border-radius:28rpx 28rpx 0 0;background:var(--theme-surface);color:var(--theme-text);box-shadow:0 12px 36px rgba(0,0,0,.2);animation:led-project-in 300ms cubic-bezier(.2,.72,.25,1) both}
+.led-report-sheet{display:flex;box-sizing:border-box;width:100%;max-height:90vh;min-height:0;padding:20rpx 22rpx calc(16rpx + env(safe-area-inset-bottom));flex-direction:column;overflow:hidden;border:1rpx solid var(--theme-divider);border-radius:28rpx 28rpx 0 0;border-bottom:0;background:var(--theme-surface);color:var(--theme-text);box-shadow:0 12px 36px rgba(0,0,0,.2);animation:led-project-in 300ms cubic-bezier(.2,.72,.25,1) both}
 .led-report-sheet.report-preview-closing{animation:led-project-out 300ms ease-in both;pointer-events:none}
 .led-report-header{position:relative;display:flex;box-sizing:border-box;min-height:44px;margin-bottom:14rpx;padding:0 56px 0 2rpx;flex:none;align-items:center}
 .led-report-title{box-sizing:border-box;width:100%;min-width:0;color:var(--theme-text);font-size:18px;font-weight:650;line-height:1.35;overflow-wrap:anywhere}
@@ -124,7 +124,7 @@
 .led-project-overlay.project-keyboard-open{padding:0}
 .led-project-overlay.project-dialog-closing{pointer-events:auto}
 .led-project-overlay.project-dialog-closing{animation:led-overlay-out 320ms ease-in both}
-.led-project-sheet{display:flex;box-sizing:border-box;width:100%;max-height:90vh;min-height:0;padding:20rpx 22rpx calc(16rpx + env(safe-area-inset-bottom));flex-direction:column;overflow:hidden;border:1rpx solid var(--theme-divider);border-radius:28rpx 28rpx 0 0;background:var(--theme-surface);color:var(--theme-text);box-shadow:0 12px 36px rgba(0,0,0,.2);animation:led-project-in 300ms cubic-bezier(.2,.72,.25,1) both}
+.led-project-sheet{display:flex;box-sizing:border-box;width:100%;max-height:90vh;min-height:0;padding:20rpx 22rpx calc(16rpx + env(safe-area-inset-bottom));flex-direction:column;overflow:hidden;border:1rpx solid var(--theme-divider);border-radius:28rpx 28rpx 0 0;border-bottom:0;background:var(--theme-surface);color:var(--theme-text);box-shadow:0 12px 36px rgba(0,0,0,.2);animation:led-project-in 300ms cubic-bezier(.2,.72,.25,1) both}
 .project-dialog-closing .led-project-sheet{animation:led-project-out 320ms ease-in both;pointer-events:none}
 .led-project-sheet.project-keyboard-open{padding:4px 22rpx}
 @keyframes led-project-in{from{transform:translateY(calc(100% + env(safe-area-inset-bottom)))}to{transform:translateY(0)}}

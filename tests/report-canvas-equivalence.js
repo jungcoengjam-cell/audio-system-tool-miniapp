@@ -639,6 +639,8 @@ function assertLedCurrentSemanticContract(outcome, fault, current) {
   const expectedData = {
     ...EXPECTED_CURRENT_LED_DATA,
     result: EXPECTED_CURRENT_LED_RESULT,
+    // This geometry-only placeholder state is unrelated to report content.
+    resultAreaStyle: '',
     reportCanvasHeight: expected.height,
     reportImagePath: expected.path,
     reportPreviewVisible: expected.preview,

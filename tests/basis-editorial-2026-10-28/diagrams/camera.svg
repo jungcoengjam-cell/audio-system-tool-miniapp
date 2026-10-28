@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="750" height="560" viewBox="0 0 750 560" role="img" aria-labelledby="title desc">
+  <title id="title">相机视场的目标角点、俯仰、退距和投影包络</title>
+  <desc id="desc">地面区域用八个三维角点，垂直目标面用四个角点；相机按退距 D 和俯仰 theta 投影目标角点，并扩张包络后检查水平与垂直视场。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#2867c7"/></marker>
+    <marker id="arrowO" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#d77719"/></marker>
+    <style>
+      text{font-family:Arial,"Microsoft YaHei","PingFang SC",sans-serif}
+      .ink{fill:#17314b}.sub{fill:#536b82}.blue{fill:#2867c7}.green{fill:#16775f}.orange{fill:#c66a15}
+      .hair{stroke:#d6e0ea;stroke-width:2}.thin{stroke:#9db0c2;stroke-width:2;fill:none}
+    </style>
+  </defs>
+  <rect width="750" height="560" fill="#f7f9fb"/>
+  <text x="50" y="46" class="green" font-size="28" font-weight="700">地面区域：8 角点</text>
+  <text x="335" y="46" class="orange" font-size="28" font-weight="700">垂直目标面：4 角点</text>
+
+  <!-- Camera and two-axis sight cone -->
+  <path d="M75 235L108 217L108 254Z" fill="#eaf1fc" stroke="#2867c7" stroke-width="3"/>
+  <rect x="54" y="226" width="15" height="22" fill="#17314b"/>
+  <circle cx="108" cy="235" r="5" fill="#2867c7"/>
+  <text x="79" y="281" text-anchor="middle" class="ink" font-size="25" font-weight="700">镜头 C</text>
+  <path d="M108 235L503 135L503 364Z" fill="#e7effb" fill-opacity=".55" stroke="#91add0" stroke-width="2" stroke-dasharray="6 6"/>
+  <line x1="108" y1="235" x2="412" y2="246" stroke="#2867c7" stroke-width="2" stroke-dasharray="5 5"/>
+  <path d="M157 235A49 49 0 0 0 154 223" fill="none" stroke="#d77719" stroke-width="2.5"/>
+  <text x="164" y="219" class="orange" font-size="28" font-weight="700">θ</text>
+
+  <!-- 3-D target envelope: eight vertices, with the front vertical plane highlighted -->
+  <polygon points="370,185 455,153 493,172 408,204" fill="#eff5fd" stroke="#91add0" stroke-width="2"/>
+  <polygon points="370,185 408,204 408,329 370,310" fill="#fff1dd" stroke="#d77719" stroke-width="3"/>
+  <polygon points="408,204 493,172 493,297 408,329" fill="#e8f3ef" stroke="#16775f" stroke-width="2.5"/>
+  <polygon points="370,310 455,278 493,297 408,329" fill="#eaf1fb" stroke="#91add0" stroke-width="2"/>
+  <line x1="455" y1="153" x2="455" y2="278" stroke="#91add0" stroke-width="2"/>
+  <line x1="370" y1="185" x2="370" y2="310" stroke="#d77719" stroke-width="2.5"/>
+  <line x1="455" y1="153" x2="493" y2="172" stroke="#91add0" stroke-width="2"/>
+  <g fill="#2867c7" stroke="#fff" stroke-width="2.5">
+    <circle cx="455" cy="153" r="8"/><circle cx="493" cy="172" r="8"/><circle cx="455" cy="278" r="8"/><circle cx="493" cy="297" r="8"/>
+  </g>
+  <g fill="#d77719" stroke="#fff" stroke-width="2.5">
+    <circle cx="370" cy="185" r="8"/><circle cx="408" cy="204" r="8"/><circle cx="370" cy="310" r="8"/><circle cx="408" cy="329" r="8"/>
+  </g>
+
+  <!-- horizontal setback and height -->
+  <line x1="108" y1="411" x2="370" y2="411" stroke="#d77719" stroke-width="2.5" marker-start="url(#arrowO)" marker-end="url(#arrowO)"/>
+  <line x1="108" y1="363" x2="108" y2="420" stroke="#9db0c2" stroke-width="2"/>
+  <line x1="370" y1="337" x2="370" y2="420" stroke="#9db0c2" stroke-width="2"/>
+  <text x="239" y="451" text-anchor="middle" class="orange" font-size="30" font-weight="700">退距 D</text>
+  <line x1="53" y1="235" x2="53" y2="390" stroke="#71879c" stroke-width="2.5" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+  <text x="41" y="318" text-anchor="end" class="sub" font-size="28" font-weight="700">H</text>
+  <line x1="53" y1="390" x2="493" y2="390" stroke="#9db0c2" stroke-width="2"/>
+  <text x="51" y="438" class="sub" font-size="26" font-weight="700">非比例</text>
+
+  <!-- projected envelope and separate horizontal / vertical checks -->
+  <line x1="501" y1="227" x2="532" y2="227" stroke="#536b82" stroke-width="2.5" stroke-dasharray="4 4" marker-end="url(#arrow)"/>
+  <text x="624" y="83" text-anchor="middle" class="sub" font-size="26" font-weight="700">投影包络</text>
+  <rect x="534" y="98" width="180" height="185" fill="#fff" stroke="#9db0c2" stroke-width="2"/>
+  <rect x="551" y="120" width="146" height="139" fill="none" stroke="#d77719" stroke-width="3" stroke-dasharray="6 5"/>
+  <rect x="570" y="140" width="108" height="99" fill="#e8f3ef" stroke="#16775f" stroke-width="3"/>
+  <line x1="624" y1="98" x2="624" y2="283" stroke="#d6e0ea" stroke-width="1.5"/>
+  <line x1="534" y1="190" x2="714" y2="190" stroke="#d6e0ea" stroke-width="1.5"/>
+  <text x="624" y="316" text-anchor="middle" class="orange" font-size="26" font-weight="700">余量扩张</text>
+  <text x="624" y="350" text-anchor="middle" class="blue" font-size="24" font-weight="700">水平视场校核</text>
+  <text x="624" y="382" text-anchor="middle" class="green" font-size="24" font-weight="700">垂直视场校核</text>
+
+  <line x1="32" y1="464" x2="718" y2="464" class="hair"/>
+  <text x="375" y="500" text-anchor="middle" class="ink" font-size="28" font-weight="700">角点投影 → 扩张包络 → 校核双轴视场</text>
+  <text x="375" y="540" text-anchor="middle" class="sub" font-size="26" font-weight="700">改变退距 D，重算俯仰 θ 与投影</text>
+</svg>

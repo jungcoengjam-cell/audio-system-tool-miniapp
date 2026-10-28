@@ -94,6 +94,11 @@ try {
   const writesBeforeSelect = writes
   page.selectFixture({ currentTarget: { dataset: { model: 'TL-SV3103' } } })
   assert.equal(writes, writesBeforeSelect, 'selection preview must not persist before confirmation')
+  const selectionCloseTimerId = page._sheetCloseTimers.fixturePicker
+  const selectionCloseTimer = timers.get(selectionCloseTimerId)
+  assert(selectionCloseTimer, 'fixture selection should schedule its animated picker exit')
+  assert.equal(selectionCloseTimer.delay, 180)
+  selectionCloseTimer.callback()
   assert.equal(page.data.fixtureSearchOpen, false)
   assert.equal(page.data.pendingChange, null, 'the real pending flow remains delegated to buildPendingPreview')
   assert.equal(page._crossBoundaryPreview?.descriptor.kind, 'add')

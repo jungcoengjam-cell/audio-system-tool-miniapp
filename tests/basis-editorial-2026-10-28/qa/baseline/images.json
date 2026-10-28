@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "capturedFrom": "pages/basis/assets/<tool-id>.png before editorial image replacement",
+  "images": [
+    {
+      "id": "cable",
+      "path": "pages/basis/assets/cable.png",
+      "width": 750,
+      "height": 560,
+      "byteLength": 27252,
+      "sha256": "7f1b89edf6f02f65e54b6436892e5291786bad647b301c34823a604a19a8ed77"
+    },
+    {
+      "id": "gainStructure",
+      "path": "pages/basis/assets/gainStructure.png",
+      "width": 750,
+      "height": 560,
+      "byteLength": 31107,
+      "sha256": "17abefb0e8fd2307dbace25189b453c4aaa04b40934915949ab262a24a8cf106"
+    },
+    {
+      "id": "limiter",
+      "path": "pages/basis/assets/limiter.png",
+      "width": 750,
+      "height": 560,
+      "byteLength": 29729,
+      "sha256": "51d1dd3557bc874eee08f703b27c9e00f2c95b94471c81b84a8fdb276a57c73f"
+    },
+    {
+      "id": "spl",
+      "path": "pages/basis/assets/spl.png",
+      "width": 750,
+      "height": 560,
+      "byteLength": 27506,
+      "sha256": "ee0c0d5a14212c9a17594da37b3fcb5802f4f83f53dea30ec96d5bec39e58ac4"
+    },
+    {
+      "id": "camera",
+      "path": "pages/basis/assets/camera.png",
+      "width": 750,
+      "height": 560,
+      "byteLength": 25243,
+      "sha256": "396cc4999d18bf33f210906e8ae084081da3d13f71001eafc718fe9fc44b5b26"
+    },
+    {
+      "id": "ledScreen",
+      "path": "pages/basis/assets/ledScreen.png",
+      "width": 750,
+      "height": 560,
+      "byteLength": 28463,
+      "sha256": "6bf8e03e0b78718801da6979d6b3e73abcbcc5c8f4810d638b65e86a23bc9387"
+    }
+  ]
+}

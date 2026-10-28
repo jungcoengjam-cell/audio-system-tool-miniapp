@@ -109,7 +109,7 @@
   </view>
 
   <page-container
-    show="{{pageContainerSupported && (selectorVisible || detailsVisible || shareSheetVisible || projectSheetVisible)}}"
+    show="{{pageContainerSupported && !pageContainerClosingOverlay && (selectorVisible || detailsVisible || shareSheetVisible || projectSheetVisible)}}"
     position="bottom" overlay="true" z-index="100" round="{{false}}" close-on-slide-down="{{false}}"
     overlay-style="background-color: rgba(18, 20, 27, .55);" custom-style="background-color: transparent; padding: 0;"
     bind:beforeleave="onPageContainerBeforeLeave" bind:afterleave="onPageContainerAfterLeave"

@@ -231,6 +231,33 @@ function createPageControllerChecks(context) {
       }
     }
 
+    const completeRenderedDmxClose = (page, key, action) => {
+      const originalSetTimeout = global.setTimeout
+      const originalClearTimeout = global.clearTimeout
+      const timers = []
+      let nextTimerId = 1
+      global.setTimeout = (callback, delay, ...args) => {
+        const timer = { id: `dmx-close-${nextTimerId++}`, callback, delay, args, cancelled: false }
+        timers.push(timer)
+        return timer.id
+      }
+      global.clearTimeout = (timerId) => {
+        const timer = timers.find((item) => item.id === timerId)
+        if (timer) timer.cancelled = true
+      }
+      try {
+        action()
+        const timerId = page._sheetCloseTimers && page._sheetCloseTimers[key]
+        const timer = timers.find((item) => item.id === timerId)
+        assert(timer && !timer.cancelled, `DMX ${key} close must schedule after its setData callback`)
+        assert.strictEqual(timer.delay, 180, `DMX ${key} must keep its 180 ms exit duration`)
+        timer.callback(...timer.args)
+      } finally {
+        global.setTimeout = originalSetTimeout
+        global.clearTimeout = originalClearTimeout
+      }
+    }
+
     const assertWxmlHandlers = (page, relativePath) => {
       const wxml = expandWxmlIncludes(relativePath)
       const handlers = [...wxml.matchAll(/\b(?:bind|catch)[a-z]+="([^"]+)"/g)]
@@ -288,7 +315,7 @@ function createPageControllerChecks(context) {
       && limiterWxml.includes('bindtap="onChoiceTap"'),
     '限幅器数量、功放模式和输入灵敏度必须使用直接可选控件')
     assert((limiterWxml.match(/<page-container\b/g) || []).length === 2
-      && limiterWxml.includes('show="{{pageContainerSupported && (selectorVisible || detailsVisible || shareSheetVisible || projectSheetVisible)}}"')
+      && limiterWxml.includes('show="{{pageContainerSupported && !pageContainerClosingOverlay && (selectorVisible || detailsVisible || shareSheetVisible || projectSheetVisible)}}"')
       && limiterWxml.includes('bind:beforeleave="onPageContainerBeforeLeave"')
       && limiterWxml.includes('bind:afterleave="onPageContainerAfterLeave"')
       && limiterWxml.includes('class="editor-navigation-guard"')
@@ -991,7 +1018,7 @@ function createPageControllerChecks(context) {
     assert.strictEqual(dmxPage.data.allocationMode, 'auto', '确认前不得提交手动编址方式')
     assert.strictEqual(dmxPage.data.groups[0].targetUniverse, 'A', '确认前不得提交目标域变化')
     assert.strictEqual(dmxPage._calculationResult.fixtures[0].addressText, 'A001', '确认前地址结果保持不变')
-    dmxPage.confirmPendingChange()
+    completeRenderedDmxClose(dmxPage, 'pendingChange', () => dmxPage.confirmPendingChange())
     assert.strictEqual(dmxPage.data.allocationMode, 'manual')
     assert.strictEqual(dmxPage.data.groups[0].targetUniverse, 'A')
     assert.strictEqual(dmxPage._calculationResult.fixtures[0].addressText, 'A001')
@@ -1004,7 +1031,7 @@ function createPageControllerChecks(context) {
     assert.strictEqual(dmxPage.data.allocationMode, 'manual')
     assert.strictEqual(dmxPage.data.groups[0].targetUniverse, 'A', '确认前目标域仍保持 A')
     assert.strictEqual(dmxPage._calculationResult.fixtures[0].addressText, 'A001', '确认前地址仍保持 A001')
-    dmxPage.confirmPendingChange()
+    completeRenderedDmxClose(dmxPage, 'pendingChange', () => dmxPage.confirmPendingChange())
     assert.strictEqual(dmxPage.data.groups[0].targetUniverse, 'B')
     assert.strictEqual(dmxPage.data.result.fixtures, undefined, 'DMX 页面不应把逐台数组传入视图层')
     assert.strictEqual(dmxPage._calculationResult.fixtures[0].addressText, 'B001')
@@ -1016,7 +1043,7 @@ function createPageControllerChecks(context) {
     assert.strictEqual(dmxPage.data.allocationMode, 'manual', '确认前仍保持手动编址方式')
     assert.strictEqual(dmxPage.data.groups[0].targetUniverse, 'B')
     assert.strictEqual(dmxPage._calculationResult.fixtures[0].addressText, 'B001', '确认前地址仍保持 B001')
-    dmxPage.confirmPendingChange()
+    completeRenderedDmxClose(dmxPage, 'pendingChange', () => dmxPage.confirmPendingChange())
     assert.strictEqual(dmxPage.data.allocationMode, 'auto')
     assert.strictEqual(dmxPage._calculationResult.fixtures[0].addressText, 'A001')
     dmxPage.openFixtureLayout()
@@ -1063,11 +1090,13 @@ function createPageControllerChecks(context) {
     const existingFixtureModel = validDmxFixtureModels[0]?.model
     assert(existingFixtureModel, '单型号编址回归缺少可用灯具型号')
     dmxPage.openFixtureSearch({ currentTarget: { dataset: { index: 0 } } })
-    dmxPage.selectFixture({ currentTarget: { dataset: { model: existingFixtureModel } } })
+    completeRenderedDmxClose(dmxPage, 'fixturePicker', () => {
+      dmxPage.selectFixture({ currentTarget: { dataset: { model: existingFixtureModel } } })
+    })
     assert.strictEqual(dmxPage.data.pendingChange.kind, 'edit', '更换现有型号应先进入待确认状态')
     assert.strictEqual(dmxPage.data.groups[0].fixtureModel, dmxOriginalGroups[0].fixtureModel,
       '确认前不应覆盖现有灯组型号')
-    dmxPage.confirmPendingChange()
+    completeRenderedDmxClose(dmxPage, 'pendingChange', () => dmxPage.confirmPendingChange())
     assert.strictEqual(dmxPage.data.groups[0].fixtureModel, existingFixtureModel, '灯具目录选择未更新现有组型号')
 
     const dmxGroupsBeforeSingleModelAdd = JSON.parse(JSON.stringify(dmxPage.data.groups))
@@ -1084,13 +1113,15 @@ function createPageControllerChecks(context) {
     dmxPage.addGroup()
     assert.strictEqual(dmxPage.data.fixtureSearchOpen, true, '添加灯组未打开单型号灯具目录')
     assert.strictEqual(dmxPage.data.fixtureBatchOpen, false, '添加灯组仍打开多型号选择面板')
-    dmxPage.selectFixture({ currentTarget: { dataset: { model: existingFixtureModel } } })
+    completeRenderedDmxClose(dmxPage, 'fixturePicker', () => {
+      dmxPage.selectFixture({ currentTarget: { dataset: { model: existingFixtureModel } } })
+    })
     assert.strictEqual(dmxPage.data.pendingChange.kind, 'add', '选择一个型号后未进入新增灯组确认')
     assert.strictEqual(dmxPage.data.pendingChange.fixtureModel, existingFixtureModel)
     dmxPage.onPendingQuantityInput({ detail: { value: '2' } })
     dmxPage.onPendingQuantityBlur()
     assert.strictEqual(dmxPage.data.pendingChange.valid, true, '合法的同型号数量未通过验证')
-    dmxPage.confirmPendingChange()
+    completeRenderedDmxClose(dmxPage, 'pendingChange', () => dmxPage.confirmPendingChange())
     assert.strictEqual(dmxPage.data.fixtureBatchOpen, false, '确认新增后多型号面板仍打开')
     assert.strictEqual(dmxPage.data.groups.length, dmxGroupsBeforeSingleModelAdd.length + 1,
       '单型号确认未创建新灯组')
@@ -1216,13 +1247,15 @@ function createPageControllerChecks(context) {
     assert.strictEqual(dmxPage.data.fixtureSearchTotal, 1)
     const searchedFixtureGroupsBeforeEdit = JSON.parse(JSON.stringify(dmxPage.data.groups))
     const storageWritesBeforeSearchedFixtureEdit = storageWriteCount
-    dmxPage.selectFixture({ currentTarget: { dataset: { model: 'TL-SV3103' } } })
+    completeRenderedDmxClose(dmxPage, 'fixturePicker', () => {
+      dmxPage.selectFixture({ currentTarget: { dataset: { model: 'TL-SV3103' } } })
+    })
     assert.strictEqual(dmxPage.data.pendingChange.kind, 'edit', '更换灯具型号应先进入确认预览')
     assert.strictEqual(dmxPage.data.pendingChange.fixtureModel, 'TL-SV3103', '型号预览与搜索选择不一致')
     assert.strictEqual(dmxPage.data.pendingChange.valid, true, '合法型号更换预览未通过验证')
     assert.deepStrictEqual(dmxPage.data.groups, searchedFixtureGroupsBeforeEdit, '确认前已覆盖原灯组')
     assert.strictEqual(storageWriteCount, storageWritesBeforeSearchedFixtureEdit, '型号更换预览阶段不得写入偏好')
-    dmxPage.confirmPendingChange()
+    completeRenderedDmxClose(dmxPage, 'pendingChange', () => dmxPage.confirmPendingChange())
     assert.strictEqual(dmxPage.data.groups[0].fixtureModel, 'TL-SV3103')
     assert.strictEqual(dmxPage.data.groups[0].fixtureSource, 'library')
     assert.strictEqual(dmxPage.data.groups[0].channelCount, '14')
@@ -1264,7 +1297,9 @@ function createPageControllerChecks(context) {
       '通道详情未支持切换到另一通道',
     )
     dmxPage.closeFixtureChannelGuideDetail()
-    assert.strictEqual(dmxPage.data.fixtureChannelGuideDetail, null, '通道详情关闭入口失效')
+    assert.strictEqual(dmxPage.data.fixtureChannelGuideDetailExpanded, false, '通道详情关闭入口未开始折叠')
+    assert.strictEqual(dmxPage.data.fixtureChannelGuideDetail.channel, dmxPage.data.fixtureChannelGuide.channels[secondGuideRangeIndex].channel,
+      '折叠动画期间通道详情内容应继续保留')
     dmxPage.selectFixtureChannelGuideDetail({
       currentTarget: { dataset: { channelIndex: firstGuideRangeIndex } },
     })
@@ -1272,6 +1307,7 @@ function createPageControllerChecks(context) {
       currentTarget: { dataset: { globalIndex: guideFixture.globalIndex } },
     })
     assert.strictEqual(dmxPage.data.fixtureChannelGuideDetail, null, '重新打开通道速查后仍残留详情')
+    assert.strictEqual(dmxPage.data.fixtureChannelGuideDetailExpanded, false, '重新打开通道速查后详情仍处于展开态')
     dmxPage.closeFixtureChannelGuide()
     assert.strictEqual(dmxPage.data.fixtureChannelGuide, null)
     assert.strictEqual(dmxPage.data.fixtureChannelGuideDetail, null, '关闭通道速查后未清理详情')
@@ -1324,7 +1360,7 @@ function createPageControllerChecks(context) {
     assert.strictEqual(dmxPage.data.pendingChange.groupId, groupsBeforeConfirmedDelete[1]._lightingGroupId)
     assert.deepStrictEqual(dmxPage.data.groups, groupsBeforeConfirmedDelete, '删除确认前已改变灯组')
     assert.strictEqual(storageWriteCount, storageWritesBeforeConfirmedDelete, '删除预览阶段不得写入偏好')
-    dmxPage.confirmPendingChange()
+    completeRenderedDmxClose(dmxPage, 'pendingChange', () => dmxPage.confirmPendingChange())
     assert.strictEqual(dmxPage.data.groups.length, groupsBeforeConfirmedDelete.length - 1, '确认删除未只移除目标灯组')
     assert.strictEqual(dmxPage.data.groups[0]._lightingGroupId, groupsBeforeConfirmedDelete[0]._lightingGroupId, '确认删除改变了其他灯组身份')
     assert.strictEqual(dmxPage.data.groups[0].fixtureModel, groupsBeforeConfirmedDelete[0].fixtureModel, '确认删除改变了其他灯组型号')
@@ -1352,7 +1388,7 @@ function createPageControllerChecks(context) {
     assert.strictEqual(dmxPage.data.pendingChange.remainingGroupCount, 0)
     assert(dmxWxml.includes('删除后当前方案将没有灯具'), '最后一组预览须明确确认后会留下空方案')
     assert.strictEqual(storageWriteCount, storageWritesBeforeLastGroupConfirm, '最后一组确认前不得写入偏好')
-    dmxPage.confirmPendingChange()
+    completeRenderedDmxClose(dmxPage, 'pendingChange', () => dmxPage.confirmPendingChange())
     assert.strictEqual(dmxPage.data.groups.length, 0, '确认删除最后一组后须保留空方案')
     assert.strictEqual(dmxPage.getPreferences().groups.length, 0, '空方案须保存到偏好')
     assert.strictEqual(dmxPage._unsavedScheme, false, '最后一组删除须确认保存成功')

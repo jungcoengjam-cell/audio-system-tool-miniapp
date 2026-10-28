@@ -338,6 +338,16 @@ function invalidateReportForInputChange(page) {
   }
 }
 
+function cancelResultReportWorkForOverlayExit(page) {
+  if (!page.data?.isGeneratingResultReport && !page.data?.isCheckingResultReportCache
+    && !page._reportCacheCheckRevision) return false
+  page.resultReportRevision = (page.resultReportRevision || 0) + 1
+  page.resultReportPendingSignature = ''
+  page._reportCacheCheckRevision = 0
+  if (page.data?.isGeneratingResultReport && typeof wx.hideLoading === 'function') wx.hideLoading()
+  return true
+}
+
 function formatProjectSavedAt(timestamp) {
   const value = Number(timestamp)
   if (!Number.isFinite(value) || value <= 0) return '保存时间未知'
@@ -403,6 +413,7 @@ Page({
     ...createGainProjectData(),
     pageContainerSupported: false,
     pageContainerFallbackClosing: false,
+    pageContainerClosingOverlay: '',
     ...createResultReportData(),
   },
 
@@ -423,6 +434,7 @@ Page({
     this._pageContainerFallbackCloseTimer = null
     this._activePageContainerOverlay = null
     this._pageContainerLeave = null
+    this._pendingPageContainerClose = null
     this._inputRevision = 0
     let pageContainerSupported = false
     try {
@@ -492,6 +504,7 @@ Page({
     this.cancelPageContainerFallbackClose()
     this._activePageContainerOverlay = null
     this._pageContainerLeave = null
+    this._pendingPageContainerClose = null
     this._projectRequestId = (this._projectRequestId || 0) + 1
     this._projectSavePending = false
     this._projectSnapshotForSave = null
@@ -509,6 +522,7 @@ Page({
       projectSheetVisible: false,
       isSavingProject: false,
       selectorVisible: false,
+      pageContainerClosingOverlay: '',
       pageContainerFallbackClosing: false,
       resultReportPreviewVisible: false,
     })
@@ -523,6 +537,7 @@ Page({
     this.cancelPageContainerFallbackClose()
     this._activePageContainerOverlay = null
     this._pageContainerLeave = null
+    this._pendingPageContainerClose = null
     this.resetProjectKeyboardState({ hideKeyboard: true, updateView: false })
     cancelResultReportGeneration(this)
     printPerformanceSummary('增益架构/')
@@ -540,9 +555,11 @@ Page({
   openPageContainerOverlay(name) {
     this.cancelPageContainerFallbackClose()
     if (this.data.pageContainerFallbackClosing) this.setData({ pageContainerFallbackClosing: false })
+    this._pendingPageContainerClose = null
     this._pageContainerEpoch = (this._pageContainerEpoch || 0) + 1
     this._activePageContainerOverlay = { name, epoch: this._pageContainerEpoch }
     this._pageContainerLeave = null
+    if (this.data.pageContainerClosingOverlay) this.setData({ pageContainerClosingOverlay: '' })
   },
 
   clearPageContainerOverlay(name) {
@@ -550,6 +567,7 @@ Page({
     this._pageContainerEpoch = (this._pageContainerEpoch || 0) + 1
     this._activePageContainerOverlay = null
     this._pageContainerLeave = null
+    this._pendingPageContainerClose = null
     return true
   },
 
@@ -564,7 +582,8 @@ Page({
     if (this._isUnloaded || !this.data) return false
     const supported = this.data.pageContainerSupported
     const active = this._activePageContainerOverlay
-    const leaveStarted = active?.name === name && this.onPageContainerBeforeLeave()
+    const leaveStarted = active?.name === name
+      && (this.onPageContainerBeforeLeave() || this._pageContainerLeave?.epoch === active.epoch)
     const fallbackEpoch = !supported && leaveStarted ? active.epoch : null
     if (!supported && fallbackEpoch != null) {
       if (this.data.pageContainerFallbackClosing) return false
@@ -591,13 +610,29 @@ Page({
       })
       return true
     }
-    if (supported) this.clearPageContainerOverlay(name)
+    if (supported && leaveStarted && this._pageContainerAfterLeaveEpoch !== active.epoch) {
+      const pending = this._pendingPageContainerClose
+      this._pendingPageContainerClose = {
+        name,
+        epoch: active.epoch,
+        changes: { ...(pending?.epoch === active.epoch ? pending.changes : {}), ...changes },
+        afterLeave: afterFallbackClose || (pending?.epoch === active.epoch ? pending.afterLeave : null),
+      }
+      this.setData({ pageContainerClosingOverlay: name })
+      return true
+    }
+    if (supported) {
+      const pending = this._pendingPageContainerClose
+      if (pending && active && pending.epoch === active.epoch) changes = { ...pending.changes, ...changes }
+      this.clearPageContainerOverlay(name)
+      this._pageContainerAfterLeaveEpoch = null
+    }
     if (name === 'project') {
       this._projectRequestId = (this._projectRequestId || 0) + 1
       this._projectSavePending = false
       this._projectSnapshotForSave = null
     }
-    this.setData(changes, () => {
+    this.setData({ ...changes, ...(supported ? { pageContainerClosingOverlay: '' } : {}) }, () => {
       if (!supported && fallbackEpoch != null) {
         if (this._activePageContainerOverlay?.epoch === fallbackEpoch
           && !this.data.selectorVisible && !this.data.shareSheetVisible && !this.data.projectSheetVisible) {
@@ -616,19 +651,40 @@ Page({
     if (!this._activePageContainerOverlay || this._pageContainerLeave) return false
     if (this._activePageContainerOverlay.name === 'project') this.invalidateProjectSave()
     this._pageContainerLeave = { ...this._activePageContainerOverlay }
+    if (this._activePageContainerOverlay.name === 'share') cancelResultReportWorkForOverlayExit(this)
+    if (this.data.pageContainerSupported) {
+      this.setData({ pageContainerClosingOverlay: this._activePageContainerOverlay.name })
+    }
     return true
   },
 
   onPageContainerAfterLeave() {
     const leaving = this._pageContainerLeave
-    this._pageContainerLeave = null
     if (!leaving || this._activePageContainerOverlay?.epoch !== leaving.epoch) return false
+    const pending = this._pendingPageContainerClose
+    if (pending?.epoch === leaving.epoch) {
+      this._pendingPageContainerClose = null
+      this.setData({ ...pending.changes, pageContainerClosingOverlay: '' }, () => {
+        if (this._activePageContainerOverlay?.epoch !== leaving.epoch) return
+        this._activePageContainerOverlay = null
+        if (this._pageContainerLeave?.epoch === leaving.epoch) this._pageContainerLeave = null
+        pending.afterLeave?.()
+      })
+      return true
+    }
+    this._pageContainerAfterLeaveEpoch = leaving.epoch
     const close = {
       selector: this.closeAmplifierSelector,
       share: this.closeSharePreview,
       project: this.closeProjectSheet,
     }[leaving.name]
     if (close) close.call(this)
+    else {
+      const field = { selector: 'selectorVisible', share: 'shareSheetVisible', project: 'projectSheetVisible' }[leaving.name]
+      this.clearPageContainerOverlay(leaving.name)
+      this.setData({ ...(field ? { [field]: false } : {}), pageContainerClosingOverlay: '' })
+    }
+    this._pageContainerAfterLeaveEpoch = null
     return Boolean(close)
   },
 
@@ -763,11 +819,6 @@ Page({
     const url = `/pages/products/detail?type=amplifier&model=${encodeURIComponent(event.currentTarget.dataset.model)}`
     this._selectorMatches = []
     const changes = { selectorVisible: false, selectorItems: [], selectorTotalCount: 0 }
-    if (this.data.pageContainerSupported) {
-      this.closePageContainerOverlay('selector', changes)
-      wx.navigateTo({ url })
-      return
-    }
     this.closePageContainerOverlay('selector', changes, () => wx.navigateTo({ url }))
   },
 
@@ -827,7 +878,13 @@ Page({
     const hasInputChange = semanticKeys.some((key) => this.data[key] !== pageState[key])
     if (hasInputChange) this._inputRevision = (this._inputRevision || 0) + 1
     const inputRevision = this._inputRevision || 0
-    if (hasInputChange && !this.data.pageContainerFallbackClosing) this.clearPageContainerOverlay()
+    const nativePageContainerLeavePending = Boolean(this.data.pageContainerSupported
+      && this._pageContainerLeave && this._activePageContainerOverlay
+      && this._pageContainerLeave.epoch === this._activePageContainerOverlay.epoch
+      && this._pageContainerAfterLeaveEpoch !== this._pageContainerLeave.epoch)
+    if (hasInputChange && !this.data.pageContainerFallbackClosing && !nativePageContainerLeavePending) {
+      this.clearPageContainerOverlay()
+    }
     const hasDraftInputs = Boolean(this.data.hasDraftInputs || hasInputChange)
     let result = this.data.result
     let hint = this.data.outputHint
@@ -971,7 +1028,7 @@ Page({
     vibrate('light')
     this.openPageContainerOverlay('share')
     this.setData({ shareSheetVisible: true, resultReportError: '' }, () => {
-      if (!this._isUnloaded && this.data.shareSheetVisible) this.generateResultReportImage()
+      if (!this._isUnloaded && !this._pageContainerLeave && this.data.shareSheetVisible) this.generateResultReportImage()
     })
     return true
   },
@@ -979,14 +1036,13 @@ Page({
   closeSharePreview() {
     if (!this.data.shareSheetVisible && !this.data.isGeneratingResultReport
       && !this.data.isCheckingResultReportCache) return false
+    if (!this._pageContainerLeave || this._pageContainerLeave.name !== 'share') this.onPageContainerBeforeLeave()
+    if (this._pageContainerLeave?.name !== 'share') cancelResultReportWorkForOverlayExit(this)
     const wasGenerating = Boolean(this.data.isGeneratingResultReport)
-    if (wasGenerating || this.data.isCheckingResultReportCache) {
-      cancelResultReportGeneration(this)
-      this._reportCacheCheckRevision = 0
-      if (wasGenerating) this.resultReportSignature = ''
-    }
+    if (wasGenerating) this.resultReportSignature = ''
     this.closePageContainerOverlay('share', {
       shareSheetVisible: false,
+      isGeneratingResultReport: false,
       isCheckingResultReportCache: false,
       resultReportPreviewVisible: false,
       resultReportError: '',
@@ -1011,6 +1067,7 @@ Page({
   },
 
   generateResultReportImage() {
+    if (this._pageContainerLeave?.name === 'share') return false
     const record = this.getRecordPayload()
     const payload = buildResultReportPayload(record)
     if (!payload || !this.data.hasValidResult) {

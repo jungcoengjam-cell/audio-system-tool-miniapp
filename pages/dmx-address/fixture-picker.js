@@ -135,7 +135,8 @@ function createFixturePickerMethods({
     if (!fixture || !fixture.channelModes?.length) return
     const index = this.data.fixtureSearchGroupIndex
     this.cancelFixtureSearch()
-    this.resetFixturePicker()
+    this.beginSheetClose('fixturePicker', 'fixturePickerClosing', () => {
+    this.closeFixturePicker()
     if (index < 0) {
     const group = {
     ...createGroup(this._nextGroupId, {
@@ -194,6 +195,7 @@ function createFixturePickerMethods({
     channelModes: fixture.channelModes,
     fixtureModel: fixture.model,
     fixtureName: fixture.name,
+    })
     })
     }
   }

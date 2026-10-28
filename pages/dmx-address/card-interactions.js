@@ -176,11 +176,13 @@ function createDmxCardInteractionMethods(runtime) {
           floatingStyle: `left:${origin.left}px;top:${origin.top}px;width:${origin.width}px;height:${origin.height}px;`,
         }, () => {
           if (!this._pageAlive || !this._pageVisible || transitionId !== this._floatingTransitionId) return
-          this._floatingTransitionTimer = setTimeout(() => {
+          const timer = setTimeout(() => {
+            if (this._floatingTransitionTimer !== timer) return
             this._floatingTransitionTimer = null
             if (!this._pageAlive || !this._pageVisible || transitionId !== this._floatingTransitionId) return
             this.setData({ floatingStyle: `left:${targetLeft}px;top:${targetTop}px;width:${targetWidth}px;height:${cardHeight}px;` })
           }, 20)
+          this._floatingTransitionTimer = timer
         })
       }
       if (!query) return openAt()
@@ -233,14 +235,20 @@ function createDmxCardInteractionMethods(runtime) {
         floatingStyle: `left:${origin.left}px;top:${origin.top}px;width:${origin.width}px;height:${origin.height}px;`,
         floatingSwipeOffset: 0,
         floatingSwipeDragging: false,
+      }, () => {
+        if (!this._pageAlive || !this._pageVisible
+          || transitionId !== this._floatingTransitionId
+          || !this._floatingClosing || !this.data.floatingClosing) return
+        const timer = setTimeout(() => {
+          if (this._floatingTransitionTimer !== timer) return
+          this._floatingTransitionTimer = null
+          if (!this._pageAlive || !this._pageVisible || transitionId !== this._floatingTransitionId) return
+          this._floatingClosing = false
+          this._floatingOrigin = null
+          this.setData({ floatingGroup: null, floatingVisible: false, floatingClosing: false, floatingStyle: '', floatingSwipeOffset: 0, floatingSwipeDragging: false })
+        }, 230)
+        this._floatingTransitionTimer = timer
       })
-      this._floatingTransitionTimer = setTimeout(() => {
-        this._floatingTransitionTimer = null
-        if (!this._pageAlive || !this._pageVisible || transitionId !== this._floatingTransitionId) return
-        this._floatingClosing = false
-        this._floatingOrigin = null
-        this.setData({ floatingGroup: null, floatingVisible: false, floatingClosing: false, floatingStyle: '', floatingSwipeOffset: 0, floatingSwipeDragging: false })
-      }, 230)
     },
     cancelFloatingTransition() {
       this._floatingTransitionId = (Number(this._floatingTransitionId) || 0) + 1

@@ -1,4 +1,4 @@
-const APP_VERSION = '6.0.1'
+const APP_VERSION = '6.0.2'
 const PRODUCT_DATA_DATE = '2026-09-01'
 const PRODUCT_COUNTS = Object.freeze({
   amplifier: 38,

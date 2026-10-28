@@ -796,8 +796,11 @@ function testPageContainerBackLifecycle() {
     wx.canvasToTempFilePath = () => { exportCount += 1 }
     page.openSharePreview()
     assert.equal(page.data.isGeneratingResultReport, true)
+    const reportRevision = page.resultReportRevision
     page.onPageContainerBeforeLeave()
-    assert.equal(page.data.isGeneratingResultReport, false, 'beforeleave cancels in-flight report generation')
+    assert(page.resultReportRevision > reportRevision, 'beforeleave invalidates in-flight report generation')
+    assert.equal(page.resultReportPendingSignature, '', 'beforeleave clears the pending report signature')
+    assert.equal(page.data.isGeneratingResultReport, true, 'share content keeps its generating branch mounted until afterleave')
     page.retryResultReport()
     page.generateResultReportImage()
     page.shareResultReportImage()
@@ -806,8 +809,10 @@ function testPageContainerBackLifecycle() {
     assert.equal(exportCount, 0, 'report actions are refused while the native sheet is leaving')
     drawCallbacks.shift()()
     assert.equal(exportCount, 0, 'a late draw callback cannot export after native back begins')
+    assert.equal(page.data.isGeneratingResultReport, true, 'a late draw callback cannot alter the retained exit-state branch')
     page.onPageContainerAfterLeave()
     assert.equal(page.data.shareSheetVisible, false)
+    assert.equal(page.data.isGeneratingResultReport, false, 'afterleave clears the stale generating branch')
 
     const records = require('../../utils/records')
     const project = records.createProject('返回键项目')
@@ -964,8 +969,11 @@ function testSelectorLeaveOwnership() {
         assert(item, 'the selector exposes the chosen model for changed and same-value events')
         const priorModel = page.data.selectedAmplifier.model
         page.selectEquipment({ currentTarget: { dataset: { index: String(item.index) } } })
-        if (native) assert.equal(page.data.selectorVisible, false)
-        else {
+        if (native) {
+          assert.equal(page.data.selectorVisible, true, 'native selector retains its content until afterleave')
+          assert(page.data.selectorItems.length > 0, 'native selector items remain mounted through exit')
+          assert.equal(page.data.pageContainerClosingOverlay, 'selector')
+        } else {
           assert.equal(page.data.pageContainerFallbackClosing, true)
           clock.advance(180)
           assert.equal(page.data.selectorVisible, false)
@@ -978,6 +986,8 @@ function testSelectorLeaveOwnership() {
           page.openProjectSheet()
           assert.equal(page.data.projectSheetVisible, false, 'native selector leave lock blocks another sheet')
           page.onPageContainerAfterLeave()
+          assert.equal(page.data.selectorVisible, false, 'native selector hides after afterleave')
+          assert.equal(page.data.selectorItems.length, 0, 'native selector data clears after afterleave')
         }
         assert.equal(page._activePageContainerOverlay, null,
           `${native ? 'native' : 'fallback'} selector releases only after its leave is complete`)
@@ -994,9 +1004,13 @@ function testImplicitOverlayCloseReleasePaths() {
       page.onShow()
       page.openProjectSheet()
       assert.equal(page.data.projectSheetVisible, true)
+      const projectItems = clone(page.data.projectItems)
       page.commitInput({ modeIndex: page.data.modeIndex === 0 ? 1 : 0 })
-      if (native) assert.equal(page.data.projectSheetVisible, false, 'a calculation update closes a stale project snapshot')
-      else {
+      if (native) {
+        assert.equal(page.data.projectSheetVisible, true, 'native project content stays mounted until afterleave')
+        assert.deepEqual(page.data.projectItems, projectItems, 'native project rows remain available during exit')
+        assert.equal(page.data.pageContainerClosingOverlay, 'project')
+      } else {
         assert.equal(page.data.pageContainerFallbackClosing, true,
           'a calculation update closes the fallback project sheet with its exit animation')
         clock.advance(180)
@@ -1006,6 +1020,7 @@ function testImplicitOverlayCloseReleasePaths() {
         assert.equal(page._activePageContainerOverlay?.name, 'project')
         assert.equal(page._pageContainerLeave?.fallback, false)
         page.onPageContainerAfterLeave()
+        assert.equal(page.data.projectSheetVisible, false, 'a calculation update closes a stale project snapshot after native exit')
       }
       assert.equal(page._activePageContainerOverlay, null,
         `${native ? 'native' : 'fallback'} project invalidation releases overlay ownership`)
@@ -1181,12 +1196,13 @@ function testRootOverlayActionExclusivity() {
     page.onGroupTap({ currentTarget: { dataset: { group: 'settings' } } })
     assert.deepEqual([
       page.data.selectorVisible, page.data.detailsVisible, page.data.shareSheetVisible, page.data.projectSheetVisible,
-    ], [false, false, false, false], 'root and background taps are ignored during native leave')
+    ], [false, false, true, false], 'the closing share panel stays mounted while other root actions are ignored')
     assert.deepEqual([page.data.activeGroup, page.data.countIndex, page.data.modeIndex],
       [initialGroup, initialCount, initialMode], 'the leave transition blocks background input events')
     assert.equal(page._projectNameTouched, true)
     assert.strictEqual(page._projectSnapshotForSave, closingProjectSnapshot)
     page.onPageContainerAfterLeave()
+    assert.equal(page.data.shareSheetVisible, false, 'afterleave removes the closing share panel')
 
     page.openProjectSheet()
     assert.equal(page.data.projectSheetVisible, true, 'a new root sheet opens after the prior leave completes')
@@ -1223,9 +1239,11 @@ function testRootOverlayActionExclusivity() {
     page.closeProjectSheet()
     const projectLeave = page._pageContainerLeave
     page.openProjectSheet()
-    assert.equal(page.data.projectSheetVisible, false, 'the project sheet cannot reopen until its leave completes')
+    assert.equal(page.data.projectSheetVisible, true, 'the closing project form stays mounted during native exit')
+    assert.equal(page._activePageContainerOverlay?.epoch, projectEpoch, 'a blocked reopen does not create a new overlay epoch')
     assert.strictEqual(page._pageContainerLeave, projectLeave)
     page.onPageContainerAfterLeave()
+    assert.equal(page.data.projectSheetVisible, false, 'afterleave removes the closing project form')
 
     page.requestReset()
     assert.equal(page._resetModalPending, true)

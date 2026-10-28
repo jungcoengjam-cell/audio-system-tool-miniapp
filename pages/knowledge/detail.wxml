@@ -59,23 +59,27 @@
         <button wx:if="{{!demo}}" class="distance-action-button demo-action-button" bindtap="replayPrincipleAnimation">重新演示</button>
         <button wx:if="{{demo}}" class="distance-action-button demo-action-button" bindtap="toggleDemoPlayback">{{demoPlaying ? '暂停' : '播放'}}</button>
         <button wx:if="{{demo}}" class="distance-action-button demo-action-button" bindtap="replayDemo">重新演示</button>
-        <button class="distance-action-button demo-action-button" bindtap="toggleFormula">
+        <button class="distance-action-button demo-action-button" bindtap="toggleFormula" aria-expanded="{{formulaExpanded}}" aria-controls="knowledge-formula-content">
           {{formulaExpanded ? '收起计算公式' : '查看计算公式'}}
         </button>
       </view>
 
-      <view wx:if="{{formulaExpanded}}" class="distance-formula-detail">
-        <block wx:for="{{article.sections}}" wx:key="title" wx:for-item="formulaSection">
-          <text wx:if="{{formulaSection.formulas.length}}" class="distance-formula-section">{{formulaSection.title}}</text>
-          <text
-            wx:for="{{formulaSection.formulas}}"
-            wx:key="*this"
-            wx:for-item="formula"
-            class="distance-formula-line"
-            selectable
-          >{{formula}}</text>
-        </block>
-        <text class="distance-formula-note">{{article.formulaNote}}</text>
+      <view id="knowledge-formula-content" class="disclosure-motion {{formulaExpanded ? 'disclosure-motion-open' : ''}}" aria-hidden="{{!formulaExpanded}}">
+        <view class="disclosure-motion-inner">
+          <view class="distance-formula-detail">
+            <block wx:for="{{article.sections}}" wx:key="title" wx:for-item="formulaSection">
+              <text wx:if="{{formulaSection.formulas.length}}" class="distance-formula-section">{{formulaSection.title}}</text>
+              <text
+                wx:for="{{formulaSection.formulas}}"
+                wx:key="*this"
+                wx:for-item="formula"
+                class="distance-formula-line"
+                selectable
+              >{{formula}}</text>
+            </block>
+            <text class="distance-formula-note">{{article.formulaNote}}</text>
+          </view>
+        </view>
       </view>
     </view>
 

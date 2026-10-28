@@ -20,6 +20,38 @@ assert(wxml.includes('bindchange="onPendingModeChange"')
 assert(wxml.includes('class="layout-entry" bindtap="openFixtureLayout"'),
   'The current lighting-layout navigation must remain reachable')
 
+function selectFixtureAfterPickerExit(runtime, page, model) {
+  const originalSetTimeout = global.setTimeout
+  const originalClearTimeout = global.clearTimeout
+  const timers = []
+  global.setTimeout = (callback, delay, ...args) => {
+    const timer = { callback, delay, args, cancelled: false }
+    timers.push(timer)
+    return timer
+  }
+  global.clearTimeout = (timer) => {
+    if (timers.includes(timer)) timer.cancelled = true
+    else originalClearTimeout(timer)
+  }
+  try {
+    page.selectFixture(runtime.event({ model }))
+    assert.equal(page.data.fixtureSearchOpen, true, 'fixture picker must remain mounted during its exit')
+    assert.equal(page.data.fixturePickerClosing, true, 'fixture picker must enter its closing state')
+    assert.equal(page.data.pendingChange, null, 'selection preview must wait for picker exit')
+    const timer = page._sheetCloseTimers?.fixturePicker
+    assert(timer, 'fixture picker close timer must be scheduled after rendering')
+    assert.equal(timer.delay, 180, 'fixture picker exit must retain its 180 ms duration')
+    assert.equal(timer.cancelled, false)
+    assert(timers.includes(timer), 'fixture picker close must use the scheduled timer')
+    timer.callback(...timer.args)
+    assert.equal(page.data.fixtureSearchOpen, false, 'fixture picker must unmount after exit')
+    assert.equal(page.data.pendingChange?.kind, 'add', 'selection preview must open after picker exit')
+  } finally {
+    global.setTimeout = originalSetTimeout
+    global.clearTimeout = originalClearTimeout
+  }
+}
+
 function seedPlacedUnrelatedGroup(runtime) {
   runtime.seed([{
     name: 'TL-SL323',
@@ -46,7 +78,7 @@ function assertCurrentAddFlowDoesNotWriteBeforeConfirm(runtime, page) {
   assert.equal(page.data.fixtureSearchOpen, true, 'The add button must open the single-model catalog')
   assert.equal(page.data.fixtureBatchOpen, false, 'The reachable add button must not open multi-model selection')
   assert.equal(page.data.fixtureSearchGroupIndex, -1, 'A new group must be created from the catalog selection')
-  page.selectFixture(runtime.event({ model: 'TL-SK3101' }))
+  selectFixtureAfterPickerExit(runtime, page, 'TL-SK3101')
   assert.equal(page.data.pendingChange.kind, 'add')
   assert.equal(page.data.pendingChange.valid, true)
   assert.equal(runtime.stats.writes, writes, 'Selecting a model must not persist before confirmation')
@@ -148,7 +180,7 @@ function testManualDomainOverflow() {
     const savedBefore = clone(runtime.workspace.readLightingWorkspace().scheme)
     const writes = runtime.stats.writes
     page.addGroup()
-    page.selectFixture(runtime.event({ model: 'TL-SV3104' }))
+    selectFixtureAfterPickerExit(runtime, page, 'TL-SV3104')
     assert.equal(page.data.pendingChange.kind, 'add')
     assert.equal(page.data.pendingChange.valid, false, 'A 20-channel fixture that crosses the manual A-domain boundary must be rejected')
     assert.match(page.data.pendingChange.error, /无法完整放入 A 域/)
@@ -166,7 +198,7 @@ function testConcurrentWorkspaceConflict() {
     runtime.seed()
     const page = runtime.make('main')
     page.addGroup()
-    page.selectFixture(runtime.event({ model: 'TL-SK3101' }))
+    selectFixtureAfterPickerExit(runtime, page, 'TL-SK3101')
     assert.equal(page.data.pendingChange.kind, 'add')
     const current = runtime.workspace.readLightingWorkspace()
     const external = clone(current.scheme)

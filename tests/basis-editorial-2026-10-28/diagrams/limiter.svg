@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="750" height="560" viewBox="0 0 750 560" role="img" aria-labelledby="title desc">
+  <title id="title">限幅器保护上限与阈值换算</title>
+  <desc id="desc">音箱保护电压与功放额定输出电压取较低者，再按输入灵敏度换算为限幅电压、dBu 和 dBFS。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="11" markerHeight="11" refX="5" refY="5" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#16775f"/></marker>
+    <style>
+      text{font-family:Arial,"Microsoft YaHei","PingFang SC",sans-serif}
+      .ink{fill:#17314b}.sub{fill:#536b82}.blue{fill:#2867c7}.green{fill:#16775f}.orange{fill:#c66a15}
+      .hair{stroke:#d6e0ea;stroke-width:2}
+    </style>
+  </defs>
+  <rect width="750" height="560" fill="#f7f9fb"/>
+
+  <text x="184" y="48" text-anchor="middle" class="blue" font-size="30" font-weight="700">音箱电压上限</text>
+  <text x="184" y="88" text-anchor="middle" class="ink" font-size="28" font-weight="700">√(P音箱总 × Z总)</text>
+  <text x="566" y="48" text-anchor="middle" class="orange" font-size="30" font-weight="700">功放电压上限</text>
+  <text x="566" y="88" text-anchor="middle" class="ink" font-size="28" font-weight="700">√(P功放额定 × Z总)</text>
+  <line x1="184" y1="109" x2="184" y2="164" stroke="#2867c7" stroke-width="8"/>
+  <line x1="566" y1="109" x2="566" y2="164" stroke="#d77719" stroke-width="8"/>
+  <line x1="184" y1="164" x2="353" y2="205" stroke="#2867c7" stroke-width="3"/>
+  <line x1="566" y1="164" x2="397" y2="205" stroke="#d77719" stroke-width="3"/>
+  <path d="M375 176L404 205L375 234L346 205Z" fill="#fff" stroke="#16775f" stroke-width="3"/>
+  <text x="375" y="214" text-anchor="middle" class="green" font-size="24" font-weight="700">MIN</text>
+  <text x="375" y="268" text-anchor="middle" class="green" font-size="28" font-weight="700">取较低电压</text>
+  <line x1="375" y1="276" x2="375" y2="295" stroke="#16775f" stroke-width="3" marker-end="url(#arrow)"/>
+  <text x="375" y="333" text-anchor="middle" class="blue" font-size="34" font-weight="700">V_target = min(V_speaker, V_amp)</text>
+
+  <line x1="54" y1="356" x2="696" y2="356" class="hair"/>
+  <text x="375" y="390" text-anchor="middle" class="ink" font-size="29" font-weight="700">V_limiter = V_sensitivity × V_target ÷ V_amp</text>
+  <line x1="375" y1="398" x2="375" y2="420" stroke="#2867c7" stroke-width="3" marker-end="url(#arrow)"/>
+  <text x="375" y="454" text-anchor="middle" class="blue" font-size="31" font-weight="700">dBu = 20log₁₀(V_limiter ÷ 0.775)</text>
+  <line x1="54" y1="472" x2="696" y2="472" class="hair"/>
+  <text x="375" y="508" text-anchor="middle" class="green" font-size="28" font-weight="700">本设备标定：0 dBFS ↔ +18.4 dBu</text>
+  <text x="375" y="548" text-anchor="middle" class="orange" font-size="34" font-weight="700">Threshold_dBFS = dBu − 18.4</text>
+</svg>

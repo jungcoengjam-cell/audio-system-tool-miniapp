@@ -11,7 +11,7 @@
         <button class="action-button" aria-label="选择项目保存" disabled="{{!canUseResultActions}}" bindtap="saveToActiveProject"><view class="action-icon icon-folder"></view></button>
       </view>
 
-      <view class="result-card result-card-{{calculationState}}">
+      <view class="result-card result-card-{{calculationState}}" style="{{canUseResultActions ? '' : resultAreaStyle}}">
           <view class="result-content">
             <view class="result-heading">
               <view wx:if="{{canUseResultActions}}" class="status-chip {{result.isWithinStandard ? 'status-chip-good' : 'status-chip-warning'}}">{{result.status}}</view>

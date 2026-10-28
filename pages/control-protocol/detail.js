@@ -183,6 +183,8 @@ Page({
     this._copyFeedbackMessage = ''
     this._sheetOpenTimer = null
     this._sheetCloseTimer = null
+    this._sheetTransitionEpoch = 0
+    this._sheetCloseReady = false
     this._copyFeedbackTimer = null
     this._sheetDuration = this.getSheetDuration()
     this._photoContextToken = 0
@@ -509,12 +511,28 @@ Page({
     if (this._sheetCloseTimer) clearTimeout(this._sheetCloseTimer)
     this._sheetOpenTimer = null
     this._sheetCloseTimer = null
-    this.setData({ activeOverlay: 'device', sheetOpen: this._sheetDuration === 0 })
-    if (this._sheetDuration === 0) return
-    this._sheetOpenTimer = setTimeout(() => {
-      this._sheetOpenTimer = null
-      if (!this._pageUnloaded && this.data.activeOverlay === 'device') this.setData({ sheetOpen: true })
-    }, 16)
+    const transitionEpoch = (this._sheetTransitionEpoch || 0) + 1
+    this._sheetTransitionEpoch = transitionEpoch
+    this._sheetCloseReady = false
+    if (this._sheetDuration === 0) {
+      this.setData({ activeOverlay: 'device', sheetOpen: true })
+      return
+    }
+    this.setData({ activeOverlay: 'device', sheetOpen: false }, () => {
+      if (this._pageUnloaded
+        || this._sheetTransitionEpoch !== transitionEpoch
+        || this.data.activeOverlay !== 'device'
+        || this.data.sheetOpen) return
+      const timer = setTimeout(() => {
+        if (this._sheetOpenTimer === timer) this._sheetOpenTimer = null
+        if (this._pageUnloaded
+          || this._sheetTransitionEpoch !== transitionEpoch
+          || this.data.activeOverlay !== 'device'
+          || this.data.sheetOpen) return
+        this.setData({ sheetOpen: true })
+      }, 16)
+      this._sheetOpenTimer = timer
+    })
   },
 
   closeOverlay() {
@@ -523,22 +541,40 @@ Page({
     if (this._sheetCloseTimer) clearTimeout(this._sheetCloseTimer)
     this._sheetOpenTimer = null
     this._sheetCloseTimer = null
-    this.setData({ sheetOpen: false })
+    const transitionEpoch = (this._sheetTransitionEpoch || 0) + 1
+    this._sheetTransitionEpoch = transitionEpoch
+    this._sheetCloseReady = false
     if (this._sheetDuration === 0) {
       this.setData({ activeOverlay: '', sheetOpen: false })
       return
     }
-    this._sheetCloseTimer = setTimeout(() => {
-      this._sheetCloseTimer = null
-      if (!this._pageUnloaded && !this.data.sheetOpen) this.setData({ activeOverlay: '', sheetOpen: false })
-    }, this._sheetDuration + 24)
+    this.setData({ sheetOpen: false }, () => {
+      if (this._pageUnloaded
+        || this._sheetTransitionEpoch !== transitionEpoch
+        || this.data.activeOverlay !== 'device'
+        || this.data.sheetOpen) return
+      this._sheetCloseReady = true
+      const timer = setTimeout(() => {
+        if (this._sheetCloseTimer === timer) this._sheetCloseTimer = null
+        if (!this._pageUnloaded
+          && this._sheetTransitionEpoch === transitionEpoch
+          && this.data.activeOverlay === 'device'
+          && !this.data.sheetOpen) {
+          this._sheetCloseReady = false
+          this.setData({ activeOverlay: '', sheetOpen: false })
+        }
+      }, this._sheetDuration + 24)
+      this._sheetCloseTimer = timer
+    })
   },
 
   onSheetTransitionEnd(event) {
-    if (this.data.sheetOpen || !this.data.activeOverlay) return
+    if (this.data.sheetOpen || !this.data.activeOverlay || !this._sheetCloseReady) return
     if (event && event.target && event.currentTarget && event.target !== event.currentTarget) return
     if (this._sheetCloseTimer) clearTimeout(this._sheetCloseTimer)
     this._sheetCloseTimer = null
+    this._sheetCloseReady = false
+    this._sheetTransitionEpoch = (this._sheetTransitionEpoch || 0) + 1
     this.setData({ activeOverlay: '', sheetOpen: false })
   },
 
@@ -547,6 +583,8 @@ Page({
     if (this._sheetCloseTimer) clearTimeout(this._sheetCloseTimer)
     this._sheetOpenTimer = null
     this._sheetCloseTimer = null
+    this._sheetCloseReady = false
+    this._sheetTransitionEpoch = (this._sheetTransitionEpoch || 0) + 1
   },
 
   onOverlayMaskTap() {

@@ -1,7 +1,7 @@
 <view class="page-root">
   <scroll-view class="page-scroll" aria-label="LED 大屏尺寸" scroll-y="{{!projectDialogVisible && !reportPreviewVisible && !reportPreviewClosing}}" enhanced show-scrollbar="{{false}}">
     <view class="page-content">
-      <view class="result-card">
+      <view class="result-card" style="{{result && !inputPending && !inputError ? '' : resultAreaStyle}}">
         <view class="action-rail" aria-label="方案操作">
           <button class="action-button" aria-label="清空本次计算" bindtap="resetInputs"><view class="action-icon icon-reset"></view></button>
           <button class="action-button" aria-label="分享结果图片" disabled="{{!result || inputPending || inputError || isGeneratingReport}}" bindtap="openSharePreview"><view class="action-icon icon-share"></view></button>
@@ -61,7 +61,7 @@
               <view class="viewing-title">观看距离校核</view>
               <view class="viewing-actions">
                 <view class="viewing-status">{{result.statusLabel}}</view>
-                <view wx:if="{{result.statusKey !== 'fit'}}" class="viewing-details-toggle" bindtap="toggleViewingDetails">{{viewingDetailsExpanded ? '收起说明' : '查看说明'}}</view>
+                <view wx:if="{{result.statusKey !== 'fit'}}" class="viewing-details-toggle" bindtap="toggleViewingDetails" aria-expanded="{{viewingDetailsExpanded}}" aria-controls="led-viewing-details-content">{{viewingDetailsExpanded ? '收起说明' : '查看说明'}}</view>
               </view>
             </view>
             <view class="viewing-facts">
@@ -69,7 +69,11 @@
               <view><text>舒适距离</text><text>{{result.comfortableRangeText}}</text></view>
             </view>
             <view wx:if="{{result.viewingAssessmentText}}" class="viewing-note">{{result.viewingAssessmentText}}</view>
-            <view wx:if="{{viewingDetailsExpanded}}" class="viewing-details">{{result.viewingDetailsText}}</view>
+            <view id="led-viewing-details-content" class="disclosure-motion {{viewingDetailsExpanded ? 'disclosure-motion-open' : ''}}" aria-hidden="{{!viewingDetailsExpanded}}">
+              <view class="disclosure-motion-inner">
+                <view class="viewing-details">{{result.viewingDetailsText}}</view>
+              </view>
+            </view>
           </view>
         </view>
 

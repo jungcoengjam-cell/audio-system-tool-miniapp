@@ -2,7 +2,7 @@
   <view class="page-scroll">
     <view class="page-content">
       <view class="result-pane">
-        <view class="result-card result-card-tabs">
+        <view class="result-card result-card-tabs" style="{{canUseResultActions && !isCalculationPending ? '' : resultAreaStyle}}">
           <view class="result-tabs" role="tablist" aria-label="声压级结果分类">
             <view id="splTabResult" class="result-tab {{resultTab === 'spl' ? 'result-tab-active' : ''}} {{!canUseResultActions || isCalculationPending ? 'result-tab-disabled' : ''}}" role="tab" aria-selected="{{resultTab === 'spl'}}" aria-disabled="{{!canUseResultActions || isCalculationPending}}" aria-controls="splPanelResult" data-tab="spl" bindtap="onResultTabTap">声压级</view>
             <view id="splTabDistance" class="result-tab {{resultTab === 'distance' ? 'result-tab-active' : ''}} {{!canUseResultActions || isCalculationPending ? 'result-tab-disabled' : ''}}" role="tab" aria-selected="{{resultTab === 'distance'}}" aria-disabled="{{!canUseResultActions || isCalculationPending}}" aria-controls="splPanelDistance" data-tab="distance" bindtap="onResultTabTap">不同距离</view>

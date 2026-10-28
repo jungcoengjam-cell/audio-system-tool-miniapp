@@ -1,0 +1,1147 @@
+{
+  "schemaVersion": 1,
+  "baselineRevision": "20ee3484539640978814b9f70317b1ff7d5a551f",
+  "capturedFrom": "utils/tool-registry.js + pages/basis/presentation.js",
+  "sourceSha256": {
+    "registry": "4ef604811852d7206cf9ec97e1ffd86648c345fb0f412663a9ffd0434388f092",
+    "presentation": "934f5c468d89bcad986f5f654bea296f57f704adea1758222dd58b94396e424f"
+  },
+  "tools": [
+    {
+      "id": "cable",
+      "title": "线材选型",
+      "category": "布线",
+      "route": "/pages/cable/cable",
+      "icon": "/assets/home/module-cable-catalog.png",
+      "basis": {
+        "subject": "定压广播线与专业音箱线选型",
+        "summary": "公司对照表、带载系数与公式校核",
+        "what": "按单程布线距离、总功率和线材类型给出公司资料范围内的规格参考，并在表格不适用时保留公式下限与复核提示。",
+        "method": "定压广播线先按总功率 × 1.5 取设计带载功率，再按公司距离、功率档位查表；公式校核为 S ≥ P × L × 5。S 为单芯截面积（mm²），P 为设计带载功率（kW），L 为最远单程距离（km）。专业音箱线按公司表的设计功率档选择，长度用于核对 100 m 上限。",
+        "inputs": "总功率：W；最远单程距离：m；线材类别与室内/室外环境：用户选择。输出截面积：mm²，或公司表内线型。",
+        "sourceSummary": "带载 1.5 倍、线材规格对照表、距离档位及 S ≥ P × L × 5 均来自公司提供的《线材标准》，属于公司规则。",
+        "limits": "定压线距离不得超过 1000 m；表格覆盖范围以公司资料为准。实际工程还需核对敷设方式、温度、品牌参数和当地规范；公司公式不能替代施工校核。",
+        "sourceFiles": [
+          "utils/cable.js · calculateConstantVoltageCable / calculateProfessionalSpeakerCable",
+          "docs/cable-selection.md"
+        ]
+      },
+      "presentation": {
+        "pathSteps": [
+          {
+            "number": 1,
+            "label": "设计带载功率"
+          },
+          {
+            "number": 2,
+            "label": "公司距离与功率档位查表"
+          },
+          {
+            "number": 3,
+            "label": "公式下限与长度边界复核"
+          }
+        ],
+        "pathRows": [
+          {
+            "number": 1,
+            "first": {
+              "number": 1,
+              "label": "设计带载功率"
+            },
+            "second": {
+              "number": 2,
+              "label": "公司距离与功率档位查表"
+            }
+          },
+          {
+            "number": 2,
+            "first": {
+              "number": 3,
+              "label": "公式下限与长度边界复核"
+            },
+            "second": null
+          }
+        ],
+        "methodGroups": [
+          {
+            "number": 1,
+            "text": "定压广播线先按总功率 × 1.5 取设计带载功率，再按公司距离、功率档位查表；",
+            "lead": "",
+            "equation": ""
+          },
+          {
+            "number": 2,
+            "text": "公式校核为 S ≥ P × L × 5。",
+            "lead": "公式校核为 ",
+            "equation": "S ≥ P × L × 5。"
+          },
+          {
+            "number": 3,
+            "text": "S 为单芯截面积（mm²），P 为设计带载功率（kW），L 为最远单程距离（km）。",
+            "lead": "",
+            "equation": ""
+          },
+          {
+            "number": 4,
+            "text": "专业音箱线按公司表的设计功率档选择，长度用于核对 100 m 上限。",
+            "lead": "",
+            "equation": ""
+          }
+        ],
+        "inputRows": [
+          {
+            "id": "input-1",
+            "full": false,
+            "label": "总功率",
+            "separator": "：",
+            "meaning": "W",
+            "ending": "；"
+          },
+          {
+            "id": "input-2",
+            "full": false,
+            "label": "最远单程距离",
+            "separator": "：",
+            "meaning": "m",
+            "ending": "；"
+          },
+          {
+            "id": "input-3",
+            "full": false,
+            "label": "线材类别与室内/室外环境",
+            "separator": "：",
+            "meaning": "用户选择",
+            "ending": "。"
+          },
+          {
+            "id": "input-4",
+            "full": false,
+            "label": "输出截面积",
+            "separator": "：",
+            "meaning": "mm²，或公司表内线型",
+            "ending": "。"
+          }
+        ],
+        "sourceTags": [
+          "公司线材标准"
+        ],
+        "limitRows": [
+          {
+            "number": 1,
+            "text": "定压线距离不得超过 1000 m；表格覆盖范围以公司资料为准。"
+          },
+          {
+            "number": 2,
+            "text": "实际工程还需核对敷设方式、温度、品牌参数和当地规范；公司公式不能替代施工校核。"
+          }
+        ],
+        "quick": {
+          "purpose": "按单程布线距离、总功率和线材类别，提供公司资料范围内的规格参考。",
+          "method": "定压设计功率 P表=总功率×1.5；公司表按单程距离 m、功率 W 查档。公式中 P[kW]=P表[W]÷1000、L[km]=距离[m]÷1000，再按 S≥P×L×5 复核；专业线按公司档选，核对 100 m 上限。",
+          "parameters": [
+            {
+              "label": "单程距离",
+              "value": "输入 m；公式 L 用 km"
+            },
+            {
+              "label": "单芯截面积",
+              "value": "S（mm²）"
+            },
+            {
+              "label": "设计功率",
+              "value": "查表 W；公式 P 用 kW"
+            },
+            {
+              "label": "线材类别",
+              "value": "用户选择"
+            }
+          ],
+          "source": "带载系数、对照表和公式来自公司提供的《线材标准》，属于公司规则。",
+          "limit": "定压线单程距离不得超过 1000 m；公式和表格不能替代现场敷设与施工校核。",
+          "figureCaption": "量最远单程距离（m）；公司表按 m 与功率 W 查档，公式复核前换成 P[kW]、L[km]。",
+          "figureAlt": "功放到音箱的单程布线路径标出输入距离（m）；公司表用距离 m、设计功率 W 查档，公式复核前将 P表[W] 除以 1000 换成 P[kW]，将单程距离[m] 除以 1000 换成 L[km]，再按 S 大于等于 P 乘 L 乘 5 复核线芯截面积。"
+        },
+        "figure": {
+          "src": "/pages/basis/assets/cable.png",
+          "alt": "功放到音箱的单程布线路径标出输入距离（m）；公司表用距离 m、设计功率 W 查档，公式复核前将 P表[W] 除以 1000 换成 P[kW]，将单程距离[m] 除以 1000 换成 L[km]，再按 S 大于等于 P 乘 L 乘 5 复核线芯截面积。",
+          "caption": "量最远单程距离（m）；公司表按 m 与功率 W 查档，公式复核前换成 P[kW]、L[km]。"
+        },
+        "completeExplanation": {
+          "what": "按单程布线距离、总功率和线材类型给出公司资料范围内的规格参考，并在表格不适用时保留公式下限与复核提示。",
+          "method": "定压广播线先按总功率 × 1.5 取设计带载功率，再按公司距离、功率档位查表；公式校核为 S ≥ P × L × 5。S 为单芯截面积（mm²），P 为设计带载功率（kW），L 为最远单程距离（km）。专业音箱线按公司表的设计功率档选择，长度用于核对 100 m 上限。",
+          "inputs": "总功率：W；最远单程距离：m；线材类别与室内/室外环境：用户选择。输出截面积：mm²，或公司表内线型。",
+          "sourceSummary": "带载 1.5 倍、线材规格对照表、距离档位及 S ≥ P × L × 5 均来自公司提供的《线材标准》，属于公司规则。",
+          "limits": "定压线距离不得超过 1000 m；表格覆盖范围以公司资料为准。实际工程还需核对敷设方式、温度、品牌参数和当地规范；公司公式不能替代施工校核。"
+        }
+      }
+    },
+    {
+      "id": "gainStructure",
+      "title": "增益结构",
+      "category": "音频",
+      "route": "/pages/gain-structure/gain-structure",
+      "icon": "/assets/home/module-gain-structure-catalog.png",
+      "basis": {
+        "subject": "DSP 输出与功放满功率输入级对齐",
+        "summary": "dBFS、dBu、电压与对齐衰减",
+        "what": "估算 DSP 目标峰值与功放额定输出输入电平之间的差值，并提示将总衰减放在一个可核对的位置。",
+        "method": "当前设备标定下 DSP 输出 dBu = 电平 dBFS + 18.4。功放满功率输入优先读取说明书输入灵敏度；仅有电压增益时，以 V_amp = √(P_rated × Z_load)、V_in = V_amp ÷ 10^(Gain/20) 反算。系统对齐差值 = DSP 目标 dBu − 功放满功率输入 dBu。",
+        "inputs": "DSP 峰值：dBFS；输入级：V、dBu 或 dB；功放额定功率：W；负载：Ω；节目动态余量：dB。中间电压：V RMS。",
+        "sourceSummary": "功放输入级档位及功率点取各型号说明书；0 dBFS = +18.4 dBu 是本项目用户设备实测标定。默认目标峰值 −6 dBFS、节目动态余量 12 dB 是可调整的初始建议，不是行业固定值。",
+        "limits": "只建立电子电平关系，不控制设备，也不替代现场电压、削波和噪声测量。只用说明书明确列出的负载功率点，不做插值；未知功放档位需现场确认。",
+        "sourceFiles": [
+          "utils/gain-structure.js · calculateGainStructure",
+          "data/amplifier-input-stages.js",
+          "docs/gain-structure-calculation.md",
+          "docs/calculation.md"
+        ]
+      },
+      "presentation": {
+        "pathSteps": [
+          {
+            "number": 1,
+            "label": "DSP 输出标定"
+          },
+          {
+            "number": 2,
+            "label": "功放满功率输入级"
+          },
+          {
+            "number": 3,
+            "label": "计算系统对齐差值"
+          }
+        ],
+        "pathRows": [
+          {
+            "number": 1,
+            "first": {
+              "number": 1,
+              "label": "DSP 输出标定"
+            },
+            "second": {
+              "number": 2,
+              "label": "功放满功率输入级"
+            }
+          },
+          {
+            "number": 2,
+            "first": {
+              "number": 3,
+              "label": "计算系统对齐差值"
+            },
+            "second": null
+          }
+        ],
+        "methodGroups": [
+          {
+            "number": 1,
+            "text": "当前设备标定下 DSP 输出 dBu = 电平 dBFS + 18.4。",
+            "lead": "当前设备标定下 DSP 输出 ",
+            "equation": "dBu = 电平 dBFS + 18.4。"
+          },
+          {
+            "number": 2,
+            "text": "功放满功率输入优先读取说明书输入灵敏度；",
+            "lead": "",
+            "equation": ""
+          },
+          {
+            "number": 3,
+            "text": "仅有电压增益时，以 V_amp = √(P_rated × Z_load)、V_in = V_amp ÷ 10^(Gain/20) 反算。",
+            "lead": "仅有电压增益时，以 ",
+            "equation": "V_amp = √(P_rated × Z_load)、V_in = V_amp ÷ 10^(Gain/20) 反算。"
+          },
+          {
+            "number": 4,
+            "text": "系统对齐差值 = DSP 目标 dBu − 功放满功率输入 dBu。",
+            "lead": "",
+            "equation": "系统对齐差值 = DSP 目标 dBu − 功放满功率输入 dBu。"
+          }
+        ],
+        "inputRows": [
+          {
+            "id": "input-1",
+            "full": false,
+            "label": "DSP 峰值",
+            "separator": "：",
+            "meaning": "dBFS",
+            "ending": "；"
+          },
+          {
+            "id": "input-2",
+            "full": false,
+            "label": "输入级",
+            "separator": "：",
+            "meaning": "V、dBu 或 dB",
+            "ending": "；"
+          },
+          {
+            "id": "input-3",
+            "full": false,
+            "label": "功放额定功率",
+            "separator": "：",
+            "meaning": "W",
+            "ending": "；"
+          },
+          {
+            "id": "input-4",
+            "full": false,
+            "label": "负载",
+            "separator": "：",
+            "meaning": "Ω",
+            "ending": "；"
+          },
+          {
+            "id": "input-5",
+            "full": false,
+            "label": "节目动态余量",
+            "separator": "：",
+            "meaning": "dB",
+            "ending": "。"
+          },
+          {
+            "id": "input-6",
+            "full": false,
+            "label": "中间电压",
+            "separator": "：",
+            "meaning": "V RMS",
+            "ending": "。"
+          }
+        ],
+        "sourceTags": [
+          "用户设备实测",
+          "所选型号说明书"
+        ],
+        "limitRows": [
+          {
+            "number": 1,
+            "text": "只建立电子电平关系，不控制设备，也不替代现场电压、削波和噪声测量。"
+          },
+          {
+            "number": 2,
+            "text": "只用说明书明确列出的负载功率点，不做插值；未知功放档位需现场确认。"
+          }
+        ],
+        "quick": {
+          "purpose": "估算 DSP 目标峰值与功放额定输出输入电平的差值，明确总衰减的核对位置。",
+          "method": "当前设备标定下 dBu = dBFS + 18.4；优先读取功放说明书的满功率输入级，系统对齐差值 = DSP 目标 dBu − 功放满功率输入 dBu。",
+          "parameters": [
+            {
+              "label": "DSP 峰值",
+              "value": "dBFS"
+            },
+            {
+              "label": "功放输入级",
+              "value": "V / dBu / dB"
+            },
+            {
+              "label": "额定功率 / 负载",
+              "value": "W / Ω"
+            },
+            {
+              "label": "动态余量",
+              "value": "dB"
+            }
+          ],
+          "source": "功放输入级取型号说明书；+18.4 dBu 是本项目用户设备实测标定。",
+          "limit": "只估算电子电平关系，不替代现场电压、削波和噪声测量；+18.4 dBu 不通用于其他设备。",
+          "figureCaption": "DSP 的 dBFS 按本项目设备标定换成 dBu，再与功放满功率输入级对齐。",
+          "figureAlt": "DSP 输出电平刻度通过本项目设备实测标定对应到 dBu，并与功放说明书中的满功率输入参考线比较，得到系统对齐差值和总衰减位置。"
+        },
+        "figure": {
+          "src": "/pages/basis/assets/gainStructure.png",
+          "alt": "DSP 输出电平刻度通过本项目设备实测标定对应到 dBu，并与功放说明书中的满功率输入参考线比较，得到系统对齐差值和总衰减位置。",
+          "caption": "DSP 的 dBFS 按本项目设备标定换成 dBu，再与功放满功率输入级对齐。"
+        },
+        "completeExplanation": {
+          "what": "估算 DSP 目标峰值与功放额定输出输入电平之间的差值，并提示将总衰减放在一个可核对的位置。",
+          "method": "当前设备标定下 DSP 输出 dBu = 电平 dBFS + 18.4。功放满功率输入优先读取说明书输入灵敏度；仅有电压增益时，以 V_amp = √(P_rated × Z_load)、V_in = V_amp ÷ 10^(Gain/20) 反算。系统对齐差值 = DSP 目标 dBu − 功放满功率输入 dBu。",
+          "inputs": "DSP 峰值：dBFS；输入级：V、dBu 或 dB；功放额定功率：W；负载：Ω；节目动态余量：dB。中间电压：V RMS。",
+          "sourceSummary": "功放输入级档位及功率点取各型号说明书；0 dBFS = +18.4 dBu 是本项目用户设备实测标定。默认目标峰值 −6 dBFS、节目动态余量 12 dB 是可调整的初始建议，不是行业固定值。",
+          "limits": "只建立电子电平关系，不控制设备，也不替代现场电压、削波和噪声测量。只用说明书明确列出的负载功率点，不做插值；未知功放档位需现场确认。"
+        }
+      }
+    },
+    {
+      "id": "limiter",
+      "title": "限幅器",
+      "category": "音频",
+      "route": "/pages/limiter/limiter",
+      "icon": "/assets/home/module-limiter-catalog.png",
+      "basis": {
+        "subject": "由功放、音箱额定参数求 DSP 限幅阈值",
+        "summary": "负载、目标电压、dBu 与 dBFS",
+        "what": "按每通道总阻抗、音箱额定功率和功放明确标注的额定功率点，估算保护电压和 DSP 输入阈值。",
+        "method": "Z_total 按单只/串并联关系计算；V_speaker = √(P_speaker_total × Z_total)，V_amp = √(P_amp_rated × Z_total)，V_target = min(V_speaker, V_amp)。再按功放输入灵敏度换算 V_limiter = V_sensitivity × V_target ÷ V_amp；dBu = 20 × log10(V_limiter ÷ 0.775)，Threshold_dBFS = dBu − 18.4。",
+        "inputs": "额定阻抗：Ω；额定功率：W；数量：只；功放模式与接法；输入灵敏度：V；可选 HPF：Hz。输出阈值：dBFS，时间建议：ms。",
+        "sourceSummary": "功放与音箱参数取所选型号资料及说明书。18.4 dBu 来自用户设备按 1 kHz、0 dBFS、输出增益 0 dB 测得 6.45 V RMS 后换算并采用的一位小数，不适用于所有 DSP。",
+        "limits": "功放功率表只采用明确给出的阻抗点，不插值。HPF 只影响 Attack/Release 分档建议，不影响阈值；时间建议基于资料中的分档逻辑，不是统一行业标准。现场仍需核对接线和实际电平。",
+        "sourceFiles": [
+          "utils/limiter.js · calculateLimiter / calculateTiming",
+          "docs/calculation.md · 设备校准与算法说明"
+        ]
+      },
+      "presentation": {
+        "pathSteps": [
+          {
+            "number": 1,
+            "label": "汇总负载与功率"
+          },
+          {
+            "number": 2,
+            "label": "比较目标电压"
+          },
+          {
+            "number": 3,
+            "label": "换算输入灵敏度与 dBu"
+          },
+          {
+            "number": 4,
+            "label": "得到 dBFS 阈值"
+          }
+        ],
+        "pathRows": [
+          {
+            "number": 1,
+            "first": {
+              "number": 1,
+              "label": "汇总负载与功率"
+            },
+            "second": {
+              "number": 2,
+              "label": "比较目标电压"
+            }
+          },
+          {
+            "number": 2,
+            "first": {
+              "number": 3,
+              "label": "换算输入灵敏度与 dBu"
+            },
+            "second": {
+              "number": 4,
+              "label": "得到 dBFS 阈值"
+            }
+          }
+        ],
+        "methodGroups": [
+          {
+            "number": 1,
+            "text": "Z_total 按单只/串并联关系计算；",
+            "lead": "",
+            "equation": ""
+          },
+          {
+            "number": 2,
+            "text": "V_speaker = √(P_speaker_total × Z_total)，V_amp = √(P_amp_rated × Z_total)，V_target = min(V_speaker, V_amp)。",
+            "lead": "",
+            "equation": "V_speaker = √(P_speaker_total × Z_total)，V_amp = √(P_amp_rated × Z_total)，V_target = min(V_speaker, V_amp)。"
+          },
+          {
+            "number": 3,
+            "text": "再按功放输入灵敏度换算 V_limiter = V_sensitivity × V_target ÷ V_amp；",
+            "lead": "再按功放输入灵敏度换算 ",
+            "equation": "V_limiter = V_sensitivity × V_target ÷ V_amp；"
+          },
+          {
+            "number": 4,
+            "text": "dBu = 20 × log10(V_limiter ÷ 0.775)，Threshold_dBFS = dBu − 18.4。",
+            "lead": "",
+            "equation": "dBu = 20 × log10(V_limiter ÷ 0.775)，Threshold_dBFS = dBu − 18.4。"
+          }
+        ],
+        "inputRows": [
+          {
+            "id": "input-1",
+            "full": false,
+            "label": "额定阻抗",
+            "separator": "：",
+            "meaning": "Ω",
+            "ending": "；"
+          },
+          {
+            "id": "input-2",
+            "full": false,
+            "label": "额定功率",
+            "separator": "：",
+            "meaning": "W",
+            "ending": "；"
+          },
+          {
+            "id": "input-3",
+            "full": false,
+            "label": "数量",
+            "separator": "：",
+            "meaning": "只",
+            "ending": "；"
+          },
+          {
+            "id": "input-4",
+            "full": true,
+            "label": "",
+            "separator": "",
+            "meaning": "功放模式与接法；",
+            "ending": ""
+          },
+          {
+            "id": "input-5",
+            "full": false,
+            "label": "输入灵敏度",
+            "separator": "：",
+            "meaning": "V",
+            "ending": "；"
+          },
+          {
+            "id": "input-6",
+            "full": false,
+            "label": "可选 HPF",
+            "separator": "：",
+            "meaning": "Hz",
+            "ending": "。"
+          },
+          {
+            "id": "input-7",
+            "full": false,
+            "label": "输出阈值",
+            "separator": "：",
+            "meaning": "dBFS，时间建议：ms",
+            "ending": "。"
+          }
+        ],
+        "sourceTags": [
+          "用户设备实测",
+          "所选型号说明书"
+        ],
+        "limitRows": [
+          {
+            "number": 1,
+            "text": "功放功率表只采用明确给出的阻抗点，不插值。"
+          },
+          {
+            "number": 2,
+            "text": "HPF 只影响 Attack/Release 分档建议，不影响阈值；时间建议基于资料中的分档逻辑，不是统一行业标准。"
+          },
+          {
+            "number": 3,
+            "text": "现场仍需核对接线和实际电平。"
+          }
+        ],
+        "quick": {
+          "purpose": "按每通道总阻抗、音箱额定功率和功放明确的额定功率点，估算保护电压与 DSP 阈值。",
+          "method": "V_target = min(√(P_speaker × Z_total), √(P_amp × Z_total))；按功放输入灵敏度换成限幅电压，再计算 dBu 与 dBFS 阈值。",
+          "parameters": [
+            {
+              "label": "每通道总阻抗",
+              "value": "Ω"
+            },
+            {
+              "label": "额定功率 / 数量",
+              "value": "W / 只"
+            },
+            {
+              "label": "输入灵敏度",
+              "value": "V"
+            },
+            {
+              "label": "阈值",
+              "value": "dBFS"
+            }
+          ],
+          "source": "功放与音箱参数取所选型号资料及说明书；电平换算沿用本项目设备标定。",
+          "limit": "只使用说明书明确给出的功率点，不插值；+18.4 dBu 标定不适用于所有 DSP，阈值仍需现场核对。",
+          "figureCaption": "音箱保护电压与功放能力取较低者，再按输入灵敏度回推 DSP 限幅阈值。",
+          "figureAlt": "音箱保护电压 V speaker 与功放能力 V amp 取较小的保护目标电压；按输入灵敏度转为限幅电压、dBu 和 dBFS。"
+        },
+        "figure": {
+          "src": "/pages/basis/assets/limiter.png",
+          "alt": "音箱保护电压 V speaker 与功放能力 V amp 取较小的保护目标电压；按输入灵敏度转为限幅电压、dBu 和 dBFS。",
+          "caption": "音箱保护电压与功放能力取较低者，再按输入灵敏度回推 DSP 限幅阈值。"
+        },
+        "completeExplanation": {
+          "what": "按每通道总阻抗、音箱额定功率和功放明确标注的额定功率点，估算保护电压和 DSP 输入阈值。",
+          "method": "Z_total 按单只/串并联关系计算；V_speaker = √(P_speaker_total × Z_total)，V_amp = √(P_amp_rated × Z_total)，V_target = min(V_speaker, V_amp)。再按功放输入灵敏度换算 V_limiter = V_sensitivity × V_target ÷ V_amp；dBu = 20 × log10(V_limiter ÷ 0.775)，Threshold_dBFS = dBu − 18.4。",
+          "inputs": "额定阻抗：Ω；额定功率：W；数量：只；功放模式与接法；输入灵敏度：V；可选 HPF：Hz。输出阈值：dBFS，时间建议：ms。",
+          "sourceSummary": "功放与音箱参数取所选型号资料及说明书。18.4 dBu 来自用户设备按 1 kHz、0 dBFS、输出增益 0 dB 测得 6.45 V RMS 后换算并采用的一位小数，不适用于所有 DSP。",
+          "limits": "功放功率表只采用明确给出的阻抗点，不插值。HPF 只影响 Attack/Release 分档建议，不影响阈值；时间建议基于资料中的分档逻辑，不是统一行业标准。现场仍需核对接线和实际电平。"
+        }
+      }
+    },
+    {
+      "id": "spl",
+      "title": "声压级",
+      "category": "音频",
+      "route": "/pages/spl/spl",
+      "icon": "/assets/home/module-spl-catalog.png",
+      "basis": {
+        "subject": "音箱额定灵敏度下的自由场声压估算",
+        "summary": "灵敏度、额定功率、距离衰减与叠加",
+        "what": "根据产品资料中的灵敏度、额定功率、用户选择的数量和距离，估算单点理论声压级。",
+        "method": "1 m 基准 = sensitivityDb + 10 × log10(ratedPower) + summationGainDb；目标距离 SPL = 1 m 基准 − 20 × log10(distanceMeters)。多只音箱的叠加增益由工具选择的模式给出：非相干按 10 × log10(N)，相干按 20 × log10(N)。",
+        "inputs": "灵敏度：dB SPL；额定功率：W；距离：m（当前函数要求 ≥1 m）；音箱数量：只；叠加增益：dB。",
+        "sourceSummary": "灵敏度和额定功率取产品资料库中对应型号的说明书参数。采用资料所列的灵敏度口径；不同测试条件不会被换算成同一口径。",
+        "limits": "这是自由场理论估算，不是现场实测或工程验收。房间反射、指向性、频率、功率压缩、遮挡和多个声源的相位关系会改变结果；结果比较不能替代完整声学测量。",
+        "sourceFiles": [
+          "utils/spl.js · calculateSpeakerSpl / calculateSplAtDistance",
+          "data/equipment.js · 型号参数及 source 字段"
+        ]
+      },
+      "presentation": {
+        "pathSteps": [
+          {
+            "number": 1,
+            "label": "读取灵敏度与额定功率"
+          },
+          {
+            "number": 2,
+            "label": "按数量模式叠加"
+          },
+          {
+            "number": 3,
+            "label": "按目标距离衰减"
+          }
+        ],
+        "pathRows": [
+          {
+            "number": 1,
+            "first": {
+              "number": 1,
+              "label": "读取灵敏度与额定功率"
+            },
+            "second": {
+              "number": 2,
+              "label": "按数量模式叠加"
+            }
+          },
+          {
+            "number": 2,
+            "first": {
+              "number": 3,
+              "label": "按目标距离衰减"
+            },
+            "second": null
+          }
+        ],
+        "methodGroups": [
+          {
+            "number": 1,
+            "text": "1 m 基准 = sensitivityDb + 10 × log10(ratedPower) + summationGainDb；",
+            "lead": "",
+            "equation": "1 m 基准 = sensitivityDb + 10 × log10(ratedPower) + summationGainDb；"
+          },
+          {
+            "number": 2,
+            "text": "目标距离 SPL = 1 m 基准 − 20 × log10(distanceMeters)。",
+            "lead": "目标距离 ",
+            "equation": "SPL = 1 m 基准 − 20 × log10(distanceMeters)。"
+          },
+          {
+            "number": 3,
+            "text": "多只音箱的叠加增益由工具选择的模式给出：非相干按 10 × log10(N)，相干按 20 × log10(N)。",
+            "lead": "",
+            "equation": ""
+          }
+        ],
+        "inputRows": [
+          {
+            "id": "input-1",
+            "full": false,
+            "label": "灵敏度",
+            "separator": "：",
+            "meaning": "dB SPL",
+            "ending": "；"
+          },
+          {
+            "id": "input-2",
+            "full": false,
+            "label": "额定功率",
+            "separator": "：",
+            "meaning": "W",
+            "ending": "；"
+          },
+          {
+            "id": "input-3",
+            "full": false,
+            "label": "距离",
+            "separator": "：",
+            "meaning": "m（当前函数要求 ≥1 m）",
+            "ending": "；"
+          },
+          {
+            "id": "input-4",
+            "full": false,
+            "label": "音箱数量",
+            "separator": "：",
+            "meaning": "只",
+            "ending": "；"
+          },
+          {
+            "id": "input-5",
+            "full": false,
+            "label": "叠加增益",
+            "separator": "：",
+            "meaning": "dB",
+            "ending": "。"
+          }
+        ],
+        "sourceTags": [
+          "所选型号说明书"
+        ],
+        "limitRows": [
+          {
+            "number": 1,
+            "text": "这是自由场理论估算，不是现场实测或工程验收。"
+          },
+          {
+            "number": 2,
+            "text": "房间反射、指向性、频率、功率压缩、遮挡和多个声源的相位关系会改变结果；结果比较不能替代完整声学测量。"
+          }
+        ],
+        "quick": {
+          "purpose": "根据产品灵敏度、额定功率、音箱数量与距离，估算单点理论声压级。",
+          "method": "1 m 基准 = 灵敏度 + 10 × log₁₀(额定功率) + 叠加增益；目标 SPL = 1 m 基准 − 20 × log₁₀(距离)。",
+          "parameters": [
+            {
+              "label": "灵敏度",
+              "value": "dB SPL"
+            },
+            {
+              "label": "额定功率",
+              "value": "W"
+            },
+            {
+              "label": "目标距离",
+              "value": "m（≥ 1）"
+            },
+            {
+              "label": "数量 / 叠加模式",
+              "value": "只 / dB"
+            }
+          ],
+          "source": "灵敏度和额定功率取产品资料库的对应型号说明书，并按原标注口径计算。",
+          "limit": "自由场理论估算不包含房间反射、遮挡、指向性和复杂相位关系，不是现场实测或验收结果。",
+          "figureCaption": "以 1 m 灵敏度参考点为起点，沿自由场传播距离估算衰减。",
+          "figureAlt": "音箱周围的自由场波前以 1 米灵敏度参考点和目标距离 d 表示；通过距离衰减及多只音箱叠加增益计算目标声压。"
+        },
+        "figure": {
+          "src": "/pages/basis/assets/spl.png",
+          "alt": "音箱周围的自由场波前以 1 米灵敏度参考点和目标距离 d 表示；通过距离衰减及多只音箱叠加增益计算目标声压。",
+          "caption": "以 1 m 灵敏度参考点为起点，沿自由场传播距离估算衰减。"
+        },
+        "completeExplanation": {
+          "what": "根据产品资料中的灵敏度、额定功率、用户选择的数量和距离，估算单点理论声压级。",
+          "method": "1 m 基准 = sensitivityDb + 10 × log10(ratedPower) + summationGainDb；目标距离 SPL = 1 m 基准 − 20 × log10(distanceMeters)。多只音箱的叠加增益由工具选择的模式给出：非相干按 10 × log10(N)，相干按 20 × log10(N)。",
+          "inputs": "灵敏度：dB SPL；额定功率：W；距离：m（当前函数要求 ≥1 m）；音箱数量：只；叠加增益：dB。",
+          "sourceSummary": "灵敏度和额定功率取产品资料库中对应型号的说明书参数。采用资料所列的灵敏度口径；不同测试条件不会被换算成同一口径。",
+          "limits": "这是自由场理论估算，不是现场实测或工程验收。房间反射、指向性、频率、功率压缩、遮挡和多个声源的相位关系会改变结果；结果比较不能替代完整声学测量。"
+        }
+      }
+    },
+    {
+      "id": "camera",
+      "title": "摄像机视场角",
+      "category": "视频",
+      "route": "/pages/camera/camera",
+      "icon": "/assets/home/module-camera-catalog.png",
+      "basis": {
+        "subject": "地面区域与垂直目标面的完整安装几何",
+        "summary": "俯仰、目标角点投影、双轴视场与余量",
+        "what": "依据真实拍摄区域或垂直目标面估算水平退距、镜头中心高度建议，并校核视场角能否容纳目标。",
+        "method": "算法构造地面区域近/远端与底/顶的 8 个三维角点，或垂直平面的 4 个角点；以真实目标垂直方向角包络中心确定俯仰。将每个角点投影到相机 forward/right/up 坐标：q_right = ((P−C)·r)/((P−C)·f)，q_up = ((P−C)·u)/((P−C)·f)。投影包络按总宽、高余量扩张，再分别校核 ±tan(水平/垂直视场角 ÷ 2)，求最小完整可行退距。每个候选距离都会重算俯仰与投影。",
+        "inputs": "区域宽度、纵深、目标底/顶高度、安装高度：m；水平/垂直视场角及俯仰：°；构图余量：比例。默认余量 10% 表示总投影宽、高各增加 10%，两侧均分。",
+        "sourceSummary": "视场角取产品资料库所选镜头说明书中明确列出的水平、垂直参数；目标尺寸、安装位置与构图余量来自用户输入或页面建议。自动镜头高度是便于落地的建议，不是唯一解。",
+        "limits": "仅当说明书同时给出水平与垂直视场角时才计算完整安装距离。理论值仅适用于页面采用的瞄准规则与针孔模型，不代表其它朝向下的全局最优。只有水平角时只算水平约束并明确标注未完成垂直校核。变焦统一按说明书广角端；不含畸变、防抖裁切、遮挡、分辨率与识别距离。结果需用实际画面复核。",
+        "sourceFiles": [
+          "utils/camera-fov.js · calculateGroundAreaPlacement / calculateVerticalPlanePlacement",
+          "utils/camera-framing.js · framingEnvelope / solveFramingDistance",
+          "data/cameras.js · 型号视场角及说明书来源",
+          "docs/camera-fov-calculation.md"
+        ]
+      },
+      "presentation": {
+        "pathSteps": [
+          {
+            "number": 1,
+            "label": "建立目标角点"
+          },
+          {
+            "number": 2,
+            "label": "投影到相机坐标"
+          },
+          {
+            "number": 3,
+            "label": "扩张投影包络"
+          },
+          {
+            "number": 4,
+            "label": "校核水平与垂直视场"
+          }
+        ],
+        "pathRows": [
+          {
+            "number": 1,
+            "first": {
+              "number": 1,
+              "label": "建立目标角点"
+            },
+            "second": {
+              "number": 2,
+              "label": "投影到相机坐标"
+            }
+          },
+          {
+            "number": 2,
+            "first": {
+              "number": 3,
+              "label": "扩张投影包络"
+            },
+            "second": {
+              "number": 4,
+              "label": "校核水平与垂直视场"
+            }
+          }
+        ],
+        "methodGroups": [
+          {
+            "number": 1,
+            "text": "算法构造地面区域近/远端与底/顶的 8 个三维角点，或垂直平面的 4 个角点；",
+            "lead": "",
+            "equation": ""
+          },
+          {
+            "number": 2,
+            "text": "以真实目标垂直方向角包络中心确定俯仰。",
+            "lead": "",
+            "equation": ""
+          },
+          {
+            "number": 3,
+            "text": "将每个角点投影到相机 forward/right/up 坐标：q_right = ((P−C)·r)/((P−C)·f)，q_up = ((P−C)·u)/((P−C)·f)。",
+            "lead": "将每个角点投影到相机 forward/right/up 坐标：",
+            "equation": "q_right = ((P−C)·r)/((P−C)·f)，q_up = ((P−C)·u)/((P−C)·f)。"
+          },
+          {
+            "number": 4,
+            "text": "投影包络按总宽、高余量扩张，再分别校核 ±tan(水平/垂直视场角 ÷ 2)，求最小完整可行退距。",
+            "lead": "",
+            "equation": ""
+          },
+          {
+            "number": 5,
+            "text": "每个候选距离都会重算俯仰与投影。",
+            "lead": "",
+            "equation": ""
+          }
+        ],
+        "inputRows": [
+          {
+            "id": "input-1",
+            "full": false,
+            "label": "区域宽度、纵深、目标底/顶高度、安装高度",
+            "separator": "：",
+            "meaning": "m",
+            "ending": "；"
+          },
+          {
+            "id": "input-2",
+            "full": false,
+            "label": "水平/垂直视场角及俯仰",
+            "separator": "：",
+            "meaning": "°",
+            "ending": "；"
+          },
+          {
+            "id": "input-3",
+            "full": false,
+            "label": "构图余量",
+            "separator": "：",
+            "meaning": "比例",
+            "ending": "。"
+          },
+          {
+            "id": "input-4",
+            "full": true,
+            "label": "",
+            "separator": "",
+            "meaning": "默认余量 10% 表示总投影宽、高各增加 10%，两侧均分。",
+            "ending": ""
+          }
+        ],
+        "sourceTags": [
+          "所选型号说明书",
+          "用户输入"
+        ],
+        "limitRows": [
+          {
+            "number": 1,
+            "text": "仅当说明书同时给出水平与垂直视场角时才计算完整安装距离。"
+          },
+          {
+            "number": 2,
+            "text": "理论值仅适用于页面采用的瞄准规则与针孔模型，不代表其它朝向下的全局最优。"
+          },
+          {
+            "number": 3,
+            "text": "只有水平角时只算水平约束并明确标注未完成垂直校核。"
+          },
+          {
+            "number": 4,
+            "text": "变焦统一按说明书广角端；不含畸变、防抖裁切、遮挡、分辨率与识别距离。结果需用实际画面复核。"
+          }
+        ],
+        "quick": {
+          "purpose": "根据拍摄区域或垂直目标面估算退距和镜头中心高度，并校核目标是否落入视场。",
+          "method": "投影地面区域 8 个角点或垂直目标面 4 个角点，扩张投影包络并分别校核水平、垂直视场；每个候选退距都重算俯仰与投影。",
+          "parameters": [
+            {
+              "label": "目标尺寸 / 安装高度",
+              "value": "m"
+            },
+            {
+              "label": "水平 / 垂直视场角",
+              "value": "°"
+            },
+            {
+              "label": "俯仰角",
+              "value": "°"
+            },
+            {
+              "label": "构图余量",
+              "value": "比例"
+            }
+          ],
+          "source": "视场角取所选镜头说明书；目标尺寸、安装位置和构图余量取用户输入或页面建议。",
+          "limit": "图为非比例几何示意；完整退距要求同时有水平与垂直视场角，结果还需用实际画面复核。",
+          "figureCaption": "非比例示意：完整几何角点投影、扩张包络后分别检查水平与垂直视场。",
+          "figureAlt": "非比例安装几何示意：地面区域按近远、底顶建立八个角点，垂直目标面有四个角点；相机按退距和俯仰将角点投影成包络，再分别校核水平及垂直视场边界。"
+        },
+        "figure": {
+          "src": "/pages/basis/assets/camera.png",
+          "alt": "非比例安装几何示意：地面区域按近远、底顶建立八个角点，垂直目标面有四个角点；相机按退距和俯仰将角点投影成包络，再分别校核水平及垂直视场边界。",
+          "caption": "非比例示意：完整几何角点投影、扩张包络后分别检查水平与垂直视场。"
+        },
+        "completeExplanation": {
+          "what": "依据真实拍摄区域或垂直目标面估算水平退距、镜头中心高度建议，并校核视场角能否容纳目标。",
+          "method": "算法构造地面区域近/远端与底/顶的 8 个三维角点，或垂直平面的 4 个角点；以真实目标垂直方向角包络中心确定俯仰。将每个角点投影到相机 forward/right/up 坐标：q_right = ((P−C)·r)/((P−C)·f)，q_up = ((P−C)·u)/((P−C)·f)。投影包络按总宽、高余量扩张，再分别校核 ±tan(水平/垂直视场角 ÷ 2)，求最小完整可行退距。每个候选距离都会重算俯仰与投影。",
+          "inputs": "区域宽度、纵深、目标底/顶高度、安装高度：m；水平/垂直视场角及俯仰：°；构图余量：比例。默认余量 10% 表示总投影宽、高各增加 10%，两侧均分。",
+          "sourceSummary": "视场角取产品资料库所选镜头说明书中明确列出的水平、垂直参数；目标尺寸、安装位置与构图余量来自用户输入或页面建议。自动镜头高度是便于落地的建议，不是唯一解。",
+          "limits": "仅当说明书同时给出水平与垂直视场角时才计算完整安装距离。理论值仅适用于页面采用的瞄准规则与针孔模型，不代表其它朝向下的全局最优。只有水平角时只算水平约束并明确标注未完成垂直校核。变焦统一按说明书广角端；不含畸变、防抖裁切、遮挡、分辨率与识别距离。结果需用实际画面复核。"
+        }
+      }
+    },
+    {
+      "id": "ledScreen",
+      "title": "LED 大屏",
+      "category": "视频",
+      "route": "/pages/led-screen/led-screen",
+      "icon": "/assets/home/module-led-screen-catalog.png",
+      "basis": {
+        "subject": "规则墙面上的 LED 屏体整数拼装预估",
+        "summary": "净屏尺寸、包边余量、点间距与估算分辨率",
+        "what": "从墙面净空间和单元规格枚举整数行列组合，给出净屏尺寸、安装外尺寸、墙面余量及点间距观看距离参考。",
+        "method": "屏体宽、高 = 横向、纵向整数数量 × 单元宽、高。候选组合先按目标比例误差 ≤5% 筛选并选面积最大者；无候选时取比例误差最小、面积较大的组合。含包边安装尺寸 = 净屏尺寸 + 两侧包边。估算像素 = 净尺寸 ÷ 标称点间距并取最近整数。推荐点间距从工具内置常规规格中选择满足最近距离 ≥1.7P 的最大值；没有规格满足时选最细规格并提示观看位置偏近。",
+        "inputs": "墙体、上下预留和观看距离：m；包边：cm/边；单元尺寸：mm；内部统一换算为 m 计算；目标画面比例；点间距 P：mm。输出净屏和包边尺寸：m，拼装数量：块，分辨率：估算像素。",
+        "sourceSummary": "模组与箱体尺寸及公司常规点间距采用当前工具的内置规格；墙面尺寸、包边、观看距离和目标画面比例来自用户输入。观看距离是前期参考，不是验收标准。",
+        "limits": "结果是规则矩形墙面的前期预估，不替代结构、供配电、控制系统和安装深化。整数拼接可能带来比例偏差；估算分辨率依据标称点间距，不能代替厂家实际像素矩阵。点间距观看范围是工具参考，不是验收标准。",
+        "sourceFiles": [
+          "utils/led-screen.js · calculateLedScreenPlan",
+          "docs/led-screen-calculation.md"
+        ]
+      },
+      "presentation": {
+        "pathSteps": [
+          {
+            "number": 1,
+            "label": "枚举整数行列"
+          },
+          {
+            "number": 2,
+            "label": "筛选画面比例"
+          },
+          {
+            "number": 3,
+            "label": "计算尺寸与估算像素"
+          }
+        ],
+        "pathRows": [
+          {
+            "number": 1,
+            "first": {
+              "number": 1,
+              "label": "枚举整数行列"
+            },
+            "second": {
+              "number": 2,
+              "label": "筛选画面比例"
+            }
+          },
+          {
+            "number": 2,
+            "first": {
+              "number": 3,
+              "label": "计算尺寸与估算像素"
+            },
+            "second": null
+          }
+        ],
+        "methodGroups": [
+          {
+            "number": 1,
+            "text": "屏体宽、高 = 横向、纵向整数数量 × 单元宽、高。",
+            "lead": "",
+            "equation": "屏体宽、高 = 横向、纵向整数数量 × 单元宽、高。"
+          },
+          {
+            "number": 2,
+            "text": "候选组合先按目标比例误差 ≤5% 筛选并选面积最大者；",
+            "lead": "",
+            "equation": "候选组合先按目标比例误差 ≤5% 筛选并选面积最大者；"
+          },
+          {
+            "number": 3,
+            "text": "无候选时取比例误差最小、面积较大的组合。",
+            "lead": "",
+            "equation": ""
+          },
+          {
+            "number": 4,
+            "text": "含包边安装尺寸 = 净屏尺寸 + 两侧包边。",
+            "lead": "",
+            "equation": "含包边安装尺寸 = 净屏尺寸 + 两侧包边。"
+          },
+          {
+            "number": 5,
+            "text": "估算像素 = 净尺寸 ÷ 标称点间距并取最近整数。",
+            "lead": "",
+            "equation": "估算像素 = 净尺寸 ÷ 标称点间距并取最近整数。"
+          },
+          {
+            "number": 6,
+            "text": "推荐点间距从工具内置常规规格中选择满足最近距离 ≥1.7P 的最大值；",
+            "lead": "",
+            "equation": "推荐点间距从工具内置常规规格中选择满足最近距离 ≥1.7P 的最大值；"
+          },
+          {
+            "number": 7,
+            "text": "没有规格满足时选最细规格并提示观看位置偏近。",
+            "lead": "",
+            "equation": ""
+          }
+        ],
+        "inputRows": [
+          {
+            "id": "input-1",
+            "full": false,
+            "label": "墙体、上下预留和观看距离",
+            "separator": "：",
+            "meaning": "m",
+            "ending": "；"
+          },
+          {
+            "id": "input-2",
+            "full": false,
+            "label": "包边",
+            "separator": "：",
+            "meaning": "cm/边",
+            "ending": "；"
+          },
+          {
+            "id": "input-3",
+            "full": false,
+            "label": "单元尺寸",
+            "separator": "：",
+            "meaning": "mm",
+            "ending": "；"
+          },
+          {
+            "id": "input-4",
+            "full": true,
+            "label": "",
+            "separator": "",
+            "meaning": "内部统一换算为 m 计算；",
+            "ending": ""
+          },
+          {
+            "id": "input-5",
+            "full": true,
+            "label": "",
+            "separator": "",
+            "meaning": "目标画面比例；",
+            "ending": ""
+          },
+          {
+            "id": "input-6",
+            "full": false,
+            "label": "点间距 P",
+            "separator": "：",
+            "meaning": "mm",
+            "ending": "。"
+          },
+          {
+            "id": "input-7",
+            "full": false,
+            "label": "输出净屏和包边尺寸",
+            "separator": "：",
+            "meaning": "m，拼装数量：块，分辨率：估算像素",
+            "ending": "。"
+          }
+        ],
+        "sourceTags": [
+          "用户输入",
+          "工具内置规格"
+        ],
+        "limitRows": [
+          {
+            "number": 1,
+            "text": "结果是规则矩形墙面的前期预估，不替代结构、供配电、控制系统和安装深化。"
+          },
+          {
+            "number": 2,
+            "text": "整数拼接可能带来比例偏差；估算分辨率依据标称点间距，不能代替厂家实际像素矩阵。"
+          },
+          {
+            "number": 3,
+            "text": "点间距观看范围是工具参考，不是验收标准。"
+          }
+        ],
+        "quick": {
+          "purpose": "在墙面净空间内筛选整数模组行列，估算净屏尺寸、安装外尺寸和分辨率。",
+          "method": "屏体宽高 = 对应方向整数数量 × 单元尺寸；安装外尺寸 = 净屏尺寸 + 两侧包边，估算像素 = 净尺寸 ÷ 标称点间距 P。",
+          "parameters": [
+            {
+              "label": "墙面尺寸 / 观看距离",
+              "value": "m"
+            },
+            {
+              "label": "包边",
+              "value": "cm / 边"
+            },
+            {
+              "label": "单元尺寸",
+              "value": "mm"
+            },
+            {
+              "label": "目标比例 / 点间距",
+              "value": "P（mm）"
+            }
+          ],
+          "source": "模组、箱体与常规点间距取工具内置规格；墙面、包边、观看距离和比例来自用户输入。",
+          "limit": "仅作规则矩形墙面的前期预估；不能替代结构、供配电、控制系统深化或厂家实际像素矩阵。",
+          "figureCaption": "墙面尺寸扣除上下预留与包边后，以整数行列拼出净屏。",
+          "figureAlt": "矩形墙面标出上下预留、LED 净屏和按厘米每边输入的包边；内部网格表示整数行列模组，净屏尺寸以米计。"
+        },
+        "figure": {
+          "src": "/pages/basis/assets/ledScreen.png",
+          "alt": "矩形墙面标出上下预留、LED 净屏和按厘米每边输入的包边；内部网格表示整数行列模组，净屏尺寸以米计。",
+          "caption": "墙面尺寸扣除上下预留与包边后，以整数行列拼出净屏。"
+        },
+        "completeExplanation": {
+          "what": "从墙面净空间和单元规格枚举整数行列组合，给出净屏尺寸、安装外尺寸、墙面余量及点间距观看距离参考。",
+          "method": "屏体宽、高 = 横向、纵向整数数量 × 单元宽、高。候选组合先按目标比例误差 ≤5% 筛选并选面积最大者；无候选时取比例误差最小、面积较大的组合。含包边安装尺寸 = 净屏尺寸 + 两侧包边。估算像素 = 净尺寸 ÷ 标称点间距并取最近整数。推荐点间距从工具内置常规规格中选择满足最近距离 ≥1.7P 的最大值；没有规格满足时选最细规格并提示观看位置偏近。",
+          "inputs": "墙体、上下预留和观看距离：m；包边：cm/边；单元尺寸：mm；内部统一换算为 m 计算；目标画面比例；点间距 P：mm。输出净屏和包边尺寸：m，拼装数量：块，分辨率：估算像素。",
+          "sourceSummary": "模组与箱体尺寸及公司常规点间距采用当前工具的内置规格；墙面尺寸、包边、观看距离和目标画面比例来自用户输入。观看距离是前期参考，不是验收标准。",
+          "limits": "结果是规则矩形墙面的前期预估，不替代结构、供配电、控制系统和安装深化。整数拼接可能带来比例偏差；估算分辨率依据标称点间距，不能代替厂家实际像素矩阵。点间距观看范围是工具参考，不是验收标准。"
+        }
+      }
+    }
+  ]
+}

@@ -159,6 +159,12 @@ function createSplProjectMethods(runtime = {}) {
       return true
     },
 
+    cancelProjectSheetClose() {
+      if (this._projectCloseTimer) clearTimeout(this._projectCloseTimer)
+      this._projectCloseTimer = null
+      this._projectCloseRevision = (this._projectCloseRevision || 0) + 1
+    },
+
     refreshProjects() {
       let snapshot
       try { snapshot = getWorkspaceSnapshot({ forceRefresh: true }) } catch (error) { snapshot = null }
@@ -489,6 +495,7 @@ function createSplProjectMethods(runtime = {}) {
       if (!this.data.projectSheetVisible || this.data.projectSheetClosing) return false
       this.invalidateProjectSave({ updateView: false })
       this._projectSnapshotForSave = null
+      this.cancelProjectSheetClose()
       const closeRevision = (this._projectCloseRevision || 0) + 1
       this._projectCloseRevision = closeRevision
       this._projectRevision = (this._projectRevision || 0) + 1
@@ -498,11 +505,17 @@ function createSplProjectMethods(runtime = {}) {
         projectRevision: this._projectRevision,
         isSavingProject: false,
         ...keyboard,
+      }, () => {
+        if (this._isUnloaded || this._projectCloseRevision !== closeRevision
+          || !this.data.projectSheetVisible || !this.data.projectSheetClosing) return
+        const timer = setTimeout(() => {
+          if (this._projectCloseTimer === timer) this._projectCloseTimer = null
+          if (this._isUnloaded || this._projectCloseRevision !== closeRevision
+            || !this.data.projectSheetVisible || !this.data.projectSheetClosing) return
+          this.setData({ projectSheetVisible: false, projectSheetClosing: false, projectStep: 'select' })
+        }, SHEET_TRANSITION_DURATION)
+        this._projectCloseTimer = timer
       })
-      setTimeout(() => {
-        if (this._isUnloaded || this._projectCloseRevision !== closeRevision) return
-        this.setData({ projectSheetVisible: false, projectSheetClosing: false, projectStep: 'select' })
-      }, SHEET_TRANSITION_DURATION)
       return true
     },
 

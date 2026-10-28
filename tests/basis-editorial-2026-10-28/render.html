@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    html,body{width:750px;height:560px;margin:0;padding:0;overflow:hidden;background:#f7f9fb}
+    img{display:block;width:750px;height:560px}
+  </style>
+</head>
+<body>
+  <img id="illustration" alt="">
+  <script>
+    const id = new URLSearchParams(location.search).get('id')
+    if (!['cable', 'gainStructure', 'limiter', 'spl', 'camera', 'ledScreen'].includes(id)) throw new Error('Invalid basis illustration id')
+    document.querySelector('#illustration').src = 'diagrams/' + id + '.svg'
+  </script>
+</body>
+</html>
