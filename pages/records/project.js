@@ -13,7 +13,7 @@ const {
 } = require('../../utils/records')
 const { openProjectDraft, openRecordEditor } = require('../../utils/result-record-context')
 const { readLightingWorkspace, calculateScheme, saveLightingScheme } = require('../dmx-layout/lighting-workspace')
-const { buildProjectContentView } = require('./project-view-model')
+const { buildProjectContentView, getLightingPlacementSummary } = require('./project-view-model')
 
 const PROJECT_VIEW_FILTERS = [
   { key: 'all', label: '全部' },
@@ -140,7 +140,8 @@ function filterProjectRows(page) {
     searchText: page.data.projectSearchText,
     wiringSchedule: page._projectWiringSchedule,
     lightingFixtures: page._projectLightingFixtures,
-    lightingReadError: page.data.project?.lightingReadError,
+    hasLightingContext: Boolean(page.data.project && page.data.project.hasLighting),
+    lightingSummaryError: page.data.project?.lightingSummaryError,
   })
   const recordGroups = groupRecords(decorateRecords(view.visibleRecords)).map((group) => ({
     ...group,
@@ -160,6 +161,8 @@ function filterProjectRows(page) {
     visibleRecordCount: view.visibleRecords.length,
     wiringLines,
     lightingFixtures,
+    matchedLightingFixtureCount: view.visibleLightingFixtures.length,
+    hasProjectSearch: Boolean(String(page.data.projectSearchText || '').trim()),
     showWiring: view.showWiring,
     showLighting: view.showLighting,
     showCalculations: view.showCalculations,
@@ -294,6 +297,8 @@ Page({
     visibleRecordCount: 0,
     showWiring: false,
     showLighting: false,
+    matchedLightingFixtureCount: 0,
+    hasProjectSearch: false,
     showCalculations: true,
     projectSearchEmpty: false,
     projectTypeEmpty: false,
@@ -429,6 +434,15 @@ Page({
     this._projectLightingFixtures = lightingCalculation?.ok && lightingCalculation.valid
       ? lightingCalculation.result.fixtures
       : []
+    const lightingSummaryError = !lightingState.ok
+      ? lightingState.error
+      : lightingState.exists && (!lightingCalculation?.ok || !lightingCalculation.valid)
+        ? lightingCalculation?.error || '灯位方案暂不可用。'
+        : ''
+    const lightingPlacement = getLightingPlacementSummary(
+      lightingState.ok && lightingState.scheme ? lightingState.scheme.layout : null,
+      this._projectLightingFixtures,
+    )
 
     const rawRecords = allRecords.filter((record) => record.projectIds?.includes(project.id))
       .map((record) => getProjectRecordView(record, project.id))
@@ -488,7 +502,9 @@ Page({
       hasLighting: Boolean(lightingState.ok && lightingState.exists),
       lightingRevision: Number(lightingState.revision) || 0,
       lightingFixtureCount,
-      lightingReadError: lightingState.ok ? '' : lightingState.error,
+      lightingPlacedCount: lightingPlacement.placedCount,
+      lightingGroundCount: lightingPlacement.groundCount,
+      lightingSummaryError,
     }
     this.rawRecords = rawRecords
     this._projectWiringSchedule = project.wiringSchedule || {}
@@ -582,7 +598,7 @@ Page({
       success: ({ tapIndex }) => {
         if (tapIndex === 0) this.openProjectCalculatorPicker()
         if (tapIndex === 1) this.openProjectWiring()
-        if (tapIndex === 2) this.openProjectLighting()
+        if (tapIndex === 2) this.openProjectLightingAddress()
       },
     })
   },
@@ -724,6 +740,12 @@ Page({
   openProjectLighting(event) {
     const fixtureId = String(event?.currentTarget?.dataset?.id || '')
     if (fixtureId && consumeProjectSwipeTap(this, 'lighting', fixtureId)) return
+    if (this.data.workspaceError || !this.projectId) return
+    prepareProjectNavigation(this)
+    wx.navigateTo({ url: `/pages/dmx-layout/dmx-layout?lightingContextId=${encodeURIComponent(this.projectId)}` })
+  },
+
+  openProjectLightingAddress() {
     if (this.data.workspaceError || !this.projectId) return
     prepareProjectNavigation(this)
     const module = MODULES.dmxAddress

@@ -172,13 +172,23 @@ function mockContext() {
 }
 for (const report of [grouped, incomplete, maxReport, imported]) {
   report.pages.forEach((page) => {
+    const defaultTheme = mockContext()
     const light = mockContext()
     const dark = mockContext()
+    drawScheduleReport(defaultTheme.context, page)
     drawScheduleReport(light.context, page, { theme: 'light' })
     drawScheduleReport(dark.context, page, { theme: 'dark' })
-    assert.deepEqual(light.calls, dark.calls, 'project export remains a shared white template')
+    assert.deepEqual(defaultTheme.calls, light.calls, 'project export defaults to the existing light template')
     assert.deepEqual(light.calls[0], ['setFillStyle', '#ffffff'])
+    const withoutColors = (calls) => calls.map((call) => (
+      ['setFillStyle', 'setStrokeStyle'].includes(call[0]) ? [call[0], '<color>'] : call
+    ))
+    assert.deepEqual(withoutColors(light.calls), withoutColors(dark.calls),
+      'dark project export preserves every non-color Canvas command')
+    assert.notEqual(dark.calls[0][1], light.calls[0][1], 'dark project export uses a dark page surface')
     const drawn = light.calls.filter(([method]) => method === 'fillText').map(([, text]) => text)
+    const darkDrawn = dark.calls.filter(([method]) => method === 'fillText').map(([, text]) => text)
+    assert.deepEqual(darkDrawn, drawn, 'dark project export keeps all report text')
     page.rows.flatMap((row) => row.drawItems).forEach((item) => assert.ok(drawn.includes(item.text), 'Canvas draws ' + item.fieldId))
     assert.equal(light.calls.filter(([method]) => method === 'arc').length, 0,
       'project Canvas draws plain numbers without number circles or endpoint/cable diagrams')

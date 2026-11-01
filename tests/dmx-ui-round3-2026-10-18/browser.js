@@ -17,7 +17,11 @@ function evaluate(expression, scope) {
   try { return Function('scope', `with(scope){return (${expression})}`)(scope) }
   catch (error) { if (!/Cannot read properties of (?:undefined|null)/.test(error.message)) errors.push(`${expression}: ${error.message}`); return '' }
 }
-function value(source, scope) { const match = String(source).match(/^\{\{([\s\S]*)\}\}$/); return match ? evaluate(match[1], scope) : source }
+function value(source, scope) {
+  const text = String(source)
+  const match = text.match(/^\{\{([\s\S]*)\}\}$/)
+  return match && (text.match(/\{\{/g) || []).length === 1 ? evaluate(match[1], scope) : source
+}
 function interpolate(source, scope) { return String(source).replace(/\{\{([\s\S]*?)\}\}/g, (_, expression) => String(evaluate(expression, scope) ?? '')) }
 async function loadText(url) { const target = new URL(url, location.origin); if (query.get('sourceVersion') === 'before') target.searchParams.set('qaNativeBefore', '1'); const result = await fetch(target, { cache: 'no-store' }); if (!result.ok) throw Error(`${url}: ${result.status}`); return result.text() }
 async function cssFile(url) {

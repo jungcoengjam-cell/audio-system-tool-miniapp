@@ -702,7 +702,7 @@ assert(detailTemplate.includes('data-index="{{tab.sourceIndex}}"')
 assert(detailTemplate.includes('copyManualCommand') && detailTemplate.includes('copyProtocolCommand')
   && detailTemplate.includes('previewDirectoryPhoto') && detailTemplate.includes('selectDevice')
   && !detailTemplate.includes('class="directory-row {{item.selected ? \'directory-row-selected\' : \'\'}}" data-type')
-  && detailTemplate.includes('class="directory-list" style="height:{{directoryListHeight}}rpx"'),
+  && detailTemplate.includes('class="directory-list device-picker-list" style="height:{{directoryListHeight}}rpx"'),
   '命令复制、目录选择和原生照片预览保持独立操作')
 assert(detailTemplate.includes('mode="aspectFit"') && detailTemplate.includes('bindtap="previewPhoto"')
   && detailTemplate.includes('binderror="onPhotoError"')

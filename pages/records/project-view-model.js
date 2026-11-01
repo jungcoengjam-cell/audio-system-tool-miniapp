@@ -12,6 +12,40 @@ function containsQuery(values, query) {
   return values.some((value) => text(value).toLowerCase().includes(query))
 }
 
+function getLightingPlacementSummary(layoutValue, fixtureValue) {
+  const layout = layoutValue && typeof layoutValue === 'object' ? layoutValue : {}
+  const positionsById = layout.positionsById && typeof layout.positionsById === 'object'
+    ? layout.positionsById
+    : {}
+  const rods = [
+    ...(Array.isArray(layout.internalRods) ? layout.internalRods : []),
+    ...(Array.isArray(layout.frontRods) ? layout.frontRods : []),
+    ...(Array.isArray(layout.legacySideRods) ? layout.legacySideRods : []),
+  ]
+  const validRodIds = new Set(rods
+    .filter((rod) => rod && rod.id !== undefined && rod.id !== null)
+    .map((rod) => String(rod.id)))
+  let placedCount = 0
+  let groundCount = 0
+  const fixtures = Array.isArray(fixtureValue) ? fixtureValue : []
+
+  fixtures.forEach((fixture) => {
+    const fixtureId = String(fixture && fixture.stableId || '')
+    const position = positionsById[fixtureId]
+    const isGround = Boolean(position && (position.kind === 'ground' || position.ground === true))
+    const isOnRod = Boolean(position && !isGround && position.rodId
+      && validRodIds.has(String(position.rodId)))
+    if (isGround) {
+      placedCount += 1
+      groundCount += 1
+    } else if (isOnRod) {
+      placedCount += 1
+    }
+  })
+
+  return { placedCount, groundCount }
+}
+
 function buildProjectContentView(options = {}) {
   const projectId = text(options.projectId)
   const rawFilter = text(options.filter || 'all')
@@ -67,11 +101,12 @@ function buildProjectContentView(options = {}) {
   const includeCalculations = filter === 'all' || filter === 'calculations'
   const includeWiring = filter === 'all' || filter === 'wiring'
   const includeLighting = filter === 'all' || filter === 'lighting'
+  const hasLightingContext = Boolean(options.hasLightingContext)
   const visibleRecords = includeCalculations ? records : []
   const visibleWiringLines = includeWiring ? wiringLines : []
   const visibleLightingFixtures = includeLighting ? lightingFixtures : []
   const visibleCount = visibleRecords.length + visibleWiringLines.length + visibleLightingFixtures.length
-  const hasVisibleReadError = includeLighting && Boolean(options.lightingReadError && !query)
+  const hasVisibleLightingError = includeLighting && Boolean(options.lightingSummaryError)
 
   return {
     filter,
@@ -80,12 +115,15 @@ function buildProjectContentView(options = {}) {
     visibleLightingFixtures,
     showCalculations: includeCalculations,
     showWiring: includeWiring && wiringLines.length > 0,
-    showLighting: includeLighting && (lightingFixtures.length > 0 || hasVisibleReadError),
-    lightingReadError: text(options.lightingReadError),
+    showLighting: includeLighting && (hasVisibleLightingError
+      || visibleLightingFixtures.length > 0
+      || hasLightingContext && !query),
+    lightingSummaryError: text(options.lightingSummaryError),
     visibleCount,
-    isSearchEmpty: Boolean(query) && visibleCount === 0,
-    isTypeEmpty: !query && visibleCount === 0 && !hasVisibleReadError,
+    isSearchEmpty: Boolean(query) && visibleCount === 0 && !hasVisibleLightingError,
+    isTypeEmpty: !query && visibleCount === 0 && !hasVisibleLightingError
+      && !(includeLighting && hasLightingContext),
   }
 }
 
-module.exports = { buildProjectContentView }
+module.exports = { buildProjectContentView, getLightingPlacementSummary }

@@ -12,6 +12,8 @@ const {
 } = require('../../utils/camera-fov')
 const { findValueIndex, readPreferences, writePreferences } = require('../../utils/preferences')
 const { vibrate } = require('../../utils/haptics')
+const nativeImagePreview = require('../native-image-preview')
+const { getResultImageTheme } = require('../result-image-theme')
 const {
   createOperationMethods,
   prepareOperation,
@@ -48,17 +50,6 @@ const DEFAULT_MODEL = 'TV-6124HK'
 const CANVAS_WIDTH = 640
 const CANVAS_HEIGHT = 500
 const CAMERA_SELECTOR_TRANSITION_DURATION = 180
-function getCurrentTheme() {
-  try {
-    const appInfo = typeof wx.getAppBaseInfo === 'function' ? wx.getAppBaseInfo() : null
-    if (appInfo?.theme === 'light' || appInfo?.theme === 'dark') return appInfo.theme
-  } catch (error) {}
-  try {
-    const systemInfo = typeof wx.getSystemInfoSync === 'function' ? wx.getSystemInfoSync() : null
-    if (systemInfo?.theme === 'light' || systemInfo?.theme === 'dark') return systemInfo.theme
-  } catch (error) {}
-  return 'light'
-}
 const DEFAULT_CAMERA_INPUTS = {
   customHorizontalFovText: '60',
   customVerticalFovText: '36',
@@ -258,6 +249,7 @@ function clearCameraResultReport(page) {
   if (!Object.keys(reportChanges).length) cancelResultReportGeneration(page)
   page.resultReportSignature = ''
   page.resultReportPendingSignature = ''
+  page._resultReportImageTheme = ''
   return {
     ...reportChanges,
     resultReportImagePath: '',
@@ -266,10 +258,17 @@ function clearCameraResultReport(page) {
   }
 }
 
+function cancelCameraReportForThemeChange(page) {
+  page._cameraReportCacheCheckRevision = (page._cameraReportCacheCheckRevision || 0) + 1
+  cancelResultReportGeneration(page)
+}
+
 function resetCameraResultReportIfStale(page, record) {
   const signature = page.resultReportPendingSignature || page.resultReportSignature
   if (!signature || signature === page.getResultReportSignature(record)) return {}
-  return resetStaleResultReport(page, null)
+  const changes = resetStaleResultReport(page, null)
+  if (Object.keys(changes).length) page._resultReportImageTheme = ''
+  return changes
 }
 
 const cameraOptions = buildCameraOptions()
@@ -573,7 +572,7 @@ Page({
       : 0
     const restoredState = {
       cameraCalculationVersion: preferences.cameraCalculationVersion === 1 ? 1 : 2,
-      theme: getCurrentTheme(),
+      theme: getResultImageTheme(),
       sourceModeIndex: 0,
       cameraIndex,
       selectedCamera: buildSelectedCamera(camera),
@@ -655,6 +654,7 @@ Page({
   },
 
   onShow() {
+    const returnedFromPreview = nativeImagePreview.onShow(this)
     this._pageVisibilityRevision = (this._pageVisibilityRevision || 0) + 1
     this._pageVisible = true
     if (this.data.result) syncPageFavorite(this)
@@ -662,26 +662,35 @@ Page({
       if (this._cameraUnloaded || !this._pageVisible || !this.data.result) return
       this.captureResultHeroHeight()
       this.drawPreview()
+      if (returnedFromPreview && this.data.resultReportPreviewVisible) this.updateResultReportPreviewLayout()
     }
-    const theme = getCurrentTheme()
+    const theme = getResultImageTheme()
     if (theme === this.data.theme) refreshVisibleResult()
-    else this.setData({ theme, ...clearCameraResultReport(this) }, refreshVisibleResult)
+    else {
+      cancelCameraReportForThemeChange(this)
+      this.setData({ theme, isCheckingResultReportCache: false }, refreshVisibleResult)
+    }
   },
   onThemeChange({ theme } = {}) {
     if (this._cameraUnloaded) return
-    const nextTheme = theme === 'dark' ? 'dark' : 'light'
+    const nextTheme = theme === 'light' || theme === 'dark' ? theme : getResultImageTheme()
     if (nextTheme === this.data.theme) return
-    this.setData({ theme: nextTheme, ...clearCameraResultReport(this) }, () => {
+    cancelCameraReportForThemeChange(this)
+    this.setData({ theme: nextTheme, isCheckingResultReportCache: false }, () => {
       if (!this._cameraUnloaded && this._pageVisible && this.data.result) this.drawPreview()
+      if (!this._cameraUnloaded && this._pageVisible && this.data.resultReportPreviewVisible) {
+        this.updateResultReportPreviewLayout()
+      }
     })
   },
   onHide() {
+    const returningFromPreview = nativeImagePreview.onHide(this)
     this._pageVisibilityRevision = (this._pageVisibilityRevision || 0) + 1
     this._pageVisible = false
     this.closeCameraSelector(true)
     this.cancelCameraProjectForHide()
     cancelResultReportGeneration(this)
-    cancelCameraReportUi(this)
+    if (!returningFromPreview) cancelCameraReportUi(this)
     this.invalidatePreviewCanvas({ keepCache: true })
     this.flushPendingCalculation()
   },
@@ -759,6 +768,7 @@ Page({
     cancelCameraReportUi(this)
     this.resultReportSignature = ''
     this.resultReportPendingSignature = ''
+    this._resultReportImageTheme = ''
     this.setData({
       result: null,
       resultUpdating: false,

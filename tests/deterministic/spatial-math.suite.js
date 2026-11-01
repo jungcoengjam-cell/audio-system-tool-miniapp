@@ -2,7 +2,12 @@
 
 const camera = require('../../utils/camera-fov')
 const { cameras } = require('../../data/cameras')
-const { assertCompletePlacementCoverage, evaluatePlacementCoverage } = require('../helpers/camera-coverage-reference')
+const {
+  assertFramedPlacementCoverage,
+  evaluateFramedPlacementCoverage,
+  evaluatePlacementCoverageV1,
+  findHorizontalBoundaryV2,
+} = require('../helpers/camera-coverage-reference')
 const { calculateLedScreenPlan, LED_UNIT_SPECS, chooseRecommendedPitch, evaluateViewingDistance } = require('../../utils/led-screen')
 const { calculateDmxAddressPlan, MAX_GROUPS, MAX_TOTAL_FIXTURES } = require('../../utils/dmx-address')
 
@@ -52,9 +57,9 @@ module.exports = ({ test, assert, close, finiteTree }) => {
     const planeWithMargin = camera.calculateVerticalPlanePlacement(fov, planeMarginOptions)
     const ground = camera.calculateGroundAreaPlacement(fov, groundOptions)
     ;[plane, planeWithMargin, ground].forEach((result) => finite(result, finiteTree))
-    assertCompletePlacementCoverage(assert, finiteTree, fov, planeOptions, plane, 'plane auto, zero margin')
-    assertCompletePlacementCoverage(assert, finiteTree, fov, planeMarginOptions, planeWithMargin, 'plane auto, 20% margin')
-    assertCompletePlacementCoverage(assert, finiteTree, fov, groundOptions, ground, 'ground auto, zero margin')
+    assertFramedPlacementCoverage(assert, finiteTree, fov, planeOptions, plane, 'plane auto, zero margin')
+    assertFramedPlacementCoverage(assert, finiteTree, fov, planeMarginOptions, planeWithMargin, 'plane auto, 20% margin')
+    assertFramedPlacementCoverage(assert, finiteTree, fov, groundOptions, ground, 'ground auto, zero margin')
     close(plane.horizontalMinimumDistanceMeters, 4 / (2 * Math.tan(rad(30))), 0.01)
     close(planeWithMargin.horizontalMinimumDistanceMeters / plane.horizontalMinimumDistanceMeters, 1.2, 0.003)
     assert(plane.distanceMeters + 1e-9 >= plane.horizontalMinimumDistanceMeters)
@@ -66,36 +71,54 @@ module.exports = ({ test, assert, close, finiteTree }) => {
     assert.equal(camera.calculateGroundAreaPlacement(fov, { widthMeters: 1, depthMeters: 0, subjectHeightMeters: 1 }), null)
   }, { classification: 'implementation bug', basis: 'camera plane/ground geometry and explicit 0.2 margin input; assertions use unrounded trigonometric reference' })
 
-  test('camera vertical-plane high fixed camera selects the first feasible far branch when width start is forbidden', () => {
+  test('camera V2 uses projected corners while the explicit V1 case retains its far-branch reference', () => {
     const fov = camera.resolveCustomFov({ horizontalFov: 60, verticalFov: 10 })
     const options = {
       sceneMode: 'plane', widthMeters: 10, heightMeters: 3, bottomHeightMeters: 0,
       heightMode: 'fixed', cameraHeightMeters: 10, marginRatio: 0,
     }
     const result = camera.calculateVerticalPlanePlacement(fov, options)
-    const horizontalStart = options.widthMeters / (2 * Math.tan(rad(fov.horizontalFov / 2)))
-    const atHorizontalStart = evaluatePlacementCoverage(fov, options, horizontalStart)
-    assert(atHorizontalStart.horizontalCovered)
-    assert(!atHorizontalStart.verticalCovered,
-      'the horizontal width boundary is inside the vertical forbidden zone for the high fixed camera')
-    assertCompletePlacementCoverage(assert, finiteTree, fov, options, result, 'high fixed plane')
+    const v2HorizontalStart = findHorizontalBoundaryV2(fov, options)
+    assert(v2HorizontalStart, 'independent projected-corner search should find the V2 horizontal boundary')
+    const atV2HorizontalStart = evaluateFramedPlacementCoverage(fov, options, v2HorizontalStart)
+    assert(atV2HorizontalStart.valid && atV2HorizontalStart.horizontalCovered,
+      'independent projected corners should satisfy the V2 horizontal boundary')
+    assert(atV2HorizontalStart.verticalCovered,
+      'V2 aims at the projected target envelope, so its high fixed case is vertically feasible at the horizontal boundary')
+    assertFramedPlacementCoverage(assert, finiteTree, fov, options, result, 'high fixed V2 plane')
 
     const rawDistance = result.calculationDistanceMeters
-    assert(rawDistance > horizontalStart, 'the complete solution must move beyond the forbidden horizontal start')
-    assert(rawDistance > 10, 'the first feasible branch after the horizontal start is the far branch')
-    const immediatelyBefore = evaluatePlacementCoverage(fov, options, rawDistance - 1e-6)
+    close(rawDistance, v2HorizontalStart, 1e-7,
+      'V2 should retain the first horizontal boundary when its independent vertical check passes there')
+    const immediatelyBeforeV2 = evaluateFramedPlacementCoverage(fov, options, rawDistance - 1e-6)
+    assert(!immediatelyBeforeV2.horizontalCovered,
+      'a point immediately before the returned V2 distance must fail the independent horizontal boundary')
+
+    // Preserve the pre-existing V1 branch and coverage assertions explicitly.
+    const legacyOptions = { ...options, calculationVersion: 1 }
+    const legacy = camera.calculateVerticalPlanePlacement(fov, legacyOptions)
+    finiteTree(legacy, 'high fixed V1 plane')
+    const horizontalStart = options.widthMeters / (2 * Math.tan(rad(fov.horizontalFov / 2)))
+    const atLegacyHorizontalStart = evaluatePlacementCoverageV1(fov, legacyOptions, horizontalStart)
+    assert(atLegacyHorizontalStart.horizontalCovered)
+    assert(!atLegacyHorizontalStart.verticalCovered,
+      'the V1 horizontal width boundary remains inside the legacy vertical forbidden zone')
+    const legacyRawDistance = legacy.calculationDistanceMeters
+    assert(legacyRawDistance > horizontalStart, 'the V1 complete solution must move beyond its forbidden horizontal start')
+    assert(legacyRawDistance > 10, 'the V1 first feasible branch after the horizontal start remains the far branch')
+    const immediatelyBefore = evaluatePlacementCoverageV1(fov, legacyOptions, legacyRawDistance - 1e-6)
     assert(!immediatelyBefore.verticalCovered,
-      'a point immediately before the returned far boundary must remain vertically infeasible')
-    close(result.distanceMeters, 10.05, 1e-12, 'case #9 should display the rounded calculation distance as 10.05 m')
-    const displayedCoverage = evaluatePlacementCoverage(fov, options, result.distanceMeters)
+      'a point immediately before the returned V1 far boundary must remain vertically infeasible')
+    close(legacy.distanceMeters, 10.05, 1e-12, 'legacy case #9 should retain its V1 displayed distance of 10.05 m')
+    const displayedCoverage = evaluatePlacementCoverageV1(fov, legacyOptions, legacy.distanceMeters)
     assert(displayedCoverage.horizontalCovered && displayedCoverage.verticalCovered,
-      'the displayed 10.05 m distance must also cover both axes for case #9')
+      'the legacy displayed 10.05 m distance must still cover both axes under the V1 reference')
 
     let previousDistance = horizontalStart
     let firstFeasibleDistance = null
     for (let sample = 1; sample <= 2000; sample += 1) {
       const currentDistance = horizontalStart + sample * 0.01
-      const coverage = evaluatePlacementCoverage(fov, options, currentDistance)
+      const coverage = evaluatePlacementCoverageV1(fov, legacyOptions, currentDistance)
       if (coverage.horizontalCovered && coverage.verticalCovered) {
         firstFeasibleDistance = currentDistance
         break
@@ -107,11 +130,11 @@ module.exports = ({ test, assert, close, finiteTree }) => {
     let upper = firstFeasibleDistance
     for (let iteration = 0; iteration < 60; iteration += 1) {
       const middle = (lower + upper) / 2
-      const coverage = evaluatePlacementCoverage(fov, options, middle)
+      const coverage = evaluatePlacementCoverageV1(fov, legacyOptions, middle)
       if (coverage.horizontalCovered && coverage.verticalCovered) upper = middle
       else lower = middle
     }
-    close(rawDistance, upper, 1e-7, 'solver result should match the independently derived first far-branch boundary')
+    close(legacyRawDistance, upper, 1e-7, 'V1 result should match the independently derived first far-branch boundary')
   }, { classification: 'implementation bug', basis: 'Independent atan2 envelope and tan width boundary; both axes must pass at the raw solution and the near-side horizontal start is vertically forbidden.', issue: 'CAMERA-HIGH-FIXED-HEIGHT' })
 
   test('camera full placements cover both axes across a deterministic geometry and optics matrix', () => {
@@ -170,19 +193,26 @@ module.exports = ({ test, assert, close, finiteTree }) => {
       const placement = options.sceneMode === 'plane'
         ? camera.calculateVerticalPlanePlacement(fov, options)
         : camera.calculateGroundAreaPlacement(fov, options)
-      assertCompletePlacementCoverage(assert, finiteTree, fov, options, placement, name)
+      assertFramedPlacementCoverage(assert, finiteTree, fov, options, placement, name)
       checkedPlacements += 1
-      const horizontalStart = options.widthMeters * (1 + options.marginRatio)
-        / (2 * Math.tan(rad(fov.horizontalFov / 2)))
-      const startCoverage = evaluatePlacementCoverage(fov, options, horizontalStart)
+      const horizontalStart = findHorizontalBoundaryV2(fov, options)
+      assert(horizontalStart, `${name}: independent corner projection should find a horizontal boundary`)
+      const startCoverage = evaluateFramedPlacementCoverage(fov, options, horizontalStart)
+      assert(startCoverage.valid && startCoverage.horizontalCovered,
+        `${name}: independent horizontal boundary must pass the projected width constraint`)
       if (startCoverage.verticalCovered) {
         horizontalStartCoveredCount += 1
-        close(placement.calculationDistanceMeters, horizontalStart, 1e-8,
+        close(placement.calculationDistanceMeters, horizontalStart, 1e-7,
           `${name}: solver should retain the horizontal start when both axes already pass`)
       } else {
         horizontalStartForbiddenCount += 1
         assert(placement.calculationDistanceMeters > horizontalStart,
           `${name}: solver should move beyond a horizontally valid but vertically forbidden start`)
+        const beforePlacement = evaluateFramedPlacementCoverage(
+          fov, options, placement.calculationDistanceMeters - 1e-6,
+        )
+        assert(!beforePlacement.verticalCovered,
+          `${name}: a point immediately before the returned far boundary must fail the independent vertical constraint`)
       }
     }
     assert.strictEqual(checkedPlacements, cases.length, 'all explicitly valid matrix cases must return and pass the independent oracle')
@@ -208,7 +238,7 @@ module.exports = ({ test, assert, close, finiteTree }) => {
           const result = sceneMode === 'plane'
             ? camera.calculateVerticalPlanePlacement(fov, options)
             : camera.calculateGroundAreaPlacement(fov, options)
-          assertCompletePlacementCoverage(
+          assertFramedPlacementCoverage(
             assert, finiteTree, fov, options, result,
             `${cameraModel.model}/${viewIndex}/${endpoint}/${sceneMode}/${heightMode}`,
           )
@@ -223,19 +253,40 @@ module.exports = ({ test, assert, close, finiteTree }) => {
   }, { classification: 'implementation bug', basis: 'A deterministic matrix checks raw two-axis coverage for plane/ground, auto/fixed, high/center/low cameras, zero/existing margins, angle/sensor optics, narrow vertical FOV, and every complete catalog FOV in both scene and height modes.' })
 
   test('horizontal-only camera placements omit vertical verification and retain finite horizontal geometry', () => {
-    const result = camera.calculateHorizontalOnlyPlacement({ horizontalFov: 90 }, {
+    const options = {
       sceneMode: 'plane', widthMeters: 4, heightMeters: 2, bottomHeightMeters: 1,
       marginRatio: 0, heightMode: 'fixed', cameraHeightMeters: 3,
-    })
+    }
+    const fov = { horizontalFov: 90 }
+    const result = camera.calculateHorizontalOnlyPlacement(fov, options)
     finite(result, finiteTree)
-    close(result.horizontalMinimumDistanceMeters, 2)
-    close(result.frameWidthMeters, 4)
+    const expectedV2 = findHorizontalBoundaryV2(fov, options)
+    assert(expectedV2, 'independent corner projection should find the V2 horizontal-only boundary')
+    close(result.calculationDistanceMeters, expectedV2, 1e-9,
+      'V2 should expose the raw horizontal-only solve distance for independent checking')
+    assert(evaluateFramedPlacementCoverage(fov, options, result.calculationDistanceMeters).horizontalCovered,
+      'V2 horizontal-only solve must satisfy the independently projected horizontal envelope')
+    close(result.horizontalMinimumDistanceMeters, Math.round(expectedV2 * 100) / 100)
+    close(result.horizontalMinimumDistanceMeters, 2.15)
+    const expectedProjection = evaluateFramedPlacementCoverage(fov, options, expectedV2)
+    const targetCenterHeight = options.bottomHeightMeters + options.heightMeters / 2
+    const cameraNormalDepth = expectedV2 * Math.cos(expectedProjection.pitchDegrees * Math.PI / 180)
+      + (targetCenterHeight - options.cameraHeightMeters) * Math.sin(expectedProjection.pitchDegrees * Math.PI / 180)
+    close(result.frameWidthMeters, Math.round(2 * cameraNormalDepth * Math.tan(Math.PI / 4) * 100) / 100,
+      1e-9, 'V2 frame width should use the camera-normal section and independent projected aim')
     assert.equal(result.horizontalOnly, true)
     assert.equal(result.verticalCoverageVerified, false)
     assert.equal(Object.prototype.hasOwnProperty.call(result, 'coverageVerified'), false,
       'horizontal-only placement must not claim full two-axis verification')
-    assert.equal(Object.prototype.hasOwnProperty.call(result, 'calculationDistanceMeters'), false,
-      'horizontal-only placement must not expose a full-placement calculation distance')
+    const legacy = camera.calculateHorizontalOnlyPlacement({ horizontalFov: 90 }, { ...options, calculationVersion: 1 })
+    finite(legacy, finiteTree)
+    close(legacy.horizontalMinimumDistanceMeters, 2,
+      1e-9, 'the explicit V1 horizontal-only path must retain the world-width boundary')
+    close(legacy.frameWidthMeters, 4, 1e-9,
+      'the explicit V1 frame width must retain its vertical-facade reference')
+    assert.equal(legacy.verticalCoverageVerified, false)
+    assert.equal(Object.prototype.hasOwnProperty.call(legacy, 'calculationDistanceMeters'), false,
+      'the V1 horizontal-only result must retain its historical rounded-only distance shape')
     assert.equal(camera.calculateHorizontalOnlyPlacement({ horizontalFov: 0 }, { widthMeters: 4 }), null)
   }, { classification: 'implementation bug', basis: 'horizontal-only placement contract: use horizontal FOV and explicitly leave vertical coverage unverified' })
 
@@ -293,7 +344,7 @@ module.exports = ({ test, assert, close, finiteTree }) => {
     }
     const valid = camera.calculateGroundAreaPlacement(fov, validOptions)
     finite(valid, finiteTree)
-    assertCompletePlacementCoverage(assert, finiteTree, fov, validOptions, valid, 'ground auto ignoring unused Infinity camera height')
+    assertFramedPlacementCoverage(assert, finiteTree, fov, validOptions, valid, 'ground auto ignoring unused Infinity camera height')
     close(valid.cameraHeightMeters, 2.2)
   }, { classification: 'implementation bug', basis: 'ground placement dimensions and selected fixed camera height must be finite; auto mode ignores supplied camera height', issue: 'CAMERA-NONFINITE-DIMENSION' })
 
@@ -312,7 +363,7 @@ module.exports = ({ test, assert, close, finiteTree }) => {
     }
     const valid = camera.calculateVerticalPlanePlacement(fov, validOptions)
     finite(valid, finiteTree)
-    assertCompletePlacementCoverage(assert, finiteTree, fov, validOptions, valid, 'plane auto with zero bottom height')
+    assertFramedPlacementCoverage(assert, finiteTree, fov, validOptions, valid, 'plane auto with zero bottom height')
     assert.equal(valid.bottomHeightMeters, 0)
     close(valid.cameraHeightMeters, 1)
   }, { classification: 'implementation bug', basis: 'plane dimensions must be finite, bottom height remains nonnegative so zero is valid, and fixed camera height must be finite', issue: 'CAMERA-NONFINITE-DIMENSION' })
@@ -350,6 +401,79 @@ module.exports = ({ test, assert, close, finiteTree }) => {
       { horizontalFov: 1e-320, verticalFov: 30 }, planeOptions,
     ), null, 'a numerically unusable horizontal angle must not produce a placement')
   }, { classification: 'implementation bug', basis: 'A complete placement requires valid positive horizontal and vertical angles and finite derived boundaries; invalid or overflowed geometry must yield null rather than a verified result.' })
+
+  test('camera placements reject nonfinite decorated results for resolved tiny FOV across V1, V2 and horizontal-only paths', () => {
+    const tinyFullFov = camera.resolveCustomFov({ horizontalFov: 1e-320, verticalFov: 30 })
+    assert(tinyFullFov && Number.isFinite(tinyFullFov.diagonalFov),
+      'the tiny full-FOV case should be a structurally resolved optics object')
+    const completeCases = [
+      {
+        name: 'plane', options: {
+          sceneMode: 'plane', widthMeters: 4, heightMeters: 2, bottomHeightMeters: 1,
+          heightMode: 'auto', marginRatio: 0,
+        },
+      },
+      {
+        name: 'ground', options: {
+          sceneMode: 'ground', widthMeters: 4, depthMeters: 3, subjectHeightMeters: 1.7,
+          heightMode: 'auto', marginRatio: 0,
+        },
+      },
+    ]
+    for (const { name, options } of completeCases) {
+      for (const calculationVersion of [1, 2]) {
+        const result = options.sceneMode === 'plane'
+          ? camera.calculateVerticalPlanePlacement(tinyFullFov, { ...options, calculationVersion })
+          : camera.calculateGroundAreaPlacement(tinyFullFov, { ...options, calculationVersion })
+        assert.equal(result, null,
+          `${name} complete V${calculationVersion} placement must reject nonfinite derived output`)
+      }
+    }
+
+    const tinyHorizontalFov = { horizontalFov: 1e-320 }
+    const horizontalOnlyCases = [
+      {
+        name: 'plane', options: {
+          sceneMode: 'plane', widthMeters: 4, heightMeters: 2, bottomHeightMeters: 1,
+          heightMode: 'fixed', cameraHeightMeters: 3, marginRatio: 0,
+        },
+      },
+      {
+        name: 'ground', options: {
+          sceneMode: 'ground', widthMeters: 4, depthMeters: 3, subjectHeightMeters: 1.7,
+          heightMode: 'fixed', cameraHeightMeters: 2.5, marginRatio: 0,
+        },
+      },
+    ]
+    for (const { name, options } of horizontalOnlyCases) {
+      for (const calculationVersion of [1, 2]) {
+        assert.equal(camera.calculateHorizontalOnlyPlacement(tinyHorizontalFov, { ...options, calculationVersion }), null,
+          `${name} horizontal-only V${calculationVersion} placement must reject nonfinite derived output`)
+      }
+    }
+  }, { classification: 'implementation bug', basis: 'Every successful camera placement path must reject a candidate result containing any nonfinite numeric leaf; tiny positive FOV values are currently accepted by the common angle validator.' })
+
+  test('camera placement finite-output guard handles nested cycles without treating text as numbers', () => {
+    const fov = camera.resolveCustomFov({ horizontalFov: 60, verticalFov: 40 })
+    const metadata = { label: 'Infinity', note: 'NaN', detail: { description: 'not a numeric measurement' } }
+    metadata.parent = metadata
+    fov.auditMetadata = metadata
+    const options = {
+      sceneMode: 'plane', widthMeters: 4, heightMeters: 2, bottomHeightMeters: 1,
+      heightMode: 'auto', marginRatio: 0,
+    }
+    const valid = camera.calculateVerticalPlanePlacement(fov, options)
+    finite(valid, finiteTree)
+    assert.strictEqual(valid.auditMetadata, metadata)
+    assert.strictEqual(valid.auditMetadata.parent, metadata,
+      'finite nested cyclic metadata must not make output inspection recurse indefinitely')
+    assert.strictEqual(valid.auditMetadata.label, 'Infinity',
+      'non-numeric strings must not be parsed as nonfinite numeric fields')
+
+    metadata.detail.value = Infinity
+    assert.equal(camera.calculateVerticalPlanePlacement(fov, options), null,
+      'a nested nonfinite numeric leaf in the candidate result must be rejected')
+  }, { classification: 'implementation bug', basis: 'The output guard must inspect nested numeric leaves with cycle protection and must leave unrelated strings untouched.' })
 
   test('horizontal-only camera placement rejects nonfinite fields for both scene types', () => {
     const fov = { horizontalFov: 90 }

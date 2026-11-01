@@ -1,3 +1,5 @@
+const CANCEL = 'cancel-report'
+
 function createReportBridgeLifecycle({ bridge, cancelMessage }) {
   return {
     onLoad(options = {}) {
@@ -14,7 +16,7 @@ function createReportBridgeLifecycle({ bridge, cancelMessage }) {
         if (!payload || !this._payload || payload.ticket === this._payload.ticket) this.cancel(payload)
       }
       this._eventChannel?.on('generate-report', this._onGenerate)
-      this._eventChannel?.on('cancel-report', this._onCancel)
+      this._eventChannel?.on(CANCEL, this._onCancel)
       this._eventChannel?.emit('report-bridge-ready', { bridge })
     },
 
@@ -22,7 +24,7 @@ function createReportBridgeLifecycle({ bridge, cancelMessage }) {
       this._unloaded = true
       if (!this._terminal) this.finish({ ok: false, cancelled: true, message: cancelMessage })
       this._eventChannel?.off?.('generate-report', this._onGenerate)
-      this._eventChannel?.off?.('cancel-report', this._onCancel)
+      this._eventChannel?.off?.(CANCEL, this._onCancel)
     },
 
     finish(result) {
@@ -53,4 +55,4 @@ function createReportBridgeLifecycle({ bridge, cancelMessage }) {
   }
 }
 
-module.exports = { createReportBridgeLifecycle }
+module.exports = { createReportBridgeLifecycle, CANCEL }

@@ -58,7 +58,7 @@ const previousReports = json('tests/venue-removal-2026-10-15/baseline/report-can
 const currentReports = json('tests/report-canvas-equivalence.fixture.json')
 assert.deepEqual(currentReports.scenarios.filter((item) => !/project/i.test(item.kind)), previousReports.scenarios.filter((item) => !/project/i.test(item.kind)))
 
-const products = require('../../utils/products')
+const products = require('../../pages/products/utils/products')
 const previousProducts = json('tests/venue-removal-2026-10-15/products-before.json')
 const collectNumbers = (value, prefix = '', result = {}) => {
   if (typeof value === 'number') result[prefix] = value

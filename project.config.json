@@ -19,6 +19,8 @@
       { "type": "file", "value": "assets/miniprogram-icon-144-safe.png" },
       { "type": "file", "value": "assets/miniprogram-icon-144-final.png" },
       { "type": "file", "value": "assets/miniprogram-icon-144-full-bg.png" },
+      { "type": "file", "value": "assets/tabbar/explore.png" },
+      { "type": "file", "value": "assets/tabbar/explore-selected.png" },
       { "type": "file", "value": "assets/home/module-limiter.jpg" },
       { "type": "file", "value": "assets/home/module-spl.jpg" },
       { "type": "file", "value": "assets/home/module-cable.jpg" },

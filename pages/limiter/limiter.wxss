@@ -1,4 +1,5 @@
 @import "../../styles/theme-page-shared.wxss";
+@import "../../styles/device-picker-shared.wxss";
 
 .page-root,.page-scroll{box-sizing:border-box;width:100%;height:100vh;min-height:0;overflow:hidden;background:var(--theme-page-bg);color:var(--theme-text)}
 .page-root{display:flex;flex-direction:column;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Helvetica Neue",sans-serif}
@@ -72,8 +73,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 .icon-reset,.icon-share,.icon-bookmark,.icon-folder{box-sizing:border-box;width:22px;height:22px;margin:0;border:0;border-radius:0;background-color:currentColor;-webkit-mask-position:center;mask-position:center;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-size:100% 100%;mask-size:100% 100%}
-.icon-reset{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8'/%3E%3Cpath d='M3 3v5h5'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8'/%3E%3Cpath d='M3 3v5h5'/%3E%3C/svg%3E")}
-.icon-share{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 2v13'/%3E%3Cpath d='m16 6-4-4-4 4'/%3E%3Cpath d='M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 2v13'/%3E%3Cpath d='m16 6-4-4-4 4'/%3E%3Cpath d='M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8'/%3E%3C/svg%3E")}
 .icon-bookmark{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M17 3a2 2 0 0 1 2 2v15a1 1 0 0 1-1.496.868l-4.512-2.578a2 2 0 0 0-1.984 0l-4.512 2.578A1 1 0 0 1 5 20V5a2 2 0 0 1 2-2z'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M17 3a2 2 0 0 1 2 2v15a1 1 0 0 1-1.496.868l-4.512-2.578a2 2 0 0 0-1.984 0l-4.512 2.578A1 1 0 0 1 5 20V5a2 2 0 0 1 2-2z'/%3E%3C/svg%3E")}
 .icon-bookmark-active{background-color:var(--theme-accent);color:#fff;-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M17 3a2 2 0 0 1 2 2v15a1 1 0 0 1-1.496.868l-4.512-2.578a2 2 0 0 0-1.984 0l-4.512 2.578A1 1 0 0 1 5 20V5a2 2 0 0 1 2-2z' fill='%23000'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M17 3a2 2 0 0 1 2 2v15a1 1 0 0 1-1.496.868l-4.512-2.578a2 2 0 0 0-1.984 0l-4.512 2.578A1 1 0 0 1 5 20V5a2 2 0 0 1 2-2z' fill='%23000'/%3E%3C/svg%3E")}
 .icon-folder{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z'/%3E%3C/svg%3E")}
@@ -148,7 +147,7 @@ SOFTWARE.
 .sheet-header{display:flex;flex:none;min-height:48rpx;margin-bottom:14rpx;align-items:center;justify-content:space-between;gap:12rpx}
 .sheet-title{color:var(--theme-text);font-size:28rpx;font-weight:700}
 .sheet-subtitle{display:block;margin-top:4rpx;color:var(--theme-text-secondary);font-size:18rpx}
-.sheet-close.sheet-close{box-sizing:border-box;display:flex;flex:0 0 44px;width:44px;min-width:44px;max-width:44px;height:44px;min-height:44px;max-height:44px;margin:0;padding:0;align-items:center;justify-content:center;border:0;border-radius:50%;background:var(--theme-control);color:var(--theme-text-secondary);font-size:35rpx;line-height:1}
+.sheet-close.sheet-close{box-sizing:border-box;display:flex;flex:0 0 44px;width:44px;min-width:44px;max-width:44px;height:44px;min-height:44px;max-height:44px;margin:0;padding:0;align-items:center;justify-content:center;border:0;border-radius:50%;background:var(--theme-panel-close-bg);color:var(--theme-panel-close-color);font-size:35rpx;line-height:1}
 .sheet-close.sheet-close::after{border:0}
 .selector-search{box-sizing:border-box;width:100%;height:48px;min-height:48px;padding:0 16rpx;border:0;border-radius:13rpx;background:var(--theme-control);color:var(--theme-text);font-size:13px}
 .category-scroll{flex:none;margin-top:12rpx;white-space:nowrap}
@@ -202,6 +201,7 @@ SOFTWARE.
 .project-panel .sheet-subtitle,.share-panel .sheet-subtitle{font-size:14px;line-height:1.45}
 .project-panel .project-step{box-sizing:border-box;min-height:0;overflow:visible}
 .project-panel .project-sheet-body{box-sizing:border-box;display:block;height:auto;max-height:55vh;min-height:0;flex:0 1 auto;overflow:hidden}
+.project-panel.project-keyboard-open .project-sheet-body{width:100%;height:0;min-height:0;max-height:none;flex:1 1 0;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .project-panel .project-footer{box-sizing:border-box;flex:none;padding-top:10rpx}
 .project-panel .project-footer .form-actions{margin-top:0}
 .project-panel .project-footer>.share-action.share-action{flex:0 0 auto;width:100%;max-width:100%;min-width:0}
@@ -216,7 +216,7 @@ SOFTWARE.
 .project-panel .project-target-name{min-width:120px;overflow:visible;white-space:normal;text-overflow:clip;overflow-wrap:anywhere;word-break:break-word}
 .project-panel .text-action.text-action{min-height:44px;font-size:16px;line-height:1.45}
 .project-panel .project-note{font-size:16px;line-height:1.45}
-.project-panel.project-keyboard-open .project-note{height:84px}
+.project-panel.project-keyboard-open .project-note{height:84px;min-height:84px;margin:5px 0 0;padding:12px}
 .project-panel .project-preview{font-size:16px;line-height:1.45;overflow-wrap:anywhere}
 .project-panel .preview-title{font-size:16px;line-height:1.45}
 .project-panel .project-success{justify-content:flex-start;font-size:16px;line-height:1.45}

@@ -12,7 +12,7 @@ const { cameras } = require('../data/cameras')
 const { dmxFixtures, stageLightingProducts } = require('../data/stage-lighting')
 const { knowledgeItems, findKnowledgeById } = require('../data/knowledge')
 const { APP_VERSION, PRODUCT_DATA_DATE, PRODUCT_COUNTS } = require('../data/app-meta')
-const { speakerSpecifications } = require('../data/speaker-specifications')
+const { speakerSpecifications } = require('../pages/products/data/speaker-specifications')
 const { calculateConstantVoltageCable, calculateProfessionalSpeakerCable } = require('../utils/cable')
 const {
   calculateCoverage,
@@ -47,7 +47,7 @@ const {
   getProductFilters,
   getProductList,
   getRecentProducts,
-} = require('../utils/products')
+} = require('../pages/products/utils/products')
 const recordsApi = require('../utils/records')
 
 const root = path.resolve(__dirname, '..')
@@ -446,7 +446,10 @@ const auditRegressionScripts = [
   'limiter-project-metadata-test.js',
   'limiter-refactor-2026-10-06/limiter-page-state-test.js',
   'gain-report-regression.js',
+  'gain-blank-start-regression.cjs',
   'report-lifecycle-regression.js',
+  'report-image-preview-lifecycle-regression.cjs',
+  'result-share-button-labels-regression.cjs',
   'dmx-lifecycle-regression.js',
   'dmx-layout-overlay-style-regression.cjs',
   'dmx-layout-current-flow-regression.cjs',
@@ -458,6 +461,9 @@ const auditRegressionScripts = [
   'repair7-owner-decisions-regression.cjs',
   'dmx-ui-refactor-2026-10-18/layout-theme-lifecycle-test.cjs',
   'dmx-address-controller-boundary-regression.cjs',
+  'dmx-address-result-report-theme-controller-test.js',
+  'result-image-theme-controller-regression.cjs',
+  'current-qa/result-preview-layout-no-selector-query-regression.cjs',
   'dmx-floating-card-contract-regression.cjs',
   'dmx-cold-initialization-regression.cjs',
   'dmx-single-model-add-regression.cjs',
@@ -471,17 +477,22 @@ const auditRegressionScripts = [
   'camera-first-use-regression.js',
   'camera-closeout2-minimum-presentation-regression.cjs',
   'camera-closeout3-presentation-regression.cjs',
+  'deterministic-spatial-check.js',
   'camera-refactor-2026-10-11/camera-v3-controller-regression.cjs',
   'camera-refactor-2026-10-11/camera-v4-ui-markup-regression.cjs',
   'camera-refactor-2026-10-11/camera-v4-record-metadata-regression.cjs',
   'camera-refactor-2026-10-11/camera-v4-actions-regression.cjs',
+  'camera-result-image-theme-cache-regression.cjs',
   'calculation-boundary-regression.js',
   'audio-wiring-model-test.js',
   'audio-wiring-page-test.js',
   'audio-wiring-renderer-test.js',
+  'audio-wiring-result-image-theme-cache-regression.cjs',
   'project-list-lighting-index-regression.cjs',
   'project-wiring-model-test.js',
   'project-save-controllers-2026-10-24.cjs',
+  'project-save-details-return-regression.cjs',
+  'compact-project-select-contract-regression.cjs',
   'project-wiring-storage-test.js',
   'project-wiring-page-test.js',
   'project-wiring-workspace-controller-regression.cjs',
@@ -495,6 +506,9 @@ const auditRegressionScripts = [
   'venue-removal-2026-10-15/removal-regression.cjs',
   'control-protocol-test.js',
   'spl-refactor-2026-10-11/localreport-regression.cjs',
+  'spl-refactor-2026-10-11/preview-return-regression.cjs',
+  'spl-refactor-2026-10-11/theme-cache-regression.cjs',
+  'spl-refactor-2026-10-11/project-keyboard-lifecycle-regression.cjs',
   'dmx-engineering-closeout8-regression.cjs',
   'closeout8-contract-regression.cjs',
   'haptics-ui-regression.cjs',

@@ -267,7 +267,7 @@ function createCableProjectMethods(runtime = {}) {
     },
 
     onProjectNameInput(event) {
-      if (!this.data.projectDialogVisible || this.data.projectDialogClosing) return false
+      if (!this.data.projectDialogVisible || this.data.projectDialogClosing) return
       this.setData({
         projectNameText: event.detail.value,
         projectError: '',
@@ -276,15 +276,13 @@ function createCableProjectMethods(runtime = {}) {
     },
 
     onProjectConfigNameInput(event) {
-      if (!this.data.projectDialogVisible || this.data.projectDialogClosing || this.data.projectDialogStep !== 'confirm') return false
+      if (!this.data.projectDialogVisible || this.data.projectDialogClosing || this.data.projectDialogStep !== 'confirm') return
       this.setData({ projectConfigName: String(event?.detail?.value || ''), projectNameError: '', projectError: '' })
-      return true
     },
 
     onProjectConfigNoteInput(event) {
-      if (!this.data.projectDialogVisible || this.data.projectDialogClosing || this.data.projectDialogStep !== 'confirm') return false
+      if (!this.data.projectDialogVisible || this.data.projectDialogClosing || this.data.projectDialogStep !== 'confirm') return
       this.setData({ projectConfigNote: String(event?.detail?.value || ''), projectNoteError: '', projectError: '' })
-      return true
     },
 
     openProjectCreateForm() {

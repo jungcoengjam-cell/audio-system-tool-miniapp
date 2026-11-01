@@ -42,10 +42,17 @@ test('30 current-page fixture placements keep unique positions and preserve veri
 
     const page = makeCurrentPage(runtime)
     assert.equal(page._fixtures.length, 30)
-    page.openPlacementPanel()
     const rodId = page._layout.internalRods[0].id
-    page.onSelectRod(runtime.event({ rodId }))
-    for (const fixture of page._fixtures) page.onPanelFixtureTap(runtime.event({ fixtureId: fixture.stableId }))
+    page.openPlacementPanel(rodId)
+    for (const fixture of page._fixtures) {
+      const layoutBeforeSelection = clone(page._layout)
+      const writesBeforeSelection = runtime.stats.writes
+      page.onPanelFixtureTap(runtime.event({ fixtureId: fixture.stableId }))
+      assert.deepEqual(page._layout, layoutBeforeSelection, 'A tap stays pending until the double-tap window ends')
+      assert.equal(runtime.stats.writes, writesBeforeSelection, 'The pending tap does not persist early')
+      page.settlePendingFixtureTap()
+      assert(page._layout.positionsById[fixture.stableId], 'A completed tap places the fixture on the locked rod')
+    }
 
     let saved = currentScheme(runtime, page._contextId)
     const positions = Object.values(saved.layout.positionsById)
@@ -55,13 +62,17 @@ test('30 current-page fixture placements keep unique positions and preserve veri
     assert.deepEqual(saved.checksById, checksBefore, 'Placement must not discard independently saved fixture checks')
 
     page.onPanelFixtureTap(runtime.event({ fixtureId: checkedFixture.stableId }))
+    assert.deepEqual(page._layout.positionsById[checkedFixture.stableId], saved.layout.positionsById[checkedFixture.stableId],
+      'A completed tap waits for the double-tap window before withdrawing')
+    page.settlePendingFixtureTap()
+    assert.equal(runtime.modals.length, 0, 'Withdrawing a current-target fixture does not open a confirmation')
     saved = currentScheme(runtime, page._contextId)
     assert.equal(Object.keys(saved.layout.positionsById).length, 29)
-    assert.deepEqual(saved.checksById, checksBefore, 'Unplacing must preserve checks')
+    assert.deepEqual(saved.checksById, checksBefore, 'Withdrawing must preserve checks')
   } finally { runtime.dispose() }
 })
 
-test('cross-rod move cancel is inert and confirm moves one fixture without changing its address identity', () => {
+test('single tap withdraws only on its source target before a later canvas target can place elsewhere', () => {
   const runtime = createRuntime()
   try {
     seedSingleGroup(runtime, 2)
@@ -71,27 +82,38 @@ test('cross-rod move cancel is inert and confirm moves one fixture without chang
     const destinationRodId = page._layout.frontRods[0].id
     const addressBefore = fixture.addressText
     runtime.place(page, 0, 0)
-    page.openPlacementPanel()
-    page.onSelectRod(runtime.event({ rodId: destinationRodId }))
+    page.openPlacementPanel(destinationRodId)
 
     const cancelBaseline = clone(currentScheme(runtime, page._contextId).layout)
     const writesBeforeCancel = runtime.stats.writes
     page.onPanelFixtureTap(runtime.event({ fixtureId: fixture.stableId }))
-    assert.equal(runtime.modals.length, 1, 'Moving a placed fixture to another rod must ask for confirmation')
-    runtime.answer(false)
+    assert.equal(runtime.modals.length, 0, 'Inspecting a cross-target fixture never opens a transfer confirmation')
+    assert.equal(runtime.stats.writes, writesBeforeCancel, 'A cross-target tap remains pending and does not persist early')
+    assert.deepEqual(page._layout.positionsById[fixture.stableId], cancelBaseline.positionsById[fixture.stableId],
+      'a cross-target placed lamp stays on its original rod')
+    page.settlePendingFixtureTap()
     let saved = currentScheme(runtime, page._contextId)
-    assert.deepEqual(saved.layout, cancelBaseline, 'Cancel must leave the complete public saved layout unchanged')
-    assert.equal(runtime.stats.writes, writesBeforeCancel, 'Cancel must not write storage')
-    assert.equal(saved.layout.positionsById[fixture.stableId].rodId, sourceRodId, 'Cancel must leave the saved position unchanged')
+    assert.deepEqual(saved.layout, cancelBaseline, 'A cross-target tap leaves the complete public saved layout unchanged')
+    assert.equal(runtime.stats.writes, writesBeforeCancel, 'Cross-target inspection must not write storage')
+    assert.equal(saved.layout.positionsById[fixture.stableId].rodId, sourceRodId, 'The saved source position remains unchanged')
     assert.equal(Object.keys(saved.layout.positionsById).length, 1)
 
+    page.closePlacementPanel()
+    page.openPlacementPanel(sourceRodId)
     page.onPanelFixtureTap(runtime.event({ fixtureId: fixture.stableId }))
-    assert.equal(runtime.modals.length, 1)
-    runtime.answer(true)
+    page.settlePendingFixtureTap()
+    assert.equal(runtime.modals.length, 0, 'Withdrawing from the source target does not require a separate action or confirmation')
+    assert.equal(page._layout.positionsById[fixture.stableId], undefined, 'confirmed unplace removes its position')
+    assert.equal(page._scheme.checksById[fixture.stableId], undefined, 'the initial unchecked fixture stays unchecked')
+
+    page.closePlacementPanel()
+    page.openPlacementPanel(destinationRodId)
+    page.onPanelFixtureTap(runtime.event({ fixtureId: fixture.stableId }))
+    page.settlePendingFixtureTap()
     saved = currentScheme(runtime, page._contextId)
     assert.equal(saved.layout.positionsById[fixture.stableId].rodId, destinationRodId)
-    assert.equal(Object.keys(saved.layout.positionsById).length, 1, 'Confirm must move, not duplicate, the fixture')
-    assert.equal(page._fixtures[0].addressText, addressBefore, 'A layout move must not change address identity')
+    assert.equal(Object.keys(saved.layout.positionsById).length, 1, 'the unplaced fixture is added to the new rod once')
+    assert.equal(page._fixtures[0].addressText, addressBefore, 'Changing a layout position must not change address identity')
   } finally { runtime.dispose() }
 })
 
@@ -252,7 +274,7 @@ test('clear modal respects native button limits and clears pending after native 
     assert.equal(invalidRequests.length, invalidCount, 'The clear request must use valid button labels')
     assert.equal(page._clearLayoutPending, false, 'Native failure must release the internal pending lock')
     assert.equal(page.data.clearLayoutPending, false, 'Native failure must release the rendered pending state')
-    assert.equal(page.data.placementNotice, '清空确认失败，请重试')
+    assert.equal(runtime.toasts.at(-1).title, '确认失败', 'a failed clear remains visible in a short toast')
     assert.equal(runtime.stats.writes, writesBeforeFailure, 'Native failure must not write layout storage')
 
     const writesBeforeThrow = runtime.stats.writes
@@ -260,7 +282,7 @@ test('clear modal respects native button limits and clears pending after native 
     assert.doesNotThrow(() => page.clearSelectedRodLayout(), 'A synchronous native throw must be handled in the clear flow')
     assert.equal(page._clearLayoutPending, false, 'A synchronous throw must release the internal pending lock')
     assert.equal(page.data.clearLayoutPending, false, 'A synchronous throw must release the rendered pending state')
-    assert.equal(page.data.placementNotice, '清空确认失败，请重试')
+    assert.equal(runtime.toasts.at(-1).title, '确认失败', 'a synchronous clear failure remains visible in a short toast')
     assert.equal(runtime.stats.writes, writesBeforeThrow, 'Synchronous native failure must not write layout storage')
 
     page.clearSelectedRodLayout()

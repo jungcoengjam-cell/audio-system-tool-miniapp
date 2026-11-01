@@ -836,6 +836,7 @@ module.exports = {
   TEMPORARY_CONTEXT_ID,
   createLightingScheme,
   ensureSchemeIdentity,
+  fixtureFingerprint,
   calculateScheme,
   readLightingWorkspace,
   getLightingContexts,

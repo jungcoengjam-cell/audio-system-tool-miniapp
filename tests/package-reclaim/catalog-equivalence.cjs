@@ -80,7 +80,7 @@ assert.strictEqual(isolatedCatalog.stageLightingProductIndex.has('__probe__'), t
 isolatedCatalog.stageLightingProductIndex.delete('__probe__')
 
 // Runtime consumers must observe the same catalog behavior as before refactoring.
-const productUtils = require('../../utils/products')
+const productUtils = require('../../pages/products/utils/products')
 const productList = productUtils.getProductList('lighting')
 assert.strictEqual(productList.length, 149)
 assert.deepStrictEqual(productUtils.getCategories('lighting'), ['全部', ...new Set(productsFromSource.map((product) => product.category))])
@@ -98,12 +98,12 @@ assert.deepStrictEqual(Object.fromEntries(Object.keys(productsFromSource.find((p
 
 const Module = require('module')
 function createProductUtilsWithCatalog(catalogProducts) {
-  const filename = path.join(root, 'utils/products.js')
+  const filename = path.join(root, 'pages/products/utils/products.js')
   const instance = new Module(filename, module)
   instance.filename = filename
   instance.paths = Module._nodeModulePaths(path.dirname(filename))
   const originalRequire = instance.require.bind(instance)
-  instance.require = (request) => request === '../data/stage-lighting'
+  instance.require = (request) => request === '../../../data/stage-lighting'
     ? { stageLightingProducts: catalogProducts }
     : originalRequire(request)
   instance._compile(fs.readFileSync(filename, 'utf8'), filename)

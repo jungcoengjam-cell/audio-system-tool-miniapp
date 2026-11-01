@@ -11,6 +11,7 @@ const reportPreviewWxml = fs.readFileSync(path.join(root, 'templates/result-repo
 const cameraJs = fs.readFileSync(path.join(root, 'pages/camera/camera.js'), 'utf8')
 const cameraProjectJs = fs.readFileSync(path.join(root, 'pages/camera/camera-project.js'), 'utf8')
 const cameraReportUi = fs.readFileSync(path.join(root, 'pages/camera/camera-report-ui.js'), 'utf8')
+const nativeImagePreview = fs.readFileSync(path.join(root, 'pages/native-image-preview.js'), 'utf8')
 const cameraWxss = fs.readFileSync(path.join(root, 'pages/camera/camera.wxss'), 'utf8')
 
 const currentMarkup = `${cameraWxml}\n${overlaysWxml}`
@@ -136,7 +137,16 @@ assert(cameraWxml.includes('<include src="../../templates/result-report-preview.
   && reportPreviewWxml.includes('bindtap="previewResultReportImage"')
   && reportPreviewWxml.includes('bindtap="shareResultReportImage"')
   && reportPreviewWxml.includes('bindtap="saveResultReportImage"')
-  && cameraReportUi.includes('previewGeneratedImage(path)')
+  && cameraReportUi.includes("const nativeImagePreview = require('../native-image-preview')")
+  && cameraReportUi.includes('if (!nativeImagePreview.preview(this, path, () => cancelCameraReportUi(this)))')
+  && cameraReportUi.includes('function cancelCameraReportUi(page)')
+  && cameraReportUi.includes('nativeImagePreview.cancel(page)')
+  && cameraReportUi.includes('hiddenPreviewChanges(page)')
+  && cameraJs.includes('const returningFromPreview = nativeImagePreview.onHide(this)')
+  && cameraJs.includes('if (!returningFromPreview) cancelCameraReportUi(this)')
+  && nativeImagePreview.includes('if (page._nativeImagePreview !== state || state.failed) return')
+  && nativeImagePreview.includes('if (state.hidden) {')
+  && nativeImagePreview.includes('if (onFailure) onFailure()')
   && cameraReportUi.includes('accessLocalImage(path, openPreview, invalidate)')
   && !/resultReportImageViewer|setResultReportImageViewerScale|closeResultReportImageViewer/.test(
     overlaysWxml + cameraReportUi + cameraJs + cameraWxss,

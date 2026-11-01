@@ -10,6 +10,7 @@ const app = JSON.parse(fs.readFileSync(path.join(root, 'app.json'), 'utf8'))
 const pageJson = JSON.parse(fs.readFileSync(path.join(root, 'pages/dmx-layout/dmx-layout.json'), 'utf8'))
 const pageWxml = fs.readFileSync(path.join(root, 'pages/dmx-layout/dmx-layout.wxml'), 'utf8')
 const pageWxss = fs.readFileSync(path.join(root, 'pages/dmx-layout/dmx-layout.wxss'), 'utf8')
+const pageFactorySource = fs.readFileSync(path.join(root, 'pages/dmx-layout/page-factory.js'), 'utf8')
 const pageSource = pageWxml + '\n' + pageWxss
 
 // Fixed migration matrix: source identities come from the frozen release-check
@@ -172,7 +173,7 @@ function verifyStyleMatrix() {
 
   assertFinalCss('.export-subtitle', 'color', 'var(--theme-text-secondary,#6e6e73)', 'Export subtitle text is secondary')
   assert.equal(finalCssValue('.export-subtitle', 'background'), undefined, 'Export subtitle has no opaque background; its own box remains transparent')
-  assertIncludes(pageWxml, '<view class="export-subtitle">{{contextLabel}}</view>', 'Export subtitle shows the current workspace label')
+  assertIncludes(pageWxml, '<view class="export-subtitle result-copy">{{contextLabel}}</view>', 'Export subtitle shows the current workspace label')
 
   for (const selector of ['.dimension-input-wrap input', '.rod-distance-input input']) {
     assertFinalCss(selector, 'color', 'var(--theme-text,#1d1d1f)', 'Numeric inputs use the current text token')
@@ -203,15 +204,27 @@ function verifyStyleMatrix() {
     && !/class="fixture-group-heading"[^>]*bindtap=/.test(pageWxml),
   'Fixture group heading is a static label, not a selectable legacy palette group')
 
-  assertFinalCss('.fixture-address-chip', 'background', 'var(--theme-control,#f4f4f6)', 'Fixture address cell uses a control surface')
+  assertFinalCss('.fixture-address-chip', 'background', 'var(--theme-surface,#fff)', 'Fixture address cell uses a theme surface')
   assertFinalCss('.fixture-address-chip', 'border', '1px solid var(--theme-divider,#dbdbe0)', 'Fixture address cell has a divider border')
   assertFinalCss('.fixture-chip-address', 'text-overflow', 'ellipsis', 'Address text remains bounded inside each cell')
-  assertFinalCss('.fixture-chip-placed', 'background', 'var(--fixture-color,#8a2bff)', 'Placed address state uses its fixture color')
-  assertFinalCss('.fixture-chip-placed .fixture-chip-address', 'color', '#fff', 'Placed address text stays white for contrast')
-  assertFinalCss('.fixture-chip-other-rod', 'background', 'var(--theme-surface,#fff)', 'Other-rod state remains visually distinct')
-  assertFinalCss('.fixture-chip-origin', 'color', 'var(--theme-text-tertiary,#86868b)', 'Other-rod origin label uses tertiary text')
-  assertFinalCss('.fixture-address-selected', 'box-shadow', '0 0 0 2px rgba(0,122,255,.24)', 'Selected fixture has a distinct focus ring')
-  assertIncludes(pageWxml, 'class="fixture-address-chip {{fixture.placedOnSelectedRod ?', 'Address cells bind placed/other-rod state classes')
+  assertFinalCss('.fixture-chip-placed', 'background', 'var(--fixture-color,#8a2bff)', 'Placed address state fills with its fixture group color')
+  assertFinalCss('.fixture-chip-placed', 'border', '2px solid var(--fixture-color,#8a2bff)', 'Placed address state retains its fixture-color border')
+  assertFinalCss('.fixture-chip-placed .fixture-chip-address', 'color', 'var(--fixture-ink,#fff)', 'Placed address text uses the contrasting fixture ink')
+  assertFinalCss('.dark-mode .fixture-address-chip', 'background', 'var(--theme-surface,#1c1c1e)', 'Unplaced address cells remain on the dark theme surface')
+  assertFinalCss('.dark-mode .fixture-chip-placed', 'background', 'var(--fixture-color,#8a2bff)', 'Placed address cells retain their group color in dark mode')
+  assertFinalCss('.fixture-chip-other-rod', 'background', 'var(--fixture-color,#8a2bff)', 'A fixture placed on another target retains its group fill')
+  assertFinalCss('.fixture-chip-other-rod .fixture-chip-origin', 'color', 'var(--fixture-ink,#fff)', 'Other-target origin text uses the contrasting fixture ink')
+  assertFinalCss('.fixture-address-selected', 'box-shadow', '0 0 0 2px var(--theme-accent,#007aff)', 'Selected fixture has a theme-aware focus ring')
+  assertIncludes(pageWxml, 'style="--fixture-color:{{fixture.color}};--fixture-ink:{{fixture.placedTextColor}};"', 'Address tiles bind the actual fixture group color and contrasting text color')
+  assertIncludes(pageFactorySource, 'return luminance > 0.179 ? \'#111111\' : \'#ffffff\'', 'Fixture text color is selected from its background luminance')
+  assertIncludes(pageFactorySource, 'placedTextColor: readableTextOnColor(fixture.color)', 'The readable fixture ink follows the actual group color')
+  assertIncludes(pageWxml, 'class="fixture-address-chip {{fixture.placed ? \'fixture-chip-placed\' : \'\'}} {{fixture.placedElsewhere ? \'fixture-chip-other-rod\' : \'\'}}', 'Placed cells retain the group fill and identify placements on another target')
+  assertIncludes(pageWxml, 'aria-label="{{fixture.accessibleLabel}}"', 'Placement target and address-check state remain available to assistive technology')
+  assertIncludes(pageFactorySource, 'const placedOnSelectedRod = Boolean(this._activeRodId && fixture.placed\n          && !fixture.groundPlaced && String(fixture.rodId) === String(this._activeRodId))', 'Current-rod placement state uses the real target position')
+  assertIncludes(pageFactorySource, 'const placedOnSelectedGround = Boolean(!this._activeRodId && fixture.groundPlaced)', 'Ground placement state uses the real stage-ground position')
+  assertIncludes(pageFactorySource, "const placedElsewhere = Boolean(fixture.placed && !placedOnSelectedTarget)", 'Other-target state excludes the current rod or ground target')
+  assertIncludes(pageFactorySource, "const placementLabel = placedOnSelectedTarget\n          ? this._activeRodId ? '已放在当前灯杆' : '已放在舞台地面'\n          : placedElsewhere ? '已放在' + fixture.rodName : '未放置'", 'Ground, current-rod, other-target, and unplaced states remain identifiable from the accessible label')
+  assertIncludes(pageFactorySource, "accessibleLabel: fixture.addressText + '，' + placementLabel + '，地址'", 'Accessible label uses the freshly computed placement state')
   assertIncludes(pageWxml, "selectedFixtureId === fixture.id ? 'fixture-address-selected'", 'Address selection styling follows the selected fixture ID')
   assertIncludes(pageWxml, '<text class="fixture-chip-address">{{fixture.addressText}}</text>', 'The address label is the actual visible text child')
   assertIncludes(pageWxml, '{{item.channelCount}} CH · {{item.fixtures.length}} 台', 'Group metadata includes channel and fixture counts')
@@ -252,8 +265,11 @@ function verifyOverlayMarkup() {
     'Export canvas must mount only for the generation phase')
   assert(/<view wx:if="\{\{previewVisible\}\}" class="export-overlay/.test(pageWxml),
     'Export preview overlay must be shown after generation')
-  assert(/<button class="sheet-close" bindtap="closePreview"/.test(pageWxml),
-    'Export preview must keep its explicit close action')
+  const previewCloseControl = '<button class="sheet-close panel-close-control" aria-label="关闭灯位图预览" bindtap="closePreview"><view class="panel-close-icon" aria-hidden="true"></view></button>'
+  assert.strictEqual(pageWxml.split(previewCloseControl).length - 1, 1,
+    'Export preview must keep its shared explicit close control exactly once')
+  assert(pageWxml.includes('<button class="reduction-cancel" bindtap="cancelLayoutReduction">返回修改</button>'),
+    'The reduction Cancel action must retain its original label and handler')
   assertFinalCss('.export-canvas', 'pointer-events', 'none', 'Export canvas must stay noninteractive')
   assertFinalCss('.overlay', 'position', 'fixed', 'Interactive panel backdrops cover the page')
   assertFinalCss('.settings-overlay', 'z-index', '110', 'Settings overlay stacking')
@@ -369,9 +385,12 @@ function verifyActualPageLifecycleAndMultiFixtureLayout() {
     page.onSelectRod(runtime.event({ rodId }))
     for (const fixture of sameModel.slice(0, 3)) {
       page.onPanelFixtureTap(runtime.event({ fixtureId: fixture.stableId }))
+      assert.equal(page._layout.positionsById[fixture.stableId], undefined,
+        'Selecting a fixture in the placement panel must not change its stage position')
+      page.moveSelectedFixtureToRod()
     }
     const placed = sameModel.slice(0, 3).map((fixture) => page._layout.positionsById[fixture.stableId])
-    assert(placed.every((position) => position && position.rodId === String(rodId)), 'Actual panel taps should place the chosen fixtures on the selected rod')
+    assert(placed.every((position) => position && position.rodId === String(rodId)), 'Explicit placement actions should place the chosen fixtures on the selected rod')
     assert.equal(new Set(placed.map((position) => position.t)).size, 3, 'Three fixtures of one model must keep distinct stage positions')
     assert.equal(Object.keys(page._layout.positionsById).length, 3, 'Placement should preserve the other fixture addresses without fictitious positions')
     const refreshedGroup = page.data.placementGroups.find((item) => item.fixtureModel === page._fixtures[0].fixtureModel)

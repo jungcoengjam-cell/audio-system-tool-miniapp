@@ -41,6 +41,17 @@ function fixtureTouch(page, fixture) {
   return touchForWorldPoint(page, layoutModel.layoutFixturePoint(geometry, rod, position))
 }
 
+function groundFixtureTouch(page, fixture) {
+  const geometry = page.getGeometry()
+  return touchForWorldPoint(page, layoutModel.layoutFixturePoint(geometry, null, page._layout.positionsById[fixture.stableId]))
+}
+
+function assertGroundCorner(position, corner, context) {
+  assert.equal(position.kind, 'ground', `${context}: position remains on the stage floor`)
+  assert(Math.abs(Number(position.x) - corner.x) < 1e-9, `${context}: x clamps to ${corner.x}; got ${position.x}`)
+  assert(Math.abs(Number(position.y) - corner.y) < 1e-9, `${context}: y clamps to ${corner.y}; got ${position.y}`)
+}
+
 async function startDrag(page, fixture) {
   const touch = fixtureTouch(page, fixture)
   page.onCanvasTouchStart({ touches: [touch] })
@@ -159,6 +170,102 @@ async function testLegacySideRodDrop() {
   runtime.dispose()
 }
 
+async function testGroundDragEdgeToleranceAcrossOrientations() {
+  const { runtime, page, fixture } = makePlacedPage()
+  try {
+    const savedLayout = page.saveLayoutOnly.bind(page)
+    let saveCalls = 0
+    page.saveLayoutOnly = (layout) => { saveCalls += 1; return savedLayout(layout) }
+    page._layout.positionsById[fixture.stableId] = { kind: 'ground', x: .5, y: .5 }
+    assert(page.saveLayoutOnly(page._layout), 'ground fixture setup should persist')
+
+    const directions = [
+      { direction: 'bottom', scale: .85 },
+      { direction: 'right', scale: 1 },
+      { direction: 'top', scale: 1.15 },
+      { direction: 'left', scale: 1.25 },
+    ]
+    const corners = [
+      { x: 0, y: 0, label: 'top-left' },
+      { x: 1, y: 0, label: 'top-right' },
+      { x: 0, y: 1, label: 'bottom-left' },
+      { x: 1, y: 1, label: 'bottom-right' },
+    ]
+    for (const { direction, scale } of directions) {
+      page._layout.apronDirection = direction
+      page._geometry = null
+      page._geometryKey = ''
+      const geometry = page.getGeometry()
+      page._view = {
+        s: scale,
+        x: (page._canvasRect.width - geometry.stage.width * scale) / 2 - geometry.stage.left * scale,
+        y: (page._canvasRect.height - geometry.stage.height * scale) / 2 - geometry.stage.top * scale,
+      }
+
+      for (const corner of corners) {
+        page._layout.positionsById[fixture.stableId] = { kind: 'ground', x: .5, y: .5 }
+        const start = groundFixtureTouch(page, fixture)
+        page.onCanvasTouchStart({ touches: [start] })
+        await wait(410)
+        assert.equal(page._touchState?.dragging, true, `${direction}/${corner.label}: long press should start ground drag`)
+
+        const currentGeometry = page.getGeometry()
+        const stage = currentGeometry.stage
+        const outsideWorldPoint = {
+          x: corner.x === 0 ? stage.left - 8 / scale : stage.left + stage.width + 8 / scale,
+          y: corner.y === 0 ? stage.top - 8 / scale : stage.top + stage.height + 8 / scale,
+        }
+        const release = touchForWorldPoint(page, outsideWorldPoint)
+        page.onCanvasTouchMove({ touches: [release] })
+        assertGroundCorner(page._layout.positionsById[fixture.stableId], corner,
+          `${direction}/${corner.label}: slight screen-space overshoot clamps to the stage corner`)
+
+        const beforeReleaseSaves = saveCalls
+        page.onCanvasTouchEnd({ touches: [], changedTouches: [release] })
+        assert.equal(saveCalls, beforeReleaseSaves + 1, `${direction}/${corner.label}: corner drag should save once`)
+        const stored = runtime.workspace.readLightingWorkspace(page._contextId)
+        assertGroundCorner(stored.scheme.layout.positionsById[fixture.stableId], corner,
+          `${direction}/${corner.label}: clamped corner should persist`)
+        page.onHide()
+        page.onShow()
+        assertGroundCorner(page._layout.positionsById[fixture.stableId], corner,
+          `${direction}/${corner.label}: persisted corner should reload`)
+      }
+    }
+
+    page._layout.apronDirection = 'bottom'
+    page._geometry = null
+    page._geometryKey = ''
+    const geometry = page.getGeometry()
+    const scale = .85
+    page._view = {
+      s: scale,
+      x: (page._canvasRect.width - geometry.stage.width * scale) / 2 - geometry.stage.left * scale,
+      y: (page._canvasRect.height - geometry.stage.height * scale) / 2 - geometry.stage.top * scale,
+    }
+    const original = { kind: 'ground', x: .5, y: .5 }
+    page._layout.positionsById[fixture.stableId] = clone(original)
+    const start = groundFixtureTouch(page, fixture)
+    page.onCanvasTouchStart({ touches: [start] })
+    await wait(410)
+    const tooFarWorldPoint = {
+      x: geometry.stage.left - 24 / scale,
+      y: geometry.stage.top - 24 / scale,
+    }
+    const tooFar = touchForWorldPoint(page, tooFarWorldPoint)
+    const beforeFarDropSaves = saveCalls
+    page.onCanvasTouchMove({ touches: [tooFar] })
+    assert.deepEqual(page._layout.positionsById[fixture.stableId], original,
+      'a point well outside the edge tolerance keeps the original position')
+    page.onCanvasTouchEnd({ touches: [], changedTouches: [tooFar] })
+    assert.deepEqual(page._layout.positionsById[fixture.stableId], original,
+      'an out-of-bounds release cannot leave the stage or commit a new position')
+    assert.equal(saveCalls, beforeFarDropSaves, 'an out-of-bounds release does not save')
+  } finally {
+    runtime.dispose()
+  }
+}
+
 function testGroupColorOnScreenAndExport() {
   const layout = {
     stageWidthText: '12', stageDepthText: '8', apronDirection: 'bottom',
@@ -194,7 +301,7 @@ function testLandscapeStatusAndUiContract() {
   assert.equal(page.data.statusBarHeight, 8, 'valid landscape capsule should override a stale portrait status bar')
   assert.equal(page.data.navigationHeight, 52, 'landscape navigation should follow the capsule geometry')
 
-  for (const relative of ['pages/dmx-layout/dmx-layout.wxml', 'pages/dmx-layout-landscape/dmx-layout-landscape.wxml']) {
+  for (const relative of ['pages/dmx-layout/dmx-layout.wxml']) {
     const source = fs.readFileSync(path.join(root, relative), 'utf8')
     assert(!/定位灯具|class="locate-overlay|class="locate-card/.test(source), `${relative}: locator entry and panel should be absent`)
     assert(/class="context-row"[\s\S]*?class="context-native-picker"[\s\S]*?class="context-share/.test(source),
@@ -248,6 +355,7 @@ async function main() {
   await testSameRodAndInvalidRelease()
   await testInterruptedDragDoesNotPersist()
   await testLegacySideRodDrop()
+  await testGroundDragEdgeToleranceAcrossOrientations()
   testGroupColorOnScreenAndExport()
   testLandscapeStatusAndUiContract()
   testLandscapeDisplayFit()

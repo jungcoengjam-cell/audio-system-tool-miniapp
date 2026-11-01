@@ -9,7 +9,7 @@ const {
   getCategories,
   getProductFilters,
   getRecentProducts,
-} = require('../../utils/products')
+} = require('./utils/products')
 
 const PRODUCT_PAGE_SIZE = 12
 const SEARCH_REFRESH_DELAY = 140

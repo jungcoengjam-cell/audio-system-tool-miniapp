@@ -11,6 +11,12 @@ const COLORS = {
   tertiary: '#778181', line: '#d8e5e2', wall: '#f5f7fa', frame: '#c7c7cc',
   screen: '#4f46e5', warningText: '#80530f',
 }
+const DARK_COLORS = {
+  background: '#111214', card: '#1c1d20', mint: '#18332f', accent: '#5bd0b9',
+  blue: '#1b2d3e', warning: '#382817', text: '#f2f3f5', secondary: '#c4c7cc',
+  tertiary: '#a9abb0', line: '#3b3e42', wall: '#1b1d20', frame: '#484a50',
+  screen: COLORS.screen, warningText: '#ffd08a',
+}
 
 function fontString(size, weight = 400) {
   return `${weight} ${size}px -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif`
@@ -212,7 +218,7 @@ function buildLedScreenReportLayout(context, payload) {
   return layout
 }
 
-function drawWallDiagram(context, payload, section) {
+function drawWallDiagram(context, payload, section, colors) {
   const { input, result } = payload
   const wallX = SIDE_MARGIN + (CARD_WIDTH - section.diagramWall.width) / 2
   const diagramTop = section.y + section.wallLabelTop + section.wallLabelLines.length * 24 + 7
@@ -220,7 +226,7 @@ function drawWallDiagram(context, payload, section) {
   const wallWidth = section.diagramWall.width
   const wallHeight = section.diagramWall.height
 
-  if (typeof context.setFillStyle === 'function') context.setFillStyle(COLORS.wall)
+  if (typeof context.setFillStyle === 'function') context.setFillStyle(colors.wall)
   context.fillRect(wallX, wallY, wallWidth, wallHeight)
   strokeRect(context, wallX, wallY, wallWidth, wallHeight, '#93a0ad', 2)
 
@@ -230,7 +236,7 @@ function drawWallDiagram(context, payload, section) {
   const frameY = wallY + (result.actualTopMarginMeters / wallHeightMeters * wallHeight)
   const frameWidth = result.installedWidthMeters / wallWidthMeters * wallWidth
   const frameHeight = result.installedHeightMeters / wallHeightMeters * wallHeight
-  if (typeof context.setFillStyle === 'function') context.setFillStyle(COLORS.frame)
+  if (typeof context.setFillStyle === 'function') context.setFillStyle(colors.frame)
   context.fillRect(frameX, frameY, frameWidth, frameHeight)
   strokeRect(context, frameX, frameY, frameWidth, frameHeight, '#8e8e93', 1)
 
@@ -238,7 +244,7 @@ function drawWallDiagram(context, payload, section) {
   const screenY = frameY + result.frameWidthMeters / result.installedHeightMeters * frameHeight
   const screenWidth = result.screenWidthMeters / result.installedWidthMeters * frameWidth
   const screenHeight = result.screenHeightMeters / result.installedHeightMeters * frameHeight
-  if (typeof context.setFillStyle === 'function') context.setFillStyle(COLORS.screen)
+  if (typeof context.setFillStyle === 'function') context.setFillStyle(colors.screen)
   context.fillRect(screenX, screenY, screenWidth, screenHeight)
 
   if (typeof context.setStrokeStyle === 'function') context.setStrokeStyle('rgba(255,255,255,.3)')
@@ -270,69 +276,70 @@ function drawWallDiagram(context, payload, section) {
   }
 
   drawLines(context, section.wallLabelLines, REPORT_WIDTH / 2,
-    section.y + section.wallLabelTop + 18, 24, 18, COLORS.secondary, 500, 'center')
+    section.y + section.wallLabelTop + 18, 24, 18, colors.secondary, 500, 'center')
   drawLines(context, section.outerFrameLines, REPORT_WIDTH / 2,
-    section.y + section.outerTop + 17, 23, 18, COLORS.tertiary, 400, 'center')
+    section.y + section.outerTop + 17, 23, 18, colors.tertiary, 400, 'center')
   drawLines(context, section.clearanceLines, SIDE_MARGIN + CARD_PADDING,
-    section.y + section.clearanceTop + 18, 23, 18, COLORS.secondary, 500)
+    section.y + section.clearanceTop + 18, 23, 18, colors.secondary, 500)
 }
 
-function drawMetricCell(context, cell) {
-  roundedRect(context, cell.x, cell.y, cell.width, cell.height, 16, COLORS.blue)
+function drawMetricCell(context, cell, colors) {
+  roundedRect(context, cell.x, cell.y, cell.width, cell.height, 16, colors.blue)
   const labelLineHeight = 22
   const valueY = cell.y + 53 + Math.max(0, cell.labelLines.length - 1) * labelLineHeight
   drawLines(context, cell.labelLines, cell.x + 16, cell.y + 22,
-    labelLineHeight, 18, COLORS.tertiary, 600)
+    labelLineHeight, 18, colors.tertiary, 600)
   drawLines(context, cell.valueLines, cell.x + 16,
-    valueY, cell.valueLineHeight, cell.valueFontSize, COLORS.text, 650)
+    valueY, cell.valueLineHeight, cell.valueFontSize, colors.text, 650)
 }
 
-function drawLedScreenReport(context, payload, layout = buildLedScreenReportLayout(context, payload)) {
-  if (typeof context.setFillStyle === 'function') context.setFillStyle(COLORS.background)
+function drawLedScreenReport(context, payload, layout = buildLedScreenReportLayout(context, payload), theme = 'light') {
+  const colors = theme === 'dark' ? DARK_COLORS : COLORS
+  if (typeof context.setFillStyle === 'function') context.setFillStyle(colors.background)
   context.fillRect(0, 0, REPORT_WIDTH, layout.height)
 
   layout.sections.forEach((section) => {
     if (section.type === 'title') {
-      drawLines(context, section.lines, SIDE_MARGIN, section.y + 31, section.lineHeight, 32, COLORS.text, 700)
+      drawLines(context, section.lines, SIDE_MARGIN, section.y + 31, section.lineHeight, 32, colors.text, 700)
       return
     }
     if (section.type === 'hero') {
-      roundedRect(context, SIDE_MARGIN, section.y, CARD_WIDTH, section.height, 24, COLORS.mint)
-      drawText(context, '净屏尺寸', REPORT_WIDTH / 2, section.y + 34, 21, COLORS.accent, 650, 'center')
+      roundedRect(context, SIDE_MARGIN, section.y, CARD_WIDTH, section.height, 24, colors.mint)
+      drawText(context, '净屏尺寸', REPORT_WIDTH / 2, section.y + 34, 21, colors.accent, 650, 'center')
       drawLines(context, section.primaryLines, REPORT_WIDTH / 2,
-        section.y + 92, 68, 58, COLORS.text, 700, 'center')
+        section.y + 92, 68, 58, colors.text, 700, 'center')
       const afterPrimary = section.y + 92 + section.primaryLines.length * 68
       drawLines(context, section.layoutLines, REPORT_WIDTH / 2,
-        afterPrimary + 18, 30, 22, COLORS.secondary, 500, 'center')
+        afterPrimary + 18, 30, 22, colors.secondary, 500, 'center')
       drawLines(context, section.outerLines, REPORT_WIDTH / 2,
-        afterPrimary + 18 + section.layoutLines.length * 30 + 20, 32, 23, COLORS.accent, 650, 'center')
+        afterPrimary + 18 + section.layoutLines.length * 30 + 20, 32, 23, colors.accent, 650, 'center')
       return
     }
     if (section.type === 'diagram') {
-      roundedRect(context, SIDE_MARGIN, section.y, CARD_WIDTH, section.height, 22, COLORS.card)
+      roundedRect(context, SIDE_MARGIN, section.y, CARD_WIDTH, section.height, 22, colors.card)
       drawLines(context, section.titleLines, SIDE_MARGIN + CARD_PADDING,
-        section.y + CARD_PADDING + 26, 34, 27, COLORS.text, 650)
-      drawWallDiagram(context, payload, section)
+        section.y + CARD_PADDING + 26, 34, 27, colors.text, 650)
+      drawWallDiagram(context, payload, section, colors)
       return
     }
     if (section.type === 'specs') {
-      roundedRect(context, SIDE_MARGIN, section.y, CARD_WIDTH, section.height, 22, COLORS.card)
+      roundedRect(context, SIDE_MARGIN, section.y, CARD_WIDTH, section.height, 22, colors.card)
       drawLines(context, section.titleLines, SIDE_MARGIN + CARD_PADDING,
-        section.y + CARD_PADDING + 23, 32, 26, COLORS.text, 650)
-      section.cells.forEach((cell) => drawMetricCell(context, cell))
+        section.y + CARD_PADDING + 23, 32, 26, colors.text, 650)
+      section.cells.forEach((cell) => drawMetricCell(context, cell, colors))
       return
     }
     if (section.type === 'warnings') {
-      roundedRect(context, SIDE_MARGIN, section.y, CARD_WIDTH, section.height, 22, COLORS.warning)
+      roundedRect(context, SIDE_MARGIN, section.y, CARD_WIDTH, section.height, 22, colors.warning)
       drawLines(context, section.titleLines, SIDE_MARGIN + CARD_PADDING,
-        section.y + CARD_PADDING + 22, 31, 24, COLORS.warningText, 650)
+        section.y + CARD_PADDING + 22, 31, 24, colors.warningText, 650)
       let rowY = section.y + CARD_PADDING + section.titleLines.length * 31 + 12
       section.rows.forEach((row) => {
         drawLines(context, row.labelLines, SIDE_MARGIN + CARD_PADDING, rowY + 19,
-          26, 19, COLORS.warningText, 650)
+          26, 19, colors.warningText, 650)
         rowY += row.labelLines.length * 26
         drawLines(context, row.textLines, SIDE_MARGIN + CARD_PADDING, rowY + 21,
-          29, 19, COLORS.secondary, 400)
+          29, 19, colors.secondary, 400)
         rowY += row.textLines.length * 29 + 20
       })
     }

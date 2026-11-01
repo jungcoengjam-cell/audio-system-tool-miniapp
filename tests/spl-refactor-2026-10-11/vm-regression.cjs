@@ -172,8 +172,16 @@ function testModelCountSummationAndInvalidInputs() {
 function testResetPreservesRecordsAndHandlesStorageFailure() {
   withSession(({ page, platform, records }) => {
     const payload = page.getRecordPayload()
+    const project = records.createProject('声压级重置保护')
+    assert.ok(project)
+    const savedRecord = records.addRecordToProject(payload, project.id)
+    assert.ok(savedRecord)
     const favorite = records.toggleFavorite(payload)
     assert.ok(favorite?.favorite)
+    const recordsBeforeReset = structuredClone(records.getRecords())
+    const favoritesBeforeReset = structuredClone(records.getFavorites())
+    assert.equal(recordsBeforeReset.length, 1, 'project records do not include independent favorites')
+    assert.equal(favoritesBeforeReset.length, 1)
     page.onShow()
     assert.equal(page.data.currentFavorite, true)
 
@@ -189,8 +197,8 @@ function testResetPreservesRecordsAndHandlesStorageFailure() {
     assert.match(page.data.resetError, /保存失败/)
     assert.equal(platform.toastLog.at(-1)?.title, '清空失败，请重试',
       'failed preference persistence reports the failure to the user')
-    assert.equal(records.getRecords().length, 1)
-    assert.equal(records.getRecords()[0].favorite, true)
+    assert.deepEqual(records.getRecords(), recordsBeforeReset, 'failed reset preserves the full project record')
+    assert.deepEqual(records.getFavorites(), favoritesBeforeReset, 'failed reset preserves the independent favorite')
 
     platform.failedWrites.delete(PREFERENCE_KEY)
     assert.equal(page.clearSplInputs(), true)
@@ -204,13 +212,19 @@ function testResetPreservesRecordsAndHandlesStorageFailure() {
     assert.equal(page.getRecordPayload(), null, 'blank reset cannot be saved or dereference a missing speaker')
     assert.equal(page.getRecordLookupPayload(), null)
     assert.equal(page.data.summationModes[page.data.summationModeIndex].value, 'distributed')
-    assert.equal(page.data.selectorVisible, false)
+    assert.equal(page.data.selectorVisible, true, 'selector stays mounted during its reset close transition')
+    assert.equal(page.data.selectorClosing, true)
+    platform.clock.tick(179)
+    assert.equal(page.data.selectorVisible, true, 'selector remains mounted before the close transition ends')
+    platform.clock.tick(1)
+    assert.equal(page.data.selectorVisible, false, 'reset closes the selector at the transition boundary')
+    assert.equal(page.data.selectorClosing, false)
     assert.equal(page.data.selectorKeyword, '')
     assert.equal(page.data.speakerKeyword, '')
     assert.equal(page.data.resultReportImagePath, '')
     assert.equal(page.data.currentFavorite, false, 'blank reset has no active favorite identity')
-    assert.equal(records.getRecords().length, 1, 'reset preserves saved record')
-    assert.equal(records.getRecords()[0].favorite, true, 'reset preserves favorite')
+    assert.deepEqual(records.getRecords(), recordsBeforeReset, 'reset preserves the full saved project record')
+    assert.deepEqual(records.getFavorites(), favoritesBeforeReset, 'reset preserves the full independent favorite')
     assert.deepEqual(platform.storage.get(PREFERENCE_KEY), EMPTY_PREFERENCES,
       'reset persists an explicit empty preference record')
   })
@@ -330,6 +344,179 @@ function testProjectKeyboardEventsAndMetadataIdentity() {
   })
 }
 
+function testProjectFocusDefersKeyboardLayout() {
+  withSession(({ page, platform }) => {
+    assert.equal(page.openProjectSheet(), true)
+    page.setData({ projectStep: 'details' })
+    const writesBefore = platform.writeLog.slice()
+    const pageSetData = page.setData.bind(page)
+    const setDataCalls = []
+    page.setData = (changes, callback) => {
+      setDataCalls.push(changes)
+      return pageSetData(changes, callback)
+    }
+
+    const focusNote = event(page, 'projectConfigNote', { detail: { height: 280 }, timeStamp: 1000 })
+    assert.equal(page.onProjectInputFocus(focusNote), true)
+    assert.equal(page._projectKeyboardFocusId, 'projectConfigNote')
+    assert.equal(page._projectKeyboardHeight, 280, 'focus retains the native height for resize fallback')
+    assert.equal(setDataCalls.length, 0, 'focus does not synchronously reflow the native textarea container')
+    assert.equal(page.data.projectKeyboardActive, false)
+    assert.equal(page.data.projectKeyboardPanelStyle, '')
+
+    const staleHeight = event(page, 'projectConfigNote', { detail: { height: 320 }, timeStamp: 999 })
+    assert.equal(page.onProjectKeyboardHeightChange(staleHeight), false, 'a pre-focus height event is ignored')
+    assert.equal(setDataCalls.length, 0)
+    const currentHeight = event(page, 'projectConfigNote', { detail: { height: 280 }, timeStamp: 1001 })
+    assert.equal(page.onProjectKeyboardHeightChange(currentHeight), true)
+    assert.equal(page.data.projectKeyboardActive, true, 'keyboardheightchange applies the deferred layout')
+    assert.equal(page.data.projectKeyboardPanelStyle, 'max-height:calc(391px - 10px);margin-bottom:280px;')
+
+    const existingLayout = page.data.projectKeyboardPanelStyle
+    const patchesBeforeSwitch = setDataCalls.length
+    assert.equal(page.onProjectInputBlur(event(page, 'projectConfigNote', { timeStamp: 1002 })), true)
+    const focusName = event(page, 'projectConfigName', { detail: { height: 300 }, timeStamp: 1003 })
+    assert.equal(page.onProjectInputFocus(focusName), true, 'focus can move to the adjacent name field')
+    assert.equal(page._projectKeyboardFocusId, 'projectConfigName')
+    assert.equal(page._projectKeyboardHeight, 300)
+    assert.equal(setDataCalls.length, patchesBeforeSwitch, 'switching fields does not reflow during focus')
+    assert.equal(page.data.projectKeyboardPanelStyle, existingLayout, 'the prior layout remains until a keyboard/resize event')
+    assert.equal(page.onProjectKeyboardHeightChange(
+      event(page, 'projectConfigNote', { detail: { height: 320 }, timeStamp: 1004 })), false,
+    'a delayed height event from the old field is ignored')
+    assert.equal(page._projectKeyboardHeight, 300)
+    assert.equal(page.onProjectKeyboardHeightChange(
+      event(page, 'projectConfigName', { detail: { height: 300 }, timeStamp: 1005 })), true)
+
+    page.onResize({ size: { windowHeight: 500 } })
+    assert.equal(page.data.projectKeyboardActive, true, 'onResize updates layout using the recorded keyboard height')
+    assert.equal(page.data.projectKeyboardPanelStyle, 'max-height:calc(371px - 10px);margin-bottom:129px;')
+    assert.equal(page.data.projectSheetVisible, true)
+    assert.equal(page.data.projectStep, 'details')
+    assert.deepEqual(platform.writeLog, writesBefore, 'focus and layout events do not change project storage')
+
+    page.onHide()
+    assert.equal(page.data.projectSheetVisible, false, 'ordinary hide keeps the existing sheet cleanup behavior')
+    const patchesAfterHide = setDataCalls.length
+    assert.equal(page.onProjectKeyboardHeightChange(currentHeight), false, 'keyboard events after hide are ignored')
+    assert.equal(setDataCalls.length, patchesAfterHide)
+    page.onUnload()
+    const patchesAfterUnload = setDataCalls.length
+    assert.equal(page.onProjectInputFocus(focusName), false, 'focus events after unload are ignored')
+    assert.equal(page.onProjectKeyboardHeightChange(currentHeight), false, 'height events after unload are ignored')
+    assert.equal(setDataCalls.length, patchesAfterUnload)
+    assert.deepEqual(platform.writeLog, writesBefore, 'hide/unload lifecycle does not change project storage')
+  })
+}
+
+function testProjectKeyboardResizeLifecycle() {
+  withSession(({ page, platform }) => {
+    let windowHeight = 671
+    let windowReads = 0
+    platform.wx.getWindowInfo = () => {
+      windowReads += 1
+      return { windowWidth: 390, windowHeight }
+    }
+    const writesBefore = platform.writeLog.slice()
+    const pageSetData = page.setData.bind(page)
+    const setDataCalls = []
+    page.setData = (changes, callback) => {
+      setDataCalls.push(Object.keys(changes))
+      return pageSetData(changes, callback)
+    }
+
+    page.onResize({ size: { windowHeight: 620 } })
+    assert.equal(windowReads, 0, 'a resize without a project sheet does not read keyboard height')
+    assert.deepEqual(setDataCalls, [], 'a resize without a project sheet does not update keyboard layout')
+    assert.deepEqual(platform.writeLog, writesBefore, 'a resize does not write project records')
+
+    assert.equal(page.openProjectSheet(), true)
+    page.setData({ projectStep: 'details' })
+    setDataCalls.length = 0
+    const projectWritesBeforeResize = platform.writeLog.slice()
+    let projectRecordReads = 0
+    const getStorageSync = platform.wx.getStorageSync.bind(platform.wx)
+    platform.wx.getStorageSync = (key) => {
+      if (key === RECORDS_KEY || key === PROJECTS_KEY) projectRecordReads += 1
+      return getStorageSync(key)
+    }
+
+    windowHeight = 700
+    page.onResize({ size: { windowHeight } })
+    assert.equal(page._projectKeyboardWindowHeight, 700)
+    assert.equal(page._projectKeyboardBaselineHeight, 700,
+      'a no-keyboard resize refreshes the project keyboard baseline')
+    assert.deepEqual(setDataCalls, [], 'a no-keyboard resize updates internal baseline only')
+
+    page._projectKeyboardFocusId = 'projectConfigNote'
+    page._projectKeyboardHeight = 280
+    page.onResize({ size: { windowHeight: 420 } })
+    assert.equal(page.data.projectKeyboardActive, true)
+    assert.equal(page.data.projectKeyboardPanelStyle, 'max-height:calc(420px - 10px);margin-bottom:0px;',
+      'a keyboard resize uses the new viewport height')
+    assert.equal(page.data.projectSheetVisible, true)
+    assert.equal(page.data.projectStep, 'details')
+
+    page.onResize({ size: { windowHeight: 430 } })
+    assert.equal(page.data.projectKeyboardPanelStyle, 'max-height:calc(420px - 10px);margin-bottom:10px;',
+      'consecutive resize events recalculate the remaining keyboard lift')
+    assert.equal(projectRecordReads, 0, 'keyboard resizes do not read project records')
+    assert.deepEqual(platform.writeLog, projectWritesBeforeResize,
+      'keyboard resizes do not write project records')
+
+    page.setData({ projectSheetVisible: false })
+    setDataCalls.length = 0
+    const readsBeforeHiddenResize = windowReads
+    page.onResize({ size: { windowHeight: 450 } })
+    assert.equal(windowReads, readsBeforeHiddenResize, 'a hidden project sheet skips keyboard height reads')
+    assert.deepEqual(setDataCalls, [], 'a hidden project sheet skips keyboard layout updates')
+
+    page.onHide()
+    setDataCalls.length = 0
+    const readsBeforeHiddenPageResize = windowReads
+    page.onResize({ size: { windowHeight: 460 } })
+    assert.equal(windowReads, readsBeforeHiddenPageResize, 'a hidden page skips keyboard height reads')
+    assert.deepEqual(setDataCalls, [], 'a hidden page skips keyboard layout updates')
+    assert.equal(projectRecordReads, 0, 'hidden-page resizes do not read project records')
+    assert.deepEqual(platform.writeLog, projectWritesBeforeResize,
+      'hidden resizes do not write project records')
+  })
+
+  withSession(({ page, platform }) => {
+    assert.equal(page.openProjectSheet(), true)
+    let windowReads = 0
+    let projectRecordReads = 0
+    const getWindowInfo = platform.wx.getWindowInfo.bind(platform.wx)
+    const getStorageSync = platform.wx.getStorageSync.bind(platform.wx)
+    platform.wx.getWindowInfo = () => {
+      windowReads += 1
+      return getWindowInfo()
+    }
+    platform.wx.getStorageSync = (key) => {
+      if (key === RECORDS_KEY || key === PROJECTS_KEY) projectRecordReads += 1
+      return getStorageSync(key)
+    }
+    page.onUnload()
+    const dataAfterUnload = JSON.parse(JSON.stringify(page.data))
+    const writesAfterUnload = platform.writeLog.slice()
+    windowReads = 0
+    projectRecordReads = 0
+    let setDataCalls = 0
+    const pageSetData = page.setData.bind(page)
+    page.setData = (...args) => {
+      setDataCalls += 1
+      return pageSetData(...args)
+    }
+    page.onResize({ size: { windowHeight: 460 } })
+    assert.equal(windowReads, 0, 'a resize after unload does not read keyboard height')
+    assert.equal(projectRecordReads, 0, 'a resize after unload does not read project records')
+    assert.equal(setDataCalls, 0, 'a resize after unload does not update page data')
+    assert.deepEqual(page.data, dataAfterUnload)
+    assert.deepEqual(platform.writeLog, writesAfterUnload,
+      'a resize after unload does not write project records')
+  })
+}
+
 function testProjectSaveFailureIsAtomic() {
   withSession(({ page, platform, records }) => {
     assert.equal(page.openProjectSheet(), true)
@@ -410,8 +597,8 @@ function testReportLifecycleAndLateCallbacks() {
     assert.equal(page.openSharePreview(), true)
     assert.equal(page._pendingSetDataCallbacks.length, 1)
     assert.equal(page.closeSharePreview(), true)
-    platform.clock.tick(320)
     page.flushSetDataCallbacks()
+    platform.clock.tick(320)
     page.flushSetDataCallbacks()
     platform.runNextDrawCallback()
     if (platform.canvasExports.length) platform.resolveCanvasExport(0, '/tmp/animated-stale.png')
@@ -448,6 +635,8 @@ function testReportLifecycleAndLateCallbacks() {
     platform.wx.getFileSystemManager = () => ({ access(request) { cacheRequest = request } })
     const cachedImagePath = '/tmp/deferred-spl-cache.png'
     page.resultReportSignature = page.getResultReportSignature()
+    page._resultReportImageTheme = require(path.join(root, 'pages/result-image-theme.js'))
+      .getResultImageTheme(platform.wx)
     page.data.resultReportImagePath = cachedImagePath
     assert.equal(page.openSharePreview(), true)
     assert.equal(page.data.isCheckingResultReportCache, true)
@@ -463,92 +652,18 @@ function testReportLifecycleAndLateCallbacks() {
     assert.equal(page.data.shareSheetVisible, false)
   })
 
-  withSession(({ page, platform }) => {
-    const pendingLayouts = []
-    const nodes = {
-      '.page-root': { left: 0, right: 390, top: 0, bottom: 671, width: 390, height: 671 },
-      '.spl-overlay': { left: 0, right: 390, top: 0, bottom: 671, width: 390, height: 671 },
-      '#splSharePanel': {
-        left: 0, right: 390, top: 0, bottom: 671, width: 390, height: 671,
-        computedStyle: {
-          paddingTop: '15px', paddingBottom: '46px', paddingLeft: '16px', paddingRight: '16px',
-          borderTopWidth: '1px', borderBottomWidth: '1px', borderLeftWidth: '1px', borderRightWidth: '1px',
-        },
-      },
-      '#splShareHeader': { left: 16, right: 374, top: 16, bottom: 60, width: 358, height: 44, computedStyle: { marginBottom: '9px' } },
-      '#splShareActions': { left: 16, right: 374, top: 400, bottom: 454, width: 358, height: 54 },
-      '#splShareImageFrame': {
-        left: 16, right: 374, top: 70, bottom: 370, width: 358, height: 300,
-        computedStyle: {
-          paddingTop: '0px', paddingBottom: '0px', paddingLeft: '0px', paddingRight: '0px',
-          borderTopWidth: '1px', borderBottomWidth: '1px', borderLeftWidth: '1px', borderRightWidth: '1px',
-        },
-      },
-    }
-    page.resultReportRevision = 1
-    platform.wx.createSelectorQuery = () => {
-      const selections = []
-      const query = {
-        in() { return this },
-        select(selector) {
-          const entry = { selector, callback: null }
-          selections.push(entry)
-          return {
-            fields(_options, callback) { entry.callback = callback },
-            boundingClientRect(callback) { entry.callback = callback },
-          }
-        },
-        exec(callback) {
-          pendingLayouts.push(() => {
-            selections.forEach((entry) => entry.callback?.(nodes[entry.selector]))
-            callback?.()
-          })
-        },
-      }
-      return query
-    }
-    page.setData({
-      shareSheetVisible: true,
-      shareSheetClosing: false,
-      resultReportPreviewVisible: true,
-      resultReportImagePath: '/tmp/spl-layout.png',
-      resultReportCanvasHeight: 1600,
-    })
-    assert.equal(page.updateShareImageLayout(), true)
-    assert.equal(pendingLayouts.length, 1)
-    pendingLayouts.shift()()
-    const parsePixels = (style, property) => Number(new RegExp(`${property}:(\\d+(?:\\.\\d+)?)px`).exec(style)?.[1])
-    const tallImageWidth = parsePixels(page.data.shareImageStyle, 'width')
-    const tallImageHeight = parsePixels(page.data.shareImageStyle, 'height')
-    const tallFrameHeight = parsePixels(page.data.shareImageFrameStyle, 'height')
-    assert.ok(Math.abs((tallImageWidth / tallImageHeight) - (750 / 1600)) < 0.01,
-      'long reports retain their complete 750-to-canvas-height aspect ratio')
-    assert.ok(tallImageHeight > 400 && tallFrameHeight >= tallImageHeight + 1,
-      'long report frame reserves the measured image height and border')
+}
 
-    page.setData({ resultReportCanvasHeight: 600 })
-    assert.equal(page.updateShareImageLayout(), true)
-    pendingLayouts.shift()()
-    const shortImageWidth = parsePixels(page.data.shareImageStyle, 'width')
-    const shortImageHeight = parsePixels(page.data.shareImageStyle, 'height')
-    const shortFrameHeight = parsePixels(page.data.shareImageFrameStyle, 'height')
-    assert.ok(Math.abs((shortImageWidth / shortImageHeight) - (750 / 600)) < 0.01,
-      'short reports retain their complete 750-to-canvas-height aspect ratio')
-    assert.ok(shortImageHeight < tallImageHeight && shortFrameHeight < tallFrameHeight,
-      'short report frame shrinks to its image instead of keeping the long-report viewport height')
-
-    page.setData({ resultReportCanvasHeight: 1800 })
-    assert.equal(page.updateShareImageLayout(), true)
-    const styleBeforeLateLayout = page.data.shareImageStyle
-    const frameBeforeLateLayout = page.data.shareImageFrameStyle
-    assert.equal(page.closeSharePreview(), true)
-    pendingLayouts.shift()()
-    assert.equal(page.data.shareImageStyle, styleBeforeLateLayout,
-      'late selector-query layout after close cannot alter the next preview style')
-    assert.equal(page.data.shareImageFrameStyle, frameBeforeLateLayout,
-      'late selector-query layout after close cannot resize the hidden frame')
-    platform.clock.tick(320)
-    assert.equal(page.data.shareSheetVisible, false)
+function testSPLSharePreviewUsesScrollableImageContract() {
+  withSession(({ page }) => {
+    assert.equal(page.updateShareImageLayout, undefined,
+      'SPL image preview no longer uses selector-query viewport measurement')
+    assert.equal(page.onResultReportImageLoad, undefined,
+      'SPL image load must not inject viewport-sized dimensions')
+    assert.equal(Object.prototype.hasOwnProperty.call(page.data, 'shareImageStyle'), false,
+      'SPL preview must not keep an inline image-size override')
+    assert.equal(Object.prototype.hasOwnProperty.call(page.data, 'shareImageFrameStyle'), false,
+      'SPL preview must not keep a measured frame-size override')
   })
 }
 
@@ -739,8 +854,11 @@ const tests = [
   testModelCountSummationAndInvalidInputs,
   testResetPreservesRecordsAndHandlesStorageFailure,
   testProjectKeyboardEventsAndMetadataIdentity,
+  testProjectFocusDefersKeyboardLayout,
+  testProjectKeyboardResizeLifecycle,
   testProjectSaveFailureIsAtomic,
   testReportLifecycleAndLateCallbacks,
+  testSPLSharePreviewUsesScrollableImageContract,
   testResultTabLifecycleAndOverlayGuards,
   testSPLHighCountAndDistanceRowsRemainUnchanged,
 ]

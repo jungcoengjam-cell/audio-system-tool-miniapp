@@ -398,7 +398,8 @@ assert.equal(reportPayload.selectedItems[0].record.resultText, payload.resultTex
 assert.equal(reportPayload.selectedItems[0].record.projectNote, longNote)
 assert.equal(reportPayload.selectedItems[0].record.title, '有效名称')
 const reportText = reportPayload.pages.flatMap((page) => page.lines).map((line) => line.text).join('')
-assert(reportText.includes('项目方案名称：有效名称'))
+assert(reportText.includes('有效名称'), 'the project plan name remains as the calculation heading')
+assert(!reportText.includes('项目方案名称：有效名称'), 'the project plan name is not repeated below its heading')
 assert(reportText.includes(`项目备注：${longNote}`), 'the PDF report contains the full untruncated metadata note')
 assert(reportText.includes(`关键结果：${noteOnlyRecord.summary}`))
 assert(reportText.includes(`保存时间：${new Date(noteOnlyRecord.projectMetadata[projectA.id].savedAt).toLocaleString('zh-CN')}`),

@@ -52,6 +52,44 @@ const drawing = require('../utils/report-drawing')
 const result = loadPrivate('utils/result-report.js', ['drawWrappedText'])
 const led = require('../pages/led-screen/report')
 
+const roundedStroke = context()
+drawing.strokeRoundedRect(roundedStroke.ctx, 44, 42, 662, 144, 22, '#c5e5de')
+assert.deepStrictEqual(roundedStroke.calls, [
+  ['beginPath'],
+  ['moveTo', 66, 42],
+  ['lineTo', 684, 42],
+  ['quadraticCurveTo', 706, 42, 706, 64],
+  ['lineTo', 706, 164],
+  ['quadraticCurveTo', 706, 186, 684, 186],
+  ['lineTo', 66, 186],
+  ['quadraticCurveTo', 44, 186, 44, 164],
+  ['lineTo', 44, 64],
+  ['quadraticCurveTo', 44, 42, 66, 42],
+  ['closePath'],
+  ['setStrokeStyle', '#c5e5de'],
+  ['setLineWidth', 1],
+  ['stroke'],
+], 'shared rounded stroke keeps the report card path, stroke color, line width, and Canvas order')
+
+const clampedRoundedStroke = context()
+drawing.strokeRoundedRect(clampedRoundedStroke.ctx, 10, 20, 40, 20, 22, '#e5e5ea')
+assert.deepStrictEqual(clampedRoundedStroke.calls, [
+  ['beginPath'],
+  ['moveTo', 20, 20],
+  ['lineTo', 40, 20],
+  ['quadraticCurveTo', 50, 20, 50, 30],
+  ['lineTo', 50, 30],
+  ['quadraticCurveTo', 50, 40, 40, 40],
+  ['lineTo', 20, 40],
+  ['quadraticCurveTo', 10, 40, 10, 30],
+  ['lineTo', 10, 30],
+  ['quadraticCurveTo', 10, 20, 20, 20],
+  ['closePath'],
+  ['setStrokeStyle', '#e5e5ea'],
+  ['setLineWidth', 1],
+  ['stroke'],
+], 'shared rounded stroke clamps its radius at half the narrowest report-card dimension')
+
 assert.deepStrictEqual(drawing.REPORT_COLORS, {
   background: '#f5f5f7', card: '#ffffff', text: '#1d1d1f', secondary: '#6e6e73',
   tertiary: '#8e8e93', line: '#e5e5ea', blue: '#007aff', blueSoft: '#eef6ff',

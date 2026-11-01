@@ -155,7 +155,7 @@ function createCalculationChecks(context) {
   }
 
   function checkData() {
-    assert.strictEqual(APP_VERSION, '6.0.2')
+    assert.strictEqual(APP_VERSION, '6.0.3')
     assert.strictEqual(PRODUCT_DATA_DATE, '2026-09-01')
     assert.strictEqual(fs.readFileSync(path.join(root, 'VERSION'), 'utf8').trim(), APP_VERSION)
     assert(Object.isFrozen(PRODUCT_COUNTS), '产品资料库数量统计必须冻结')
@@ -349,8 +349,8 @@ function createCalculationChecks(context) {
     const registeredPages = getRegisteredPagePaths(appConfig)
     assert(!appConfig.pages.includes('pages/records/records'))
     assert(appConfig.pages.includes('pages/records/project'))
-    assert(appConfig.pages.includes('pages/products/library'))
-    assert(appConfig.pages.includes('pages/products/detail'))
+    assert(registeredPages.includes('pages/products/library'))
+    assert(registeredPages.includes('pages/products/detail'))
     assert(appConfig.pages.includes('pages/camera/camera'))
     assert(appConfig.pages.includes('pages/led-screen/led-screen'))
     assert(appConfig.pages.includes('pages/gain-structure/gain-structure'))

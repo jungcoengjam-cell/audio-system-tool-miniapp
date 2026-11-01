@@ -5,6 +5,7 @@ const {
   setText,
   drawText,
 } = require('../../utils/report-drawing')
+const { DARK_RESULT_COLORS } = require('../result-image-theme')
 
 const COLORS = {
   ...REPORT_COLORS,
@@ -17,7 +18,6 @@ const COLORS = {
   tile: '#eef6ff',
   tileBorder: '#d6e5f4',
 }
-
 const LEFT = 44
 const CONTENT_WIDTH = REPORT_WIDTH - (LEFT * 2)
 
@@ -142,7 +142,7 @@ function addRoundedCard(commands, x, y, width, height, fill, stroke) {
   }
 }
 
-function drawCard(context, command) {
+function drawCard(context, command, color = command.color) {
   const { x, y, width, height, radius } = command
   const r = Math.min(radius, width / 2, height / 2)
   context.beginPath()
@@ -156,7 +156,7 @@ function drawCard(context, command) {
   context.lineTo(x, y + r)
   context.quadraticCurveTo(x, y, x + r, y)
   context.closePath()
-  context.setStrokeStyle(command.color)
+  context.setStrokeStyle(color)
   context.setLineWidth(command.lineWidth)
   context.stroke()
 }
@@ -313,29 +313,30 @@ function calculateResultReportHeight(payload, measureContext) {
   return buildReportModel(payload, measureContext).height
 }
 
-function drawResultReport(context, payload, height) {
+function drawResultReport(context, payload, height, theme = 'light') {
   const model = buildReportModel(payload, context)
   if (model.height > height) {
     throw new RangeError('增益结果图片的高度与实际排版不匹配。')
   }
-  context.setFillStyle(COLORS.background)
+  const color = (value) => theme === 'dark' ? (DARK_RESULT_COLORS[value] || value) : value
+  context.setFillStyle(color(COLORS.background))
   context.fillRect(0, 0, REPORT_WIDTH, height)
   model.commands.forEach((command) => {
     if (command.type === 'roundRect') {
       roundedRect(context, command.x, command.y, command.width, command.height,
-        command.radius, command.fill)
+        command.radius, color(command.fill))
     } else if (command.type === 'roundRectStroke') {
-      drawCard(context, command)
+      drawCard(context, command, color(command.color))
     } else if (command.type === 'line') {
       context.beginPath()
       context.moveTo(command.x, command.y)
       context.lineTo(command.x + command.width, command.y)
-      context.setStrokeStyle(command.color)
+      context.setStrokeStyle(color(command.color))
       context.setLineWidth(command.lineWidth)
       context.stroke()
     } else if (command.type === 'text') {
       drawText(context, command.text, command.x, command.y, command.size,
-        command.color, command.weight, command.align)
+        color(command.color), command.weight, command.align)
     }
   })
 }

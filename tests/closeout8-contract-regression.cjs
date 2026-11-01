@@ -257,6 +257,7 @@ function currentThemeTokens(css, selector, propertyNames) {
 
 const dmxWxml = read('pages/dmx-address/dmx-address.wxml')
 const dmxWxss = read('pages/dmx-address/dmx-address.wxss')
+const devicePickerSharedWxss = read('styles/device-picker-shared.wxss')
 const projectWxml = read('pages/records/project.wxml')
 const projectWxss = read('pages/records/project.wxss')
 const libraryWxml = read('pages/products/library.wxml')
@@ -269,6 +270,34 @@ const layoutWxss = read('pages/dmx-layout/dmx-layout.wxss')
 const layoutFactory = read('pages/dmx-layout/page-factory.js')
 const layoutInteractions = read('pages/dmx-layout/layout-interactions.js')
 const layoutRenderer = read('pages/dmx-layout/layout-renderer.js')
+
+function devicePickerSelectedCategoryRole(theme) {
+  const selector = '.device-picker-scope.device-picker-scope .device-picker-category.device-picker-category-active'
+  const selected = finalPropertiesFor(devicePickerSharedWxss, selector, ['background', 'color'])
+  expect(selected.background === 'var(--theme-accent-soft)'
+    && selected.color === 'var(--theme-accent-text)',
+  'shared selected category must use the approved soft-accent surface and accent text tokens')
+  expect((selector.match(/\.[\w-]+/g) || []).length > 1,
+    'shared selected category selector must retain scoped cascade priority')
+
+  const lightTokens = declarationsOf(firstRuleFor(appWxss, 'page'))
+  let themeTokens = lightTokens
+  if (theme === 'dark') {
+    const darkRule = /@media\s*\(prefers-color-scheme:\s*dark\)\s*\{\s*page\s*\{([^{}]*)\}/.exec(appWxss)
+    expect(darkRule, 'app.wxss must define dark device-picker theme tokens')
+    themeTokens = declarationsOf(darkRule[1])
+  }
+  const resolveToken = value => {
+    const reference = /^var\((--[\w-]+)\)$/.exec(value)
+    expect(reference, 'shared selected color must resolve through an app theme token: ' + value)
+    const resolved = themeTokens[reference[1]]
+    expect(resolved, theme + ' app theme is missing ' + reference[1])
+    return parseHex(resolved)
+  }
+  const background = resolveToken(selected.background)
+  const foreground = resolveToken(selected.color)
+  return { background, foreground, ratio: contrast(foreground, background) }
+}
 
 check('dmx-current-picker-and-group-controls', () => {
   expect(dmxWxml.includes('class="context-picker"')
@@ -310,7 +339,7 @@ check('dmx-current-search-and-guide-bindings', () => {
   expect(dmxWxml.includes('fixture.primaryName') && dmxWxml.includes('fixture.model')
     && dmxWxml.includes('fixture.modeText') && dmxWxml.includes('bindtap="selectFixture"'),
   'search results must preserve name, model, mode and selection behavior')
-  expect(/fixture\.model == fixtureSearchSelectedModel \? 'fixture-search-row-selected'/.test(dmxWxml)
+  expect(dmxWxml.includes("fixture.model == fixtureSearchSelectedModel ? 'fixture-search-row-selected device-picker-row-selected' : ''")
     && dmxWxml.includes('class="fixture-search-check">✓'),
   'selected model remains visible through row treatment and a marker')
   expect(dmxWxml.includes('fixtureChannelGuide.channels')
@@ -364,7 +393,7 @@ check('dmx-current-theme-token-bindings', () => {
 })
 
 check('dmx-selected-category-label-contrast', () => {
-  expect(dmxWxml.includes("fixtureSearchCategory == item.label ? 'fixture-category-active' : ''"),
+  expect(dmxWxml.includes("fixtureSearchCategory == item.label ? 'fixture-category-active device-picker-category-active' : ''"),
     'selected category class is not bound to the active category')
   ;['light', 'dark'].forEach(theme => {
     ;[false, true].forEach(reducedMotion => {
@@ -377,18 +406,24 @@ check('dmx-selected-category-label-contrast', () => {
       expect(role.ratio >= 4.5,
         theme + ' selected category after modal/backdrop compositing is ' + role.ratio.toFixed(8) + ':1')
     })
+    const sharedRole = devicePickerSelectedCategoryRole(theme)
+    expect(sharedRole.ratio >= 4.5,
+      theme + ' actual shared selected category contrast is ' + sharedRole.ratio.toFixed(8) + ':1')
   })
   expect(contrast(parseHex('#fff'), parseHex('#007aff')) < 4.5,
     'the prior selected blue must remain a failing negative control')
 })
 
 check('dmx-selected-category-count-contrast', () => {
-  expect(dmxWxml.includes("fixtureSearchCategory == item.label ? 'fixture-category-active' : ''")
+  expect(dmxWxml.includes("fixtureSearchCategory == item.label ? 'fixture-category-active device-picker-category-active' : ''")
     && /<text>\{\{item\.count\}\}<\/text>/.test(dmxWxml),
   'active category count must be inside the bound selected category')
   const genericOpacity = Number(finalPropertiesFor(dmxWxss, '.fixture-category text', ['opacity']).opacity)
   expect(genericOpacity === 0.75,
     'the generic category count opacity remains the existing .75 negative-control input')
+  const activeCountStyle = finalPropertiesFor(dmxWxss, '.fixture-category-active text', ['opacity', 'color'])
+  expect(activeCountStyle.opacity === '1' && activeCountStyle.color === undefined,
+    'selected category count must retain full opacity and inherit the shared selected text color')
   ;['light', 'dark'].forEach(theme => {
     ;[false, true].forEach(reducedMotion => {
       const role = selectedRole(theme, ['.fixture-category', '.fixture-category-active'],
@@ -405,6 +440,12 @@ check('dmx-selected-category-count-contrast', () => {
       expect(renderedContrast(role.foreground, role.background, role.textOpacity, 0.25, role.backdrop) < 4.5,
         theme + ' reduced parent opacity must be detected after backdrop compositing')
     })
+    const sharedRole = devicePickerSelectedCategoryRole(theme)
+    const actualCountForeground = composite(sharedRole.foreground, sharedRole.background,
+      Number(activeCountStyle.opacity))
+    const actualCountRatio = contrast(actualCountForeground, sharedRole.background)
+    expect(actualCountRatio >= 4.5,
+      theme + ' actual shared selected count contrast is ' + actualCountRatio.toFixed(8) + ':1')
   })
 })
 
@@ -464,15 +505,18 @@ check('records-current-summary-theme-and-report-action', () => {
 })
 
 check('dmx-current-selection-and-theme-state-semantics', () => {
-  expect(dmxWxml.includes("fixture.model == fixtureSearchSelectedModel ? 'fixture-search-row-selected' : ''")
+  expect(dmxWxml.includes("fixture.model == fixtureSearchSelectedModel ? 'fixture-search-row-selected device-picker-row-selected' : ''")
     && /\.fixture-search-row-selected\{[^}]*background:var\(--control\)/.test(dmxWxss),
   'selected search model must use the neutral current-theme surface')
   expect(dmxWxml.includes("chip.checked ? 'address-chip-checked' : ''")
-    && /<text wx:if="\{\{chip\.checked\}\}" class="chip-check"[^>]*>✓<\/text>/.test(dmxWxml)
-    && /\.address-chip-checked\{[^}]*border-color:var\(--group-color\)/s.test(dmxWxss),
-  'checked addresses must retain their state binding, visible check marker, and group-linked distinction')
+    && /<text[^>]*>\{\{chip\.addressText\}\}<\/text><text wx:if="\{\{chip\.checked\}\}" class="chip-check"[^>]*>✓<\/text>/.test(dmxWxml)
+    && /\.address-chip\{[^}]*display:flex;[^}]*gap:2px/s.test(dmxWxss)
+    && /\.address-chip\{[^}]*background:var\(--group-tint\)[^}]*color:var\(--group-color\)/s.test(dmxWxss)
+    && /\.floating-chips \.chip-check\{color:var\(--text\)\}/.test(dmxWxss)
+    && !/\.address-chip-checked\{[^}]*\b(?:border|background|color)\s*:/s.test(dmxWxss),
+  'checked addresses must retain their base chip styling and use a theme-readable separate check marker')
   expect(dmxWxml.includes('fixture.batchSelected ? \'✓\' : \'+\'')
-    && dmxWxml.includes('class="fixture-result-name"')
+    && dmxWxml.includes('class="fixture-result-name device-picker-item-title"')
     && /\.fixture-result-name\{[^}]*color:var\(--text\)/.test(dmxWxss)
     && /\.fixture-result-model\{[^}]*color:var\(--muted\)/.test(dmxWxss)
     && /\.fixture-name\{[^}]*color:var\(--text\)/.test(dmxWxss),

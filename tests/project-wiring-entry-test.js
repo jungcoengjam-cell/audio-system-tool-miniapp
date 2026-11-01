@@ -918,16 +918,17 @@ function runProjectDetailSwipeDeletionRegression() {
     '左滑入口不替换计算记录和线路的原有点击导航')
     const swipeActions = Array.from(projectWxml.matchAll(/<view\b(?=[^>]*class="interior-swipe-delete")(?=[^>]*aria-role="button")[^>]*>([\s\S]*?)<\/view>/g))
     const swipeLabels = swipeActions.map((action) => action[1].match(/<text class="interior-swipe-label">([^<]+)<\/text>/)?.[1] || null)
-    assert.deepStrictEqual(swipeLabels, ['移除', '删除', '移出灯位'],
-      '记录、线路和灯位左滑操作均用显式文字节点呈现')
+    assert.deepStrictEqual(swipeLabels, ['移除', '删除'],
+      '项目详情只为计算记录和线路保留显式左滑操作文字')
     assert(!/<button\b[^>]*class="interior-swipe-delete"/.test(projectWxml)
+      && swipeActions.length === 2
       && swipeActions[0][0].includes('data-swipe-type="record" data-swipe-id="{{record.id}}" catchtap="onProjectSwipeDelete"')
       && swipeActions[1][0].includes('data-swipe-type="line" data-swipe-id="{{item.id}}" catchtap="onProjectSwipeDelete"')
-      && swipeActions[2][0].includes('data-swipe-type="lighting" data-swipe-id="{{item.stableId}}" catchtap="onProjectSwipeDelete"'),
-    '三类左滑操作继续使用 aria-role 视图并绑定各自稳定 ID 和原确认处理器')
+      && !projectWxml.includes('data-swipe-type="lighting"'),
+    '记录和线路左滑操作继续绑定稳定 ID，灯位摘要不暴露逐台左滑操作')
     assert(projectWxml.includes('wx:if="{{record.swipeOpen || (record.swipeDragging && record.swipeOffset < 0)}}"')
-      && (projectWxml.match(/wx:if="\{\{item\.swipeOpen \|\| \(item\.swipeDragging && item\.swipeOffset < 0\)\}\}"/g) || []).length === 2,
-    '三类左滑操作在负向拖动时即显示，回滑到零位后隐藏')
+      && (projectWxml.match(/wx:if="\{\{item\.swipeOpen \|\| \(item\.swipeDragging && item\.swipeOffset < 0\)\}\}"/g) || []).length === 1,
+    '记录和线路左滑操作在负向拖动时即显示，回滑到零位后隐藏')
     const swipeRule = projectWxss.match(/\.interior-swipe-delete\{([^}]+)\}/)
     const swipeRowRule = projectWxss.match(/\.interior-swipe-row\{([^}]+)\}/)
     const rowRule = projectWxss.match(/\.interior-item\{([^}]+)\}/)
@@ -1176,20 +1177,19 @@ function runProjectDetailLightingSwipeRegression() {
     let { page, projectAFixtures } = createPage()
     const projectABefore = lightingWorkspace.readLightingWorkspace('project-a')
     const projectBBefore = lightingWorkspace.readLightingWorkspace('project-b')
-    const targetBefore = page.data.lightingFixtures.find((item) => item.stableId === projectAFixtures.targetId)
-    const otherBefore = page.data.lightingFixtures.find((item) => item.stableId === projectAFixtures.otherId)
     const writesBeforeNavigation = navigated.length
-    swipeOpen(page, 'lighting', projectAFixtures.targetId)
     page.openProjectLighting()
     assert.strictEqual(navigated.length, writesBeforeNavigation + 1,
-      '灯位行展开时无stableId的顶部灯光入口仍能导航')
-    assert.strictEqual(page._projectOpenSwipe, null, '顶部灯光入口导航前收起展开的灯位行')
-    swipeOpen(page, 'lighting', projectAFixtures.targetId)
-    page.openProjectLighting({ currentTarget: { dataset: { id: projectAFixtures.targetId } } })
-    assert.strictEqual(navigated.length, writesBeforeNavigation + 1, '滑动后的冒泡点击只收起行，不误导航')
-    page.openProjectLighting({ currentTarget: { dataset: { id: projectAFixtures.targetId } } })
+      '灯位摘要入口应导航到灯位图')
+    assert.strictEqual(navigated.at(-1), '/pages/dmx-layout/dmx-layout?lightingContextId=project-a',
+      '灯位摘要入口打开项目灯位图')
+    page.openProjectLightingAddress()
     assert.strictEqual(navigated.at(-1), '/pages/dmx-address/dmx-address?lightingProjectId=project-a',
-      '普通灯位点击仍打开原项目灯光方案')
+      '灯具编址入口仍打开项目灯具编址页')
+    assert.deepStrictEqual(lightingWorkspace.readLightingWorkspace('project-a'), projectABefore,
+      '项目详情中的灯位图和编址入口只读取方案，不改变本项目灯位数据')
+    assert.deepStrictEqual(lightingWorkspace.readLightingWorkspace('project-b'), projectBBefore,
+      '查看A项目灯位入口不改变B项目灯位数据')
 
     page = createPage().page
     projectAFixtures = { targetId: 'fixture-a-target', otherId: 'fixture-a-other' }
@@ -1236,11 +1236,13 @@ function runProjectDetailLightingSwipeRegression() {
     assert.strictEqual(modalRequests.length, requestsAfterCommit, '未上杆灯位不再弹出破坏性确认')
     const projectWxml = fs.readFileSync(path.join(root, 'pages/records/project.wxml'), 'utf8')
     const projectWxss = fs.readFileSync(path.join(root, 'pages/records/project.wxss'), 'utf8')
-    assert(projectWxml.includes('data-swipe-type="lighting" data-swipe-id="{{item.stableId}}"')
-      && projectWxml.includes('data-id="{{item.stableId}}" bindtap="openProjectLighting"')
-      && projectWxml.includes('<text class="interior-swipe-label">移出灯位</text>')
-      && projectWxml.includes("{{item.isPlaced ? '' : ' · 未上杆'}}"),
-    '灯位滑动、stableId导航、明确操作文字和未上杆提示均由项目详情模板呈现')
+    assert(projectWxml.includes('class="interior-lighting-summary-main"')
+      && projectWxml.includes('bindtap="openProjectLighting"')
+      && projectWxml.includes('catchtap="openProjectLightingAddress"')
+      && !projectWxml.includes('data-swipe-type="lighting"')
+      && !projectWxml.includes('wx:for="{{lightingFixtures}}"')
+      && !projectWxml.includes('item.stableId'),
+    '项目详情只显示灯位摘要并提供灯位图和编址入口，不呈现逐台灯具或左滑操作')
     assert(!projectWxss.includes('.interior-lighting-swipe-delete')
       && !projectWxss.includes('.interior-lighting-swipe-label'), '灯位左滑操作复用共享文字与层级样式')
 

@@ -416,21 +416,18 @@ const methods = {
   },
 
   onProjectNameInput(event) {
-    if (!isInputEventCurrent(this, event, 'create')) return false
+    if (!isInputEventCurrent(this, event, 'create')) return
     this.setData({ projectNameText: String(event?.detail?.value || ''), projectError: '', projectLoadFailed: false })
-    return true
   },
 
   onProjectConfigNameInput(event) {
-    if (!isInputEventCurrent(this, event, 'confirm')) return false
+    if (!isInputEventCurrent(this, event, 'confirm')) return
     this.setData({ projectConfigName: String(event?.detail?.value || ''), projectNameError: '', projectError: '' })
-    return true
   },
 
   onProjectConfigNoteInput(event) {
-    if (!isInputEventCurrent(this, event, 'confirm')) return false
+    if (!isInputEventCurrent(this, event, 'confirm')) return
     this.setData({ projectConfigNote: String(event?.detail?.value || ''), projectNoteError: '', projectError: '' })
-    return true
   },
 
   openProjectCreateForm(event) {

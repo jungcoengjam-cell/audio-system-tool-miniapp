@@ -1,38 +1,41 @@
 <view wx:if="{{projectDialogVisible}}" class="cable-project-overlay {{projectKeyboardOpen ? 'project-keyboard-open' : ''}} {{projectDialogClosing ? 'project-dialog-closing' : ''}}" style="bottom:{{projectKeyboardBottom}}px;" bindtap="closeProjectDialog" catchtouchmove="preventProjectTouchMove">
-  <view class="project-sheet {{projectKeyboardOpen ? 'project-keyboard-open' : ''}} {{projectDialogStep == 'select' ? 'project-select-sheet' : ''}}" style="{{projectKeyboardOpen ? 'max-height:' + projectSheetMaxHeight + 'px;' : ''}}" catchtap="stopProjectTap">
-    <view class="project-header">
+  <view class="project-sheet result-sheet result-save {{projectKeyboardOpen ? 'project-keyboard-open' : ''}} {{projectDialogStep == 'select' ? 'project-select-sheet' : ''}}" style="{{projectKeyboardOpen ? 'max-height:' + projectSheetMaxHeight + 'px;' : ''}}" catchtap="stopProjectTap">
+    <view class="project-header result-header">
       <view class="project-header-copy">
-        <view class="project-title">{{projectDialogStep == 'create' ? '新建项目' : projectDialogStep == 'confirm' ? '配置名称与备注' : projectDialogStep == 'success' ? '保存完成' : '保存到项目'}}</view>
+        <view class="project-title result-title">{{projectDialogStep == 'create' ? '新建项目' : projectDialogStep == 'confirm' ? '配置名称与备注' : projectDialogStep == 'success' ? '保存完成' : '保存到项目'}}</view>
       </view>
-      <button class="project-close" aria-label="关闭项目保存" disabled="{{projectSaving}}" bindtap="closeProjectDialog">×</button>
+      <button class="project-close panel-close-control" aria-label="关闭项目保存" disabled="{{projectSaving}}" bindtap="closeProjectDialog"><view class="panel-close-icon" aria-hidden="true"></view></button>
     </view>
 
-    <scroll-view wx:if="{{projectDialogStep == 'select'}}" class="project-body project-step project-select-body" scroll-y scroll-into-view="{{projectFocusedInputId}}" enhanced show-scrollbar="{{false}}" aria-label="选择项目">
-      <input id="projectSearchText" class="project-search" type="text" value="{{projectSearchText}}" placeholder="搜索项目" placeholder-class="project-search-placeholder" data-field="projectSearchText" data-step="select" data-dialog-revision="{{projectDialogRevision}}" data-focus-episode="{{projectFocusEpisode}}" bindinput="onProjectSearch" bindfocus="beginProjectInputFocus" bindblur="endProjectInputFocus" bindkeyboardheightchange="onProjectKeyboardHeightChange" adjust-position="{{false}}" cursor-spacing="12" />
+    <view wx:if="{{projectDialogStep == 'select'}}" class="project-body project-step project-select-body" aria-label="选择项目">
+      <input id="projectSearchText" class="project-search" type="text" value="{{projectSearchText}}" placeholder="搜索项目" placeholder-class="project-search-placeholder result-placeholder" data-field="projectSearchText" data-step="select" data-dialog-revision="{{projectDialogRevision}}" data-focus-episode="{{projectFocusEpisode}}" bindinput="onProjectSearch" bindfocus="beginProjectInputFocus" bindblur="endProjectInputFocus" bindkeyboardheightchange="onProjectKeyboardHeightChange" adjust-position="{{false}}" cursor-spacing="12" />
       <view wx:if="{{projectLoadFailed}}" class="project-read-error">
         <view>读取项目列表失败</view>
         <view class="project-empty-detail">请检查本地存储后重试</view>
       </view>
-      <view wx:elif="{{projectProjects.length}}" class="project-list" aria-label="项目列表">
-        <view class="project-list-content">
-          <view wx:for="{{filteredProjects}}" wx:key="id" class="project-row" data-id="{{item.id}}" bindtap="selectProjectTarget">
+      <view wx:elif="{{projectProjects.length}}" class="project-list-wrap">
+        <scroll-view wx:if="{{filteredProjects.length}}" class="project-list project-select-list" scroll-y enhanced show-scrollbar="{{filteredProjects.length > 1}}" aria-label="项目列表">
+          <view class="project-list-content">
+          <view wx:for="{{filteredProjects}}" wx:key="id" class="project-row project-select-row result-row" data-id="{{item.id}}" bindtap="selectProjectTarget">
             <view class="project-row-copy">
-              <view class="project-row-name">{{item.name}}</view>
+              <view class="project-row-name result-row-name">{{item.name}}</view>
             </view>
             <view class="project-row-mark">›</view>
           </view>
-          <view wx:if="{{!filteredProjects.length}}" class="project-empty">没有匹配的项目</view>
-        </view>
+          </view>
+        </scroll-view>
+        <view wx:else class="project-empty">没有匹配的项目</view>
+        <view wx:if="{{filteredProjects.length > 1 && !projectKeyboardOpen}}" class="project-select-hint">上下滑动查看更多</view>
       </view>
       <view wx:elif="{{!projectLoadFailed}}" class="project-empty">
         <view>还没有现场项目</view>
         <view class="project-empty-detail">新建后可将本次选型保存到项目</view>
       </view>
       <view wx:if="{{projectError}}" class="project-error">{{projectError}}</view>
-    </scroll-view>
+    </view>
 
     <scroll-view wx:elif="{{projectDialogStep == 'create'}}" class="project-body project-step project-create-body" scroll-y scroll-into-view="{{projectFocusedInputId}}" enhanced show-scrollbar="{{false}}" aria-label="新建项目">
-      <input id="projectNameText" class="project-name-input" type="text" value="{{projectNameText}}" maxlength="30" placeholder="例如：三楼会议室" placeholder-class="project-name-placeholder" data-field="projectNameText" data-step="create" data-dialog-revision="{{projectDialogRevision}}" data-focus-episode="{{projectFocusEpisode}}" bindinput="onProjectNameInput" bindfocus="beginProjectInputFocus" bindblur="endProjectInputFocus" bindkeyboardheightchange="onProjectKeyboardHeightChange" adjust-position="{{false}}" cursor-spacing="12" />
+      <input id="projectNameText" class="project-name-input" type="text" value="{{projectNameText}}" maxlength="30" placeholder="例如：三楼会议室" placeholder-class="project-name-placeholder result-placeholder" data-field="projectNameText" data-step="create" data-dialog-revision="{{projectDialogRevision}}" data-focus-episode="{{projectFocusEpisode}}" bindinput="onProjectNameInput" bindfocus="beginProjectInputFocus" bindblur="endProjectInputFocus" bindkeyboardheightchange="onProjectKeyboardHeightChange" adjust-position="{{false}}" cursor-spacing="12" />
       <view class="project-create-copy">名称最多 30 字。</view>
       <view wx:if="{{projectLoadFailed}}" class="project-read-error">{{projectError}}</view>
       <view wx:elif="{{projectError}}" class="project-error">{{projectError}}</view>
@@ -45,12 +48,12 @@
       </view>
       <view class="project-metadata-field">
         <view class="project-metadata-label">配置名称</view>
-        <input id="projectConfigName" class="project-config-name" type="text" value="{{projectConfigName}}" maxlength="60" placeholder="为本项目命名此配置" placeholder-class="project-config-placeholder" data-field="projectConfigName" data-step="confirm" data-dialog-revision="{{projectDialogRevision}}" data-focus-episode="{{projectFocusEpisode}}" bindinput="onProjectConfigNameInput" bindfocus="beginProjectInputFocus" bindblur="endProjectInputFocus" bindkeyboardheightchange="onProjectKeyboardHeightChange" adjust-position="{{false}}" cursor-spacing="12" />
+        <input id="projectConfigName" class="project-config-name" type="text" value="{{projectConfigName}}" maxlength="60" placeholder="为本项目命名此配置" placeholder-class="project-config-placeholder result-placeholder" data-field="projectConfigName" data-step="confirm" data-dialog-revision="{{projectDialogRevision}}" data-focus-episode="{{projectFocusEpisode}}" bindinput="onProjectConfigNameInput" bindfocus="beginProjectInputFocus" bindblur="endProjectInputFocus" bindkeyboardheightchange="onProjectKeyboardHeightChange" adjust-position="{{false}}" cursor-spacing="12" />
         <view wx:if="{{projectNameError}}" class="project-field-error">{{projectNameError}}</view>
       </view>
       <view class="project-metadata-field">
         <view class="project-metadata-label">现场备注（选填）</view>
-        <textarea id="projectConfigNote" class="project-config-note" value="{{projectConfigNote}}" maxlength="200" placeholder="填写安装位置或现场条件" placeholder-class="project-config-placeholder" data-field="projectConfigNote" data-step="confirm" data-dialog-revision="{{projectDialogRevision}}" data-focus-episode="{{projectFocusEpisode}}" bindinput="onProjectConfigNoteInput" bindfocus="beginProjectInputFocus" bindblur="endProjectInputFocus" bindkeyboardheightchange="onProjectKeyboardHeightChange" adjust-position="{{false}}" cursor-spacing="12" auto-height="{{false}}" />
+        <textarea id="projectConfigNote" class="project-config-note" value="{{projectConfigNote}}" maxlength="200" placeholder="填写安装位置或现场条件" placeholder-class="project-config-placeholder result-placeholder" data-field="projectConfigNote" data-step="confirm" data-dialog-revision="{{projectDialogRevision}}" data-focus-episode="{{projectFocusEpisode}}" bindinput="onProjectConfigNoteInput" bindfocus="beginProjectInputFocus" bindblur="endProjectInputFocus" bindkeyboardheightchange="onProjectKeyboardHeightChange" adjust-position="{{false}}" fixed="{{true}}" cursor-spacing="12" auto-height="{{false}}" />
         <view wx:if="{{projectNoteError}}" class="project-field-error">{{projectNoteError}}</view>
       </view>
       <view class="project-preview">
@@ -67,7 +70,7 @@
       <view class="project-success-detail">{{projectFrozenSummary}}</view>
     </scroll-view>
 
-    <view class="project-footer">
+    <view class="project-footer result-footer">
       <block wx:if="{{projectDialogStep == 'select'}}">
 
         <button wx:if="{{projectLoadFailed}}" class="project-button project-button-primary" bindtap="retryProjectRead">重试读取</button>

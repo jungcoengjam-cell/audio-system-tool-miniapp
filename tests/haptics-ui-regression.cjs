@@ -140,7 +140,7 @@ function testProductSelectionsAndImport() {
 
   let importResult = { ok: true }
   const detail = loadPage('pages/products/detail.js', {
-    'utils/dmx-product-import.js': {
+    'pages/products/utils/dmx-product-import.js': {
       inspectDmxPreferences() {},
       readDmxPreferencesStatus: () => ({ ok: true, preferences: {} }),
       saveDmxProductImport: () => importResult,

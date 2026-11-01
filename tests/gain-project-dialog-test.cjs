@@ -88,6 +88,15 @@ function modalFrom(modals) {
   return modal
 }
 
+function closeProjectSheetAndFinishTransition(page) {
+  const closed = page.closeProjectSheet()
+  if (page._pageContainerLeave?.name === 'project') {
+    assert.strictEqual(page.onPageContainerAfterLeave(), true,
+      'the native project sheet close must finish through its afterleave handler')
+  }
+  return closed
+}
+
 function openProjectDetails(page, projectId) {
   if (!page.data.projectSheetVisible) page.openProjectSheet()
   if (page.data.projectStep === 'details' && page.data.projectTargetId === projectId) return
@@ -142,7 +151,7 @@ async function main() {
     assert.deepStrictEqual(calls[0][2], { name: defaultName, note: '' })
     assert.strictEqual(calls[0][0].projectMetadata, undefined,
       'configuration metadata must stay outside the frozen payload')
-    page.closeProjectSheet()
+    closeProjectSheetAndFinishTransition(page)
 
     const original = { ...projectMetadata(frozenPayload, projectA.id) }
     openProjectDetails(page, projectA.id)
@@ -157,16 +166,18 @@ async function main() {
     assert.strictEqual(calls.length, callsBeforeCancel)
     assert.deepStrictEqual(projectMetadata(frozenPayload, projectA.id), original,
       'cancel must not update the stored metadata')
-    page.closeProjectSheet()
+    closeProjectSheetAndFinishTransition(page)
 
     openProjectDetails(page, projectA.id)
     editConfig(page, '关闭后不可写', '')
     const callsBeforeClose = calls.length
     assert.strictEqual(page.saveProjectConfiguration(), true)
     const closedPrompt = modalFrom(context.modals)
-    page.closeProjectSheet()
+    assert.strictEqual(page.closeProjectSheet(), true)
     closedPrompt.success({ confirm: true })
     assert.strictEqual(calls.length, callsBeforeClose, 'a late confirm after close must not write')
+    assert.strictEqual(page.onPageContainerAfterLeave(), true,
+      'the late confirmation is ignored while the native close transition finishes')
     assert.strictEqual(page.data.projectSheetVisible, false)
     assert.strictEqual(page.data.isSavingProject, false)
 
@@ -193,7 +204,7 @@ async function main() {
     assert.strictEqual(page._projectSavePending, false)
     assert.strictEqual(page.data.isSavingProject, false)
     assert.strictEqual(page.data.projectStep, 'details')
-    page.closeProjectSheet()
+    closeProjectSheetAndFinishTransition(page)
 
     const projectB = records.createProject('另一个项目')
     assert(projectB)
@@ -210,7 +221,7 @@ async function main() {
       'a confirmation for the previous target must not write after switching projects')
     assert.strictEqual(page.data.projectStep, 'details')
     assert.strictEqual(page.data.projectTargetId, projectB.id)
-    page.closeProjectSheet()
+    closeProjectSheetAndFinishTransition(page)
 
     openProjectDetails(page, projectA.id)
     editConfig(page, '我的新配置名', '我的新备注')
@@ -241,7 +252,7 @@ async function main() {
     assert.strictEqual(page.data.projectStep, 'success')
     assert.deepStrictEqual(projectMetadata(frozenPayload, projectA.id),
       { ...projectMetadata(frozenPayload, projectA.id), name: '我的新配置名', note: '我的新备注' })
-    page.closeProjectSheet()
+    closeProjectSheetAndFinishTransition(page)
 
     const projectC = records.createProject('边界配置项目')
     assert(projectC)
@@ -259,7 +270,7 @@ async function main() {
     assert.strictEqual(calls.length, callsBeforeBoundarySave + 1)
     assert.strictEqual(calls[calls.length - 1][2].name.length, 60)
     assert.strictEqual(calls[calls.length - 1][2].note.length, 200)
-    page.closeProjectSheet()
+    closeProjectSheetAndFinishTransition(page)
 
     openProjectDetails(page, projectC.id)
     assert.strictEqual(page.data.projectConfigName, maxName, 'the exact 60-character name should restore')
@@ -275,11 +286,11 @@ async function main() {
     assert.strictEqual(calls.length, callsBeforeInvalidFields,
       'invalid field lengths must be rejected before storage writes')
     assert.strictEqual(page._projectSavePending, false)
-    page.closeProjectSheet()
+    closeProjectSheetAndFinishTransition(page)
 
     process.stdout.write('PASS project details, async confirmation invalidation, concurrency, and metadata limits\n')
   } finally {
-    if (page && page.data.projectSheetVisible) page.closeProjectSheet()
+    if (page && page.data.projectSheetVisible) closeProjectSheetAndFinishTransition(page)
     global.wx = previousWx
   }
 }

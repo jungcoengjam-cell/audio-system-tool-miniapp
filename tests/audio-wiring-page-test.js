@@ -13,7 +13,7 @@ function createRuntime(options = {}) {
     screenNodeCreations: 0, deferNextScreenQuery: false, pendingScreenQueries: [], vibrations: 0,
     deferScreenImageLoad: Boolean(options.deferScreenImageLoad), pendingScreenImages: [],
     deferImageInfo: Boolean(options.deferImageInfo), pendingImageInfoCallbacks: [],
-    deferNextPreviewQuery: false, pendingPreviewQueries: [],
+    deferNextPreviewQuery: false, pendingPreviewQueries: [], previewQueryCalls: 0,
     deferNextSetDataCallback: false, pendingSetDataCallbacks: [],
     measuredWidth: 319, throwNextScreenContext: false, throwNextImageSrc: false, page: null, canvasAttached: false,
     actionSheets: [], modals: [], navigations: [],
@@ -198,6 +198,7 @@ function createRuntime(options = {}) {
             } else callback([result])
             return
           }
+          runtime.previewQueryCalls += 1
           const defaults = () => {
             const width = 375
             const height = 800
@@ -1141,6 +1142,19 @@ function testWiringProjectDialogGuardsAndLifecycle() {
   const metadataPage = createPage(metadataRuntime)
   assert.strictEqual(metadataPage.saveToActiveProject(), true)
   const metadataRevision = metadataPage._projectDialogRevision
+  const metadataSearchInput = (dialogRevision, value) => metadataPage.onProjectSearch({
+    currentTarget: { dataset: { step: 'select', dialogRevision } },
+    detail: { value },
+  })
+  assert.strictEqual(metadataSearchInput(metadataRevision, '临时搜索'), undefined,
+    'valid project search input does not return a boolean')
+  assert.strictEqual(metadataPage.data.projectSearchText, '临时搜索')
+  assert.strictEqual(metadataSearchInput(metadataRevision, ''), undefined,
+    'clearing project search input does not return a boolean')
+  assert.strictEqual(metadataPage.data.projectSearchText, '')
+  assert.strictEqual(metadataSearchInput(metadataRevision - 1, '过期搜索'), undefined)
+  assert.strictEqual(metadataPage.data.projectSearchText, '',
+    'a stale project search event cannot replace the current query')
   const selectForCreate = { currentTarget: { dataset: { step: 'select', dialogRevision: metadataRevision } } }
   assert.strictEqual(metadataPage.openProjectCreateForm(selectForCreate), true)
   const metadataCreateRevision = metadataPage._projectDialogRevision
@@ -1165,22 +1179,64 @@ function testWiringProjectDialogGuardsAndLifecycle() {
   })
   assert.strictEqual(metadataPage.data.projectKeyboardOpen, true,
     'the active project-name focus episode opens the keyboard-aware sheet')
-  metadataPage.onProjectNameInput({
-    currentTarget: { dataset: { step: 'create', dialogRevision: metadataCreateRevision } },
-    detail: { value: '音频新建记录项目' },
+  const metadataCreateNameInput = (dialogRevision, value) => metadataPage.onProjectNameInput({
+    currentTarget: { dataset: { step: 'create', dialogRevision } },
+    detail: { value },
   })
+  assert.strictEqual(metadataCreateNameInput(metadataCreateRevision, 'abc'), undefined,
+    'valid project-name input does not return a boolean')
+  assert.strictEqual(metadataPage.data.projectNameText, 'abc')
+  assert.strictEqual(metadataCreateNameInput(metadataCreateRevision, '替换项目名'), undefined)
+  assert.strictEqual(metadataPage.data.projectNameText, '替换项目名')
+  assert.strictEqual(metadataCreateNameInput(metadataCreateRevision, ''), undefined)
+  assert.strictEqual(metadataPage.data.projectNameText, '')
+  assert.strictEqual(metadataCreateNameInput(metadataCreateRevision, '音频新建记录项目'), undefined)
+  assert.strictEqual(metadataPage.data.projectNameText, '音频新建记录项目')
   assert.strictEqual(metadataPage.createProjectFromForm(metadataCreateEvent), true,
     'a current create-form action creates and selects a project')
+  const projectNameAfterCreate = metadataPage.data.projectNameText
+  assert.strictEqual(metadataCreateNameInput(metadataCreateRevision, '过期创建项目名'), undefined)
+  assert.strictEqual(metadataPage.data.projectNameText, projectNameAfterCreate,
+    'a stale create-step input cannot change confirmation-step data')
   const createdProjectId = metadataPage.data.projectTarget.id
-  const metadataConfirm = { currentTarget: { dataset: { step: 'confirm', dialogRevision: metadataPage._projectDialogRevision } } }
-  metadataPage.onProjectConfigNameInput({
-    currentTarget: { dataset: { step: 'confirm', dialogRevision: metadataPage._projectDialogRevision } },
-    detail: { value: '左声道监听接法' },
+  const metadataConfirmRevision = metadataPage._projectDialogRevision
+  const metadataConfirm = { currentTarget: { dataset: { step: 'confirm', dialogRevision: metadataConfirmRevision } } }
+  const metadataConfigNameInput = (dialogRevision, value) => metadataPage.onProjectConfigNameInput({
+    currentTarget: { dataset: { step: 'confirm', dialogRevision } },
+    detail: { value },
   })
-  metadataPage.onProjectConfigNoteInput({
-    currentTarget: { dataset: { step: 'confirm', dialogRevision: metadataPage._projectDialogRevision } },
-    detail: { value: '施工前复核输入端说明书' },
+  assert.strictEqual(metadataConfigNameInput(metadataConfirmRevision, '临时配置'), undefined,
+    'valid configuration-name input does not return a boolean')
+  assert.strictEqual(metadataPage.data.projectConfigName, '临时配置')
+  assert.strictEqual(metadataConfigNameInput(metadataConfirmRevision, '替换配置名'), undefined)
+  assert.strictEqual(metadataPage.data.projectConfigName, '替换配置名')
+  assert.strictEqual(metadataConfigNameInput(metadataConfirmRevision, ''), undefined)
+  assert.strictEqual(metadataPage.data.projectConfigName, '')
+  assert.strictEqual(metadataConfigNameInput(metadataConfirmRevision, '左声道监听接法'), undefined)
+  assert.strictEqual(metadataPage.data.projectConfigName, '左声道监听接法')
+  assert.strictEqual(metadataConfigNameInput(metadataConfirmRevision - 1, '过期配置名'), undefined)
+  assert.strictEqual(metadataPage.data.projectConfigName, '左声道监听接法',
+    'a stale configuration-name event cannot replace the current value')
+  const metadataNoteInput = (dialogRevision, value) => metadataPage.onProjectConfigNoteInput({
+    currentTarget: { dataset: { step: 'confirm', dialogRevision } },
+    detail: { value },
   })
+  assert.strictEqual(metadataNoteInput(metadataConfirmRevision, 'abc'), undefined,
+    'a valid note input callback does not return a boolean')
+  assert.strictEqual(metadataPage.data.projectConfigNote, 'abc',
+    'valid note input is retained in page data')
+  assert.strictEqual(metadataNoteInput(metadataConfirmRevision, '替换后的备注'), undefined)
+  assert.strictEqual(metadataPage.data.projectConfigNote, '替换后的备注',
+    'replacing a note updates page data')
+  assert.strictEqual(metadataNoteInput(metadataConfirmRevision, ''), undefined)
+  assert.strictEqual(metadataPage.data.projectConfigNote, '',
+    'deleting the note to an empty value is retained in page data')
+  assert.strictEqual(metadataNoteInput(metadataConfirmRevision, '施工前复核输入端说明书'), undefined)
+  assert.strictEqual(metadataPage.data.projectConfigNote, '施工前复核输入端说明书')
+  assert.strictEqual(metadataNoteInput(metadataConfirmRevision - 1, '过期事件备注'), undefined,
+    'an expired note input callback does not return a boolean')
+  assert.strictEqual(metadataPage.data.projectConfigNote, '施工前复核输入端说明书',
+    'an expired note event cannot overwrite the current value')
   assert.strictEqual(metadataPage.saveProjectTarget(metadataConfirm), true,
     'the project form saves a wiring record with its per-project name and note')
   assert.strictEqual(metadataPage.data.projectDialogStep, 'success')
@@ -1189,6 +1245,12 @@ function testWiringProjectDialogGuardsAndLifecycle() {
   assert.strictEqual(savedProjectView.title, '左声道监听接法')
   assert.strictEqual(savedProjectView.projectNote, '施工前复核输入端说明书')
   assert.strictEqual(savedProjectView.hasProjectMetadata, true)
+  assert.strictEqual(metadataConfigNameInput(metadataConfirmRevision, '保存后过期配置'), undefined)
+  assert.strictEqual(metadataNoteInput(metadataConfirmRevision, '保存后过期备注'), undefined)
+  assert.strictEqual(metadataPage.data.projectConfigName, '左声道监听接法',
+    'inputs from the completed save step cannot change configuration metadata')
+  assert.strictEqual(metadataPage.data.projectConfigNote, '施工前复核输入端说明书',
+    'inputs from the completed save step cannot change note metadata')
   metadataPage.onUnload()
 
   const legacyRuntime = createRuntime()
@@ -1271,10 +1333,21 @@ function testSelectorCloseGeometryAndHelpRemoval() {
   assert.strictEqual(page.data.resultReportImagePath, '/tmp/help-cache.png')
   const wxml = fs.readFileSync(require.resolve('../pages/audio-wiring/index.wxml'), 'utf8')
   const wxss = fs.readFileSync(require.resolve('../pages/audio-wiring/index.wxss'), 'utf8')
+  const sharedWxss = fs.readFileSync(require.resolve('../app.wxss'), 'utf8')
+  const closeGlyphRule = /\.panel-close-icon::before,\.panel-close-icon::after\s*\{([^}]*)\}/s.exec(sharedWxss)
+  const closeGlyphAfterRule = /(?:^|})\s*\.panel-close-icon::after\s*\{([^}]*)\}/s.exec(sharedWxss)
   const js = fs.readFileSync(require.resolve('../pages/audio-wiring/index.js'), 'utf8')
   assert(!wxml.includes('当前为默认示例；正式制作前，请核对并选择实际两端接口。'), 'removed the old full-page state reminder')
   assert(wxml.includes('role="button" aria-label="关闭接口选择"'), 'the selector close has an accessible label')
-  assert(wxml.includes('class="selector-close-icon"'), 'the close glyph is CSS drawn')
+  assert(wxml.includes('class="panel-close-icon" aria-hidden="true"')
+    && closeGlyphRule
+    && /\bwidth:\s*18px\b/.test(closeGlyphRule[1])
+    && /\bheight:\s*2px\b/.test(closeGlyphRule[1])
+    && /\bbackground:\s*currentColor\b/.test(closeGlyphRule[1])
+    && /\btransform:\s*translate\(-50%,-50%\) rotate\(45deg\)/.test(closeGlyphRule[1])
+    && closeGlyphAfterRule
+    && /\btransform:\s*translate\(-50%,-50%\) rotate\(-45deg\)/.test(closeGlyphAfterRule[1]),
+  'the shared close glyph is CSS drawn and hidden from assistive technology')
   assert(!wxml.includes('selector-help') && !wxml.includes('识别说明'))
   assert(!wxml.includes('wiring-critical-notes') && !wxss.includes('.wiring-critical-notes')
     && !wxss.includes('.wiring-critical-note'),
@@ -2113,52 +2186,45 @@ function testReportUsesCurrentView() {
 }
 
 function testResponsiveSharePreviewLayout() {
-  const root = { rect: { top: 0, left: 0, width: 320, height: 640, right: 320, bottom: 640 } }
-  const previewMeasurements = {
-    '.page-root': root,
-    '.result-report-preview-overlay': {
-      rect: { top: 0, left: 0, width: 320, height: 640, right: 320, bottom: 640 },
-      computedStyle: { paddingTop: '14px', paddingBottom: '20px' },
-    },
-    '.result-report-preview-sheet': {
-      rect: { top: 80, left: 0, width: 320, height: 540, right: 320, bottom: 620 },
-      computedStyle: { paddingTop: '9px', paddingBottom: '8px', borderTopWidth: '1px', borderBottomWidth: '1px' },
-    },
-    '.result-report-preview-header': { rect: { top: 90, left: 10, width: 300, height: 164 } },
-    '.result-report-preview-actions': { rect: { top: 500, left: 10, width: 300, height: 96 } },
-    '.result-report-preview-scroll': {
-      rect: { top: 254, left: 10, width: 300, height: 246 },
-      computedStyle: { borderTopWidth: '1px', borderBottomWidth: '1px', borderLeftWidth: '1px', borderRightWidth: '1px' },
-    },
-    '.result-report-preview-image': { rect: { top: 255, left: 11, width: 298, height: 398 } },
-  }
-  const runtime = createRuntime({ previewMeasurements })
+  const runtime = createRuntime()
   const page = createPage(runtime)
-  runtime.deferNextPreviewQuery = true
   const task = startReport(page, runtime)
   task.success({ tempFilePath: '/tmp/large-font-preview.png' })
   assert.strictEqual(page.data.resultReportPreviewVisible, true)
-  assert.strictEqual(runtime.pendingPreviewQueries.length, 1)
+  assert.strictEqual(page.data.resultReportImagePath, '/tmp/large-font-preview.png')
+  assert.strictEqual(page.data.resultReportPreviewStyle, '',
+    'the shared 86vh/flex panel owns preview geometry without page-level pixel overrides')
+  assert.strictEqual(runtime.previewQueryCalls, 0,
+    'opening a result preview does not schedule an obsolete selector-query measurement')
+  const openRevision = page._reportPreviewLayoutRevision
   page.onHide()
   assert.strictEqual(page.data.resultReportPreviewStyle, '', 'hiding the page invalidates pending preview measurements')
-  runtime.deferNextPreviewQuery = false
+  assert(page._reportPreviewLayoutRevision > openRevision,
+    'hide advances the preview-layout revision so any earlier work is stale')
+  const hiddenRevision = page._reportPreviewLayoutRevision
   page.onShow()
-  const computedStyle = page.data.resultReportPreviewStyle
-  assert(computedStyle.includes('--cable-report-sheet-max-height:606px'), computedStyle)
-  const scrollMatch = computedStyle.match(/--cable-report-scroll-height:([\d.]+)px/)
-  assert(scrollMatch, 'preview scroll height is derived from measured header and action heights')
-  const scrollHeight = Number(scrollMatch[1])
-  const fixedHeight = 9 + 8 + 2 + 164 + 96
-  assert(scrollHeight + fixedHeight <= 606.01,
-    'the measured large-font close header and two action buttons fit inside the sheet')
-  const actionBottom = root.rect.bottom - 20 - 8
-  assert(actionBottom <= root.rect.bottom && actionBottom >= 96,
-    'the complete 96px action row remains above the 640px viewport bottom')
-  runtime.resolveNextPreviewQuery()
-  assert.strictEqual(page.data.resultReportPreviewStyle, computedStyle,
-    'a stale pre-hide measurement cannot replace the reopened preview layout')
+  assert.strictEqual(page.data.resultReportPreviewVisible, true,
+    'show restores the same result preview rather than regenerating or hiding it')
+  assert.strictEqual(page.data.resultReportImagePath, '/tmp/large-font-preview.png')
+  assert.strictEqual(page.data.resultReportPreviewStyle, '',
+    'show retains CSS-owned geometry and leaves no stale inline height')
+  assert(page._reportPreviewLayoutRevision > hiddenRevision,
+    'show advances the preview-layout revision after hide')
+  assert.strictEqual(runtime.previewQueryCalls, 0,
+    'hide/show does not enqueue or resolve obsolete preview geometry work')
+  const shownRevision = page._reportPreviewLayoutRevision
+  page.data.resultReportPreviewStyle = '--cable-report-scroll-height:999px'
+  page.onResize()
+  assert.strictEqual(page.data.resultReportPreviewStyle, '',
+    'resize clears a stale legacy inline height while CSS adapts to the viewport')
+  assert(page._reportPreviewLayoutRevision > shownRevision,
+    'resize advances the preview-layout revision without geometry queries')
+  assert.strictEqual(runtime.previewQueryCalls, 0)
   page.closeResultReportPreview(true)
   assert.strictEqual(page.data.resultReportPreviewStyle, '')
+  assert.strictEqual(page.data.resultReportPreviewVisible, false)
+  assert.strictEqual(runtime.previewQueryCalls, 0,
+    'closing a preview does not start geometry work')
   page.onUnload()
 }
 

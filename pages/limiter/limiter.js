@@ -5,6 +5,8 @@ const { amplifiers, speakers } = require('../../data/equipment')
 const { calculateLimiter } = require('../../utils/limiter')
 const { readPreferences, writePreferencesDetailed, removePreferences } = require('../../utils/preferences')
 const { vibrate } = require('../../utils/haptics')
+const nativeImagePreview = require('../native-image-preview')
+const { getResultImageTheme } = require('../result-image-theme')
 const {
   cancelResultReportGeneration, createResultReportData, createResultReportMethods,
   resetStaleResultReport,
@@ -371,6 +373,7 @@ Page({
   },
 
   onShow() {
+    nativeImagePreview.onShow(this)
     this._pageVisible = true
     if (this.data.projectSheetVisible) this.resetProjectKeyboardState({ captureBaseline: true })
     if (this.data.hasValidResult) syncPageFavorite(this)
@@ -378,6 +381,7 @@ Page({
   },
 
   onHide() {
+    nativeImagePreview.onHide(this)
     this._pageVisible = false
     const pendingFallbackClose = this._pendingPageContainerFallbackClose
     const pendingNativeClose = this._pendingPageContainerClose
@@ -417,6 +421,7 @@ Page({
   },
 
   onUnload() {
+    nativeImagePreview.cancel(this)
     this._isUnloaded = true
     this._pageVisible = false
     this.cancelPageContainerFallbackClose()
@@ -588,10 +593,12 @@ Page({
   },
 
   onPageContainerBeforeLeave() {
+    if (nativeImagePreview.isPending(this)) return false
     this.preparePageContainerLeave()
   },
 
   onPageContainerAfterLeave() {
+    if (nativeImagePreview.isPending(this)) return
     if (this._isUnloaded) return
     const leaving = this._pageContainerLeave
     if (!leaving) return
@@ -656,6 +663,7 @@ Page({
   },
 
   onPageContainerClickOverlay() {
+    nativeImagePreview.cancel(this)
     const name = this._activePageContainerOverlay?.name
     const close = {
       selector: this.closeEquipmentSelector, details: this.closeDetails,
@@ -958,9 +966,20 @@ Page({
 
   ...resultReportMethods,
 
+  finishFailedNativeImagePreview() {
+    this.cancelPageContainerFallbackClose()
+    this._activePageContainerOverlay = null
+    this._pageContainerLeave = null
+    this._pendingPageContainerClose = null
+    this._pageContainerEpoch = (this._pageContainerEpoch || 0) + 1
+    this.setData({ shareSheetVisible: false, resultReportPreviewVisible: false,
+      pageContainerClosingOverlay: '', pageContainerFallbackClosing: false })
+  },
+
   previewResultReportImage() {
     if (!this.isShareSheetActionAvailable()) return
-    return resultReportMethods.previewResultReportImage.call(this)
+    return nativeImagePreview.preview(this, this.data.resultReportImagePath,
+      () => this.finishFailedNativeImagePreview())
   },
 
   saveResultReportImage() {
@@ -974,6 +993,7 @@ Page({
     const payload = buildResultReportPayload(record)
     if (!payload) return wx.showToast({ title: '暂无可生成的计算结果', icon: 'none' })
     const signature = this.getResultReportSignature(record)
+    const theme = getResultImageTheme()
     const path = this.data.resultReportImagePath
     const generate = () => {
       if (typeof wx.createCanvasContext !== 'function' || typeof wx.canvasToTempFilePath !== 'function') {
@@ -994,27 +1014,36 @@ Page({
         resultReportCanvasHeight: height, resultReportImagePath: '',
         isGeneratingResultReport: true, resultReportPreviewVisible: false,
       }, () => {
-        const current = () => this.isShareSheetActionAvailable()
+        const generationCurrent = () => this.isShareSheetActionAvailable()
           && this.resultReportRevision === revision && this.resultReportPendingSignature === signature
           && this.getResultReportSignature() === signature
-        if (!current()) return
         const finish = (changes = {}) => {
-          if (!current()) return
+          if (!generationCurrent()) return false
           this.resultReportPendingSignature = ''
           this.setData({ isGeneratingResultReport: false, ...changes })
+          return true
         }
+        const current = () => {
+          if (!generationCurrent()) return false
+          if (getResultImageTheme() === theme) return true
+          finish()
+          return false
+        }
+        if (!current()) return
         try {
           drawAndExportReport(this, {
             canvasId: REPORT_CANVAS_ID, isCurrent: current, width: REPORT_WIDTH, height,
             draw: (context) => {
               const endDrawing = startMeasurement('限幅器/结果图绘制')
-              drawResultReport(context, payload, height)
+              drawResultReport(context, payload, height, theme)
               endDrawing({ height })
             },
             getExportOptions: () => getExportDimensions(height),
             startExportMeasurement: (dimensions) => startMeasurement('限幅器/结果图导出', dimensions),
             onSuccess: (imagePath) => {
+              if (!current()) return
               this.resultReportSignature = signature
+              this._resultReportImageTheme = theme
               finish({ resultReportImagePath: imagePath, resultReportPreviewVisible: true })
               if (this.resultReportRevision === revision && !this.resultReportPendingSignature
                 && isPageContextCurrent(this)) vibrate('medium')
@@ -1030,22 +1059,23 @@ Page({
         }
       })
     }
-    if (!path || this.resultReportSignature !== signature) return generate()
+    if (!path || this.resultReportSignature !== signature || this._resultReportImageTheme !== theme) return generate()
 
     const revision = (this.resultReportRevision || 0) + 1
     this.resultReportRevision = revision
     this._reportCacheCheckRevision = revision
     this.setData({ isGeneratingResultReport: true, resultReportPreviewVisible: false }, () => {
-      const current = () => this.isShareSheetActionAvailable() && this._reportCacheCheckRevision === revision
+      const cacheCheckCurrent = () => this.isShareSheetActionAvailable() && this._reportCacheCheckRevision === revision
         && this.resultReportRevision === revision && this.getResultReportSignature() === signature
       const showCached = () => {
-        if (!current()) return
+        if (!cacheCheckCurrent()) return
+        if (getResultImageTheme() !== theme) return regenerate()
         this._reportCacheCheckRevision = 0
         this.resultReportPendingSignature = ''
         this.setData({ isGeneratingResultReport: false, resultReportPreviewVisible: true })
       }
       const regenerate = () => {
-        if (!current()) return
+        if (!cacheCheckCurrent()) return
         this._reportCacheCheckRevision = 0
         this.resultReportSignature = ''
         this.setData({ isGeneratingResultReport: false, resultReportImagePath: '', resultReportPreviewVisible: false }, () => {
@@ -1065,7 +1095,9 @@ Page({
     const path = this.data.resultReportImagePath
     if (!path) return false
     if (typeof wx.showShareImageMenu !== 'function') {
-      return resultReportMethods.shareResultReportImage.call(this)
+      return nativeImagePreview.share(this, path,
+        (imagePath) => resultReportMethods.shareResultReportImage.call(this),
+        () => this.finishFailedNativeImagePreview())
     }
     wx.showShareImageMenu({
       path,
@@ -1107,6 +1139,7 @@ Page({
 
   closeSharePreview() {
     if (this._isUnloaded) return
+    nativeImagePreview.cancel(this)
     const prepared = this.preparePageContainerLeave()
     if (!prepared) this.cancelPendingImageWork({ preservePreview: true })
     this._reportCacheCheckRevision = 0

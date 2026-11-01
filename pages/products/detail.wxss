@@ -47,3 +47,5 @@
 @keyframes dmx-import-sheet-in{from{transform:translateY(calc(100% + env(safe-area-inset-bottom)))}to{transform:translateY(0)}}
 @keyframes dmx-import-sheet-out{from{transform:translateY(0)}to{transform:translateY(calc(100% + env(safe-area-inset-bottom)))}}
 @media(prefers-reduced-motion:reduce){.dmx-import-overlay,.dmx-import-sheet,.dmx-import-overlay.dmx-import-closing,.dmx-import-closing .dmx-import-sheet{animation-duration:1ms!important;animation-iteration-count:1!important}}
+
+.dmx-import-close.panel-close-control{box-sizing:border-box;display:flex;width:44px;min-width:44px;max-width:44px;height:44px;min-height:44px;max-height:44px;margin:0;padding:0;align-items:center;justify-content:center;border:0;border-radius:50%;background:var(--theme-panel-close-bg);color:var(--theme-panel-close-color);font-size:0;line-height:1}

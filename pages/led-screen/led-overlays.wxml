@@ -1,50 +1,53 @@
-<view wx:if="{{reportPreviewVisible}}" class="led-report-overlay {{reportPreviewClosing ? 'report-preview-closing' : ''}}" catchtap="closeReportPreview" catchtouchmove="preventTouchMove">
-  <view class="led-report-sheet {{reportPreviewClosing ? 'report-preview-closing' : ''}}" catchtap="stopEvent">
-    <view class="led-report-header">
-      <view class="led-report-title">方案图片</view>
-      <button class="led-report-close" aria-label="关闭方案图片" disabled="{{reportPreviewClosing}}" bindtap="closeReportPreview"><view class="led-modal-close-icon" aria-hidden="true"></view></button>
+<view wx:if="{{reportPreviewVisible}}" class="led-report-overlay result-sheet-overlay {{reportPreviewClosing ? 'report-preview-closing' : ''}}" catchtap="closeReportPreview" catchtouchmove="preventTouchMove">
+  <view class="led-report-sheet result-sheet result-share {{reportPreviewClosing ? 'report-preview-closing' : ''}}" catchtap="stopEvent">
+    <view class="led-report-header result-header">
+      <view class="led-report-title result-title">方案图片</view>
+      <button class="led-report-close panel-close-control" aria-label="关闭方案图片预览" disabled="{{reportPreviewClosing}}" bindtap="closeReportPreview"><view class="panel-close-icon" aria-hidden="true"></view></button>
     </view>
-    <scroll-view wx:if="{{!reportPreviewError}}" class="led-report-scroll" scroll-y enhanced show-scrollbar="{{true}}" aria-label="方案图片预览">
+    <scroll-view wx:if="{{!reportPreviewError}}" class="led-report-scroll result-scroll" scroll-y enhanced show-scrollbar="{{true}}" aria-label="方案图片预览">
       <image class="led-report-image" src="{{reportImagePath}}" mode="widthFix" bindtap="previewReportImage" binderror="onReportPreviewImageError" data-image-path="{{reportImagePath}}"></image>
     </scroll-view>
-    <view wx:else class="led-report-image-error">
+    <view wx:else class="led-report-image-error result-copy">
       <view>图片暂时无法打开</view>
       <button class="led-report-retry" disabled="{{isGeneratingReport || reportPreviewClosing}}" bindtap="retryReportPreview">{{isGeneratingReport ? '正在重新生成…' : '重新生成图片'}}</button>
     </view>
-    <view class="led-report-actions">
+    <view class="led-report-actions result-footer">
       <button class="led-report-share" disabled="{{!reportImagePath || isGeneratingReport || reportPreviewClosing}}" bindtap="shareReportImage">分享图片</button>
-      <button class="led-report-save" disabled="{{!reportImagePath || isGeneratingReport || reportPreviewClosing}}" bindtap="saveReportImage">保存图片</button>
+      <button class="led-report-save" disabled="{{!reportImagePath || isGeneratingReport || reportPreviewClosing}}" bindtap="saveReportImage">保存到相册</button>
     </view>
   </view>
 </view>
 
 <view wx:if="{{projectDialogVisible}}" class="led-project-overlay {{projectKeyboardOpen ? 'project-keyboard-open' : ''}} {{projectDialogClosing ? 'project-dialog-closing' : ''}}" style="bottom:{{projectKeyboardBottom}}px;" data-dialog-revision="{{projectDialogRevision}}" bindtap="closeProjectDialog" catchtouchmove="preventProjectTouchMove">
-  <view class="led-project-sheet {{projectKeyboardOpen ? 'project-keyboard-open' : ''}} {{projectDialogStep == 'select' ? 'project-select-sheet' : ''}}" style="{{projectKeyboardOpen ? 'max-height:' + projectSheetMaxHeight + 'px;' : ''}}" catchtap="stopProjectTap">
-    <view class="led-project-header">
-      <view class="led-project-title">{{projectDialogStep == 'create' ? '新建项目' : projectDialogStep == 'confirm' ? '配置名称与备注' : projectDialogStep == 'success' ? '保存完成' : '保存到项目'}}</view>
-      <button class="led-project-close" aria-label="关闭项目保存" disabled="{{projectSaving}}" data-dialog-revision="{{projectDialogRevision}}" bindtap="closeProjectDialog"><view class="led-modal-close-icon" aria-hidden="true"></view></button>
+  <view class="led-project-sheet result-sheet result-save {{projectKeyboardOpen ? 'project-keyboard-open' : ''}} {{projectDialogStep == 'select' ? 'project-select-sheet' : ''}}" style="{{projectKeyboardOpen ? 'max-height:' + projectSheetMaxHeight + 'px;' : ''}}" catchtap="stopProjectTap">
+    <view class="led-project-header result-header">
+      <view class="led-project-title result-title">{{projectDialogStep == 'create' ? '新建项目' : projectDialogStep == 'confirm' ? '配置名称与备注' : projectDialogStep == 'success' ? '保存完成' : '保存到项目'}}</view>
+      <button class="led-project-close panel-close-control" aria-label="关闭项目保存" disabled="{{projectSaving}}" data-dialog-revision="{{projectDialogRevision}}" bindtap="closeProjectDialog"><view class="panel-close-icon" aria-hidden="true"></view></button>
     </view>
 
-    <scroll-view wx:if="{{projectDialogStep == 'select'}}" class="led-project-body" scroll-y scroll-into-view="{{projectFocusedInputId}}" enhanced show-scrollbar="{{false}}" aria-label="选择项目">
-      <input id="ledProjectSearchText" class="led-project-search" type="text" value="{{projectSearchText}}" placeholder="搜索项目" placeholder-class="led-project-placeholder" disabled="{{projectSaving}}" data-field="projectSearchText" data-step="select" data-dialog-revision="{{projectDialogRevision}}" data-focus-episode="{{projectFocusEpisode}}" bindinput="onProjectSearch" bindfocus="beginProjectInputFocus" bindblur="endProjectInputFocus" bindkeyboardheightchange="onProjectKeyboardHeightChange" adjust-position="{{false}}" cursor-spacing="12" />
+    <view wx:if="{{projectDialogStep == 'select'}}" class="led-project-body project-select-body" aria-label="选择项目">
+      <input id="ledProjectSearchText" class="led-project-search" type="text" value="{{projectSearchText}}" placeholder="搜索项目" placeholder-class="led-project-placeholder result-placeholder" disabled="{{projectSaving}}" data-field="projectSearchText" data-step="select" data-dialog-revision="{{projectDialogRevision}}" data-focus-episode="{{projectFocusEpisode}}" bindinput="onProjectSearch" bindfocus="beginProjectInputFocus" bindblur="endProjectInputFocus" bindkeyboardheightchange="onProjectKeyboardHeightChange" adjust-position="{{false}}" cursor-spacing="12" />
       <view wx:if="{{projectLoadFailed}}" class="led-project-read-error">{{projectError || '读取项目列表失败，请重试。'}}</view>
-      <view wx:elif="{{projectProjects.length}}" class="led-project-list" aria-label="项目列表">
-        <view wx:for="{{filteredProjects}}" wx:key="id" class="led-project-row" data-id="{{item.id}}" data-dialog-revision="{{projectDialogRevision}}" bindtap="selectProjectTarget">
+      <view wx:elif="{{projectProjects.length}}" class="led-project-list-wrap">
+        <scroll-view wx:if="{{filteredProjects.length}}" class="led-project-list project-select-list" scroll-y enhanced show-scrollbar="{{filteredProjects.length > 1}}" aria-label="项目列表">
+        <view wx:for="{{filteredProjects}}" wx:key="id" class="led-project-row project-select-row result-row" data-id="{{item.id}}" data-dialog-revision="{{projectDialogRevision}}" bindtap="selectProjectTarget">
           <view class="led-project-row-copy">
-            <view class="led-project-row-name">{{item.name}}</view>
+            <view class="led-project-row-name result-row-name">{{item.name}}</view>
           </view>
           <view class="led-project-row-mark">›</view>
         </view>
-        <view wx:if="{{!filteredProjects.length}}" class="led-project-empty">没有匹配的项目</view>
+        </scroll-view>
+        <view wx:else class="led-project-empty">没有匹配的项目</view>
+        <view wx:if="{{filteredProjects.length > 1 && !projectKeyboardOpen}}" class="project-select-hint">上下滑动查看更多</view>
       </view>
       <view wx:elif="{{!projectLoadFailed}}" class="led-project-empty">
         <view>还没有现场项目</view><view class="led-project-empty-detail">新建后可将本次选型保存到项目</view>
       </view>
       <view wx:if="{{projectError && !projectLoadFailed}}" class="led-project-error">{{projectError}}</view>
-    </scroll-view>
+    </view>
 
     <scroll-view wx:elif="{{projectDialogStep == 'create'}}" class="led-project-body" scroll-y scroll-into-view="{{projectFocusedInputId}}" enhanced show-scrollbar="{{false}}" aria-label="新建项目">
-      <input id="ledProjectNameText" class="led-project-search" type="text" value="{{projectNameText}}" maxlength="30" placeholder="例如：三楼会议室" placeholder-class="led-project-placeholder" disabled="{{projectSaving}}" data-field="projectNameText" data-step="create" data-dialog-revision="{{projectDialogRevision}}" data-focus-episode="{{projectFocusEpisode}}" bindinput="onProjectNameInput" bindfocus="beginProjectInputFocus" bindblur="endProjectInputFocus" bindkeyboardheightchange="onProjectKeyboardHeightChange" adjust-position="{{false}}" cursor-spacing="12" />
+      <input id="ledProjectNameText" class="led-project-search" type="text" value="{{projectNameText}}" maxlength="30" placeholder="例如：三楼会议室" placeholder-class="led-project-placeholder result-placeholder" disabled="{{projectSaving}}" data-field="projectNameText" data-step="create" data-dialog-revision="{{projectDialogRevision}}" data-focus-episode="{{projectFocusEpisode}}" bindinput="onProjectNameInput" bindfocus="beginProjectInputFocus" bindblur="endProjectInputFocus" bindkeyboardheightchange="onProjectKeyboardHeightChange" adjust-position="{{false}}" cursor-spacing="12" />
       <view class="led-project-help">名称最多 30 字。创建后可将本次选型保存到该项目。</view>
       <view wx:if="{{projectError}}" class="led-project-error">{{projectError}}</view>
     </scroll-view>
@@ -55,12 +58,12 @@
       </view>
       <view class="led-project-field">
         <view class="led-project-meta-label">配置名称</view>
-        <input id="ledProjectConfigName" class="led-project-input" type="text" value="{{projectConfigName}}" maxlength="60" placeholder="为本项目命名此配置" placeholder-class="led-project-placeholder" disabled="{{projectSaving}}" data-field="projectConfigName" data-step="confirm" data-dialog-revision="{{projectDialogRevision}}" data-focus-episode="{{projectFocusEpisode}}" bindinput="onProjectConfigNameInput" bindfocus="beginProjectInputFocus" bindblur="endProjectInputFocus" bindkeyboardheightchange="onProjectKeyboardHeightChange" adjust-position="{{false}}" cursor-spacing="12" />
+        <input id="ledProjectConfigName" class="led-project-input" type="text" value="{{projectConfigName}}" maxlength="60" placeholder="为本项目命名此配置" placeholder-class="led-project-placeholder result-placeholder" disabled="{{projectSaving}}" data-field="projectConfigName" data-step="confirm" data-dialog-revision="{{projectDialogRevision}}" data-focus-episode="{{projectFocusEpisode}}" bindinput="onProjectConfigNameInput" bindfocus="beginProjectInputFocus" bindblur="endProjectInputFocus" bindkeyboardheightchange="onProjectKeyboardHeightChange" adjust-position="{{false}}" cursor-spacing="12" />
         <view wx:if="{{projectNameError}}" class="led-project-field-error">{{projectNameError}}</view>
       </view>
       <view class="led-project-field">
         <view class="led-project-meta-label">现场备注（选填）</view>
-        <textarea id="ledProjectConfigNote" class="led-project-note" value="{{projectConfigNote}}" maxlength="200" placeholder="填写安装位置或现场条件" placeholder-class="led-project-placeholder" disabled="{{projectSaving}}" data-field="projectConfigNote" data-step="confirm" data-dialog-revision="{{projectDialogRevision}}" data-focus-episode="{{projectFocusEpisode}}" bindinput="onProjectConfigNoteInput" bindfocus="beginProjectInputFocus" bindblur="endProjectInputFocus" bindkeyboardheightchange="onProjectKeyboardHeightChange" adjust-position="{{false}}" cursor-spacing="12" auto-height="{{false}}" />
+        <textarea id="ledProjectConfigNote" class="led-project-note" value="{{projectConfigNote}}" maxlength="200" placeholder="填写安装位置或现场条件" placeholder-class="led-project-placeholder result-placeholder" disabled="{{projectSaving}}" data-field="projectConfigNote" data-step="confirm" data-dialog-revision="{{projectDialogRevision}}" data-focus-episode="{{projectFocusEpisode}}" bindinput="onProjectConfigNoteInput" bindfocus="beginProjectInputFocus" bindblur="endProjectInputFocus" bindkeyboardheightchange="onProjectKeyboardHeightChange" adjust-position="{{false}}" fixed="{{true}}" cursor-spacing="12" auto-height="{{false}}" />
         <view wx:if="{{projectNoteError}}" class="led-project-field-error">{{projectNoteError}}</view>
       </view>
       <view class="led-project-preview">
@@ -77,7 +80,7 @@
       <view class="led-project-success-detail">{{projectFrozenSummary}}</view>
     </scroll-view>
 
-    <view class="led-project-footer">
+    <view class="led-project-footer result-footer">
       <block wx:if="{{projectDialogStep == 'select'}}">
         <button wx:if="{{projectLoadFailed}}" class="led-project-button led-project-button-primary" data-step="select" data-dialog-revision="{{projectDialogRevision}}" bindtap="retryProjectRead">重试读取</button>
         <button wx:else class="led-project-button led-project-button-primary" data-step="select" data-dialog-revision="{{projectDialogRevision}}" bindtap="openProjectCreateForm">新建项目</button>

@@ -14,6 +14,22 @@ function isAngle(value) {
   return positive(value) && value < 179
 }
 
+function containsNonFiniteNumber(value) {
+  const pending = [value]
+  const seen = new Set()
+  while (pending.length) {
+    const current = pending.pop()
+    if (typeof current === 'number') {
+      if (!Number.isFinite(current)) return true
+      continue
+    }
+    if (!current || typeof current !== 'object' || seen.has(current)) continue
+    seen.add(current)
+    for (const key of Object.keys(current)) pending.push(current[key])
+  }
+  return false
+}
+
 function angleFromRatio(numerator, denominator) {
   return 2 * Math.atan(numerator / (2 * denominator)) / DEGREE
 }
@@ -211,7 +227,7 @@ function decoratePlacement(fov, values) {
   if (Object.values(values).some((value) => typeof value === 'number' && !Number.isFinite(value))
     || values.requiredHorizontalFov > fov.horizontalFov + 1e-9
     || values.requiredVerticalFov > fov.verticalFov + 1e-9) return null
-  return {
+  const result = {
     ...fov,
     ...values,
     coverageVerified: true,
@@ -224,6 +240,7 @@ function decoratePlacement(fov, values) {
     verticalUtilizationPercent: round(values.requiredVerticalFov / fov.verticalFov * 100),
     marginPercent: round(values.marginRatio * 100),
   }
+  return containsNonFiniteNumber(result) ? null : result
 }
 
 function describeDistanceConstraint(horizontalDistance, verticalDistance) {
@@ -233,7 +250,7 @@ function describeDistanceConstraint(horizontalDistance, verticalDistance) {
 }
 
 function decorateHorizontalPlacement(fov, values) {
-  return {
+  const result = {
     ...fov,
     ...values,
     horizontalOnly: true,
@@ -244,6 +261,7 @@ function decorateHorizontalPlacement(fov, values) {
     marginPercent: round(values.marginRatio * 100),
     distanceConstraintText: '仅按说明书水平视场角计算；缺少垂直视场角，不能校核上下边界与完整安装距离',
   }
+  return containsNonFiniteNumber(result) ? null : result
 }
 
 function calculateLegacyHorizontalOnlyPlacement(fov, options = {}) {

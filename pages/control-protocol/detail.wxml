@@ -124,29 +124,29 @@
 </scroll-view>
 
 <view wx:if="{{activeOverlay}}" class="sheet-overlay {{sheetOpen ? 'sheet-overlay-open' : ''}}" bindtap="onOverlayMaskTap">
-  <view wx:if="{{activeOverlay == 'device'}}" class="bottom-sheet {{sheetOpen ? 'bottom-sheet-open' : ''}} device-sheet" catchtap="stopOverlayTap" bindtransitionend="onSheetTransitionEnd">
+  <view wx:if="{{activeOverlay == 'device'}}" class="bottom-sheet device-sheet device-picker-scope {{sheetOpen ? 'bottom-sheet-open' : ''}}" catchtap="stopOverlayTap" bindtransitionend="onSheetTransitionEnd">
     <view class="sheet-grabber"></view>
-    <view class="sheet-heading">
-      <view class="sheet-title">选择设备</view>
-      <view class="sheet-count">{{directoryItems.length}} 项</view>
+    <view class="sheet-heading device-picker-header">
+      <view class="sheet-title device-picker-title">选择设备</view>
+      <view class="sheet-count device-picker-count">{{directoryItems.length}} 项</view>
     </view>
     <view wx:if="{{selectedDeviceHidden}}" class="selected-hidden-note">当前设备不在此筛选结果中</view>
-    <view class="directory-search">
+    <view class="directory-search device-picker-search-control">
       <text class="search-symbol">⌕</text>
-      <input class="directory-search-input" value="{{keyword}}" placeholder="搜索设备名称、品牌或型号" confirm-type="search" bindinput="onSearchInput" />
+      <input class="directory-search-input device-picker-search-input" value="{{keyword}}" placeholder="搜索设备名称、品牌或型号" confirm-type="search" bindinput="onSearchInput" />
       <button wx:if="{{keyword}}" class="search-clear" aria-label="清除搜索" catchtap="clearSearch"><view class="search-clear-icon" aria-hidden="true"></view></button>
     </view>
-    <scroll-view class="category-scroll" scroll-x enhanced show-scrollbar="{{false}}">
+    <scroll-view class="category-scroll device-picker-category-scroll" scroll-x enhanced show-scrollbar="{{false}}">
       <view class="category-row">
-        <view wx:for="{{categories}}" wx:key="key" class="category-chip {{item.selected ? 'category-chip-active' : ''}}" data-key="{{item.key}}" bindtap="onCategoryTap">{{item.label}}</view>
+        <view wx:for="{{categories}}" wx:key="key" class="category-chip device-picker-category {{item.selected ? 'category-chip-active device-picker-category-active' : ''}}" data-key="{{item.key}}" bindtap="onCategoryTap">{{item.label}}</view>
       </view>
     </scroll-view>
-    <scroll-view class="directory-list" style="height:{{directoryListHeight}}rpx" scroll-y enhanced show-scrollbar="{{false}}">
-      <view wx:if="{{directoryIsEmpty}}" class="directory-empty">
+    <scroll-view class="directory-list device-picker-list" style="height:{{directoryListHeight}}rpx" scroll-y enhanced show-scrollbar="{{false}}">
+      <view wx:if="{{directoryIsEmpty}}" class="directory-empty device-picker-empty">
         <view class="directory-empty-title">{{keyword || categoryKey != 'all' ? '没有找到匹配资料' : '暂无可查看设备'}}</view>
         <button wx:if="{{keyword || categoryKey != 'all'}}" class="clear-filters-button" catchtap="clearFilters">清除筛选</button>
       </view>
-      <view wx:for="{{directoryItems}}" wx:for-item="item" wx:key="key" class="directory-row {{item.selected ? 'directory-row-selected' : ''}}">
+      <view wx:for="{{directoryItems}}" wx:for-item="item" wx:key="key" class="directory-row device-picker-row {{item.selected ? 'directory-row-selected device-picker-row-selected' : ''}}">
         <view class="directory-photo-wrap" data-path="{{item.photoPath}}" bindtap="previewDirectoryPhoto">
           <image wx:if="{{item.photoPath && !item.imageFailed}}" class="directory-photo" src="{{item.photoPath}}" mode="aspectFit" lazy-load data-key="{{item.key}}" binderror="onDirectoryPhotoError" />
           <view wx:elif="{{item.photoPath}}" class="directory-photo-failed" data-key="{{item.key}}" catchtap="retryDirectoryPhoto">照片加载失败<text>点此重试</text></view>
@@ -154,8 +154,8 @@
           <view wx:if="{{item.photoPath && !item.imageFailed}}" class="directory-zoom-mark" data-path="{{item.photoPath}}" catchtap="previewDirectoryPhoto" aria-label="查看原图">⌕</view>
         </view>
         <view class="directory-copy" data-type="{{item.type}}" data-id="{{item.id}}" bindtap="selectDevice">
-          <view class="directory-title">{{item.title}}</view>
-          <view class="directory-subtitle">{{item.subtitle}}</view>
+          <view class="directory-title device-picker-item-title">{{item.title}}</view>
+          <view class="directory-subtitle device-picker-item-meta">{{item.subtitle}}</view>
         </view>
         <view wx:if="{{item.selected}}" class="directory-select-control" data-type="{{item.type}}" data-id="{{item.id}}" bindtap="selectDevice" aria-label="当前设备：{{item.title}}">
           <view class="selected-check"><view class="selected-check-mark" aria-hidden="true"></view></view>
@@ -165,7 +165,7 @@
         </view>
       </view>
     </scroll-view>
-    <button class="sheet-cancel" bindtap="closeOverlay">取消</button>
+    <button class="sheet-cancel device-picker-cancel" bindtap="closeOverlay">取消</button>
   </view>
 
 </view>

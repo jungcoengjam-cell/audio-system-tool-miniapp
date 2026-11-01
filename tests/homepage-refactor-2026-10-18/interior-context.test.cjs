@@ -1,6 +1,7 @@
 'use strict'
 
 const assert = require('node:assert/strict')
+const fs = require('node:fs')
 const Module = require('node:module')
 const path = require('node:path')
 
@@ -87,7 +88,15 @@ assert.equal(routes.at(-1), `/pages/dmx-address/dmx-address?lightingProjectId=${
 instance.openProjectWiring()
 assert.equal(routes.at(-1), `/pages/project-wiring/index?id=${encodeURIComponent(projectId)}`)
 instance.openProjectLighting()
-assert.equal(routes.at(-1), `/pages/dmx-address/dmx-address?lightingProjectId=${encodeURIComponent(projectId)}`)
+assert.equal(routes.at(-1), `/pages/dmx-layout/dmx-layout?lightingContextId=${encodeURIComponent(projectId)}`, 'lighting overview opens the project lighting map')
+instance.openProjectLightingAddress()
+assert.equal(routes.at(-1), `/pages/dmx-address/dmx-address?lightingProjectId=${encodeURIComponent(projectId)}`, 'separate lighting-address action opens the project address tool')
+
+const projectTemplate = fs.readFileSync(path.resolve(__dirname, '../../pages/records/project.wxml'), 'utf8')
+assert.match(projectTemplate, /class="interior-lighting-summary-main"[^>]*bindtap="openProjectLighting"/, 'summary main area opens the lighting map')
+assert.match(projectTemplate, /class="interior-quiet-button interior-lighting-address"[^>]*catchtap="openProjectLightingAddress"/, 'address button has an independent non-bubbling tap action')
+assert.match(projectTemplate, /<view wx:else class="interior-item interior-lighting-summary">\s*<view/, 'summary card itself has no tap handler')
+assert.doesNotMatch(projectTemplate, /<view wx:else class="interior-item interior-lighting-summary"[^>]*bindtap=/, 'address button cannot bubble to a card-level map handler')
 
 instance.onProjectItemTap({ currentTarget: { dataset: { id: 'record-stable-9' } } })
 assert.equal(calls.editors.length, 1)

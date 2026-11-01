@@ -14,7 +14,9 @@ const results=cases.map(file=>{
   const name=file.replaceAll('/','_');fs.writeFileSync(path.join(out,name+'.stdout.txt'),r.stdout||'');fs.writeFileSync(path.join(out,name+'.stderr.txt'),r.stderr||'')
   const row={file,exitCode:r.status,error:r.error?.message||null};console.log(`${r.status===0?'PASS':'FAIL'} ${file}`);return row
 })
+const retiredPage='pages/dmx-layout-landscape/dmx-layout-landscape'
+if(JSON.parse(fs.readFileSync(path.join(root,'app.json'),'utf8')).pages.includes(retiredPage)||fs.existsSync(path.join(root,retiredPage+'.js')))throw Error('Retired landscape route must stay absent')
 const sources={}
-for(const dir of ['pages/dmx-address','pages/dmx-layout','pages/dmx-layout-landscape'])for(const name of fs.readdirSync(path.join(root,dir)))if(/\.(?:js|json|wxml|wxss)$/.test(name))sources[dir+'/'+name]=crypto.createHash('sha256').update(fs.readFileSync(path.join(root,dir,name))).digest('hex')
+for(const dir of ['pages/dmx-address','pages/dmx-layout'])for(const name of fs.readdirSync(path.join(root,dir)))if(/\.(?:js|json|wxml|wxss)$/.test(name))sources[dir+'/'+name]=crypto.createHash('sha256').update(fs.readFileSync(path.join(root,dir,name))).digest('hex')
 fs.writeFileSync(path.join(out,'summary.json'),JSON.stringify({runAt:new Date().toISOString(),results,sources},null,2))
 if(results.some(r=>r.exitCode!==0))process.exitCode=1

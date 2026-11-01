@@ -125,16 +125,16 @@
   </scroll-view>
 
   <view wx:if="{{selectorVisible}}" class="selector-mask {{selectorClosing ? 'selector-closing' : ''}}" catchtap="closeCameraSelector">
-    <view class="selector-panel {{selectorClosing ? 'selector-panel-closing' : ''}}" catchtap="stopTap">
-      <view class="selector-header"><view class="selector-title">选择摄像机型号</view><button class="selector-close" aria-label="关闭型号选择" catchtap="closeCameraSelector">×</button></view>
-      <input class="selector-search" value="{{selectorKeyword}}" placeholder="输入型号，例如 TV-620、TS-0663" confirm-type="search" bindinput="onSelectorInput" />
-      <view class="selector-count">共 {{selectorItems.length}} 个型号</view>
-      <scroll-view class="selector-list" scroll-y>
-        <button wx:for="{{selectorItems}}" wx:key="model" class="selector-row" data-index="{{item.index}}" catchtap="selectCamera">
-          <view class="selector-row-info"><view class="selector-model">{{item.model}}</view><view class="selector-meta">{{item.category}} · {{item.sensor}}</view><view wx:for="{{item.opticsLines}}" wx:for-item="opticsLine" wx:key="*this" class="selector-optics">{{opticsLine}}</view></view>
-          <view class="selector-row-arrow">›</view>
+    <view class="selector-panel device-picker-scope device-picker-standard {{selectorClosing ? 'selector-panel-closing' : ''}}" catchtap="stopTap">
+      <view class="selector-header device-picker-header"><view class="selector-title device-picker-title">选择摄像机型号</view><button class="selector-close device-picker-close panel-close-control" aria-label="关闭摄像机型号选择" catchtap="closeCameraSelector"><view class="panel-close-icon" aria-hidden="true"></view></button></view>
+      <input class="selector-search device-picker-search" value="{{selectorKeyword}}" placeholder="输入型号，例如 TV-620、TS-0663" confirm-type="search" bindinput="onSelectorInput" />
+      <view class="selector-count device-picker-count">共 {{selectorItems.length}} 个型号</view>
+      <scroll-view class="selector-list device-picker-list" scroll-y>
+        <button wx:for="{{selectorItems}}" wx:key="model" class="selector-row device-picker-row" data-index="{{item.index}}" catchtap="selectCamera">
+          <view class="selector-row-info"><view class="selector-model device-picker-item-title">{{item.model}}</view><view class="selector-meta device-picker-item-meta">{{item.category}} · {{item.sensor}}</view><view wx:for="{{item.opticsLines}}" wx:for-item="opticsLine" wx:key="*this" class="selector-optics device-picker-item-meta">{{opticsLine}}</view></view>
+          <view class="selector-row-arrow device-picker-arrow">›</view>
         </button>
-        <view wx:if="{{selectorItems.length == 0}}" class="selector-empty">没有匹配型号，请尝试缩短关键词。</view>
+        <view wx:if="{{selectorItems.length == 0}}" class="selector-empty device-picker-empty">没有匹配型号，请尝试缩短关键词。</view>
       </scroll-view>
     </view>
   </view>

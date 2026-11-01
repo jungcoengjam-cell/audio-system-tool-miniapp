@@ -212,7 +212,7 @@
           <view class="dmx-import-title">带入 DMX 灯具</view>
           <view class="dmx-import-product">{{product.model}} · {{product.summary}}</view>
         </view>
-        <button class="dmx-import-close" aria-label="关闭" bindtap="closeDmxProductImport">×</button>
+        <button class="dmx-import-close panel-close-control" aria-label="关闭 DMX 灯具导入面板" bindtap="closeDmxProductImport"><view class="panel-close-icon" aria-hidden="true"></view></button>
       </view>
 
       <scroll-view class="dmx-import-scroll" scroll-y enhanced show-scrollbar="{{false}}">

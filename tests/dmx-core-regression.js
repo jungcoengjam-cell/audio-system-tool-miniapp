@@ -13,7 +13,7 @@ const { stageLightingChannelProfilesFinalA: canonicalFinalA } = require('./dmx-c
 const { stageLightingChannelProfilesFinalB: canonicalFinalB } = require('./dmx-channel-sources/stage-lighting-channels-final-b.source')
 const { calculateDmxAddressPlan } = require('../utils/dmx-address')
 const { buildActualDmxChannelGuide, buildDmxChannelGuide, getDmxChannelProfile, hasDmxChannelProfile } = require('../pages/dmx-address/utils/dmx-channel-guide')
-const { getProductDetail } = require('../utils/products')
+const { getProductDetail } = require('../pages/products/utils/products')
 
 const root = path.resolve(__dirname, '..')
 function checkDmxAddressPlan() {

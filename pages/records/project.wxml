@@ -135,20 +135,22 @@
           <view wx:if="{{showLighting}}" class="interior-section">
             <view class="interior-section-heading">
               <view class="interior-section-title">灯位方案</view>
-              <view wx:if="{{!project.lightingReadError}}" class="interior-section-count">{{lightingFixtures.length}} 个</view>
+              <view wx:if="{{!project.lightingSummaryError}}" class="interior-section-count">共 {{project.lightingFixtureCount}} 台</view>
             </view>
-            <view wx:if="{{project.lightingReadError}}" class="interior-inline-error">{{project.lightingReadError}}</view>
-            <view wx:for="{{lightingFixtures}}" wx:key="stableId" class="interior-swipe-row {{item.swipeOpen ? 'interior-swipe-row-open' : ''}} {{item.swipeDragging ? 'interior-swipe-row-dragging' : ''}}" data-swipe-type="lighting" data-swipe-id="{{item.stableId}}" bindtouchstart="onProjectSwipeStart" bindtouchmove="onProjectSwipeMove" bindtouchend="onProjectSwipeEnd" bindtouchcancel="onProjectSwipeCancel">
-              <view aria-role="button" wx:if="{{item.swipeOpen || (item.swipeDragging && item.swipeOffset < 0)}}" class="interior-swipe-delete" aria-label="移出灯位{{item.displayTitle}}" data-swipe-type="lighting" data-swipe-id="{{item.stableId}}" catchtap="onProjectSwipeDelete"><text class="interior-swipe-label">移出灯位</text></view>
-              <view class="interior-item interior-swipe-content" hover-class="interior-swipe-pressed" style="transform:translateX({{item.swipeOffset}}px);" data-id="{{item.stableId}}" bindtap="openProjectLighting">
+            <view wx:if="{{project.lightingSummaryError}}" class="interior-inline-error">{{project.lightingSummaryError}}</view>
+            <button wx:if="{{project.lightingSummaryError}}" class="interior-quiet-button interior-lighting-address interior-lighting-error-address" disabled="{{workspaceError}}" aria-label="打开灯具编址" catchtap="openProjectLightingAddress">灯具编址</button>
+            <view wx:else class="interior-item interior-lighting-summary">
+              <view aria-role="button" aria-label="查看灯位图，共{{project.lightingFixtureCount}}台灯具，已布置{{project.lightingPlacedCount}}台，舞台地面{{project.lightingGroundCount}}台" aria-disabled="{{workspaceError}}" class="interior-lighting-summary-main" hover-class="interior-swipe-pressed" bindtap="openProjectLighting">
                 <view class="interior-kind-symbol interior-kind-lighting">✳</view>
                 <view class="interior-item-copy">
-                  <view class="interior-item-title">{{item.displayTitle}}</view>
-                  <view class="interior-item-subtitle">{{item.modelSummary}}</view>
-                  <view class="interior-item-time">{{item.addressSummary}}{{item.isPlaced ? '' : ' · 未上杆'}}</view>
+                  <view class="interior-item-title">查看灯位图</view>
+                  <view class="interior-item-subtitle">已布置 {{project.lightingPlacedCount}} / {{project.lightingFixtureCount}} 台</view>
+                  <view wx:if="{{project.lightingGroundCount}}" class="interior-item-time">含舞台地面灯 {{project.lightingGroundCount}} 台</view>
+                  <view wx:if="{{hasProjectSearch && matchedLightingFixtureCount}}" class="interior-item-time">搜索匹配 {{matchedLightingFixtureCount}} 台</view>
                 </view>
                 <view class="interior-chevron">›</view>
               </view>
+              <button class="interior-quiet-button interior-lighting-address" disabled="{{workspaceError}}" aria-label="打开灯具编址" catchtap="openProjectLightingAddress">灯具编址</button>
             </view>
           </view>
 

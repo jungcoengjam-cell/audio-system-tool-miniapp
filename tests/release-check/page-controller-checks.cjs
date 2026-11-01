@@ -108,18 +108,18 @@ function createPageControllerChecks(context) {
     const splWxml = fs.readFileSync(path.join(root, 'pages/spl/spl.wxml'), 'utf8')
     const splJs = fs.readFileSync(path.join(root, 'pages/spl/spl.js'), 'utf8')
     const splReport = fs.readFileSync(path.join(root, 'pages/spl/spl-report.js'), 'utf8')
+    const nativeImagePreviewSource = fs.readFileSync(path.join(root, 'pages/native-image-preview.js'), 'utf8')
     assert.strictEqual(
       (splWxml.match(/<canvas\b[^>]*canvas-id="resultReportCanvas"/g) || []).length,
       1,
       'SPL 页内结果图片预览必须保留唯一 Canvas',
     )
     assert(splWxml.includes('bindtap="openSharePreview"')
-      && splWxml.includes('class="share-image" src="{{resultReportImagePath}}" mode="aspectFit"')
-      && splWxml.includes('class="share-image-frame" style="{{shareImageFrameStyle}}"')
-      && splWxml.includes('bindload="onResultReportImageLoad"')
+      && splWxml.includes('class="share-image-scroll result-scroll" scroll-y enhanced show-scrollbar="{{false}}"')
+      && splWxml.includes('class="share-image" src="{{resultReportImagePath}}" mode="widthFix"')
       && splWxml.includes('bindtap="previewResultReportImage"')
-      && !splWxml.includes('share-image-scroll'),
-    'SPL 页内结果图片预览缺少生成入口、缓存图片、加载布局或原图预览入口')
+      && !splWxml.includes('share-image-frame'),
+    'SPL 结果图片预览必须使用可纵向滚动的 widthFix 图片，并保留生成和原图预览入口')
     assert(splWxml.includes('class="share-state share-error"')
       && splWxml.includes('bindtap="retryResultReport"')
       && splWxml.includes('bindtap="closeSharePreview"')
@@ -134,10 +134,19 @@ function createPageControllerChecks(context) {
     assert(splJs.includes('generateResultReportImage()')
       && splJs.includes('wx.getFileSystemManager()')
       && splJs.includes('fileSystem.access({ path, success: showCached, fail: regenerate })')
-      && splJs.includes('updateShareImageLayout()')
-      && splJs.includes('shareImageFrameStyle')
+      && !splJs.includes('updateShareImageLayout')
+      && !splJs.includes('shareImageFrameStyle')
       && !splJs.includes('updateShareImageScrollStyle')
-      && splJs.includes('wx.previewImage({')
+      && splJs.includes("const nativeImagePreview = require('../native-image-preview')")
+      && splJs.includes('nativeImagePreview.onShow(this)')
+      && splJs.includes('const returningFromImagePreview = nativeImagePreview.onHide(this)')
+      && splJs.includes('if (returningFromImagePreview) return')
+      && splJs.includes('return nativeImagePreview.preview(this, this.data.resultReportImagePath,')
+      && splJs.includes('() => this.closeSharePreview({ silent: true })')
+      && !splJs.includes('wx.previewImage(')
+      && nativeImagePreviewSource.includes('if (page._nativeImagePreview !== state || state.failed) return')
+      && nativeImagePreviewSource.includes('if (state.hidden) {')
+      && nativeImagePreviewSource.includes('if (onFailure) onFailure()')
       && splJs.includes('wx.showShareImageMenu({')
       && splJs.includes('saveGeneratedImage(this.data.resultReportImagePath)')
       && splJs.includes("require('./spl-report')")
@@ -153,7 +162,7 @@ function createPageControllerChecks(context) {
       && gainWxml.includes('canvas-id="resultReportCanvas"'),
     '增益架构本地结果图片模板缺少 Canvas、发送或保存入口')
     const limiter = expandWxmlIncludes('pages/limiter/limiter.wxml')
-    const limiterShareActions = /<view class="share-actions">([\s\S]*?)<\/view>/.exec(limiter)
+    const limiterShareActions = /<view class="share-actions result-footer">([\s\S]*?)<\/view>/.exec(limiter)
     assert(limiter.includes('canvas-id="resultReportCanvas"')
       && limiter.includes('bindtap="openSharePreview"')
       && limiter.includes('bindtap="shareResultReportImage"')
@@ -161,8 +170,8 @@ function createPageControllerChecks(context) {
     '限制器本地结果图片模板缺少 Canvas、预览或发送/保存入口')
     assert(limiterShareActions
       && (limiterShareActions[1].match(/<button\b/g) || []).length === 2
-      && limiterShareActions[1].includes('发送给微信好友')
-      && limiterShareActions[1].includes('保存到手机'),
+      && limiterShareActions[1].includes('分享图片')
+      && limiterShareActions[1].includes('保存到相册'),
     '限制器图片预览必须只提供发送与保存两个应用内动作')
   }
 
@@ -1059,16 +1068,19 @@ function createPageControllerChecks(context) {
     assert.strictEqual(dmxLayoutPageConfig.pageOrientation, 'portrait', '正式灯位图路由应固定竖屏')
     assert(!dmxLayoutWxml.includes('openLandscapeLayout') && !dmxLayoutWxml.includes('layout-orientation-button'),
       '正式竖屏灯位图仍暴露已退役横屏入口')
-    assert(dmxLayoutWxml.includes('bindtap="clearSelectedRodLayout"')
-      && dmxLayoutWxml.includes('bindtap="clearLayoutImage"')
+    assert(dmxLayoutWxml.includes('bindtap="openPlacementActions"')
       && dmxLayoutFactory.includes("require('./layout-interactions')")
       && dmxLayoutFactory.includes('createLayoutPlacementMethods(layoutInteractionDependencies)')
       && dmxLayoutFactory.includes('...layoutPlacementMethods')
+      && dmxLayoutInteractions.includes('openPlacementActions()')
+      && dmxLayoutInteractions.includes('wx.showActionSheet({')
+      && dmxLayoutInteractions.includes("title: '清空当前灯杆'")
+      && dmxLayoutInteractions.includes("title: '清空全图'")
       && dmxLayoutInteractions.includes('clearSelectedRodLayout()')
-      && dmxLayoutInteractions.includes('this.clearLayoutPositions(this._activeRodId)')
+      && dmxLayoutInteractions.includes('this.clearLayoutPositions(targetRodId)')
       && dmxLayoutInteractions.includes("this.clearLayoutPositions('')")
       && dmxLayoutInteractions.includes('String(position.rodId) === targetRodId'),
-    '灯位图须区分当前杆清空和全图清空，并将单杆操作限制在目标杆')
+    '灯位图须通过整理菜单区分当前杆清空和全图清空，并将单杆操作限制在目标杆')
     const dmxWritesBeforeRepeatedCalculation = storageWriteCount
     let unchangedDmxSetDataCount = 0
     dmxPage.setData = function countUnchangedDmxSetData(value, callback) {
@@ -2114,18 +2126,31 @@ function createPageControllerChecks(context) {
     assert(/\.fixture-channel-guide-detail\s*\{[^}]*flex-shrink:\s*0(?:;|})/s.test(dmxWxss),
       '当前通道详情必须保留不可收缩区域')
     // CSS establishes the layout box only; native touch behavior still requires a device check.
-    assert(/\.floating-chips \.address-chip\{min-width:48px;min-height:44px/.test(dmxWxss)
+    assert(/\.floating-chips \.address-chip\{[^}]*min-width:48px;min-height:44px/.test(dmxWxss)
       && /\.address-chips\{[^}]*display:flex;flex-wrap:wrap;gap:4px/.test(dmxWxss)
       && /class="address-chips floating-chips"[^>]*>\s*<view[^>]*class="address-chip \{\{chip\.checked/.test(dmxWxml),
     '浮卡中可交互地址格须有至少 44×44 CSS px 的真实节点盒')
     assert(dmxWxml.includes('{{floatingGroup.checkedCount}}') && dmxWxml.includes('{{floatingGroup.fixtureCountValue}}'),
       '当前浮卡需展示核对数量与灯具数量')
+    // Checked chips retain their base group tint and address text; the adjacent check is the state marker.
     assert(/<view(?=[^>]*class="address-chip)(?=[^>]*data-stable-id="{{chip.stableId}}")(?=[^>]*bindtap="toggleFixtureCheck")(?=[^>]*catchlongpress="openFixtureChannelGuide")[^>]*>/.test(dmxWxml)
       && dmxWxml.includes('chip.addressText')
       && dmxWxml.includes('<text wx:if="{{chip.checked}}" class="chip-check"')
       && dmxWxml.includes('>✓</text>')
-      && /\.address-chip-checked\{[^}]*background:var\(--group-color\)[^}]*color:#fff/s.test(dmxWxss),
+      && /<text[^>]*>\{\{chip\.addressText\}\}<\/text><text wx:if="\{\{chip\.checked\}\}" class="chip-check"[^>]*>✓<\/text>/.test(dmxWxml)
+      && /\.address-chip\{[^}]*display:flex;[^}]*gap:2px;[^}]*background:var\(--group-tint\);[^}]*color:var\(--group-color\)/s.test(dmxWxss)
+      && /\.floating-chips \.chip-check\{color:var\(--text\)\}/.test(dmxWxss)
+      && !/\.address-chip-checked\{[^}]*\b(?:border|background|color)\s*:/s.test(dmxWxss),
       '当前地址格需保稳定ID、实际地址、核对状态、点按核对和长按通道入口同节点')
+    assert(dmxWxml.includes("{{chip.checked ? 'address-chip-marked' : ''}}")
+      && dmxWxml.includes('<text wx:if="{{chip.checked}}" class="chip-check chip-check-preview">✓</text>')
+      && !/\.address-chip-preview\.address-chip-marked\{[^}]*\b(?:border|background|color)\s*:/s.test(dmxWxss)
+      && !/\.address-chip-preview\.address-chip-marked \.address-chip-preview-label\{/.test(dmxWxss)
+      && /\.chip-check-preview\{[^}]*top:1px;right:1px;[^}]*width:9px;height:9px;[^}]*background:transparent;[^}]*color:var\(--text\)/s.test(dmxWxss)
+      && /\.floating-chips \.address-chip\{position:relative;[^}]*min-width:48px;min-height:44px;[^}]*font-size:14px\}/.test(dmxWxss)
+      && /\.floating-chips \.chip-check\{position:absolute;[^}]*top:1px;right:2px;[^}]*width:11px;height:11px/s.test(dmxWxss)
+      && !/\.chip-check-preview\{[^}]*border-radius:/s.test(dmxWxss),
+    '总览与展开地址格的勾均叠加在右上角，地址文本保持居中、原字号和原几何')
     assert(/\.fixture-search-row-selected\s*\{[^}]*background:\s*var\(--control\)/s.test(dmxWxss)
       && !/\.fixture-search-row:active\s*,\s*\.fixture-search-row-selected/.test(dmxWxss),
       '型号选择弹层选中行使用随主题变化的中性表面')
@@ -2968,10 +2993,13 @@ function createPageControllerChecks(context) {
     assert.strictEqual(exportedLedCanvas.destHeight, ledScreenPage.data.reportCanvasHeight * 2)
     assert.strictEqual(ledScreenPage.previewReportImage(), true,
       'LED 原图预览入口应使用共享原生预览 API')
-    assert.deepStrictEqual(ledPreviews, [{
-      current: 'temp://led-screen-report.png',
-      urls: ['temp://led-screen-report.png'],
-    }], 'LED 原图预览应传入完整路径和 URL 列表')
+    assert.strictEqual(ledPreviews.length, 1, 'LED 原图预览应只发起一次原生预览')
+    assert.strictEqual(ledPreviews[0].current, 'temp://led-screen-report.png',
+      'LED 原图预览应传入完整图片路径')
+    assert.deepStrictEqual(ledPreviews[0].urls, ['temp://led-screen-report.png'],
+      'LED 原图预览应传入当前图片 URL 列表')
+    assert.strictEqual(typeof ledPreviews[0].fail, 'function',
+      'LED 原图预览应注册 native preview fail 回调')
     ledScreenPage.closeReportPreview(true)
     assert.strictEqual(ledScreenPage.data.reportPreviewVisible, false)
     ledScreenPage.openSharePreview()
@@ -2980,6 +3008,11 @@ function createPageControllerChecks(context) {
     assert.strictEqual(ledScreenPage.previewReportImage(), true,
       '重新打开的当前 LED 图片仍应支持原生预览')
     assert.strictEqual(ledPreviews.length, 2)
+    ledPreviews.forEach((preview) => {
+      assert.strictEqual(preview.current, 'temp://led-screen-report.png')
+      assert.deepStrictEqual(preview.urls, ['temp://led-screen-report.png'])
+      assert.strictEqual(typeof preview.fail, 'function')
+    })
     ledScreenPage.commitCalculatedState({ wallWidthText: '7' })
     assert.strictEqual(ledScreenPage.data.reportImagePath, '', 'LED 输入变化后仍沿用旧方案图片')
     delete wx.createCanvasContext

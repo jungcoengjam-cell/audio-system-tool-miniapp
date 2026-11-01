@@ -12,6 +12,11 @@ for(const name of names){
     source=source.replace("app.addEventListener(type,event=>nativeEvent(event.target,type,{}, {touches:", "app.addEventListener(type,event=>{const blocked=nativeEvent(event.target,type,{}, {touches:")
     source=source.replace("timeStamp:event.timeStamp}),{passive:false})", "timeStamp:event.timeStamp});if(blocked&&type==='touchmove')event.preventDefault()},{passive:false})")
   }
+  if(name==='browser.js') source=source.replace(/^function value\(source, scope\) \{.*\}$/m, () => String.raw`function value(source, scope) {
+  const text = String(source)
+  const match = text.match(/^\{\{([\s\S]*)\}\}$/)
+  return match && (text.match(/\{\{/g) || []).length === 1 ? evaluate(match[1], scope) : source
+}`)
   fs.writeFileSync(path.join(__dirname,name),source)
 }
 const original='C:/Users/wxx/.codex/codex-remote-attachments/01a14ae2-45ed-76d1-aeba-1959deacbdd4/EC022F6F-148B-4A7C-9C02-25466D21AD6F'

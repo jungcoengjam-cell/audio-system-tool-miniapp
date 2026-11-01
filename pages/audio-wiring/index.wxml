@@ -78,8 +78,8 @@
     <view class="selector-panel" catchtap="stopTap">
       <view class="selector-header">
         <view class="selector-title">{{selectorTitle}}</view>
-        <view class="selector-close" role="button" aria-label="关闭接口选择" bindtap="closeEndpointSelector">
-          <view class="selector-close-icon"></view>
+        <view class="selector-close panel-close-control" role="button" aria-label="关闭接口选择" bindtap="closeEndpointSelector">
+          <view class="panel-close-icon" aria-hidden="true"></view>
         </view>
       </view>
       <scroll-view class="selector-list" scroll-y enhanced show-scrollbar="{{false}}" style="height:55vh;">

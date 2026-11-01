@@ -77,7 +77,7 @@ function readLayoutViewportMetrics(wxApi, isLandscape, eventSize = {}) {
     navigationHeight + 8,
   )))
   const overlayAvailableHeight = Math.max(0, windowHeight - overlaySafeTop - safeBottom)
-  const placementCardMaxHeight = Math.max(0, Math.min(600, windowHeight * .7, overlayAvailableHeight - 24))
+  const placementCardMaxHeight = Math.max(0, Math.min(600, windowHeight * .94, overlayAvailableHeight))
   const selectorHeight = isLandscape ? 0 : 44
   const toolbarBaseHeight = isLandscape ? 58 : 62
   const toolbarHeight = toolbarBaseHeight + safeBottom

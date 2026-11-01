@@ -394,8 +394,13 @@ async function runCase(label, counts) {
     label + ': export mutated saved placement positions')
 
   layoutPage[previewHandlerMatch[1]]()
-  assert.deepStrictEqual(runtime.actions.previews, [{ current: imagePath, urls: [imagePath] }],
+  assert.strictEqual(runtime.actions.previews.length, 1, label + ': preview action did not issue one request')
+  assert.strictEqual(runtime.actions.previews[0].current, imagePath,
     label + ': preview action did not use the generated image path')
+  assert.deepStrictEqual(runtime.actions.previews[0].urls, [imagePath],
+    label + ': preview action did not retain the generated image URL')
+  assert.strictEqual(typeof runtime.actions.previews[0].fail, 'function',
+    label + ': preview action did not register native preview failure handling')
   layoutPage[shareImageHandler]()
   assert.strictEqual(runtime.actions.shares.length, 1)
   assert.strictEqual(runtime.actions.shares[0].path, imagePath,

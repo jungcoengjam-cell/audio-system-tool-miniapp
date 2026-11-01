@@ -30,7 +30,7 @@ storageFailure = false
 assert.equal(preferences.writePreferences('review', { value: 2 }), true)
 assert.equal(preferences.writePreferences('review', { value: 2 }), false)
 
-const products = fresh('../utils/products')
+const products = fresh('../pages/products/utils/products')
 const speaker = products.getProductList('speaker')[0]
 const amplifier = products.getProductList('amplifier')[0]
 const fixture = products.getProductList('lighting')

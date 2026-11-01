@@ -10,6 +10,8 @@ const {
   writePreferencesDetailed,
 } = require('../../utils/preferences')
 const { vibrate } = require('../../utils/haptics')
+const nativeImagePreview = require('../native-image-preview')
+const { getResultImageTheme } = require('../result-image-theme')
 const { isPageContextCurrent } = require('../../utils/report-image-actions')
 const {
   cancelResultReportGeneration,
@@ -171,6 +173,7 @@ function resetStaleSplReport(page, record) {
 
   cancelResultReportGeneration(page)
   page.resultReportSignature = ''
+  page._resultReportImageTheme = ''
   return {
     resultReportImagePath: '',
     resultReportPreviewVisible: false,
@@ -178,20 +181,6 @@ function resetStaleSplReport(page, record) {
   }
 }
 
-function rectOf(value) {
-  if (!value?.rect || typeof value.rect !== 'object') return value
-  return {
-    ...value.rect,
-    width: value.rect.width ?? value.width,
-    height: value.rect.height ?? value.height,
-  }
-}
-
-function styleNumber(value, name, fallback = 0) {
-  const style = value?.computedStyle || value || {}
-  const number = Number.parseFloat(style[name])
-  return Number.isFinite(number) ? number : fallback
-}
 const splProjectMethods = createSplProjectMethods({
   SHEET_TRANSITION_DURATION,
   addRecordToProject,
@@ -257,8 +246,6 @@ Page({
     selectorTotalCount: 0,
     shareSheetVisible: false,
     shareSheetClosing: false,
-    shareImageStyle: '',
-    shareImageFrameStyle: '',
     isCheckingResultReportCache: false,
     ...createSplProjectData(),
     resetError: '',
@@ -285,7 +272,6 @@ Page({
     this._projectKeyboardHeight = 0
     this._projectKeyboardBaselineHeight = 0
     this._projectKeyboardWindowHeight = 0
-    this._previewImageOpening = false
     const preferences = readPreferences(PREFERENCE_KEY)
     const hasSpeakerModel = Object.prototype.hasOwnProperty.call(preferences, 'speakerModel')
     const hasDistanceText = Object.prototype.hasOwnProperty.call(preferences, 'distanceText')
@@ -344,12 +330,9 @@ Page({
   },
 
   onShow() {
+    nativeImagePreview.onShow(this)
     this._pageVisible = true
     measure(this)
-    if (this._previewImageOpening) {
-      this._previewImageOpening = false
-      this.updateShareImageLayout()
-    }
     if (this.data.result) {
       syncPageFavorite(this)
       this._favoriteSyncedSinceLoad = true
@@ -359,10 +342,11 @@ Page({
   onReady() { measure(this) },
 
   onHide() {
+    const returningFromImagePreview = nativeImagePreview.onHide(this)
     this._pageVisible = false
     this.cancelSpeakerSelectorClose()
     this.setData({ selectorVisible: false, selectorClosing: false, selectorItems: [], selectorTotalCount: 0 })
-    if (this._previewImageOpening) return
+    if (returningFromImagePreview) return
     this._shareCloseRevision = (this._shareCloseRevision || 0) + 1
     this._projectCloseRevision = (this._projectCloseRevision || 0) + 1
     this.clearShareCloseTimer()
@@ -387,6 +371,7 @@ Page({
   },
 
   onUnload() {
+    nativeImagePreview.cancel(this)
     this._pageVisible = false
     this._isUnloaded = true
     this.cancelSpeakerSelectorClose()
@@ -598,6 +583,7 @@ Page({
     this._shareCloseRevision = (this._shareCloseRevision || 0) + 1
     this.resultReportSignature = ''
     this.resultReportPendingSignature = ''
+    this._resultReportImageTheme = ''
     this.setData({
       resultTab: 'spl',
       shareSheetVisible: false,
@@ -608,8 +594,6 @@ Page({
       resultReportImagePath: '',
       resultReportPreviewVisible: false,
       resultReportError: '',
-      shareImageStyle: '',
-      shareImageFrameStyle: '',
     })
     if (this.data.projectSheetVisible) {
       this.invalidateProjectSave({ updateView: false })
@@ -785,8 +769,6 @@ Page({
       shareSheetVisible: true,
       shareSheetClosing: false,
       resultReportError: '',
-      shareImageStyle: 'width:100%;height:100%;',
-      shareImageFrameStyle: '',
     }, () => {
       if (!this._isUnloaded && this.data.shareSheetVisible
         && !this.data.shareSheetClosing && this._inputRevision === inputRevision
@@ -798,6 +780,7 @@ Page({
   closeSharePreview({ silent = false } = {}) {
     if (!this.data.shareSheetVisible && !this.data.isGeneratingResultReport
       && !this.data.isCheckingResultReportCache) return false
+    nativeImagePreview.cancel(this)
     if (!silent && this.data.shareSheetClosing) return false
     this.clearShareCloseTimer()
     if (this.data.isGeneratingResultReport || this.data.isCheckingResultReportCache) {
@@ -829,8 +812,6 @@ Page({
             isGeneratingResultReport: false,
             resultReportPreviewVisible: false,
             resultReportError: '',
-            shareImageStyle: 'width:100%;height:100%;',
-            shareImageFrameStyle: '',
           })
         }, SHEET_TRANSITION_DURATION)
         this._shareCloseTimer = timer
@@ -843,8 +824,6 @@ Page({
       isCheckingResultReportCache: false,
       resultReportPreviewVisible: false,
       resultReportError: '',
-      shareImageStyle: 'width:100%;height:100%;',
-      shareImageFrameStyle: '',
     })
     return true
   },
@@ -872,120 +851,9 @@ Page({
     return true
   },
 
-  updateShareImageLayout() {
-    if (!this.data.shareSheetVisible || this.data.shareSheetClosing || !this.data.resultReportPreviewVisible
-      || !this.data.resultReportImagePath) return false
-    const height = Number(this.data.resultReportCanvasHeight)
-    if (!Number.isFinite(height) || height <= 0) return false
-    const layoutRevision = this._shareLayoutRevision = (this._shareLayoutRevision || 0) + 1
-    const inputRevision = this._inputRevision || 0
-    const shareSessionRevision = this._shareCloseRevision || 0
-    const reportRevision = this.resultReportRevision || 0
-    const imagePath = this.data.resultReportImagePath
-    const applyLayout = (nodes) => {
-      if (this._isUnloaded || this._shareLayoutRevision !== layoutRevision
-        || !this.data.shareSheetVisible || !this.data.resultReportPreviewVisible
-        || this.data.shareSheetClosing
-        || this._inputRevision !== inputRevision
-        || (this._shareCloseRevision || 0) !== shareSessionRevision
-        || this.resultReportRevision !== reportRevision
-        || this.data.resultReportImagePath !== imagePath) return false
-      const root = rectOf(nodes?.['.page-root'])
-      const overlay = rectOf(nodes?.['.spl-overlay'])
-      const panel = rectOf(nodes?.['#splSharePanel'])
-      const header = rectOf(nodes?.['#splShareHeader'])
-      const actions = rectOf(nodes?.['#splShareActions'])
-      const frame = rectOf(nodes?.['#splShareImageFrame'])
-      if (!root || !overlay || !panel || !header || !actions || !frame) return false
-
-      const viewportLeft = Math.max(Number(root.left) || 0, Number(overlay.left) || 0)
-      const viewportRight = Math.min(Number(root.right) || 0, Number(overlay.right) || 0)
-      const panelLeft = Number(panel.left) || 0
-      const panelRight = Number(panel.right) || 0
-      const panelBorderTop = styleNumber(nodes['#splSharePanel'], 'borderTopWidth', 1)
-      const panelBorderBottom = styleNumber(nodes['#splSharePanel'], 'borderBottomWidth', 1)
-      const panelBorderLeft = styleNumber(nodes['#splSharePanel'], 'borderLeftWidth', 1)
-      const panelBorderRight = styleNumber(nodes['#splSharePanel'], 'borderRightWidth', 1)
-      const panelPaddingTop = styleNumber(nodes['#splSharePanel'], 'paddingTop', 15)
-      const panelPaddingBottom = styleNumber(nodes['#splSharePanel'], 'paddingBottom', 46)
-      const panelPaddingLeft = styleNumber(nodes['#splSharePanel'], 'paddingLeft', 16)
-      const panelPaddingRight = styleNumber(nodes['#splSharePanel'], 'paddingRight', 16)
-      const panelContentLeft = panelLeft + panelBorderLeft + panelPaddingLeft
-      const panelContentRight = panelRight - panelBorderRight - panelPaddingRight
-      const frameLeft = Math.max(Number(frame.left) || 0, panelContentLeft, viewportLeft)
-      const frameRight = Math.min(Number(frame.right) || 0, panelContentRight, viewportRight)
-      const horizontalInsets = styleNumber(nodes['#splShareImageFrame'], 'borderLeftWidth', 1)
-        + styleNumber(nodes['#splShareImageFrame'], 'borderRightWidth', 1)
-        + styleNumber(nodes['#splShareImageFrame'], 'paddingLeft')
-        + styleNumber(nodes['#splShareImageFrame'], 'paddingRight')
-      const verticalInsets = styleNumber(nodes['#splShareImageFrame'], 'borderTopWidth', 1)
-        + styleNumber(nodes['#splShareImageFrame'], 'borderBottomWidth', 1)
-        + styleNumber(nodes['#splShareImageFrame'], 'paddingTop')
-        + styleNumber(nodes['#splShareImageFrame'], 'paddingBottom')
-      const maxPanelHeight = Math.min(
-        Number(root.height) || 0,
-        Number(overlay.height) || 0,
-      ) * 0.9
-      const panelFixedInsets = panelBorderTop + panelBorderBottom
-        + panelPaddingTop + panelPaddingBottom
-      const headerBottomMargin = styleNumber(nodes['#splShareHeader'], 'marginBottom', 9)
-      const maxFrameOuterHeight = maxPanelHeight - panelFixedInsets
-        - (Number(header.height) || 0) - headerBottomMargin - (Number(actions.height) || 0)
-      const availableWidth = Math.max(0, frameRight - frameLeft - horizontalInsets)
-      const availableHeight = Math.max(0, maxFrameOuterHeight - verticalInsets)
-      if (!(availableWidth > 0) || !(availableHeight > 0)) return false
-
-      const scale = Math.min(availableWidth / REPORT_WIDTH, availableHeight / height)
-      if (!Number.isFinite(scale) || scale <= 0) return false
-      const imageWidth = Math.floor(REPORT_WIDTH * scale * 100) / 100
-      const imageHeight = Math.floor(height * scale * 100) / 100
-      const frameHeight = Math.floor(imageHeight + verticalInsets)
-      this.setData({
-        shareImageStyle: `width:${imageWidth}px;height:${imageHeight}px;max-width:100%;max-height:100%;`,
-        shareImageFrameStyle: `height:${frameHeight}px;flex:none;`,
-      })
-      return { width: imageWidth, height: imageHeight }
-    }
-    try {
-      if (typeof wx.createSelectorQuery !== 'function') return false
-      const query = wx.createSelectorQuery()
-      const scopedQuery = typeof query.in === 'function' ? query.in(this) : query
-      const nodes = {}
-      const read = (selector, styles = []) => {
-        const selection = scopedQuery.select(selector)
-        const callback = (value) => { nodes[selector] = value }
-        if (typeof selection.fields === 'function') {
-          selection.fields({ rect: true, size: true, computedStyle: styles }, callback)
-        } else {
-          selection.boundingClientRect(callback)
-        }
-      }
-      read('.page-root')
-      read('.spl-overlay')
-      read('#splSharePanel', [
-        'paddingTop', 'paddingBottom', 'paddingLeft', 'paddingRight',
-        'borderTopWidth', 'borderBottomWidth', 'borderLeftWidth', 'borderRightWidth',
-      ])
-      read('#splShareHeader', ['marginBottom'])
-      read('#splShareActions')
-      read('#splShareImageFrame', [
-        'paddingTop', 'paddingBottom', 'paddingLeft', 'paddingRight',
-        'borderTopWidth', 'borderBottomWidth', 'borderLeftWidth', 'borderRightWidth',
-      ])
-      scopedQuery.exec(() => applyLayout(nodes))
-      return true
-    } catch (error) {
-      return false
-    }
-  },
-
-  onResultReportImageLoad() {
-    if (!this.data.shareSheetVisible || !this.data.resultReportImagePath) return false
-    return this.updateShareImageLayout()
-  },
-
   generateResultReportImage() {
     if (this.data.shareSheetClosing) return false
+    const theme = getResultImageTheme()
     const record = this.getRecordPayload()
     const payload = buildSplReportPayload(this.data)
     if (!payload || !this.data.canUseResultActions || this.data.isCalculationPending) {
@@ -1004,7 +872,8 @@ Page({
       && this.resultReportRevision === revision
       && this.getResultReportSignature() === signature
 
-    if (this.data.resultReportImagePath && this.resultReportSignature === signature) {
+    if (this.data.resultReportImagePath && this.resultReportSignature === signature
+      && this._resultReportImageTheme === theme) {
       const path = this.data.resultReportImagePath
       const revision = (this.resultReportRevision || 0) + 1
       this.resultReportRevision = revision
@@ -1017,15 +886,15 @@ Page({
         if (!isCurrent(revision) || this._reportCacheCheckRevision !== revision) return
         const showCached = () => {
           if (!isCurrent(revision) || this._reportCacheCheckRevision !== revision) return
+          if (getResultImageTheme() !== theme) return regenerate()
           this._reportCacheCheckRevision = 0
-          this.setData({ isCheckingResultReportCache: false, resultReportPreviewVisible: true }, () => {
-            if (isCurrent(revision)) this.updateShareImageLayout()
-          })
+          this.setData({ isCheckingResultReportCache: false, resultReportPreviewVisible: true })
         }
         const regenerate = () => {
           if (!isCurrent(revision) || this._reportCacheCheckRevision !== revision) return
           this._reportCacheCheckRevision = 0
           this.resultReportSignature = ''
+          this._resultReportImageTheme = ''
           this.setData({
             isCheckingResultReportCache: false,
             resultReportImagePath: '',
@@ -1060,6 +929,7 @@ Page({
     this.resultReportRevision = revision
     this._reportCacheCheckRevision = 0
     this.resultReportPendingSignature = signature
+    this._resultReportImageTheme = ''
     this.setData({
       resultReportCanvasHeight,
       resultReportImagePath: '',
@@ -1072,9 +942,7 @@ Page({
       const finish = (changes = {}) => {
         if (!isCurrent(revision) || this.resultReportPendingSignature !== signature) return false
         this.resultReportPendingSignature = ''
-        this.setData({ isGeneratingResultReport: false, ...changes }, () => {
-          if (changes.resultReportPreviewVisible && isCurrent(revision)) this.updateShareImageLayout()
-        })
+        this.setData({ isGeneratingResultReport: false, ...changes })
         return true
       }
       try {
@@ -1083,18 +951,21 @@ Page({
           isCurrent: () => isCurrent(revision) && this.resultReportPendingSignature === signature,
           width: REPORT_WIDTH,
           height: resultReportCanvasHeight,
-          draw: (context) => drawSplReport(context, payload, resultReportCanvasHeight),
+          draw: (context) => drawSplReport(context, payload, resultReportCanvasHeight, theme),
           getExportOptions: () => getExportDimensions(resultReportCanvasHeight),
           startExportMeasurement: (dimensions) => startMeasurement('声压级/结果图导出', dimensions),
           onSuccess: (imagePath) => {
             if (!imagePath) return finish({ resultReportError: '图片生成失败，请重试。' })
-            this.resultReportSignature = signature
             const finished = finish({
               resultReportImagePath: imagePath,
               resultReportPreviewVisible: true,
               resultReportError: '',
             })
-            if (finished && isPageContextCurrent(this)) vibrate('medium')
+            if (finished) {
+              this.resultReportSignature = signature
+              this._resultReportImageTheme = theme
+              if (isPageContextCurrent(this)) vibrate('medium')
+            }
           },
           onFailure: () => finish({ resultReportError: '图片生成失败，请重试。' }),
         })
@@ -1110,21 +981,8 @@ Page({
       || !this.data.canUseResultActions || this.data.isCalculationPending
       || this.data.shareSheetClosing
       || this.data.isGeneratingResultReport || this.data.isCheckingResultReportCache) return false
-    this._previewImageOpening = true
-    try {
-      wx.previewImage({
-        current: this.data.resultReportImagePath,
-        urls: [this.data.resultReportImagePath],
-        fail: () => { this._previewImageOpening = false },
-      })
-      setTimeout(() => {
-        if (this._pageVisible && this._previewImageOpening) this._previewImageOpening = false
-      }, 2000)
-      return true
-    } catch (error) {
-      this._previewImageOpening = false
-      return false
-    }
+    return nativeImagePreview.preview(this, this.data.resultReportImagePath,
+      () => this.closeSharePreview({ silent: true }))
   },
 
   shareResultReportImage() {
@@ -1197,7 +1055,6 @@ Page({
       isCheckingResultReportCache: false,
       isGeneratingResultReport: false,
       resultReportError: '',
-      shareImageStyle: 'width:100%;height:100%;',
       projectSheetVisible: false,
       projectSheetClosing: false,
       projectStep: 'select',
@@ -1222,26 +1079,17 @@ Page({
       savedConfigName: '',
       savedAtText: '',
     }
+    this._resultReportImageTheme = ''
     this.commitCalculatedState(changes, { skipRevision: true })
     vibrate('light')
     return true
   },
 ...splProjectMethods,
 
-  onResize() {
+  onResize(event) {
     if (this._isUnloaded || !this._pageVisible) return
     measure(this)
-    if (this.data.shareSheetVisible && this.data.resultReportPreviewVisible) {
-      this.updateShareImageLayout()
-    }
-    if (this.data.projectSheetVisible) {
-      const currentHeight = getProjectKeyboardHeight()
-      if (!this._projectKeyboardHeight && currentHeight) {
-        this._projectKeyboardWindowHeight = currentHeight
-        this._projectKeyboardBaselineHeight = currentHeight
-      }
-      if (this._projectKeyboardHeight) this.updateProjectKeyboardLayout()
-    }
+    if (this.data.projectSheetVisible) this.resizeProjectKeyboard(event)
   },
 
   copyResult() {

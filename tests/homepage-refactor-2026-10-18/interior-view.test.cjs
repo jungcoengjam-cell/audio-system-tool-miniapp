@@ -1,7 +1,7 @@
 'use strict'
 
 const assert = require('node:assert/strict')
-const { buildProjectContentView } = require('../../pages/records/project-view-model')
+const { buildProjectContentView, getLightingPlacementSummary } = require('../../pages/records/project-view-model')
 
 const projectId = 'project-stable-a'
 const otherProjectId = 'project-stable-b'
@@ -20,7 +20,7 @@ const lightingFixtures = [
 ]
 const immutableSnapshot = JSON.stringify({ records, wiringSchedule, lightingFixtures })
 
-const all = buildProjectContentView({ projectId, records, wiringSchedule, lightingFixtures })
+const all = buildProjectContentView({ projectId, records, wiringSchedule, lightingFixtures, hasLightingContext: true })
 assert.deepEqual(all.visibleRecords.map(({ id }) => id), ['record-a', 'record-b'])
 assert.equal(all.visibleWiringLines.length, 1)
 assert.equal(all.visibleWiringLines[0].endpointSummary, '调音台 · OUT-01 → 功放 · IN-01')
@@ -42,6 +42,33 @@ assert.equal(searchWiring.visibleRecords.length, 0)
 
 const searchLighting = buildProjectContentView({ projectId, records, wiringSchedule, lightingFixtures, filter: 'lighting', searchText: 'A:0013' })
 assert.deepEqual(searchLighting.visibleLightingFixtures.map(({ stableId }) => stableId), ['fixture-stable'])
+assert.equal(searchLighting.showLighting, true, 'a fixture match should retain the summary section')
+
+const emptyLightingContext = buildProjectContentView({ projectId, filter: 'lighting', hasLightingContext: true })
+assert.equal(emptyLightingContext.showLighting, true, 'an empty saved plan should still expose its summary')
+assert.equal(emptyLightingContext.isTypeEmpty, false, 'an empty saved plan is not a missing plan')
+
+const noLightingSearchMatch = buildProjectContentView({ projectId, filter: 'lighting', searchText: 'not-a-fixture', lightingFixtures, hasLightingContext: true })
+assert.equal(noLightingSearchMatch.showLighting, false, 'search should not show an unrelated plan summary')
+assert.equal(noLightingSearchMatch.isSearchEmpty, true)
+
+const lightingReadFailure = buildProjectContentView({ projectId, filter: 'lighting', searchText: 'not-a-fixture', lightingSummaryError: '读取失败' })
+assert.equal(lightingReadFailure.showLighting, true, 'a read failure remains visible while searching')
+assert.equal(lightingReadFailure.isSearchEmpty, false, 'an unreadable plan should not be reported as a confirmed empty search')
+
+const placementSummary = getLightingPlacementSummary({
+  internalRods: [{ id: 'internal-1' }],
+  frontRods: [{ id: 'front-1' }],
+  legacySideRods: [{ id: 'legacy-1' }],
+  positionsById: {
+    onRod: { rodId: 'front-1' },
+    onGround: { kind: 'ground', x: 0.3, y: 0.4 },
+    groundAndRod: { rodId: 'internal-1', ground: true },
+    unplaced: null,
+    staleRod: { rodId: 'removed-rod' },
+  },
+}, ['onRod', 'onGround', 'groundAndRod', 'unplaced', 'staleRod'].map((stableId) => ({ stableId })))
+assert.deepEqual(placementSummary, { placedCount: 3, groundCount: 2 }, 'ground fixtures count as placed exactly once')
 
 const noCrossProjectLeak = buildProjectContentView({ projectId, records, searchText: '不可见项目的记录' })
 assert.equal(noCrossProjectLeak.visibleCount, 0)

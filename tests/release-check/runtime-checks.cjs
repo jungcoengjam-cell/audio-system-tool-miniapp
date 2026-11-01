@@ -10,7 +10,7 @@ function createRuntimeChecks(context) {
 
   function checkProductLibraryLazyLoading() {
     const librarySource = fs.readFileSync(path.join(root, 'pages/products/library.js'), 'utf8')
-    const productsSource = fs.readFileSync(path.join(root, 'utils/products.js'), 'utf8')
+    const productsSource = fs.readFileSync(path.join(root, 'pages/products/utils/products.js'), 'utf8')
     ;['equipment', 'cameras', 'stage-lighting'].forEach((name) => {
       assert(!librarySource.includes(`../data/${name}`), `产品资料库页面仍顶层依赖 data/${name}`)
     })
@@ -54,10 +54,10 @@ const defaultRequests = [...trackedRequests]
 const defaultModules = Object.keys(require.cache).filter((file) => file.startsWith(root + path.sep))
 const defaultSourceBytes = defaultModules.reduce((total, file) => total + fs.statSync(file).size, 0)
 const forbidden = [
-  '../data/stage-lighting',
-  '../data/cameras',
+  '../../../data/stage-lighting',
+  '../../../data/cameras',
   '../data/speaker-specifications',
-  './camera-fov',
+  '../../../utils/camera-fov',
 ]
 if (forbidden.some((item) => defaultRequests.includes(item))) throw new Error('默认功放路径加载了无关产品资料')
 const expectedTypes = [
@@ -87,12 +87,12 @@ console.log(JSON.stringify({
     assert.strictEqual(result.status, 0, `产品资料库懒加载隔离测试失败：${result.stderr || result.stdout}`)
     const output = result.stdout.trim().split('\n').at(-1)
     const measurement = JSON.parse(output)
-    assert.deepStrictEqual(measurement.defaultRequests, ['../data/equipment'],
+    assert.deepStrictEqual(measurement.defaultRequests, ['../../../data/equipment'],
       '默认功放路径加载了非功放资料')
     assert(measurement.allRequests.includes('../data/speaker-specifications')
-      && measurement.allRequests.includes('../data/cameras')
-      && measurement.allRequests.includes('./camera-fov')
-      && measurement.allRequests.includes('../data/stage-lighting'),
+      && measurement.allRequests.includes('../../../data/cameras')
+      && measurement.allRequests.includes('../../../utils/camera-fov')
+      && measurement.allRequests.includes('../../../data/stage-lighting'),
     '切换产品类型后未按需加载对应资料')
     assert(measurement.sourceKib < 198.7, '产品资料库默认路径解析源码仍未明显低于基线')
     console.log(

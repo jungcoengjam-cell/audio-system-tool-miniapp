@@ -1,4 +1,4 @@
-const { getExportDimensions, roundedRect } = require('../../utils/report-drawing')
+const { getExportDimensions, roundedRect, strokeRoundedRect } = require('../../utils/report-drawing')
 
 const SPL_REPORT_DESIGN_VERSION = 'spl-report-v3'
 const REPORT_CANVAS_ID = 'resultReportCanvas'
@@ -18,6 +18,12 @@ const COLORS = {
   accent: '#087f70',
   secondary: '#5f6869',
   line: '#d8e5e2',
+}
+const DARK_COLORS = {
+  background: '#111214', mint: '#18332f', mintLine: '#2c6257',
+  blue: '#1b2d3e', blueLine: '#38536d', white: '#1c1d20',
+  text: '#f2f3f5', accent: '#5bd0b9', secondary: '#c4c7cc',
+  line: '#3b3e42', rowLine: '#3b3e42',
 }
 
 function fontString(size, weight = 400) {
@@ -210,88 +216,71 @@ function drawLines(context, lines, x, y, lineHeight, size, color, weight = 400, 
   lines.forEach((line, index) => context.fillText(line, x, y + (index * lineHeight)))
 }
 
-function strokeRoundedRect(context, x, y, width, height, radius, color) {
-  const r = Math.min(radius, width / 2, height / 2)
-  context.beginPath()
-  context.moveTo(x + r, y)
-  context.lineTo(x + width - r, y)
-  context.quadraticCurveTo(x + width, y, x + width, y + r)
-  context.lineTo(x + width, y + height - r)
-  context.quadraticCurveTo(x + width, y + height, x + width - r, y + height)
-  context.lineTo(x + r, y + height)
-  context.quadraticCurveTo(x, y + height, x, y + height - r)
-  context.lineTo(x, y + r)
-  context.quadraticCurveTo(x, y, x + r, y)
-  context.closePath()
-  context.setStrokeStyle(color)
-  context.setLineWidth(1)
-  context.stroke()
-}
-
-function drawSplReport(context, payload, height) {
+function drawSplReport(context, payload, height, theme = 'light') {
   const layout = buildSplReportLayout(context, payload)
-  context.setFillStyle(COLORS.background)
+  const colors = theme === 'dark' ? DARK_COLORS : COLORS
+  context.setFillStyle(colors.background)
   context.fillRect(0, 0, REPORT_WIDTH, height || layout.height)
 
   layout.sections.forEach((section) => {
     if (section.type === 'title') {
       drawLines(context, section.lines, SIDE_MARGIN, section.y + 30,
-        section.lineHeight, 30, COLORS.text, 650)
+        section.lineHeight, 30, colors.text, 650)
       return
     }
 
     if (section.type === 'main') {
-      roundedRect(context, SIDE_MARGIN, section.y, CARD_WIDTH, section.height, 22, COLORS.mint)
-      strokeRoundedRect(context, SIDE_MARGIN, section.y, CARD_WIDTH, section.height, 22, COLORS.mintLine)
+      roundedRect(context, SIDE_MARGIN, section.y, CARD_WIDTH, section.height, 22, colors.mint)
+      strokeRoundedRect(context, SIDE_MARGIN, section.y, CARD_WIDTH, section.height, 22, colors.mintLine)
       const center = REPORT_WIDTH / 2
       let lineY = section.y + 26
-      drawLines(context, section.labelLines, center, lineY + 23, 32, 23, COLORS.accent, 650, 'center')
+      drawLines(context, section.labelLines, center, lineY + 23, 32, 23, colors.accent, 650, 'center')
       lineY += (section.labelLines.length * 32) + 10
 
       const valueX = center - ((section.primaryValueWidth + section.primaryUnitWidth + 12) / 2)
       context.font = section.primaryValueFont
-      context.setFillStyle(COLORS.text)
+      context.setFillStyle(colors.text)
       context.setTextAlign('left')
       context.fillText(payload.primaryValue, valueX, lineY + section.primaryValueSize)
       drawLines(context, [payload.primaryUnit], valueX + section.primaryValueWidth + 12, lineY + section.primaryValueSize,
-        32, 24, COLORS.secondary, 650)
+        32, 24, colors.secondary, 650)
       lineY += section.primaryLineHeight + 12
       drawLines(context, section.descriptionLines, center, lineY + 22, 32, 22,
-        COLORS.secondary, 400, 'center')
+        colors.secondary, 400, 'center')
       return
     }
 
     if (section.type === 'metrics') {
       section.metrics.forEach((metric) => {
-        roundedRect(context, metric.x, metric.y, metric.width, metric.height, 22, COLORS.blue)
-        strokeRoundedRect(context, metric.x, metric.y, metric.width, metric.height, 22, COLORS.blueLine)
+        roundedRect(context, metric.x, metric.y, metric.width, metric.height, 22, colors.blue)
+        strokeRoundedRect(context, metric.x, metric.y, metric.width, metric.height, 22, colors.blueLine)
         const center = metric.x + (metric.width / 2)
         let metricY = metric.y + ((metric.height - metric.contentHeight) / 2)
         drawLines(context, metric.labelLines, center, metricY + 24, 32, 24,
-          COLORS.secondary, 600, 'center')
+          colors.secondary, 600, 'center')
         metricY += (metric.labelLines.length * 32) + 10
         drawLines(context, metric.valueLines, center, metricY + 30, 40, 30,
-          COLORS.text, 650, 'center')
+          colors.text, 650, 'center')
       })
       return
     }
 
     if (section.type === 'parameters') {
-      drawLines(context, section.titleLines, SIDE_MARGIN, section.y + 32, 40, 32, COLORS.text, 650)
-      roundedRect(context, SIDE_MARGIN, section.cardY, CARD_WIDTH, section.cardHeight, 22, COLORS.white)
-      strokeRoundedRect(context, SIDE_MARGIN, section.cardY, CARD_WIDTH, section.cardHeight, 22, COLORS.line)
+      drawLines(context, section.titleLines, SIDE_MARGIN, section.y + 32, 40, 32, colors.text, 650)
+      roundedRect(context, SIDE_MARGIN, section.cardY, CARD_WIDTH, section.cardHeight, 22, colors.white)
+      strokeRoundedRect(context, SIDE_MARGIN, section.cardY, CARD_WIDTH, section.cardHeight, 22, colors.line)
       let rowY = section.cardY
       section.parameterRows.forEach((row, index) => {
         drawLines(context, row.labelLines, section.labelX, rowY + 14 + 26,
-          row.lineHeight, 26, COLORS.secondary, 650)
+          row.lineHeight, 26, colors.secondary, 650)
         drawLines(context, row.valueLines, section.valueX, rowY + 14 + 26,
-          row.lineHeight, 26, COLORS.text, 500)
+          row.lineHeight, 26, colors.text, 500)
         rowY += row.height
         if (index < section.parameterRows.length - 1) {
           context.beginPath()
           context.moveTo(SIDE_MARGIN + 18, rowY)
           context.lineTo(SIDE_MARGIN + CARD_WIDTH - 18, rowY)
-          context.setStrokeStyle('#e4e8e8')
+          context.setStrokeStyle(theme === 'dark' ? colors.rowLine : '#e4e8e8')
           context.setLineWidth(1)
           context.stroke()
         }
@@ -300,17 +289,17 @@ function drawSplReport(context, payload, height) {
     }
 
     if (section.type === 'distances') {
-      drawLines(context, section.titleLines, SIDE_MARGIN, section.y + 32, 40, 32, COLORS.text, 650)
+      drawLines(context, section.titleLines, SIDE_MARGIN, section.y + 32, 40, 32, colors.text, 650)
       section.rows.forEach((row) => {
-        const fill = row.isSelected ? COLORS.mint : COLORS.white
-        const stroke = row.isSelected ? COLORS.mintLine : COLORS.line
+        const fill = row.isSelected ? colors.mint : colors.white
+        const stroke = row.isSelected ? colors.mintLine : colors.line
         roundedRect(context, row.x, row.y, row.width, row.height, 22, fill)
         strokeRoundedRect(context, row.x, row.y, row.width, row.height, 22, stroke)
         const center = row.x + (row.width / 2)
         drawLines(context, row.labelLines, center, row.y + 30, 32, 24,
-          COLORS.secondary, 600, 'center')
+          colors.secondary, 600, 'center')
         drawLines(context, row.valueLines, center, row.y + 66, 40, 30,
-          row.isSelected ? COLORS.accent : COLORS.text, 650, 'center')
+          row.isSelected ? colors.accent : colors.text, 650, 'center')
       })
     }
   })

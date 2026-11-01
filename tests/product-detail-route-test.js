@@ -10,7 +10,7 @@ global.wx = {
   setNavigationBarTitle: ({ title }) => { page._title = title },
 }
 
-const products = require('../utils/products')
+const products = require('../pages/products/utils/products')
 delete require.cache[require.resolve('../pages/products/detail')]
 require('../pages/products/detail')
 page.setData = (patch) => { page.data = { ...page.data, ...patch } }

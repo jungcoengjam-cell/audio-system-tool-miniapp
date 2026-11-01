@@ -8,22 +8,27 @@ const markup = fs.readFileSync(path.join(root, 'pages/project-wiring/index.wxml'
 const styles = fs.readFileSync(path.join(root, 'pages/project-wiring/index.wxss'), 'utf8')
 
 async function main() {
-  const reportFooter = markup.match(/<view class="wiring-sheet-actions wiring-report-actions">([\s\S]*?)<\/view>/)?.[1]
+  const reportFooter = markup.match(/<view class="wiring-sheet-actions wiring-report-actions result-footer">([\s\S]*?)<\/view>/)?.[1]
   assert.ok(reportFooter, 'report footer exists')
+  assert.equal((markup.match(/\bresult-footer\b/g) || []).length, 1,
+    'the report action footer is the only shared result footer')
   assert.equal((reportFooter.match(/<button\b/g) || []).length, 2, 'footer has only two buttons')
-  assert.match(reportFooter, /bindtap="shareReportImage">转发图片<\/button>/)
-  assert.match(reportFooter, /bindtap="saveReportImage">保存本地<\/button>/)
+  assert.match(reportFooter, /bindtap="shareReportImage">分享图片<\/button>/)
+  assert.match(reportFooter, /bindtap="saveReportImage">保存到相册<\/button>/)
   assert.doesNotMatch(reportFooter, /上一张|下一张|saveAllReportImages|stopReportSaveJob/)
-  assert.match(markup, /class="wiring-close-button" bindtap="closeReportPreview"/,
-    'close remains in the heading rather than the action footer')
+  const reportHeadingClose = '<button hover-class="workspace-pressed" hover-stay-time="80" class="wiring-close-button panel-close-control" aria-label="关闭项目接线图预览" bindtap="closeReportPreview"><view class="panel-close-icon" aria-hidden="true"></view></button>'
+  assert.equal(markup.split(reportHeadingClose).length - 1, 1,
+    'the shared report close control stays in the heading exactly once')
+  assert.doesNotMatch(reportFooter, /closeReportPreview|panel-close-control/,
+    'report close remains outside the share/save action footer')
   assert.match(markup, /class="wiring-report-page-hint"[\s\S]*?左右滑动切换/)
-  assert.match(markup, /<swiper class="wiring-report-swiper" current="\{\{reportPageIndex\}\}"[^>]*bindchange="onReportPageSwipe"/)
+  assert.match(markup, /<swiper class="wiring-report-swiper result-scroll-swiper" current="\{\{reportPageIndex\}\}"[^>]*bindchange="onReportPageSwipe"/)
   assert.match(markup, /<scroll-view class="wiring-report-image-scroll" scroll-y/)
   assert.match(markup, /class="wiring-report-image" src="\{\{reportImage\.path\}\}"[^>]*bindtap="previewReportImage"/)
-  assert.match(markup, /wx:if="\{\{reportSaveError\}\}" class="wiring-report-save-error"/,
+  assert.match(markup, /wx:if="\{\{reportSaveError\}\}" class="wiring-report-save-error result-copy"/,
     'save failures and permission guidance are rendered as text')
   const statusStart = markup.indexOf('<view class="wiring-report-save-status">')
-  const footerStart = markup.indexOf('<view class="wiring-sheet-actions wiring-report-actions">')
+  const footerStart = markup.indexOf('<view class="wiring-sheet-actions wiring-report-actions result-footer">')
   const statusMarkup = markup.slice(statusStart, footerStart)
   assert.ok(statusStart >= 0 && footerStart > statusStart)
   assert.doesNotMatch(statusMarkup, /<button\b/,

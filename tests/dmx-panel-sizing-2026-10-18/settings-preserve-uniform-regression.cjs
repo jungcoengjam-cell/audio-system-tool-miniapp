@@ -123,18 +123,18 @@ function testRodReductionConfirmationAndUniformUndoRestoreTheRemovedRod() {
 
 function testProductionSettingsExposeOnlySupportedModesAndKeepSinglePlacementHelpers() {
   const source = fs.readFileSync(path.join(root, 'pages/dmx-layout/page-factory.js'), 'utf8')
+  const settingsSource = fs.readFileSync(path.join(root, 'pages/dmx-layout/layout-settings.js'), 'utf8')
+  const interactionsSource = fs.readFileSync(path.join(root, 'pages/dmx-layout/layout-interactions.js'), 'utf8')
   const templates = [
     'pages/dmx-layout/dmx-layout.wxml',
-    'pages/dmx-layout-landscape/dmx-layout-landscape.wxml',
   ].map((relative) => fs.readFileSync(path.join(root, relative), 'utf8'))
   const styles = [
     'pages/dmx-layout/dmx-layout.wxss',
-    'pages/dmx-layout-landscape/dmx-layout-landscape.wxss',
   ].map((relative) => fs.readFileSync(path.join(root, relative), 'utf8'))
 
-  assert.match(source, /if \(!\['preserve', 'uniform'\]\.includes\(arrangementMode\)\) return/)
+  assert.match(settingsSource, /if \(!\['preserve', 'uniform'\]\.includes\(arrangementMode\)\) return/)
   assert.match(source, /unplacedFixtureCount:/)
-  assert.match(source, /nextRodPosition\(layout, geometryRod, exceptId\)/)
+  assert.match(interactionsSource, /nextRodPosition\(layout, geometryRod, exceptId\)/)
   for (const template of templates) {
     assert.equal((template.match(/class="arrangement-choice /g) || []).length, 2)
     assert.doesNotMatch(template, /未上杆批量安排|batch-target|batch-arrangement|onBatchTargetRodChange/)

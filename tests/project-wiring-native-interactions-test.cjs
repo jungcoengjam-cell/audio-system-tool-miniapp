@@ -321,7 +321,8 @@ async function run() {
     page.closeNewProject()
     await delay(300) // model a busy UI bridge before the closing patch is rendered
     assert.equal(page.data.workspaceOverlayPhases.newProject, 'closing', 'close lifetime does not start before its render commit')
-    assert.equal(commits.flushAll(), 1)
+    assert.equal(commits.pending(), 2, 'both the preparing and closing render commits remain queued')
+    assert.equal(commits.flushAll(), 2, 'the stale preparing callback is harmless and the closing callback starts the exit timer')
     await delay(225)
     assert.equal(page.data.workspaceOverlayPhases.newProject, 'closing', 'the full exit duration starts at the rendered close state')
     await delay(30)

@@ -1,5 +1,6 @@
 const VIEW_PREFERENCE_KEY = 'audioTool.projectWiring.view.v1'
 const INITIALIZE_ONLY_ROUTE_ID = '__workspace_initialize_only__'
+const nativeImagePreview = require('../native-image-preview')
 
 function readWorkspaceViewPreference() {
   const absent = { version: 1, tab: 'devices', projectId: '', hasPreference: false, readFailure: false }
@@ -81,12 +82,13 @@ function createPageLifecycle({ emptySchedule, resetFormKeyboardAvoidance, isPerf
   }
 
   function hidePageState() {
+    const returningFromPreview = nativeImagePreview.onHide(this)
     this._hidden = true
     this.clearFormKeyboardViewport()
     this._formInputId = ''
     if (this._formBlurTimer) clearTimeout(this._formBlurTimer)
     this._formBlurTimer = null
-    this.invalidateExport(false)
+    this.invalidateExport(false, returningFromPreview)
   }
 
   function destroyPageState() {
@@ -177,6 +179,7 @@ function createPageLifecycle({ emptySchedule, resetFormKeyboardAvoidance, isPerf
     },
 
     onShow() {
+      nativeImagePreview.onShow(this)
       const profilingEnabled = isPerformanceMeasurementEnabled()
       const sameProjectReturn = profilingEnabled && this._hidden
         && !this.data.editorVisible && !this.data.batchVisible

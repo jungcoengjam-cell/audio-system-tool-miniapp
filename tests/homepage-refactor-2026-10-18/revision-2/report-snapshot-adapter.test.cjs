@@ -5,7 +5,7 @@ const reportModel = require('../../../pages/records/report-model')
 const adapter = require('../../../pages/records/report-snapshot-adapter')
 const { calculateDmxAddressPlan } = require('../../../utils/dmx-address')
 const { createStageGeometry, layoutFixturePoint } = require('../../../pages/dmx-layout/layout-model')
-const { buildLightingExportPages } = require('../../../pages/dmx-layout/layout-renderer')
+const { buildLightingExportPages, getCanvasTheme } = require('../../../pages/dmx-layout/layout-renderer')
 
 const NATIVE_MEASURE_FACTOR = 1.22
 
@@ -136,8 +136,10 @@ assert.ok(payloadText.includes('OUT 1') && payloadText.includes('IN L'))
 assert.ok(payloadText.includes('OUT 2') && payloadText.includes('IN R'))
 assert.ok(payloadText.includes('A001') && payloadText.includes('A007'), 'lighting addresses stay available in report detail')
 source.lighting.fixtures.forEach((fixture) => {
-  assert.ok(payloadText.includes(`位置关联编号：${fixture.stableId}`), 'lighting summary must preserve each fixture identifier')
-  assert.ok(payloadText.includes(`完整地址：${fixture.addressText}`), 'lighting summary must map fixture identifiers to saved addresses')
+  assert.ok(!payloadText.includes(fixture.stableId), 'lighting summary must omit internal fixture identifiers')
+  assert.ok(payloadText.includes(`灯具 ${fixture.fixtureIndex}`), 'lighting summary must retain the readable fixture ordinal')
+  assert.ok(payloadText.includes(`完整地址：${fixture.addressText} · 占用范围：${fixture.rangeText}`),
+    'lighting summary must retain each address and occupied range')
 })
 assert.ok(!payloadText.includes(calculationItems[0].record.resultText), 'main report text remains concise while image tasks carry tool results')
 const gainItem = calculationItems.find((item) => item.record.module === 'gainStructure')
@@ -225,6 +227,71 @@ for (const [label, position] of [
   assert.match(invalidPosition.error, /历史位置无法还原/)
 }
 
+const groundFixtureId = firstLightingFixture.stableId
+const groundFixture = source.lighting.fixtures.find((fixture) => fixture.stableId === groundFixtureId)
+for (const [label, position] of [
+  ['top-left', { kind: 'ground', x: 0, y: 0 }],
+  ['top-right', { kind: 'ground', x: 1, y: 0 }],
+  ['bottom-left', { kind: 'ground', x: 0, y: 1 }],
+  ['bottom-right', { kind: 'ground', x: 1, y: 1 }],
+  ['legacy ground flag', { ground: true, x: 0.25, y: 0.75 }],
+]) {
+  const groundItem = lightingItemWithPosition(groundFixtureId, position)
+  groundItem.lighting.fixtures.forEach((fixture) => { fixture.checked = true })
+  const groundResult = adapter.buildReportImageTasks(groundItem, source.project.name)
+  assert.equal(groundResult.ok, true, `${label}: ${groundResult.error || ''}`)
+  assert.deepEqual(groundResult.coveredFixtureIds, source.lighting.fixtures.map((fixture) => fixture.stableId),
+    `${label} ground positions must remain in a mixed ground/rod image`)
+  assert.deepEqual(groundResult.unplacedFixtureIds, [])
+
+  const groundCanvas = createCanvasSpy()
+  groundResult.tasks[0].drawSegment(groundCanvas, 0, groundResult.tasks[0].height)
+  const groundText = callText(groundCanvas)
+  assert.ok(groundText.includes(`地 · ${groundFixture.addressText}`), `${label} marker must be drawn on the stage`)
+  assert.ok(groundText.some((text) => text.includes('舞台地面灯'))
+    && groundText.some((text) => text.includes(groundFixture.addressText)),
+    `${label} ground fixture must remain in the address list`)
+  assert.ok(!groundCanvas.calls.some((call) => call.method === 'setStrokeStyle'
+    && call.args[0] === getCanvasTheme('light').success),
+  `${label} exported image must not show the checked-address badge`)
+
+  const layout = groundItem.lighting.scheme.layout
+  const page = buildLightingExportPages({
+    layout,
+    fixtures: groundItem.lighting.fixtures.map((fixture) => ({ ...fixture, id: fixture.stableId })),
+    contextLabel: `${source.project.name} · 已布置 2/2 台`,
+  }, { width: 1120, height: 1160, maxDimension: 4096 })[0]
+  const geometry = createStageGeometry(layout, page.diagramWidth, page.diagramHeight)
+  const expectedGroundPoint = layoutFixturePoint(geometry, null, position)
+  assert.equal(expectedGroundPoint.x, geometry.stage.left + position.x * geometry.stage.width,
+    `${label} x must be preserved at the stage boundary`)
+  assert.equal(expectedGroundPoint.y, geometry.stage.top + position.y * geometry.stage.height,
+    `${label} y must be preserved at the stage boundary`)
+}
+
+for (const [label, position] of [
+  ['NaN x', { kind: 'ground', x: NaN, y: 0.5 }],
+  ['infinite y', { kind: 'ground', x: 0.5, y: Infinity }],
+  ['negative x', { kind: 'ground', x: -0.01, y: 0.5 }],
+  ['x above one', { kind: 'ground', x: 1.01, y: 0.5 }],
+  ['string x', { kind: 'ground', x: '0.5', y: 0.5 }],
+  ['null y', { ground: true, x: 0.5, y: null }],
+  ['contradictory ground flag', { kind: 'ground', ground: false, x: 0.5, y: 0.5 }],
+  ['ground and rod marker', { ground: true, kind: 'rod', rodId: lightingLayout.internalRods[0].id, t: 0.5, x: 0.5, y: 0.5 }],
+  ['ground with rod fields', { kind: 'ground', rodId: lightingLayout.internalRods[0].id, t: 0.5, x: 0.5, y: 0.5 }],
+]) {
+  const invalidGround = adapter.buildReportImageTasks(lightingItemWithPosition(groundFixtureId, position), source.project.name)
+  assert.equal(invalidGround.ok, false, `${label} must not be clamped or rendered as a valid position`)
+  assert.match(invalidGround.error, /历史位置无法还原/)
+}
+
+const inconsistentGroundSnapshot = structuredClone(lightingItem)
+inconsistentGroundSnapshot.lighting.fixtures[0].position = { kind: 'ground', x: 0.5, y: 0.5 }
+const inconsistentGroundResult = adapter.buildReportImageTasks(inconsistentGroundSnapshot, source.project.name)
+assert.equal(inconsistentGroundResult.ok, false)
+assert.match(inconsistentGroundResult.error, /位置快照彼此不一致/,
+  'the fixture position must still match the layout position snapshot')
+
 for (const [label, invalidateLayout] of [
   ['missing saved stage width', (layout) => { delete layout.stageWidthText }],
   ['non-finite saved stage depth', (layout) => { layout.stageDepthText = 'unknown' }],
@@ -257,8 +324,8 @@ unplacedSource.lighting.fixtures[0].position = null
 unplacedSource.lighting.scheme.layout.positionsById[firstLightingFixture.stableId] = null
 const unplacedPayload = reportModel.buildReportPayload(unplacedSource, [lightingItem.id])
 const unplacedText = unplacedPayload.pages.flatMap((page) => page.lines).map((line) => line.text).join('')
-assert.ok(unplacedText.includes(`位置关联编号：${firstLightingFixture.stableId}`))
-assert.ok(unplacedText.includes('布置状态：未布置（未进入灯位图）'), 'the summary must explicitly distinguish a genuine unplaced fixture')
+assert.ok(!unplacedText.includes(firstLightingFixture.stableId), 'the report text must omit internal fixture identity')
+assert.ok(unplacedText.includes('布置位置：未布置（未进入灯位图）'), 'the summary must explicitly distinguish a genuine unplaced fixture')
 const noPlacedFixtures = structuredClone(partiallyUnplacedItem)
 noPlacedFixtures.lighting.fixtures[1].position = null
 noPlacedFixtures.lighting.scheme.layout.positionsById[source.lighting.fixtures[1].stableId] = null
@@ -277,6 +344,62 @@ noRodsLayoutItem.lighting.scheme.layout.frontRods = []
 const noRodsResult = adapter.buildReportImageTasks(noRodsLayoutItem, source.project.name)
 assert.equal(noRodsResult.ok, true, noRodsResult.error || 'the layout editor permits explicitly empty rod lists')
 assert.deepEqual(noRodsResult.coveredFixtureIds, [])
+
+const groundWithoutRods = structuredClone(noPlacedFixtures)
+groundWithoutRods.lighting.scheme.layout.internalRods = []
+groundWithoutRods.lighting.scheme.layout.frontRods = []
+groundWithoutRods.lighting.fixtures.forEach((fixture, index) => {
+  const position = index === 0
+    ? { kind: 'ground', x: 0.2, y: 0.3 }
+    : { ground: true, x: 0.8, y: 0.7 }
+  fixture.position = position
+  groundWithoutRods.lighting.scheme.layout.positionsById[fixture.stableId] = position
+})
+const groundWithoutRodsResult = adapter.buildReportImageTasks(groundWithoutRods, source.project.name)
+assert.equal(groundWithoutRodsResult.ok, true, groundWithoutRodsResult.error)
+assert.deepEqual(groundWithoutRodsResult.coveredFixtureIds, source.lighting.fixtures.map((fixture) => fixture.stableId))
+assert.deepEqual(groundWithoutRodsResult.unplacedFixtureIds, [])
+const groundWithoutRodsCanvas = createCanvasSpy()
+groundWithoutRodsResult.tasks[0].drawSegment(groundWithoutRodsCanvas, 0, groundWithoutRodsResult.tasks[0].height)
+assert.ok(callText(groundWithoutRodsCanvas).includes(`地 · ${source.lighting.fixtures[0].addressText}`))
+
+const manyGroundFixtures = structuredClone(lightingItem)
+const groupId = manyGroundFixtures.lighting.scheme.groupIds[0]
+const templateFixture = manyGroundFixtures.lighting.fixtures[0]
+const manyIds = Array.from({ length: 41 }, (_, index) => `fixture-page-${index + 1}`)
+manyGroundFixtures.lighting.fixtures = manyIds.map((stableId, index) => {
+  const position = index % 2 === 0
+    ? { kind: 'ground', x: (index % 10) / 9, y: Math.floor(index / 10) / 4 }
+    : { rodId: lightingLayout.internalRods[0].id, t: (index + 1) / 42 }
+  return {
+    ...templateFixture,
+    stableId,
+    groupId,
+    fixtureIndex: index + 1,
+    addressText: `A${String(index + 1).padStart(3, '0')}`,
+    rangeText: `A${String(index + 1).padStart(3, '0')}-A${String(index + 6).padStart(3, '0')}`,
+    checked: true,
+    position,
+  }
+})
+manyGroundFixtures.lighting.scheme.preferences.groups[0].fixtureCount = manyIds.length
+manyGroundFixtures.lighting.scheme.fixtureIdsByGroup[groupId] = manyIds
+manyGroundFixtures.lighting.scheme.layout.positionsById = Object.fromEntries(
+  manyGroundFixtures.lighting.fixtures.map((fixture) => [fixture.stableId, fixture.position]),
+)
+const pagedLightingResult = adapter.buildReportImageTasks(manyGroundFixtures, source.project.name)
+assert.equal(pagedLightingResult.ok, true, pagedLightingResult.error)
+assert.equal(pagedLightingResult.tasks.length, 2, '41 placed fixtures must produce two complete lighting image pages')
+assert.deepEqual(pagedLightingResult.coveredFixtureIds, manyIds)
+assert.deepEqual(pagedLightingResult.unplacedFixtureIds, [])
+assert.match(pagedLightingResult.tasks[0].title, /1\/2/)
+assert.match(pagedLightingResult.tasks[1].title, /2\/2/)
+pagedLightingResult.tasks.forEach((task) => {
+  const canvas = createCanvasSpy()
+  task.drawSegment(canvas, 0, task.height)
+  assert.ok(callText(canvas).some((text) => text.startsWith('地 · A')),
+    `${task.title} must draw ground fixture addresses on its own page`)
+})
 
 const audioItem = calculationItems.find((item) => item.record.module === 'audioWiring')
 const audio = audioBridge.buildRecordModel(audioItem)
@@ -418,5 +541,55 @@ assert.ok(!gainSupplementText.some((line) => line.startsWith('DSP 输入表目�
   || line.startsWith('输入级档位：') || line.startsWith('工作条件：') || line.startsWith('DSP 标定：')),
   'supplement pages must not duplicate conditions already in the summary or specialized image')
 assert.deepEqual(gainSnapshot.record, originalGainRecord, 'rendering must preserve every saved gain input and result line')
+
+const flowStorage = seed.createReportQaStorage()
+const flowWorkspace = flowStorage['audioTool.dmxLightingWorkspace.v2']
+const flowScheme = flowWorkspace.contexts[seed.projectId].scheme
+const flowFixtureId = flowScheme.fixtureIdsByGroup[flowScheme.groupIds[0]][0]
+flowScheme.layout.positionsById[flowFixtureId] = { kind: 'ground', x: 0, y: 1 }
+const flowCanvases = []
+const flowWx = {
+  getStorageSync: (key) => flowStorage[key],
+  createCanvasContext() {
+    const canvas = createCanvasSpy()
+    canvas.draw = (reserve, callback) => callback?.()
+    flowCanvases.push(canvas)
+    return canvas
+  },
+  canvasToTempFilePath(options) { options.success({ tempFilePath: `temp://ground-report-${flowCanvases.length}.png` }) },
+  showToast() {},
+  vibrateShort() {},
+}
+const flowDefinitions = []
+const previousWx = global.wx
+const previousPage = global.Page
+global.wx = flowWx
+global.Page = (definition) => flowDefinitions.push(definition)
+delete require.cache[require.resolve('../../../pages/records/report')]
+require('../../../pages/records/report')
+const flowPageDefinition = flowDefinitions[0]
+assert.ok(flowPageDefinition, 'the normal project report page must register')
+const flowPage = {
+  ...flowPageDefinition,
+  data: structuredClone(flowPageDefinition.data),
+  setData(changes, callback) {
+    this.data = { ...this.data, ...changes }
+    callback?.()
+  },
+}
+flowPage.onLoad({ id: seed.projectId })
+const flowLightingItem = reportModel.getProjectReportSections(flowPage.reportSource)
+  .flatMap((section) => section.items).find((item) => item.type === 'lighting')
+assert.ok(flowLightingItem, 'the seeded project must produce a lighting report candidate')
+flowPage.updateSelection([flowLightingItem.id])
+flowPage.generateReport()
+assert.equal(flowPage.data.mode, 'preview', flowPage.data.pageStatus)
+assert.equal(flowPage.data.isGenerating, false)
+assert.ok(flowPage.data.pageCount >= 2, 'the normal report flow must export both summary and lighting image pages')
+assert.ok(flowPage.data.reportPages.some((page) => page.title?.includes('灯位原生图')))
+assert.ok(flowCanvases.some((canvas) => callText(canvas).includes(`地 · ${flowPage.reportSource.lighting.fixtures[0].addressText}`)),
+  'the normal report flow must draw the saved ground position before opening preview')
+global.wx = previousWx
+global.Page = previousPage
 
 console.log(`Report snapshot adapter: PASS (${directImageCount} direct native images, audio-wiring connector photos, ${wiringReport.lineCount} wiring lines, lighting addresses, complete long DMX pages)`)

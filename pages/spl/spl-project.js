@@ -565,7 +565,6 @@ function createSplProjectMethods(runtime = {}) {
       const reportedKeyboardHeight = Number(event?.detail?.height)
       if (Number.isFinite(reportedKeyboardHeight) && reportedKeyboardHeight > 0) {
         this._projectKeyboardHeight = reportedKeyboardHeight
-        this.updateProjectKeyboardLayout()
       }
       return true
     },
@@ -632,6 +631,15 @@ function createSplProjectMethods(runtime = {}) {
         projectKeyboardPanelStyle: `max-height:calc(${Math.floor(visibleHeight)}px - 10px);margin-bottom:${Math.ceil(lift)}px;`,
       })
       return true
+    },
+
+    resizeProjectKeyboard(event) {
+      const currentHeight = getProjectKeyboardHeight(event)
+      if (!this._projectKeyboardHeight && currentHeight) {
+        this._projectKeyboardWindowHeight = currentHeight
+        this._projectKeyboardBaselineHeight = currentHeight
+      }
+      if (this._projectKeyboardHeight) this.updateProjectKeyboardLayout(event)
     },
 
     saveToActiveProject() {

@@ -29,6 +29,24 @@ function roundedRect(context, x, y, width, height, radius, fillStyle) {
   context.fill()
 }
 
+function strokeRoundedRect(context, x, y, width, height, radius, color) {
+  const r = Math.min(radius, width / 2, height / 2)
+  context.beginPath()
+  context.moveTo(x + r, y)
+  context.lineTo(x + width - r, y)
+  context.quadraticCurveTo(x + width, y, x + width, y + r)
+  context.lineTo(x + width, y + height - r)
+  context.quadraticCurveTo(x + width, y + height, x + width - r, y + height)
+  context.lineTo(x + r, y + height)
+  context.quadraticCurveTo(x, y + height, x, y + height - r)
+  context.lineTo(x, y + r)
+  context.quadraticCurveTo(x, y, x + r, y)
+  context.closePath()
+  context.setStrokeStyle(color)
+  context.setLineWidth(1)
+  context.stroke()
+}
+
 function setText(context, size, color = DEFAULT_TEXT_COLOR, weight = 400, align = 'left') {
   context.font = `${weight} ${size}px -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif`
   context.setFillStyle(color)
@@ -94,6 +112,7 @@ module.exports = {
   REPORT_WIDTH,
   REPORT_COLORS,
   roundedRect,
+  strokeRoundedRect,
   setText,
   drawText,
   splitText,

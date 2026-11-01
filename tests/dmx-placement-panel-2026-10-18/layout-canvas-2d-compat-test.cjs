@@ -130,7 +130,7 @@ const { createDmxLayoutPage } = require('../../pages/dmx-layout/page-factory')
 const { saveLightingScheme } = require('../../pages/dmx-layout/lighting-workspace')
 const { pointOnRod } = require('../../pages/dmx-layout/layout-model')
 const sourceRoot = path.resolve(__dirname, '../..')
-for (const relative of ['pages/dmx-layout/dmx-layout.wxml', 'pages/dmx-layout-landscape/dmx-layout-landscape.wxml']) {
+for (const relative of ['pages/dmx-layout/dmx-layout.wxml']) {
   const markup = fs.readFileSync(path.join(sourceRoot, relative), 'utf8')
   assert.match(markup, /<canvas\s+wx:if="\{\{!layoutPanelVisible && !locateVisible && !placementVisible && !previewVisible && !isGeneratingImage && !exportCanvasActive\}\}"\s+type="2d"\s+id="dmxLayoutCanvas"/, `${relative} must unmount its native 2D stage node while a native overlay is active`)
   assert.match(markup, /<canvas\s+wx:if="\{\{exportCanvasActive\}\}"\s+type="2d"\s+id="dmxLayoutExportCanvas"/, `${relative} must use a native 2D export node`)
@@ -138,7 +138,7 @@ for (const relative of ['pages/dmx-layout/dmx-layout.wxml', 'pages/dmx-layout-la
 }
 assert.doesNotMatch(fs.readFileSync(path.join(sourceRoot, 'pages/dmx-layout/page-factory.js'), 'utf8'), /createCanvasContext|canvasId\s*:/,
   'production page must not use legacy canvas contexts or canvas IDs')
-for (const relative of ['pages/dmx-layout/dmx-layout.wxss', 'pages/dmx-layout-landscape/dmx-layout-landscape.wxss']) {
+for (const relative of ['pages/dmx-layout/dmx-layout.wxss']) {
   const styles = fs.readFileSync(path.join(sourceRoot, relative), 'utf8')
   assert.doesNotMatch(styles, /\.export-canvas\{[^}]*left:-2000px|\.export-canvas\{[^}]*z-index:-1/,
     `${relative} export node must stay mounted visibly in the native layer`)
@@ -225,9 +225,21 @@ const stageBeforeFixtureTap = mainNode
 page.drawLayout()
 const staleFixtureTapFrame = [...stageBeforeFixtureTap.frameHistory.values()][0]
 const textCountBeforeFixtureTap = mainTextCalls.length
-page._touchState = { fixtureId: String(page._fixtures[0].stableId), start: { x: 100, y: 100 }, last: { x: 100, y: 100 }, moved: false, dragging: false }
+const fixtureId = String(page._fixtures[0].stableId)
+if (!page._layout.positionsById[fixtureId]) {
+  const seededLayout = JSON.parse(JSON.stringify(page._layout))
+  seededLayout.positionsById[fixtureId] = { rodId: seededLayout.internalRods[0].id, t: .37 }
+  page._layout = seededLayout
+  assert.equal(page.saveLayoutOnly(seededLayout), true, 'fixture-tap lifecycle test needs one real placed lamp')
+  page.updateLayoutData()
+}
+const fixturePosition = page._layout.positionsById[fixtureId]
+const fixtureRod = page.getGeometry().rods.find((item) => String(item.id) === String(fixturePosition.rodId))
+const fixturePoint = pointOnRod(fixtureRod, fixturePosition.t)
+assert.equal(String(page.findFixtureAt(fixturePoint)?.stableId), String(page._fixtures[0].stableId), 'fixture-tap point must hit the placed fixture')
+page._touchState = { fixtureId: String(page._fixtures[0].stableId), start: fixturePoint, last: fixturePoint, moved: false, dragging: false, startedAt: Date.now(), touchId: 0 }
 page._gesture = { type: 'single', view: { ...page._view } }
-page.onCanvasTouchEnd({ touches: [] })
+page.onCanvasTouchEnd({ touches: [], changedTouches: [{ identifier: 0, x: fixturePoint.x, y: fixturePoint.y }] })
 assert.equal(page.data.placementVisible, true, 'a fixture tap should open its placement card')
 assert.equal(page._canvasNode, null, 'fixture-tap placement must also suspend the native stage node')
 assert.equal(stageBeforeFixtureTap.frames.size, 0, 'fixture-tap placement must cancel any pending stage RAF')
@@ -245,9 +257,9 @@ const staleRodTapFrame = [...stageBeforeRodTap.frameHistory.values()][0]
 const textCountBeforeRodTap = mainTextCalls.length
 const emptyRod = page.getGeometry().rods.find((item) => !Object.values(page._layout.positionsById || {}).some((position) => String(position.rodId) === String(item.id)))
 const emptyRodPoint = pointOnRod(emptyRod, .5)
-page._touchState = { fixtureId: '', rodId: String(emptyRod.id), start: emptyRodPoint, last: emptyRodPoint, moved: false, dragging: false }
+page._touchState = { fixtureId: '', rodId: String(emptyRod.id), start: emptyRodPoint, last: emptyRodPoint, moved: false, dragging: false, startedAt: Date.now() }
 page._gesture = { type: 'single', view: { ...page._view } }
-page.onCanvasTouchEnd({ touches: [] })
+page.onCanvasTouchEnd({ touches: [], changedTouches: [{ x: emptyRodPoint.x, y: emptyRodPoint.y }] })
 assert.equal(page.data.placementVisible, true, 'a rod tap should open its placement card')
 assert.equal(page._canvasNode, null, 'rod-tap placement must suspend the native stage node')
 assert.equal(stageBeforeRodTap.frames.size, 0, 'rod-tap placement must cancel any pending stage RAF')
@@ -380,7 +392,8 @@ assert.equal(exportRequests[0].canvasId, undefined)
 assert.equal(exportRequests[0].backingWidth, exportRequests[0].width)
 assert.equal(exportRequests[0].backingHeight, exportRequests[0].height)
 assert.ok(exportTextCalls.some((call) => call.value === '灯位图'), 'export node should receive the real diagram title draw call')
-assert.ok(!exportTextCalls.some((call) => /灯具地址清单|灯具编址与灯位图|地址清单/.test(String(call.value))), 'native export draw calls must not include the removed list/report')
+assert.ok(exportTextCalls.some((call) => String(call.value) === '完整地址清单（3 台）'), 'native export should retain the current complete address-list page')
+assert.ok(!exportTextCalls.some((call) => String(call.value) === '灯具编址与灯位图'), 'native export should not use the retired combined report title')
 assert.equal(page.data.previewVisible, true)
 assert.equal(page.data.exportCanvasActive, false)
 assert.equal(page._canvasNode, null, 'preview should continue to keep the main stage node unmounted')

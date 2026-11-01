@@ -9,6 +9,7 @@ const {
   roundedRect,
   setText,
   getExportDimensions,
+  strokeRoundedRect,
 } = require('../../utils/report-drawing')
 const { adaptCanvas2dContext, drawPreviewAtSize } = require('./preview-renderer')
 const { getPresentedMinimumDistanceMeters } = require('./camera-presentation')
@@ -192,24 +193,6 @@ function drawLines(context, lines, x, y, lineHeight, size, color, weight = 400, 
 function setCameraReportText(context, size, color, weight = 400, align = 'left') {
   if (typeof context.setFontSize === 'function') context.setFontSize(size)
   setText(context, size, color, weight, align)
-}
-
-function strokeRoundedRect(context, x, y, width, height, radius, color) {
-  const r = Math.min(radius, width / 2, height / 2)
-  context.beginPath()
-  context.moveTo(x + r, y)
-  context.lineTo(x + width - r, y)
-  context.quadraticCurveTo(x + width, y, x + width, y + r)
-  context.lineTo(x + width, y + height - r)
-  context.quadraticCurveTo(x + width, y + height, x + width - r, y + height)
-  context.lineTo(x + r, y + height)
-  context.quadraticCurveTo(x, y + height, x, y + height - r)
-  context.lineTo(x, y + r)
-  context.quadraticCurveTo(x, y, x + r, y)
-  context.closePath()
-  context.setStrokeStyle(color)
-  context.setLineWidth(1)
-  context.stroke()
 }
 
 function buildCameraReportLayout(context, payload) {
@@ -437,13 +420,13 @@ function createCameraReportMethods(baseMethods = {}) {
     ...base,
 
     getResultReportSignature(record) {
-      const signature = base.getResultReportSignature?.call(this, record) || ''
-      return signature ? JSON.stringify([signature, this.data?.theme === 'dark' ? 'dark' : 'light']) : ''
+      return base.getResultReportSignature?.call(this, record) || ''
     },
 
     generateResultReportImage() {
       const result = this.data?.result
-      const payload = buildCameraReportPayload(result, { theme: this.data?.theme })
+      const theme = this.data?.theme === 'dark' ? 'dark' : 'light'
+      const payload = buildCameraReportPayload(result, { theme })
       if (!payload || this.data?.isGeneratingResultReport) {
         if (!payload) showToast('当前没有可生成的安装建议')
         return false
@@ -456,7 +439,8 @@ function createCameraReportMethods(baseMethods = {}) {
         showToast('当前没有可生成的安装建议')
         return false
       }
-      if (this.data.resultReportImagePath && this.resultReportSignature === signature) {
+      if (this.data.resultReportImagePath && this.resultReportSignature === signature
+        && this._resultReportImageTheme === theme) {
         const shouldNotifyOpen = !this.data.resultReportPreviewVisible
         const revision = this.resultReportRevision || 0
         this.setData({ resultReportPreviewVisible: true }, () => {
@@ -518,6 +502,7 @@ function createCameraReportMethods(baseMethods = {}) {
             startExportMeasurement: (exportDimensions) => startMeasurement('摄像机/报告导出', exportDimensions),
             onSuccess: (tempFilePath) => {
               this.resultReportSignature = signature
+              this._resultReportImageTheme = theme
               this.finishResultReportGeneration(revision, {
                 resultReportImagePath: tempFilePath,
                 resultReportPreviewVisible: true,

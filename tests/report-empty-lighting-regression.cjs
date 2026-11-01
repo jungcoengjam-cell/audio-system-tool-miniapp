@@ -5,6 +5,7 @@ const {
   loadProjectReportSource,
   readLightingProjectContext,
 } = require('../pages/records/report-model')
+const { buildLightingTask } = require('../pages/records/report-snapshot-adapter')
 const { calculateScheme, WORKSPACE_KEY } = require('../pages/dmx-layout/lighting-workspace')
 
 const projectId = 'report-empty-lighting-a'
@@ -71,6 +72,54 @@ function reportSections(lighting) {
   })
 }
 
+function lightingReportPayload(lighting, id = projectId) {
+  return buildReportPayload({
+    ok: true,
+    project: { id, name: '测试项目' },
+    records: [],
+    schedule: { devices: [], lines: [] },
+    lighting,
+  }, [`lighting:${id}`])
+}
+
+function makePositionedFixtureEntry(project, fixtureIds, positionsById) {
+  const groupId = `group-${project}`
+  return {
+    revision: 9,
+    scheme: {
+      version: 2,
+      preferences: {
+        startAddressText: '1',
+        allocationMode: 'auto',
+        groupSummary: `测试灯具 × ${fixtureIds.length}`,
+        groups: [{
+          name: '测试灯具',
+          fixtureModel: '',
+          fixtureSource: 'custom',
+          fixtureCount: fixtureIds.length,
+          channelCount: 6,
+          targetUniverse: 'A',
+        }],
+      },
+      groupIds: [groupId],
+      fixtureIdsByGroup: { [groupId]: fixtureIds },
+      checksById: {},
+      layout: {
+        stageWidthText: '12',
+        stageDepthText: '8',
+        apronDirection: 'bottom',
+        internalRods: [{ id: 'report-internal-1', distance: 4 }],
+        frontRods: [{ id: 'report-front-1', distance: 2 }],
+        legacySideRods: [
+          { id: 'report-left-1', distance: 1, startT: 0, endT: 1, side: 'left', positionIndex: 0 },
+          { id: 'report-right-2', distance: 1, startT: 0, endT: 1, side: 'right', positionIndex: 1 },
+        ],
+        positionsById,
+      },
+    },
+  }
+}
+
 for (const [label, emptyEntry] of [
   ['revision>0 empty scheme', makeEmptyEntry(3)],
   ['empty layout', makeEmptyEntry(5, { positionsById: {} })],
@@ -91,6 +140,94 @@ assert.equal(unplaced.lighting.fixtures.length, 1, 'a real fixture remains repor
 assert.equal(unplaced.lighting.fixtures[0].stableId, 'fixture-unplaced')
 assert.equal(unplaced.lighting.fixtures[0].position, null, 'unplaced fixtures keep their empty position')
 assert.equal(reportSections(unplaced.lighting).find((section) => section.key === 'lighting').items.length, 1)
+
+const positionFixtureIds = [
+  'fixture-internal', 'fixture-front', 'fixture-left', 'fixture-right',
+  'fixture-internal-kind-marker', 'fixture-front-legacy-marker',
+  'fixture-ground-kind', 'fixture-ground-legacy', 'fixture-unplaced-report',
+]
+const positionsById = {
+  'fixture-internal': { rodId: 'report-internal-1', t: .25 },
+  'fixture-front': { rodId: 'report-front-1', t: .5 },
+  'fixture-left': { rodId: 'report-left-1', t: .4 },
+  'fixture-right': { rodId: 'report-right-2', t: .6 },
+  'fixture-internal-kind-marker': { kind: 'rod', rodId: 'report-internal-1', t: .75 },
+  'fixture-front-legacy-marker': { ground: false, rodId: 'report-front-1', t: .75 },
+  'fixture-ground-kind': { kind: 'ground', x: .25, y: .75 },
+  'fixture-ground-legacy': { ground: true, x: .75, y: .25 },
+}
+const positionedEntry = makePositionedFixtureEntry(projectId, positionFixtureIds, positionsById)
+const positionedStorageBefore = JSON.stringify(positionedEntry)
+const positioned = read(projectId, { [projectId]: positionedEntry })
+assert.equal(positioned.ok, true, positioned.error)
+const positionedPayload = lightingReportPayload(positioned.lighting)
+assert.ok(positionedPayload, 'positioned lighting remains reportable')
+const positionedReportLines = positionedPayload.pages.flatMap((page) => page.lines.map((line) => line.text))
+const positionedReportText = positionedReportLines.join('\n')
+const positionedReportFlatText = positionedReportLines.join('')
+for (const label of ['灯杆1', '面光杆1', '左侧光1', '右侧光2', '舞台地面', '未布置']) {
+  assert.ok(positionedReportText.includes(`布置位置：${label}`), `report should label placement as ${label}`)
+}
+assert.ok(positionedReportText.includes('布置位置：未布置（未进入灯位图）'),
+  'the report marks an unplaced fixture as omitted from the lighting diagram')
+assert.doesNotMatch(positionedReportText, /"rodId"|"kind":"ground"|"ground":true/,
+  'report text must not expose raw position JSON')
+assert.doesNotMatch(positionedReportText, /fixture-(?:internal|front|left|right|ground|unplaced-report)/,
+  'report text must not expose internal fixture identity keys')
+assert.ok(positionedReportText.includes('灯具 1'), 'the readable fixture ordinal remains available for site checks')
+assert.ok(positionedReportText.includes('通道模式：6 CH/台'), 'the per-fixture channel mode remains available once at group level')
+for (const fixture of positioned.lighting.fixtures) {
+  assert.ok(positionedReportText.includes(`完整地址：${fixture.addressText} · 占用范围：${fixture.rangeText}`),
+    `report must retain the full address and channel range for fixture ${fixture.fixtureIndex}`)
+}
+function placementLineForFixture(fixtureIndex) {
+  const start = positionedReportFlatText.indexOf(`灯具 ${fixtureIndex}`)
+  assert.notEqual(start, -1, `report should retain fixture ordinal ${fixtureIndex}`)
+  const placementStart = positionedReportFlatText.indexOf('布置位置：', start)
+  const nextFixture = positionedReportFlatText.indexOf('灯具 ', start + 1)
+  if (placementStart !== -1 && (nextFixture === -1 || placementStart < nextFixture)) {
+    const labels = ['灯杆1', '面光杆1', '左侧光1', '右侧光2', '舞台地面', '未布置', '无法识别']
+    const label = labels.find((value) => positionedReportFlatText.startsWith(`布置位置：${value}`, placementStart))
+    return label ? `布置位置：${label}` : ''
+  }
+  return ''
+}
+assert.equal(placementLineForFixture(positioned.lighting.fixtures.find((fixture) => fixture.stableId === 'fixture-internal-kind-marker').fixtureIndex), '布置位置：灯杆1',
+  'a rod position with the existing kind marker must retain its rod label')
+assert.equal(placementLineForFixture(positioned.lighting.fixtures.find((fixture) => fixture.stableId === 'fixture-front-legacy-marker').fixtureIndex), '布置位置：面光杆1',
+  'a rod position with the legacy false ground marker must retain its front rod label')
+assert.deepEqual(positionedPayload.selectedItems[0].lighting, positioned.lighting,
+  'report text formatting must preserve the full lighting snapshot used by the position diagram')
+assert.equal(positionedPayload.project.id, projectId, 'project identity remains in the report source snapshot')
+const lightingDiagram = buildLightingTask(positionedPayload.selectedItems[0], '测试项目')
+assert.equal(lightingDiagram.ok, true, lightingDiagram.error)
+assert.deepEqual(lightingDiagram.coveredFixtureIds, positionFixtureIds.filter((id) => id !== 'fixture-unplaced-report'),
+  'position diagram continues to include every placed fixture')
+assert.deepEqual(lightingDiagram.unplacedFixtureIds, ['fixture-unplaced-report'],
+  'position diagram retains the unplaced fixture list')
+assert.equal(JSON.stringify(positionedEntry), positionedStorageBefore, 'report generation must not mutate saved position data')
+
+const unknownPositionEntry = makePositionedFixtureEntry(projectId, ['fixture-unknown-position'], {
+  'fixture-unknown-position': { rodId: 'missing-rod', t: .5 },
+})
+const unknownPosition = read(projectId, { [projectId]: unknownPositionEntry })
+assert.equal(unknownPosition.ok, true, unknownPosition.error)
+const unknownPositionText = lightingReportPayload(unknownPosition.lighting).pages
+  .flatMap((page) => page.lines.map((line) => line.text)).join('\n')
+assert.ok(unknownPositionText.includes('布置位置：无法识别'), 'an unknown rod reference must not be guessed')
+
+for (const invalidField of ['side', 'positionIndex']) {
+  const invalidLegacyRodEntry = makePositionedFixtureEntry(projectId, ['fixture-invalid-legacy-position'], {
+    'fixture-invalid-legacy-position': { rodId: 'report-left-1', t: .5 },
+  })
+  delete invalidLegacyRodEntry.scheme.layout.legacySideRods[0][invalidField]
+  const invalidLegacyRod = read(projectId, { [projectId]: invalidLegacyRodEntry })
+  assert.equal(invalidLegacyRod.ok, true, invalidLegacyRod.error)
+  const invalidLegacyRodText = lightingReportPayload(invalidLegacyRod.lighting).pages
+    .flatMap((page) => page.lines.map((line) => line.text)).join('\n')
+  assert.ok(invalidLegacyRodText.includes('布置位置：无法识别'),
+    `a legacy side rod without a valid ${invalidField} must be unrecognized`)
+}
 
 const isolated = read(projectId, {
   [otherProjectId]: makeFixtureEntry(otherProjectId, 'fixture-other-project'),
@@ -164,4 +301,4 @@ assert.deepEqual(pagesWithoutGenerationTimestamp(emptyWorkspacePayload.pages),
   'an empty lighting workspace must not change report page content, size, or order')
 assert.deepEqual(emptyWorkspacePayload.selectedIds, ['line:line-1'])
 
-console.log('Empty project lighting report regression passed (selection, pagination, storage immutability, deletion, unplaced fixtures, and project isolation).')
+console.log('Project lighting report regression passed (placement labels, addresses, diagram snapshot, invalid positions, storage immutability, selection, and project isolation).')

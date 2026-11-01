@@ -239,8 +239,35 @@ function assertInvalidInputs() {
 function projectFlow(page, target, name, note) {
   assert(page.openProjectSheet())
   assert(page.selectProjectTarget({ currentTarget: { dataset: { id: target.id } } }))
-  page.onProjectConfigNameInput({ detail: { value: name } })
-  page.onProjectConfigNoteInput({ detail: { value: note } })
+  const dialogRevision = page.data.projectDialogRevision
+  const configNameInput = (value, revision = dialogRevision) => page.onProjectConfigNameInput({
+    currentTarget: { dataset: { step: 'confirm', dialogRevision: revision, field: 'projectConfigName' } },
+    detail: { value },
+  })
+  const configNoteInput = (value, revision = dialogRevision) => page.onProjectConfigNoteInput({
+    currentTarget: { dataset: { step: 'confirm', dialogRevision: revision, field: 'projectConfigNote' } },
+    detail: { value },
+  })
+  assert.equal(configNameInput('temporary'), undefined)
+  assert.equal(page.data.projectConfigName, 'temporary')
+  assert.equal(configNameInput('replaced'), undefined)
+  assert.equal(page.data.projectConfigName, 'replaced')
+  assert.equal(configNameInput(''), undefined)
+  assert.equal(page.data.projectConfigName, '')
+  assert.equal(configNameInput(name), undefined, 'valid configuration-name input does not return a boolean')
+  assert.equal(page.data.projectConfigName, name)
+  assert.equal(configNoteInput('temporary'), undefined)
+  assert.equal(page.data.projectConfigNote, 'temporary')
+  assert.equal(configNoteInput('replaced'), undefined)
+  assert.equal(page.data.projectConfigNote, 'replaced')
+  assert.equal(configNoteInput(''), undefined)
+  assert.equal(page.data.projectConfigNote, '')
+  assert.equal(configNoteInput(note), undefined, 'valid note input does not return a boolean')
+  assert.equal(page.data.projectConfigNote, note)
+  assert.equal(configNameInput('stale configuration', dialogRevision - 1), undefined)
+  assert.equal(page.data.projectConfigName, name, 'a stale configuration-name revision cannot overwrite the current value')
+  assert.equal(configNoteInput('stale note', dialogRevision - 1), undefined)
+  assert.equal(page.data.projectConfigNote, note, 'a stale note revision cannot overwrite the current value')
 }
 
 function seedProjects(env, records) {
@@ -248,6 +275,53 @@ function seedProjects(env, records) {
   const second = records.createProject('LED QA South Hall')
   assert(first && second, 'test projects must be available')
   return { first, second }
+}
+
+function assertProjectTextInputReturnsUndefined() {
+  const { env, page, records } = fixture()
+  setInputs(page, {
+    wallWidthText: '6', wallHeightText: '3', topReserveText: '0.2', bottomReserveText: '0.2',
+    frameWidthText: '5', viewingDistanceText: '2',
+  })
+  setSelections(page, 0, 0, 0)
+  seedProjects(env, records)
+  assert(page.openProjectSheet())
+  const selectRevision = page.data.projectDialogRevision
+  const searchInput = (dialogRevision, value) => page.onProjectSearch({
+    currentTarget: { dataset: { step: 'select', dialogRevision, field: 'projectSearchText' } },
+    detail: { value },
+  })
+  assert.equal(searchInput(selectRevision, 'LED QA'), undefined,
+    'valid project search input does not return a boolean')
+  assert.equal(page.data.projectSearchText, 'LED QA')
+  assert.equal(searchInput(selectRevision, ''), undefined)
+  assert.equal(page.data.projectSearchText, '')
+  assert.equal(searchInput(selectRevision - 1, 'stale query'), undefined)
+  assert.equal(page.data.projectSearchText, '', 'a stale search revision cannot replace the current query')
+  assert(page.openProjectCreateForm({
+    currentTarget: { dataset: { step: 'select', dialogRevision: selectRevision } },
+  }))
+  const createRevision = page.data.projectDialogRevision
+  const createNameInput = (dialogRevision, value) => page.onProjectNameInput({
+    currentTarget: { dataset: { step: 'create', dialogRevision, field: 'projectNameText' } },
+    detail: { value },
+  })
+  assert.equal(createNameInput(createRevision, 'abc'), undefined,
+    'valid project-name input does not return a boolean')
+  assert.equal(page.data.projectNameText, 'abc')
+  assert.equal(createNameInput(createRevision, '替换项目名'), undefined)
+  assert.equal(page.data.projectNameText, '替换项目名')
+  assert.equal(createNameInput(createRevision, ''), undefined)
+  assert.equal(page.data.projectNameText, '')
+  assert.equal(createNameInput(createRevision, 'LED 临时项目'), undefined)
+  assert.equal(page.data.projectNameText, 'LED 临时项目')
+  assert.equal(searchInput(createRevision, 'stale step query'), undefined)
+  assert.equal(page.data.projectSearchText, '', 'a search event from the previous dialog step is ignored')
+  assert(page.closeProjectDialog(true))
+  const closedName = page.data.projectNameText
+  assert.equal(createNameInput(createRevision, 'closed create event'), undefined)
+  assert.equal(page.data.projectNameText, closedName, 'a create-name event after close cannot change page data')
+  return 8
 }
 
 function assertRecordMetadataAndValidation() {
@@ -324,8 +398,15 @@ function assertCancelAndStorageFailure() {
     const { first } = seedProjects(env, records)
     const before = records.getRecords().length
     projectFlow(page, first, 'Canceled configuration', '')
+    const dialogRevision = page.data.projectDialogRevision
     page.closeProjectDialog(true)
     env.flushNextTicks()
+    const noteAfterClose = page.data.projectConfigNote
+    assert.equal(page.onProjectConfigNoteInput({
+      currentTarget: { dataset: { step: 'confirm', dialogRevision, field: 'projectConfigNote' } },
+      detail: { value: 'late closed input' },
+    }), undefined)
+    assert.equal(page.data.projectConfigNote, noteAfterClose, 'a note event after close cannot change page data')
     assert.equal(records.getRecords().length, before, 'canceling project confirmation must not write a record')
   }
   {
@@ -396,8 +477,18 @@ function assertNativeReportPreviewGuards() {
   generateReportImage(env, page, imagePath)
 
   assert.equal(page.previewReportImage(), true, 'the current report should open through native preview')
-  assert.deepEqual(previews, [{ current: imagePath, urls: [imagePath] }],
-    'native LED preview should pass the complete cached path as current and its only URL')
+  assert.equal(previews.length, 1, 'the current report should issue one native preview request')
+  assert.equal(previews[0].current, imagePath,
+    'native LED preview should pass the complete cached path as current')
+  assert.deepEqual(previews[0].urls, [imagePath],
+    'native LED preview should pass the complete cached path as its only URL')
+  assert.equal(typeof previews[0].fail, 'function',
+    'native preview failure callback is required to clear the pending lifecycle identity')
+  previews[0].fail({ errMsg: 'preview failed before hide' })
+  assert.equal(page.data.reportPreviewVisible, true,
+    'an early native preview failure leaves the existing in-page report visible')
+  assert.equal(page._nativeImagePreview, null,
+    'an early native preview failure clears its pending native lifecycle identity')
 
   const previewCountBeforeMissingPath = previews.length
   page.setData({ reportImagePath: '' })
@@ -416,6 +507,19 @@ function assertNativeReportPreviewGuards() {
   env.flushNextTicks()
   env.finishCanvas(0, 'wxfile://led-native-preview-regenerated.png')
   env.flushNextTicks()
+
+  assert.equal(page.previewReportImage(), true, 'the regenerated report should open through native preview')
+  const latePreview = previews.at(-1)
+  assert.equal(typeof latePreview.fail, 'function')
+  page.onHide()
+  assert.equal(page.data.reportPreviewVisible, true,
+    'returning from a pending native preview preserves the report until its outcome is known')
+  latePreview.fail({ errMsg: 'preview failed while hidden' })
+  assert.equal(page.data.reportPreviewVisible, false,
+    'a late native preview failure closes only the corresponding report layer')
+  page.onShow()
+  assert.equal(page.data.reportPreviewVisible, false,
+    'a late failure cannot reopen the old report on return')
 
   page.onHide()
   const previewCountBeforeHiddenTap = previews.length
@@ -532,6 +636,7 @@ function main() {
     defaultsAndBlankReopen: assertBlankDefaults(),
     matrixAndGeometry: assertSampleAndModeMatrix(),
     invalidInputs: assertInvalidInputs(),
+    projectTextInputReturns: assertProjectTextInputReturnsUndefined(),
     recordsAndMetadata: assertRecordMetadataAndValidation(),
     cancellationAndWriteFailure: assertCancelAndStorageFailure(),
     delayedProjectTargetRaces: assertDelayedTargetRace(),

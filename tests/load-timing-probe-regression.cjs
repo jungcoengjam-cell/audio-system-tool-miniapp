@@ -703,10 +703,12 @@ function testAudioDetailedOnLoadTiming() {
   const windowStart = source.indexOf('function getWindowWidth()')
   const windowStartMark = source.indexOf("'audioWindowInfoStart'", windowStart)
   const windowCall = source.indexOf('const info = typeof wx.getWindowInfo', windowStart)
+  const windowFallbackCall = source.indexOf('wx.getSystemInfoSync()', windowCall)
   const windowEndMark = source.indexOf("'audioWindowInfoEnd'", windowCall)
-  const windowEnd = source.indexOf('function rectOf', windowStart)
+  const windowEnd = source.indexOf('function getPixelRatio()', windowCall)
   assert(windowStart >= 0 && windowStartMark > windowStart && windowCall > windowStartMark
-    && windowEndMark > windowCall && windowEnd > windowEndMark,
+    && windowFallbackCall > windowCall && windowFallbackCall < windowEndMark
+    && windowEndMark > windowFallbackCall && windowEnd > windowEndMark,
   'window timing markers must bracket the existing window-info/fallback read')
 
   const preferenceStart = source.indexOf("'audioPreferenceReadStart'", onLoadStart)

@@ -91,7 +91,7 @@ async function main() {
     environment: { browser: 'headless Chromium with source-backed mini-program adapter', physicalDevice: false },
     scenes: scenes.length,
     screenshots: screenshots.length,
-    totalIllustrationBytes: tools.reduce((sum, tool) => sum + fs.statSync(path.join(root, 'assets/basis', tool + '.png')).size, 0),
+    totalIllustrationBytes: tools.reduce((sum, tool) => sum + fs.statSync(path.join(root, 'pages/basis/assets', tool + '.png')).size, 0),
     failures: [],
     sceneData: scenes,
   }

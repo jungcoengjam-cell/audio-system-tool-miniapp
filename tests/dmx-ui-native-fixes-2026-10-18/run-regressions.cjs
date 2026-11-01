@@ -4,6 +4,10 @@ const crypto=require('node:crypto')
 const {spawnSync}=require('node:child_process')
 const root=path.resolve(__dirname,'../..'),out=path.join(__dirname,'evidence/regressions')
 fs.mkdirSync(out,{recursive:true})
+const appConfig=JSON.parse(fs.readFileSync(path.join(root,'app.json'),'utf8'))
+const registeredPages=[...(appConfig.pages||[]),...(appConfig.subPackages||[]).flatMap(pkg=>(pkg.pages||[]).map(page=>path.posix.join(pkg.root,page)))]
+if(registeredPages.includes('pages/dmx-layout-landscape/dmx-layout-landscape'))throw new Error('Retired landscape route must stay out of app.json')
+if(fs.existsSync(path.join(root,'pages/dmx-layout-landscape')))throw new Error('Retired landscape page source must stay absent')
 const cases=fs.readdirSync(path.join(root,'tests')).filter(n=>/^(?:dmx-.*|audit-dmx-regression)\.js$/.test(n)).map(n=>'tests/'+n)
 cases.push(...['calculation-equivalence.cjs','workspace-helper-test.cjs','layout-migration-test.cjs','layout-canvas-export-test.cjs','layout-interactions-test.cjs','layout-extra-interactions-test.cjs','depth-label-width-test.cjs','layout-annotation-collision-test.cjs','layout-theme-lifecycle-test.cjs','main-interactions-test.cjs','native-source-contracts-test.cjs','browser-parser-test.cjs'].map(n=>'tests/dmx-ui-refactor-2026-10-18/'+n))
 cases.push(...['main-native-structure-test.cjs','layout-canvas-2d-regression-test.cjs'].map(n=>'tests/dmx-ui-native-fixes-2026-10-18/'+n))
@@ -14,6 +18,6 @@ const results=cases.map(file=>{
   const row={file,exitCode:r.status,error:r.error?.message||null};console.log(`${r.status===0?'PASS':'FAIL'} ${file}`);return row
 })
 const sources={}
-for(const dir of ['pages/dmx-address','pages/dmx-layout','pages/dmx-layout-landscape'])for(const name of fs.readdirSync(path.join(root,dir)))if(/\.(?:js|json|wxml|wxss)$/.test(name))sources[dir+'/'+name]=crypto.createHash('sha256').update(fs.readFileSync(path.join(root,dir,name))).digest('hex')
+for(const dir of ['pages/dmx-address','pages/dmx-layout'])for(const name of fs.readdirSync(path.join(root,dir)))if(/\.(?:js|json|wxml|wxss)$/.test(name))sources[dir+'/'+name]=crypto.createHash('sha256').update(fs.readFileSync(path.join(root,dir,name))).digest('hex')
 fs.writeFileSync(path.join(out,'summary.json'),JSON.stringify({runAt:new Date().toISOString(),results,sources},null,2))
 if(results.some(r=>r.exitCode!==0))process.exitCode=1

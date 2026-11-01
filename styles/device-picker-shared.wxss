@@ -1,0 +1,189 @@
+.device-picker-scope.device-picker-scope{
+  border-color:var(--theme-divider);
+  border-bottom:0;
+  border-radius:24px 24px 0 0;
+  background:var(--theme-surface);
+  color:var(--theme-text);
+  box-shadow:0 -12px 36px rgba(0,0,0,.18);
+}
+.device-picker-scope.device-picker-scope .device-picker-title{
+  color:var(--theme-text);
+  font-size:16px;
+  font-weight:700;
+  line-height:1.35;
+}
+.device-picker-scope.device-picker-scope .device-picker-close{
+  border:0;
+  border-radius:50%;
+  background:var(--theme-panel-close-bg);
+  color:var(--theme-panel-close-color);
+}
+.device-picker-scope.device-picker-scope .device-picker-search{
+  border-color:var(--theme-divider);
+  border-radius:13px;
+  background:var(--theme-control);
+  color:var(--theme-text);
+  font-size:14px;
+}
+.device-picker-scope.device-picker-scope .device-picker-search-control{
+  border-radius:13px;
+  background:var(--theme-control);
+}
+.device-picker-scope.device-picker-scope .device-picker-search-input{
+  color:var(--theme-text);
+  font-size:14px;
+}
+.device-picker-scope.device-picker-scope .device-picker-category{
+  border-radius:999px;
+  background:var(--theme-control);
+  color:var(--theme-text-secondary);
+}
+.device-picker-scope.device-picker-scope .device-picker-category.device-picker-category-active{
+  border-color:transparent;
+  background:var(--theme-accent-soft);
+  color:var(--theme-accent-text);
+}
+.device-picker-scope.device-picker-scope .device-picker-count{
+  color:var(--theme-text-tertiary);
+}
+.device-picker-scope.device-picker-scope .device-picker-list{
+  border-color:var(--theme-divider);
+  border-radius:14px;
+  background:var(--theme-surface-muted);
+  color:var(--theme-text);
+}
+.device-picker-scope.device-picker-scope .device-picker-row{
+  border-bottom-color:var(--theme-divider);
+  color:var(--theme-text);
+}
+.device-picker-standard.device-picker-standard .device-picker-row-selected{
+  background:var(--theme-accent-soft);
+}
+.device-picker-scope.device-picker-scope .device-picker-item-title{
+  color:var(--theme-text);
+}
+.device-picker-scope.device-picker-scope .device-picker-item-meta{
+  color:var(--theme-text-secondary);
+}
+.device-picker-scope.device-picker-scope .device-picker-detail{
+  background:var(--theme-accent-soft);
+  color:var(--theme-accent-text);
+}
+.device-picker-scope.device-picker-scope .device-picker-arrow{
+  color:var(--theme-accent-text);
+}
+.device-picker-scope.device-picker-scope .device-picker-empty{
+  color:var(--theme-text-secondary);
+}
+.device-picker-scope.device-picker-scope .device-picker-dismiss{
+  color:var(--theme-accent-text);
+}
+.device-picker-scope.device-picker-scope .device-picker-cancel{
+  color:var(--theme-text-secondary);
+}
+.device-picker-standard.device-picker-standard{
+  height:78vh;
+  max-height:88vh;
+  min-height:0;
+}
+.device-picker-standard.device-picker-standard .device-picker-header{
+  min-height:44px;
+  margin-bottom:8px;
+}
+.device-picker-standard.device-picker-standard .device-picker-title{
+  min-width:0;
+  font-size:16px;
+  font-weight:700;
+  line-height:1.35;
+}
+.device-picker-standard.device-picker-standard .device-picker-search{
+  box-sizing:border-box;
+  width:100%;
+  height:48px;
+  min-height:48px;
+  flex:none;
+  margin:0;
+  padding:0 14px;
+  line-height:48px;
+}
+.device-picker-standard.device-picker-standard .device-picker-category-scroll{
+  margin-top:8px;
+}
+.device-picker-standard.device-picker-standard .device-picker-category{
+  box-sizing:border-box;
+  min-height:44px;
+  padding:0 14px;
+  font-size:12px;
+}
+.device-picker-standard.device-picker-standard .device-picker-count{
+  margin:8px 0 6px;
+  font-size:11px;
+  line-height:1.3;
+}
+.device-picker-standard.device-picker-standard .device-picker-list{
+  box-sizing:border-box;
+  width:100%;
+  height:0;
+  min-height:120px;
+  max-height:60vh;
+  flex:1 1 auto;
+  overflow:hidden;
+  border:1px solid var(--theme-divider);
+}
+.device-picker-standard.device-picker-standard .device-picker-row{
+  box-sizing:border-box;
+  min-height:56px;
+  padding:6px 10px;
+}
+.device-picker-standard.device-picker-standard .device-picker-item-title{
+  font-size:14px;
+  font-weight:650;
+  line-height:1.3;
+}
+.device-picker-standard.device-picker-standard .device-picker-item-meta{
+  font-size:12px;
+  line-height:1.3;
+}
+.device-picker-standard.device-picker-standard .device-picker-detail{
+  box-sizing:border-box;
+  width:58px;
+  min-width:58px;
+  max-width:58px;
+  min-height:44px;
+  flex:0 0 58px;
+  padding:0;
+  text-align:center;
+}
+@media(max-height:680px){
+  .device-picker-standard.device-picker-standard{
+    height:88vh;
+    max-height:94vh;
+  }
+  .device-picker-standard.device-picker-standard .device-picker-list{
+    min-height:72px;
+  }
+}
+@media(max-height:420px){
+  .device-picker-standard.device-picker-standard{
+    height:92vh;
+    max-height:92vh;
+  }
+  .device-picker-standard.device-picker-standard .device-picker-header{
+    margin-bottom:4px;
+  }
+  .device-picker-standard.device-picker-standard .device-picker-search{
+    height:44px;
+    min-height:44px;
+    line-height:44px;
+  }
+  .device-picker-standard.device-picker-standard .device-picker-category-scroll{
+    margin-top:4px;
+  }
+  .device-picker-standard.device-picker-standard .device-picker-count{
+    margin:4px 0;
+  }
+  .device-picker-standard.device-picker-standard .device-picker-list{
+    min-height:48px;
+    max-height:45vh;
+  }
+}

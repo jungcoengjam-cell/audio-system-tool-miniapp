@@ -57,11 +57,78 @@ function testLibraryStateAndProjectSaveMetadataFlow() {
   const initialResult = page.data.result
   const initialPreferences = page.getPreferences()
 
+  assert.equal(page.saveToActiveProject(), true, 'a current result should open project input controls')
+  const inputDialogRevision = page.data.projectDialogRevision
+  const cameraSearchInput = (dialogRevision, value) => page.onCameraProjectSearch({
+    currentTarget: { dataset: { step: 'select', dialogRevision, field: 'projectSearchText' } },
+    detail: { value },
+  })
+  assert.equal(cameraSearchInput(inputDialogRevision, '临时搜索'), undefined,
+    'valid project search input does not return a boolean')
+  assert.equal(page.data.projectSearchText, '临时搜索')
+  assert.equal(cameraSearchInput(inputDialogRevision, ''), undefined)
+  assert.equal(page.data.projectSearchText, '')
+  page.openCameraProjectCreateForm()
+  const createDialogRevision = page.data.projectDialogRevision
+  const cameraProjectNameInput = (dialogRevision, value) => page.onCameraProjectNameInput({
+    currentTarget: { dataset: { step: 'create', dialogRevision, field: 'projectNameText' } },
+    detail: { value },
+  })
+  assert.equal(cameraProjectNameInput(createDialogRevision, 'abc'), undefined,
+    'valid project-name input does not return a boolean')
+  assert.equal(page.data.projectNameText, 'abc')
+  assert.equal(cameraProjectNameInput(createDialogRevision, '替换项目名'), undefined)
+  assert.equal(page.data.projectNameText, '替换项目名')
+  assert.equal(cameraProjectNameInput(createDialogRevision, ''), undefined)
+  assert.equal(page.data.projectNameText, '')
+  assert.equal(cameraProjectNameInput(createDialogRevision, '暂存摄像机项目名'), undefined)
+  assert.equal(page.data.projectNameText, '暂存摄像机项目名')
+  assert.equal(page.closeCameraProjectDialog(true), true)
+  const closedSearchText = page.data.projectSearchText
+  const closedProjectName = page.data.projectNameText
+  assert.equal(cameraSearchInput(inputDialogRevision, '关闭后的搜索'), undefined)
+  assert.equal(cameraProjectNameInput(createDialogRevision, '关闭后的项目名'), undefined)
+  assert.equal(page.data.projectSearchText, closedSearchText,
+    'a search event received after close cannot change page data')
+  assert.equal(page.data.projectNameText, closedProjectName,
+    'a create-name event received after close cannot change page data')
+
   chooseProject(page, projectA)
-  page.onCameraProjectConfigNameInput({ detail: { value: '大厅广角配置' } })
-  page.onCameraProjectConfigNoteInput({ detail: { value: '吊装点位 A' } })
+  const confirmRevision = page.data.projectDialogRevision
+  const cameraConfigNameInput = (value) => page.onCameraProjectConfigNameInput({
+    currentTarget: { dataset: { step: 'confirm', dialogRevision: confirmRevision, field: 'projectConfigName' } },
+    detail: { value },
+  })
+  const cameraConfigNoteInput = (value) => page.onCameraProjectConfigNoteInput({
+    currentTarget: { dataset: { step: 'confirm', dialogRevision: confirmRevision, field: 'projectConfigNote' } },
+    detail: { value },
+  })
+  assert.equal(cameraConfigNameInput('临时配置'), undefined,
+    'valid configuration-name input does not return a boolean')
+  assert.equal(page.data.projectConfigName, '临时配置')
+  assert.equal(cameraConfigNameInput('替换配置名'), undefined)
+  assert.equal(page.data.projectConfigName, '替换配置名')
+  assert.equal(cameraConfigNameInput(''), undefined)
+  assert.equal(page.data.projectConfigName, '')
+  assert.equal(cameraConfigNameInput('大厅广角配置'), undefined)
+  assert.equal(page.data.projectConfigName, '大厅广角配置')
+  assert.equal(cameraConfigNoteInput('abc'), undefined,
+    'valid note input does not return a boolean')
+  assert.equal(page.data.projectConfigNote, 'abc')
+  assert.equal(cameraConfigNoteInput('替换后的备注'), undefined)
+  assert.equal(page.data.projectConfigNote, '替换后的备注')
+  assert.equal(cameraConfigNoteInput(''), undefined)
+  assert.equal(page.data.projectConfigNote, '')
+  assert.equal(cameraConfigNoteInput('吊装点位 A'), undefined)
+  assert.equal(page.data.projectConfigNote, '吊装点位 A')
   flushProjectSave(env, page)
   assert.equal(page.data.projectDialogStep, 'success')
+  assert.equal(cameraConfigNameInput('保存后过期配置'), undefined)
+  assert.equal(cameraConfigNoteInput('保存后过期备注'), undefined)
+  assert.equal(page.data.projectConfigName, '大厅广角配置',
+    'confirmation-step inputs cannot overwrite a completed save')
+  assert.equal(page.data.projectConfigNote, '吊装点位 A',
+    'confirmation-step note cannot overwrite a completed save')
   const signature = JSON.stringify(['camera', initialPreferences])
   const saved = records.getRecords().find((record) => record.signature === signature)
   assert(saved, 'camera save should reuse the existing result signature')
@@ -264,8 +331,11 @@ function testNativeReportPreviewAndCancellationFlow() {
   const firstPath = 'wxfile://camera-v4-actions.png'
   assert.equal(page.data.resultReportImagePath, firstPath)
   assert.equal(page.previewResultReportImage(), true, 'preview action should open the current local image natively')
-  assert.deepEqual(previews, [{ current: firstPath, urls: [firstPath] }],
+  assert.equal(previews.length, 1, 'camera original preview should issue exactly one wx.previewImage call')
+  assert.equal(previews[0].current, firstPath,
     'camera original preview should pass the full current path through wx.previewImage')
+  assert.deepEqual(previews[0].urls, [firstPath])
+  assert.equal(typeof previews[0].fail, 'function', 'camera preview should clear its native-preview identity on failure')
 
   page.shareResultReportImage()
   assert.equal(shares.length, 1)
@@ -286,7 +356,9 @@ function testNativeReportPreviewAndCancellationFlow() {
     'unchanged cached report opens after file-access verification without a new render')
   assert.equal(env.pending.draws.length, 0)
   assert.equal(page.previewResultReportImage(), true, 'the reopened current cache remains previewable')
-  assert.deepEqual(previews.at(-1), { current: firstPath, urls: [firstPath] })
+  assert.equal(previews.at(-1).current, firstPath)
+  assert.deepEqual(previews.at(-1).urls, [firstPath])
+  assert.equal(typeof previews.at(-1).fail, 'function')
 
   assert.equal(page.closeResultReportPreview(true), true)
   env.wx.getFileSystemManager = () => ({ access: ({ fail }) => fail() })
@@ -321,13 +393,21 @@ function testNativeReportPreviewAndCancellationFlow() {
   env.finishCanvas(0, 'wxfile://camera-v4-actions-recovered.png')
   env.flushNextTicks()
   assert.equal(page.previewResultReportImage(), true)
-  assert.deepEqual(previews.at(-1), {
-    current: 'wxfile://camera-v4-actions-recovered.png',
-    urls: ['wxfile://camera-v4-actions-recovered.png'],
-  })
+  assert.equal(previews.at(-1).current, 'wxfile://camera-v4-actions-recovered.png')
+  assert.deepEqual(previews.at(-1).urls, ['wxfile://camera-v4-actions-recovered.png'])
+  assert.equal(typeof previews.at(-1).fail, 'function')
 
   page.onHide()
-  assert.equal(page.data.resultReportPreviewVisible, false)
+  assert.equal(page.data.resultReportPreviewVisible, true,
+    'native original-image preview return must preserve the report sheet')
+  assert.equal(page.data.resultReportImagePath, 'wxfile://camera-v4-actions-recovered.png')
+  page.onShow()
+  assert.equal(page.data.resultReportPreviewVisible, true,
+    'returning from native original-image preview must keep the current report open')
+
+  page.onHide()
+  assert.equal(page.data.resultReportPreviewVisible, false,
+    'a later ordinary hide still closes the report sheet')
   assert.equal(page.data.resultReportImagePath, 'wxfile://camera-v4-actions-recovered.png',
     'hide closes the report sheet but preserves a valid cached path')
   const previewCountBeforeHiddenTap = previews.length

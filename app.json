@@ -14,8 +14,6 @@
     "pages/led-screen/led-screen",
     "pages/gain-structure/gain-structure",
     "pages/dmx-layout/dmx-layout",
-    "pages/products/library",
-    "pages/products/detail",
     "pages/records/project",
     "pages/knowledge/detail",
     "pages/troubleshoot/index"
@@ -50,6 +48,13 @@
       ]
     },
     {
+      "root": "pages/products",
+      "pages": [
+        "library",
+        "detail"
+      ]
+    },
+    {
       "root": "pages/basis",
       "pages": [
         "detail"
@@ -62,8 +67,7 @@
       "packages": [
         "pages/audio-wiring",
         "pages/project-wiring",
-        "pages/dmx-address",
-        "pages/control-protocol"
+        "pages/dmx-address"
       ]
     }
   },

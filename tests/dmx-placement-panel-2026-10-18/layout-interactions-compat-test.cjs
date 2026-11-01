@@ -55,35 +55,47 @@ function test(name, body) {
   catch (error) { results.push({ name, passed: false, error: error.stack }); console.error('FAIL ' + name + ': ' + error.message) }
 }
 
-test('thirty immediate placements have distinct positions; unplacing preserves checks', () => {
+test('thirty single taps place distinct positions; current-target withdrawal preserves checks', () => {
   reset()
   const page = makePage(), first = page._fixtures[0].stableId, checks = clone(page._scheme.checksById)
   const rod = page._layout.internalRods[0].id
-  page.openPlacementPanel()
-  page.onSelectRod({ currentTarget: { dataset: { rodId: rod } } })
-  for (const fixture of page._fixtures) page.onPanelFixtureTap({ currentTarget: { dataset: { fixtureId: fixture.stableId } } })
+  page.openPlacementPanel(rod)
+  for (const fixture of page._fixtures) {
+    page.onPanelFixtureTap({ currentTarget: { dataset: { fixtureId: fixture.stableId } } })
+    page.settlePendingFixtureTap()
+  }
   const placed = Object.values(page._layout.positionsById)
   assert.equal(placed.length, 30)
   assert.equal(new Set(placed.map(position => position.t)).size, 30)
   assert(placed.every(position => position.rodId === rod && position.t >= 0 && position.t <= 1))
   page.onPanelFixtureTap({ currentTarget: { dataset: { fixtureId: first } } })
+  page.settlePendingFixtureTap()
+  assert.equal(modals.length, 0, 'withdrawing a current-target lamp does not ask for confirmation')
   assert.equal(Object.keys(page._layout.positionsById).length, 29)
   assert.deepEqual(workspace.readLightingWorkspace().scheme.checksById, checks)
 })
 
-test('cross-rod movement confirms; cancel is inert and confirm never duplicates', () => {
+test('cross-target tap preserves source; withdraw at source before a later target can place it', () => {
   reset(2)
   const page = makePage(), fixture = page._fixtures[0], before = fixture.addressText
   const a = page._layout.internalRods[0].id, b = page._layout.frontRods[0].id
   page.assignFixtureToRod(fixture, a)
-  page.openPlacementPanel()
-  page.onSelectRod({ currentTarget: { dataset: { rodId: b } } })
+  page.openPlacementPanel(b)
   page.onPanelFixtureTap({ currentTarget: { dataset: { fixtureId: fixture.stableId } } })
-  assert.equal(modals.length, 1)
-  modals.shift().success({ confirm: false })
+  page.settlePendingFixtureTap()
+  assert.equal(modals.length, 0, 'a cross-target tap does not ask to transfer or unplace')
   assert.equal(page._layout.positionsById[fixture.stableId].rodId, a)
+
+  page.closePlacementPanel()
+  page.openPlacementPanel(a)
   page.onPanelFixtureTap({ currentTarget: { dataset: { fixtureId: fixture.stableId } } })
-  modals.shift().success({ confirm: true })
+  page.settlePendingFixtureTap()
+  assert.equal(modals.length, 0)
+  assert.equal(page._layout.positionsById[fixture.stableId], undefined, 'single tap on the source target withdraws the lamp')
+  page.closePlacementPanel()
+  page.openPlacementPanel(b)
+  page.onPanelFixtureTap({ currentTarget: { dataset: { fixtureId: fixture.stableId } } })
+  page.settlePendingFixtureTap()
   assert.equal(page._layout.positionsById[fixture.stableId].rodId, b)
   assert.equal(Object.keys(page._layout.positionsById).length, 1)
   assert.equal(page._fixtures[0].addressText, before)
@@ -136,7 +148,7 @@ test('unload cancels pending native export callback', () => {
 })
 
 test('canvas selector resolves an actual source element in both orientations', () => {
-  for (const relative of ['pages/dmx-layout/dmx-layout.wxml', 'pages/dmx-layout-landscape/dmx-layout-landscape.wxml']) {
+  for (const relative of ['pages/dmx-layout/dmx-layout.wxml']) {
     const source = fs.readFileSync(path.resolve(__dirname, '../..', relative), 'utf8')
     assert(/id=["']dmxLayoutCanvasShell["']/.test(source), 'Missing touch-coordinate anchor in ' + relative)
   }

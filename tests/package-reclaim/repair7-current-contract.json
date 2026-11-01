@@ -1,7 +1,13 @@
 {
-  "schema": "repair7-current-contract-v1",
-  "rationale": "Approved portrait layout markup adds single-rod clear, per-rod validation, and text-distinguishable fixture states; keep this current snapshot separate from the historical UI manifest.",
-  "approvedExpandedWxmlSha256": {
+  "schema": "repair7-current-contract-v3",
+  "rationale": "The approved portrait lamp-placement interaction enters from a canvas-locked rod or ground target and keeps the preview at the top. A single tap places an unplaced lamp or withdraws a lamp only from the current target; a cross-target tap preserves its source position and explains where to withdraw it without a shifting inline notice. A double tap toggles only the address mark. Placed lamps use solid group color with readable source text; earlier digests are retained for audit.",
+  "previousApprovedExpandedWxmlSha256": {
     "pages/dmx-layout/dmx-layout.wxml": "9cf15b5d90ce081d1395c5aa6e7294c1bb4a1951588e3d941d7e8a755d9a0a62"
+  },
+  "previousPlacementFlowExpandedWxmlSha256": {
+    "pages/dmx-layout/dmx-layout.wxml": "364a454a6ba43f233dbe4c6ac9d7f2a30c0cb0c3f174fcdefcb00c8c732e081d"
+  },
+  "approvedExpandedWxmlSha256": {
+    "pages/dmx-layout/dmx-layout.wxml": "3f7fce87f95da7a9448a68d30f6b2bfe9e1adf8b9160419417b85fac5496e027"
   }
 }

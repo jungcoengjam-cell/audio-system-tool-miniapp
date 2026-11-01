@@ -192,9 +192,11 @@ test('layout address chips have a 44px touch box and text-distinguishable select
   const wxss = fs.readFileSync(path.join(root, 'pages/dmx-layout/dmx-layout.wxss'), 'utf8')
   const addressWxss = fs.readFileSync(path.join(root, 'pages/dmx-address/dmx-address.wxss'), 'utf8')
   assert.match(wxml, /class="fixture-address-chip[^\"]*"[\s\S]*?data-fixture-id="\{\{fixture\.id\}\}" bindtap="onPanelFixtureTap"/)
-  assert.match(wxml, /wx:if="\{\{selectedFixtureId === fixture\.id\}\}" class="fixture-chip-selected-marker">选<\/view>/)
-  assert.match(wxml, /wx:if="\{\{fixture\.placedOnSelectedRod\}\}" class="fixture-chip-check">✓<\/view>/)
-  assert.match(wxml, /wx:elif="\{\{fixture\.placedElsewhere\}\}" class="fixture-chip-origin">\{\{fixture\.shortRodName\}\}<\/text>/)
+  assert.match(wxml, /class="fixture-address-chip[^\"]*selectedFixtureId === fixture\.id \? 'fixture-address-selected' : ''/)
+  assert.match(wxml, /style="--fixture-color:\{\{fixture\.color\}\};--fixture-ink:\{\{fixture\.placedTextColor\}\};"/)
+  assert.match(wxml, /wx:if="\{\{fixture\.checked\}\}" class="fixture-chip-address-checked" aria-hidden="true">✓<\/view>/)
+  assert.match(wxml, /wx:if="\{\{fixture\.placedElsewhere\}\}" class="fixture-chip-origin">\{\{fixture\.shortRodName\}\}<\/text>/)
+  assert.match(wxml, /aria-label="\{\{fixture\.accessibleLabel\}\}"/)
 
   function finalValueIn(source, selector, property) {
     const pattern = /([^{}]+)\{([^{}]*)\}/g
@@ -210,17 +212,34 @@ test('layout address chips have a 44px touch box and text-distinguishable select
   const finalValue = (selector, property) => finalValueIn(wxss, selector, property)
   assert.equal(finalValue('.fixture-address-chip', 'height'), '44px')
   assert.equal(finalValue('.fixture-address-chip', 'min-height'), '44px')
-  assert.equal(finalValue('.fixture-address-chip', 'min-width'), '44px')
-  assert.equal(finalValue('.fixture-address-grid', 'grid-template-columns'), 'repeat(auto-fill,minmax(44px,1fr))')
-  assert.equal(finalValue('.fixture-address-grid', 'gap'), '7px')
+  assert.match(wxss, /\.fixture-address-chip\{[^}]*height:44px;[^}]*min-width:44px;[^}]*min-height:44px/)
+  assert.match(wxss, /@media\(max-width:360px\)\{[\s\S]*?\.fixture-address-chip\{height:44px;min-width:0\}/)
+  assert.equal(finalValue('.fixture-address-grid', 'grid-template-columns'), 'repeat(6,minmax(0,1fr))')
+  assert.match(wxss, /\.fixture-address-grid\{padding:0 6px 6px;grid-template-columns:repeat\(6,minmax\(0,1fr\)\);gap:6px\}/)
+  assert.match(wxss, /@media\(max-width:360px\)\{[\s\S]*?\.fixture-address-grid\{grid-template-columns:repeat\(6,minmax\(0,1fr\)\);gap:5px\}/)
+  assert.match(wxss, /\.placement-card,.settings-card,.export-sheet\{[^}]*width:100%/)
+  assert.match(wxss, /@media\(max-width:360px\)\{[\s\S]*?\.placement-card \.fixture-selection-list\{width:calc\(100% - 12px\);margin-right:6px;margin-left:6px\}/)
+  assert.match(wxss, /\.fixture-address-grid\{display:grid;box-sizing:border-box;width:100%/)
+  // The narrow-screen min-width override prevents overflow; at 320px the CSS geometry still gives each tile at least 44px.
+  const narrowViewportWidth = 320
+  const narrowListWidth = narrowViewportWidth - 12
+  const narrowGridContentWidth = narrowListWidth - 2 * 6
+  const narrowTileWidth = (narrowGridContentWidth - 5 * 5) / 6
+  assert(narrowTileWidth >= 44, `Expected a >=44px tile at 320px viewport, got ${narrowTileWidth}px`)
+  assert.equal(finalValue('.fixture-address-chip', 'background'), 'var(--theme-surface,#fff)')
+  assert.equal(finalValue('.fixture-chip-placed', 'background'), 'var(--fixture-color,#8a2bff)')
+  assert.equal(finalValue('.fixture-chip-placed .fixture-chip-address', 'color'), 'var(--fixture-ink,#fff)')
+  assert.equal(finalValue('.fixture-chip-other-rod .fixture-chip-origin', 'color'), 'var(--fixture-ink,#fff)')
+  assert.equal(finalValue('.fixture-address-selected', 'box-shadow'), '0 0 0 2px var(--theme-accent,#007aff)')
   assert.match(fs.readFileSync(path.join(root, 'pages/dmx-address/dmx-address.wxml'), 'utf8'),
     /class="address-chips floating-chips"[\s\S]*?class="address-chip \{\{chip\.checked/)
   assert(Number.parseInt(finalValueIn(addressWxss, '.floating-chips .address-chip', 'min-width'), 10) >= 44)
   assert(Number.parseInt(finalValueIn(addressWxss, '.floating-chips .address-chip', 'min-height'), 10) >= 44)
   const darkAddressStyles = addressWxss.slice(addressWxss.indexOf('@media (prefers-color-scheme:dark)'))
   assert.match(darkAddressStyles, /\.address-chip\{background:var\(--group-tint\)\}/)
-  assert.match(darkAddressStyles, /\.address-chip-checked\{color:#fff\}/)
-  assert.match(addressWxss, /\.address-chip-checked\{border-color:var\(--group-color\);background:var\(--group-color\);color:#fff\}/)
+  assert.match(addressWxss, /\.address-chip\{[^}]*background:var\(--group-tint\)[^}]*color:var\(--group-color\)/)
+  assert.match(addressWxss, /\.floating-chips \.chip-check\{color:var\(--text\)\}/)
+  assert.doesNotMatch(addressWxss, /\.address-chip-checked\{[^}]*\b(?:border|background|color)\s*:/s)
   assert.match(fs.readFileSync(path.join(root, 'pages/dmx-address/dmx-address.wxml'), 'utf8'),
     /wx:if="\{\{chip\.checked\}\}" class="chip-check"[^>]*>✓/)
 })

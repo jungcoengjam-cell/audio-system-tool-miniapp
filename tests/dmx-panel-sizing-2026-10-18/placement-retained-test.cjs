@@ -85,7 +85,7 @@ function testClearLayoutPreservesTheSchemeAndHandlesFailure() {
     assert.deepEqual(failed.workspace.readLightingWorkspace().scheme.layout, persisted, 'Failed clear changed storage')
     assert.deepEqual(page._layout.positionsById, {}, 'Failed clear discarded the retryable local edit')
     assert.equal(page._layoutDirty, true)
-    assert.match(page.data.placementNotice, /未保存/)
+    assert.equal(failed.toasts.at(-1).title, '清空未保存', 'a failed clear remains visible after removing the changing notice row')
     failed.state.failWrites = false
     page.retryLayoutSave()
     assert.deepEqual(failed.workspace.readLightingWorkspace().scheme.layout.positionsById, {})

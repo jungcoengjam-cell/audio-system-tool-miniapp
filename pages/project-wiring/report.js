@@ -967,8 +967,11 @@ function strokeProjectLine(context, x1, y1, x2, y2, color, width) {
   context.stroke()
 }
 
-function drawProjectWiringReport(context, page) {
-  const colors = PROJECT_REPORT
+function drawProjectWiringReport(context, page, theme = 'light') {
+  const colors = theme === 'dark' ? {
+    background: '#000000', groupHeader: '#1c1c1e', columnHeader: '#2c2c2e',
+    text: '#f5f5f7', secondary: '#c5c5cb', border: '#38383a',
+  } : PROJECT_REPORT
   context.setFillStyle(colors.background)
   context.fillRect(0, 0, page.width, page.height)
   page.nameLines.forEach((line, index) => drawText(context, line, PROJECT_REPORT.innerLeft,
@@ -1091,7 +1094,7 @@ function drawLineScheduleReport(context, page, colors) {
 
 function drawScheduleReport(context, page, options = {}) {
   if (!context || !page || !Array.isArray(page.rows)) throw new TypeError('布线报告页面无效')
-  if (page.type === 'project') return drawProjectWiringReport(context, page)
+  if (page.type === 'project') return drawProjectWiringReport(context, page, options.theme)
   const colors = palette(options.theme)
   if (page.type === 'lines') return drawLineScheduleReport(context, page, colors)
   context.setFillStyle(colors.background)

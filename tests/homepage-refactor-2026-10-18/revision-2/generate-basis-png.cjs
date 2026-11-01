@@ -7,7 +7,7 @@ const { launch, delay } = require('../browser-driver.cjs')
 
 const root = path.resolve(__dirname, '../../..')
 const sourceDir = path.join(__dirname, 'illustration-sources')
-const assetDir = path.join(root, 'assets/basis')
+const assetDir = path.join(root, 'pages/basis/assets')
 const ids = ['cable', 'gainStructure', 'limiter', 'spl', 'camera', 'ledScreen']
 
 function pngChunks(buffer) {

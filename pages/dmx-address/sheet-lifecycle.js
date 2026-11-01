@@ -82,7 +82,7 @@ function createDmxSheetLifecycleMethods(runtime) {
         ...(!preserveSaveProjectExit ? ['saveProject'] : [])]
         .forEach((key) => this.clearSheetCloseTimer(key))
     },
-    dismissMainSheetsImmediately({ preserveFixturePicker = false, preserveSaveProjectExit = false } = {}) {
+    dismissMainSheetsImmediately({ preserveFixturePicker = false, preserveSaveProjectExit = false, preserveResultReportPreview = false } = {}) {
       this.clearAllSheetCloseTimers({ preserveSaveProjectExit })
       if (!preserveFixturePicker) this.cancelFixtureSearch()
       cancelResultReportGeneration(this)
@@ -97,7 +97,7 @@ function createDmxSheetLifecycleMethods(runtime) {
       ;['fixturePickerClosing', 'pendingChangeClosing', 'saveProjectClosing', 'fixtureChannelGuideClosing', 'resultReportPreviewClosing']
         .filter((key) => !(preserveSaveProjectExit && key === 'saveProjectClosing'))
         .forEach((key) => { if (this.data[key]) closingFlags[key] = false })
-      if (this.data.resultReportPreviewVisible) closingFlags.resultReportPreviewVisible = false
+      if (!preserveResultReportPreview && this.data.resultReportPreviewVisible) closingFlags.resultReportPreviewVisible = false
       if (Object.keys(closingFlags).length) this.setData(closingFlags)
     },
   }

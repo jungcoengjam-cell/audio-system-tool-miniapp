@@ -63,18 +63,25 @@ function loadFresh(relativePath) {
   delete require.cache[resolved]
   return require(resolved)
 }
-function runTimerWithDelay(delay) {
-  const entry = [...timers.entries()].find(([, value]) => value.delay === delay)
-  assert(entry, 'missing controlled timer with delay ' + delay)
-  timers.delete(entry[0])
-  entry[1].callback(...entry[1].args)
-  return entry[1].callback
+function runSheetCloseTimer(key, delay) {
+  const id = page._sheetCloseTimers?.[key]
+  const entry = timers.get(id)
+  assert(entry, 'missing controlled close timer for ' + key)
+  assert.equal(entry.delay, delay, 'unexpected close timer delay for ' + key)
+  timers.delete(id)
+  entry.callback(...entry.args)
+  return entry.callback
 }
 function closeGuideThroughBoundHandler() {
   page.onUserCloseFixtureChannelGuide()
   assert.equal(page.data.fixtureChannelGuideClosing, true)
-  runTimerWithDelay(180)
+  runSheetCloseTimer('fixtureChannelGuide', 180)
   assert.equal(page.data.fixtureChannelGuide, null)
+}
+function finishPendingChangeClose() {
+  assert.equal(page.data.pendingChangeClosing, true)
+  runSheetCloseTimer('pendingChange', 180)
+  assert.equal(page.data.pendingChange, null)
 }
 function openGuideThroughWxmlBoundHandler() {
   const fixture = page._calculationResult.fixtures[0]
@@ -210,6 +217,7 @@ try {
   assert.equal(page.data.pendingChange.kind, 'edit')
   assert.equal(page.data.pendingChange.channelCount, 16)
   page.confirmPendingChange()
+  finishPendingChangeClose()
   assert.equal(page.data.groups[0].channelCount, '16')
   assert.equal(page._calculationResult.fixtures[0].channelCount, 16)
   openGuideThroughWxmlBoundHandler()
@@ -225,8 +233,10 @@ try {
   page.openModelPicker({ currentTarget: { dataset: { index: '0' } } })
   assert.equal(page.data.fixtureSearchOpen, true)
   page.selectFixture({ currentTarget: { dataset: { model: 'TL-SV3104' } } })
+  runSheetCloseTimer('fixturePicker', 180)
   assert.equal(page.data.pendingChange.fixtureModel, 'TL-SV3104')
   page.confirmPendingChange()
+  finishPendingChangeClose()
   assert.equal(page.data.groups[0].fixtureModel, 'TL-SV3104')
   const changedModeCount = Number(page.data.groups[0].channelCount)
   openGuideThroughWxmlBoundHandler()

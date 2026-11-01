@@ -11,7 +11,10 @@ const expectedPackages = [
   'pages/audio-wiring',
   'pages/project-wiring',
   'pages/dmx-address',
+]
+const onDemandPackages = [
   'pages/control-protocol',
+  'pages/products',
 ]
 const rule = app.preloadRule && app.preloadRule[triggerPage]
 
@@ -22,11 +25,13 @@ assert.deepEqual(Object.keys(rule).sort(), ['network', 'packages'])
 assert.ok(Array.isArray(rule.packages), 'preload packages must be an array')
 assert.equal(new Set(rule.packages).size, rule.packages.length, 'preload packages must be unique')
 assert.deepEqual([...rule.packages].sort(), [...expectedPackages].sort())
+assert.ok(onDemandPackages.every((root) => !rule.packages.includes(root)),
+  'control-protocol and products packages must remain on-demand')
 
-for (const root of expectedPackages) {
+for (const root of [...expectedPackages, ...onDemandPackages]) {
   const subpackage = app.subPackages.find((item) => item.root === root)
-  assert.ok(subpackage, `preload root must exist in app.json subPackages: ${root}`)
-  assert.ok(Array.isArray(subpackage.pages) && subpackage.pages.length > 0, `subpackage must declare pages: ${root}`)
+  assert.ok(subpackage, `package root must exist in app.json subPackages: ${root}`)
+  assert.ok(Array.isArray(subpackage.pages) && subpackage.pages.length > 0, `package must declare pages: ${root}`)
 }
 
 console.log('preload-rule-test: all assertions passed')

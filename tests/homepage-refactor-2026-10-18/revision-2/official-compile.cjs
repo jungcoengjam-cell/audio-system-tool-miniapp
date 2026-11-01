@@ -36,6 +36,7 @@ const wxssFiles = [
   'pages/project-wiring/index.wxss',
   'pages/project-wiring/workspace.wxss',
   'pages/cable/cable.wxss',
+  'styles/device-picker-shared.wxss',
   'pages/camera/camera.wxss',
   'pages/audio-wiring/index.wxss',
   'pages/audio-wiring/report-bridge.wxss',
@@ -44,6 +45,7 @@ const wxssFiles = [
   'pages/project-wiring/report-bridge.wxss',
   'styles/homepage.wxss',
   'styles/theme-page-shared.wxss',
+  'styles/disclosure-motion.wxss',
   'app.wxss',
 ]
 

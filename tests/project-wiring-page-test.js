@@ -1022,11 +1022,18 @@ function testPagedExportActionsAndLateCallbacks() {
   assert.equal(page.data.reportImagePath, 'lines-1.png')
   page.nextReportPage()
   assert.equal(page.data.reportImagePath, 'lines-2.png')
-  page.previewReportImage()
-  assert.deepEqual(runtime.previews.at(-1), {
-    current: 'lines-2.png',
-    urls: ['lines-1.png', 'lines-2.png'],
-  }, 'image preview should include every page of the current report')
+  assert.equal(page.previewReportImage(), true)
+  assert.equal(runtime.previews.length, 1, 'image preview should make one native request')
+  assert.equal(runtime.previews[0].current, 'lines-2.png', 'image preview should open the current report page')
+  assert.deepEqual(runtime.previews[0].urls, ['lines-1.png', 'lines-2.png'],
+    'image preview should include every page of the current report')
+  assert.equal(typeof runtime.previews[0].fail, 'function', 'image preview should register failure handling')
+
+  page.onHide()
+  assert.equal(page.data.reportPreviewVisible, true, 'native preview hide should retain the report window')
+  page.onShow()
+  assert.equal(page.data.reportPreviewVisible, true, 'returning from the native preview should restore the report window')
+  assert.equal(page.data.reportImagePath, 'lines-2.png', 'native preview return should retain the selected report page')
   page.saveReportImage()
   page.shareReportImage()
   assert.equal(runtime.saves.at(-1).filePath, 'lines-2.png')

@@ -1,4 +1,4 @@
-const { PRODUCT_DATA_DATE } = require('../data/app-meta')
+const { PRODUCT_DATA_DATE } = require('../../../data/app-meta')
 
 const ALL_CATEGORY = '全部'
 const RECENT_STORAGE_KEY = 'audioTool.products.recent.v1'
@@ -42,13 +42,13 @@ let cameraFovApi = null
 function getSourceItems(type) {
   if (SOURCE_ITEMS[type]) return SOURCE_ITEMS[type]
   if (type === 'amplifier' || type === 'speaker') {
-    const { amplifiers, speakers } = require('../data/equipment')
+    const { amplifiers, speakers } = require('../../../data/equipment')
     SOURCE_ITEMS.amplifier = amplifiers
     SOURCE_ITEMS.speaker = speakers
   } else if (type === 'camera') {
-    SOURCE_ITEMS.camera = require('../data/cameras').cameras
+    SOURCE_ITEMS.camera = require('../../../data/cameras').cameras
   } else if (type === 'lighting') {
-    SOURCE_ITEMS.lighting = require('../data/stage-lighting').stageLightingProducts
+    SOURCE_ITEMS.lighting = require('../../../data/stage-lighting').stageLightingProducts
   }
   return SOURCE_ITEMS[type] || []
 }
@@ -66,7 +66,7 @@ function getSpeakerSpecifications() {
 }
 
 function getCameraFovApi() {
-  if (!cameraFovApi) cameraFovApi = require('./camera-fov')
+  if (!cameraFovApi) cameraFovApi = require('../../../utils/camera-fov')
   return cameraFovApi
 }
 

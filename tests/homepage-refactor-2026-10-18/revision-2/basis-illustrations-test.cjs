@@ -51,7 +51,7 @@ function pageText(markup) {
 
 function checkIllustrations() {
   const sourceDir = path.join(__dirname, 'illustration-sources')
-  const assetDir = path.join(root, 'assets/basis')
+  const assetDir = path.join(root, 'pages/basis/assets')
   let bytes = 0
   let sourceBytes = 0
   for (const id of ids) {
@@ -72,7 +72,7 @@ function checkIllustrations() {
     assert.equal(png.readUInt32BE(20), 560, id + ' PNG height')
     const tool = registry.getBasisTool(id)
     const presentation = buildBasisPresentation(tool)
-    assert.equal(presentation.figure.src, '/assets/basis/' + id + '.png')
+    assert.equal(presentation.figure.src, '/pages/basis/assets/' + id + '.png')
     assert.ok(presentation.figure.alt.length > 20, id + ' figure needs meaningful alternative text')
     assert.deepEqual(
       JSON.parse(JSON.stringify(presentation.completeExplanation)),
@@ -181,7 +181,7 @@ function checkDetailToggleAndRoutes() {
       definition.onLoad.call(context, { tool: id })
       assert.equal(context.data.notFound, false, id + ' should resolve')
       assert.equal(context.data.showFullExplanation, false, id + ' explanation starts collapsed')
-      assert.equal(context.data.presentation.figure.src, '/assets/basis/' + id + '.png')
+      assert.equal(context.data.presentation.figure.src, '/pages/basis/assets/' + id + '.png')
       definition.toggleFullExplanation.call(context)
       assert.equal(context.data.showFullExplanation, true, id + ' expands full explanation')
       definition.toggleFullExplanation.call(context)

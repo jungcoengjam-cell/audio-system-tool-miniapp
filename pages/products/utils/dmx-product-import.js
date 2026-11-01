@@ -1,4 +1,4 @@
-const { calculateDmxAddressPlan, MAX_GROUPS } = require('./dmx-address')
+const { calculateDmxAddressPlan, MAX_GROUPS } = require('../../../utils/dmx-address')
 
 const DMX_PREFERENCES_KEY = 'audioTool.dmxAddress.preferences'
 

@@ -462,6 +462,88 @@ function testFavoriteRenderingAcrossInvalidResult() {
   } finally { context.close() }
 }
 
+function testLimiterProjectFocusDefersContainerLayout() {
+  const context = bootPage({ seedPreferences: true })
+  const { page, writes } = context
+  try {
+    page.onShow()
+    const records = require('../../utils/records')
+    const project = records.createProject('键盘布局回归项目')
+    assert(project)
+    page.openProjectSheet()
+    page.chooseProject({ currentTarget: { dataset: { id: project.id } } })
+    assert.equal(page.data.projectStep, 'details')
+    const writesBefore = writes.length
+    const setData = page.setData
+    const viewPatches = []
+    page.setData = function trackProjectView(changes, callback) {
+      viewPatches.push(clone(changes))
+      return setData.call(this, changes, callback)
+    }
+    const event = (field, height, timeStamp, episode = page.data.projectKeyboardEpisode) => ({
+      currentTarget: { dataset: { projectField: field, projectEpisode: String(episode) } },
+      detail: { height }, timeStamp,
+    })
+
+    const episode = page.data.projectKeyboardEpisode
+    page.onProjectInputFocus(event('projectConfigName', 280, 100))
+    assert.equal(page._projectKeyboardFocusId, 'projectConfigName', 'focus still records its current field')
+    assert.equal(page._projectKeyboardHeight, 280, 'focus still records the reported keyboard height')
+    assert.equal(page._projectKeyboardBaselineHeight, 844, 'focus still records the viewport baseline')
+    assert.equal(viewPatches.length, 0, 'focus does not synchronously resize the native container')
+    assert.equal(page.data.projectKeyboardActive, false)
+    assert.equal(page.data.projectKeyboardPanelStyle, '')
+
+    page.onProjectKeyboardHeightChange(event('projectConfigName', 280, 99, episode))
+    assert.equal(viewPatches.length, 0, 'a keyboard event older than focus is ignored')
+    assert.equal(page.data.projectKeyboardActive, false)
+    page.onProjectKeyboardHeightChange(event('projectConfigName', 280, 101, episode))
+    assert.equal(page.data.projectKeyboardActive, true, 'the current keyboard-height event applies the layout')
+    assert.match(page.data.projectKeyboardPanelStyle, /max-height:564px/)
+
+    const patchCountBeforeFieldSwitch = viewPatches.length
+    page.onProjectInputBlur(event('projectConfigName', 0, 150, episode))
+    page.onProjectInputFocus(event('projectConfigNote', 300, 160, episode))
+    assert.equal(page._projectKeyboardFocusId, 'projectConfigNote', 'switching fields transfers focus ownership')
+    assert.equal(page._projectKeyboardHeight, 300, 'switching fields records the new reported height')
+    assert.equal(viewPatches.length, patchCountBeforeFieldSwitch, 'switching fields does not trigger focus-time reflow')
+    page.onProjectKeyboardHeightChange(event('projectConfigName', 280, 170, episode))
+    assert.equal(page._projectKeyboardHeight, 300, 'a delayed event from the previous field cannot replace current height')
+    page.onProjectKeyboardHeightChange(event('projectConfigNote', 300, 171, episode))
+    assert.equal(page.data.projectKeyboardActive, true)
+
+    page.onResize({ size: { windowHeight: 600 } })
+    assert.equal(page.data.projectKeyboardActive, true, 'onResize retains its existing layout path')
+    assert.match(page.data.projectKeyboardPanelStyle, /margin-bottom:56px/)
+    assert.equal(page.data.projectSheetVisible, true)
+    assert.equal(page.data.projectStep, 'details')
+    assert.equal(writes.length, writesBefore, 'keyboard layout events do not write project storage')
+
+    page.onHide()
+    assert.equal(page.data.projectSheetVisible, true, 'ordinary hide keeps the existing sheet state')
+    assert.equal(page.data.projectStep, 'details')
+    assert.equal(page.data.projectKeyboardActive, false, 'ordinary hide clears keyboard layout')
+    const setDataAfterHide = viewPatches.length
+    page.onProjectKeyboardHeightChange(event('projectConfigNote', 300, 172, episode))
+    assert.equal(viewPatches.length, setDataAfterHide, 'late keyboard events after hide are ignored')
+
+    page.onShow()
+    const setDataAfterShow = viewPatches.length
+    page.onProjectKeyboardHeightChange(event('projectConfigNote', 300, 173, episode))
+    assert.equal(viewPatches.length, setDataAfterShow, 'events from the previous focus episode after show are ignored')
+    page.onProjectInputFocus(event('projectConfigNote', 300, 200))
+    assert.equal(viewPatches.length, setDataAfterShow, 'a fresh focus still does not synchronously resize the container')
+    page.onResize({ size: { windowHeight: 600 } })
+    assert.equal(page.data.projectKeyboardActive, true, 'onResize applies the recorded focus height if needed')
+    assert.match(page.data.projectKeyboardPanelStyle, /margin-bottom:56px/)
+    page.onUnload()
+    const setDataAfterUnload = viewPatches.length
+    page.onProjectKeyboardHeightChange(event('projectConfigNote', 300, 201))
+    assert.equal(viewPatches.length, setDataAfterUnload, 'late keyboard events after unload are ignored')
+    assert.equal(writes.length, writesBefore, 'hide/show/unload layout cleanup does not write project storage')
+  } finally { context.close() }
+}
+
 function testProjectSnapshotAndContinuation() {
   const context = bootPage({ seedPreferences: true })
   const { page, storage, modals, clock } = context
@@ -566,6 +648,7 @@ function testProjectSnapshotAndContinuation() {
     let accessResult
     page.setData({ resultReportImagePath: 'temp://missing.png' })
     page.resultReportSignature = page.getResultReportSignature()
+    page._resultReportImageTheme = context.wx.getSystemInfoSync().theme
     context.wx.getFileSystemManager = () => ({ access: (options) => { accessResult = options } })
     let canvasCount = 0
     const originalContext = context.wx.createCanvasContext
@@ -703,6 +786,7 @@ function testPendingReportCallbacksAreInvalidated() {
     assert.equal(exportCount, 0, 'hiding the page invalidates a pending canvas callback')
     page.setData({ resultReportImagePath: 'temp://late-hidden.png' })
     page.resultReportSignature = page.getResultReportSignature()
+    page._resultReportImageTheme = context.wx.getSystemInfoSync().theme
     wx.getFileSystemManager = () => ({ access: ({ success }) => { accessCount += 1; success() } })
     page.retryResultReport()
     page.generateResultReportImage()
@@ -1461,6 +1545,7 @@ function testLimiterSharePreviewHaptics() {
     page.onPageContainerAfterLeave()
     page.setData({ resultReportImagePath: 'temp://limiter-cached.png' })
     page.resultReportSignature = page.getResultReportSignature()
+    page._resultReportImageTheme = context.wx.getSystemInfoSync().theme
     clearVibrations(context)
     page.openSharePreview()
     expectVibrations(context, 'light')
@@ -1542,6 +1627,7 @@ function testLimiterHapticsAfterPageHide() {
     page.onShow()
     page.setData({ resultReportImagePath: 'temp://limiter-pending.png' })
     page.resultReportSignature = page.getResultReportSignature()
+    page._resultReportImageTheme = context.wx.getSystemInfoSync().theme
     let access
     wx.getFileSystemManager = () => ({ access: (options) => { access = options } })
 
@@ -1562,6 +1648,7 @@ testEmptyAndRealInputEvents()
 testFifteenSecondReminderDuration()
 testUnknownRestoredValueStaysIncomplete()
 testFavoriteRenderingAcrossInvalidResult()
+testLimiterProjectFocusDefersContainerLayout()
 testProjectSnapshotAndContinuation()
 testProjectMetadataProjectionInPage()
 testPendingReportCallbacksAreInvalidated()

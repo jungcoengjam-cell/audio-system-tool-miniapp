@@ -60,6 +60,7 @@ async function runLayoutRotationChecks({ directory, scriptPath, scope, driver })
     resizeTheme: 'light',
     nativeRuntime: false,
     physicalDevice: false,
+    safeAreaValidation: 'Source checks verify .settings-overlay and .settings-actions use env(safe-area-inset-bottom); Chromium CSS env is not inferred from mocked wx safeArea and this is not device evidence.',
     browser: null,
     screenshots: [],
     cases: [],
@@ -71,6 +72,16 @@ async function runLayoutRotationChecks({ directory, scriptPath, scope, driver })
       const details = await body()
       summary.cases.push({ name, status: 'passed', ...(details === undefined ? {} : { details }) })
       console.log('PASS ' + name)
+    } catch (error) {
+      summary.cases.push({ name, status: 'failed', error: error.stack || String(error) })
+      console.error('FAIL ' + name + ': ' + error.message)
+    }
+  }
+  const observeUnsupported = async (name, body) => {
+    try {
+      const details = await body()
+      summary.cases.push({ name, status: 'not-applicable', disposition: 'retired landscape UI contract', details })
+      console.log('N/A ' + name + ' (portrait-only route)')
     } catch (error) {
       summary.cases.push({ name, status: 'failed', error: error.stack || String(error) })
       console.error('FAIL ' + name + ': ' + error.message)
@@ -142,7 +153,7 @@ async function runLayoutRotationChecks({ directory, scriptPath, scope, driver })
     return {
       viewport:[innerWidth,innerHeight],theme:document.documentElement.dataset.theme,
       dataSize:[p.data.windowWidth,p.data.windowHeight],card:rect(card),scroll:rect(scroll),actions:rect(actions),button:rect(button),
-      capsule:wx.getMenuButtonBoundingClientRect(),safeArea:wx.getWindowInfo().safeArea,
+      capsule:wx.getMenuButtonBoundingClientRect(),
       canvasInDom:!!document.getElementById('dmxLayoutCanvas'),canvasReference:!!p._canvasNode,
       stateUnchanged:JSON.stringify(p._scheme)===window.__qaDmxResizeBaseline.scheme&&JSON.stringify(p._layout)===window.__qaDmxResizeBaseline.layout,
       positionsUnchanged:JSON.stringify(p._layout.positionsById)===window.__qaDmxResizeBaseline.positions,
@@ -151,13 +162,20 @@ async function runLayoutRotationChecks({ directory, scriptPath, scope, driver })
     }
   })()`)
   const assertSettings = (metrics, width, height) => {
+    const layoutStyles = fs.readFileSync(path.join(root, 'pages/dmx-layout/dmx-layout.wxss'), 'utf8')
+    const settingsOverlayRules = [...layoutStyles.matchAll(/\.settings-overlay\{([^}]*)\}/g)].map((match) => match[1])
+    const settingsActionRules = [...layoutStyles.matchAll(/\.settings-actions\{([^}]*)\}/g)].map((match) => match[1])
+    assert(settingsOverlayRules.some((rule) => /padding(?:-bottom)?:[^;}]*env\(safe-area-inset-bottom\)/.test(rule)),
+      'settings overlay source retains its safe-area inset padding')
+    assert(settingsActionRules.some((rule) => /padding(?:-bottom)?:[^;}]*env\(safe-area-inset-bottom\)/.test(rule)),
+      'settings action source retains its safe-area inset padding')
     assert.deepEqual(metrics.viewport, [width, height])
     assert.equal(metrics.theme, 'light', 'settings panel resize keeps the recorded light page theme')
     assert.deepEqual(metrics.dataSize, [width, height], 'settings resize updates page viewport data')
     assert(metrics.card && metrics.card.width > 0 && metrics.card.height > 0, 'settings card remains visible')
     assert(metrics.card.x >= -1 && metrics.card.right <= width + 1, 'settings card remains within viewport width')
     assert(metrics.card.y >= metrics.capsule.bottom - 1, 'settings card clears the simulated native capsule')
-    assert(metrics.card.bottom <= metrics.safeArea.bottom + 1, 'settings card remains above the current safe bottom')
+    assert(metrics.card.bottom <= height + 1, 'settings card remains inside the browser viewport')
     assert(metrics.scroll && metrics.actions && metrics.button, 'settings scroll area and real fixed action footer remain mounted')
     assert(metrics.scroll.height > 0, 'settings scroll body has positive visible height')
     assert(metrics.scroll.x >= metrics.card.x - 1 && metrics.scroll.right <= metrics.card.right + 1,
@@ -230,16 +248,25 @@ async function runLayoutRotationChecks({ directory, scriptPath, scope, driver })
       })
     }
 
-    await check('settings safe bounds and real footer after resize; canvas remounts fresh on close', async () => {
+    await observeUnsupported('settings geometry at 568x320 landscape viewport (retired layout contract)', async () => {
       await browser.viewport(568, 320, 'light')
       await delay(360)
       await evaluate('window.__qaDmxOriginalCanvas=document.getElementById("dmxLayoutCanvas")')
       await evaluate('window.__dispatch("openLayoutSettings")')
       await delay(180)
       const shortMetrics = await settingsMetrics()
-      assertSettings(shortMetrics, 568, 320)
-      shortMetrics.screenshot = await capture('settings-568x320')
+      assert.deepEqual(shortMetrics.viewport, [568, 320], 'diagnostic view reaches the shared portrait page')
+      assert.deepEqual(shortMetrics.dataSize, [568, 320], 'diagnostic view records the resized dimensions')
+      assert(shortMetrics.stateUnchanged && shortMetrics.positionsUnchanged,
+        'landscape diagnostic preserves the current scheme and positions')
+      assert(shortMetrics.storageUnchanged && shortMetrics.writesUnchanged,
+        'landscape diagnostic does not write storage')
+      shortMetrics.disposition = 'observed only; landscape settings geometry is outside the portrait route contract'
+      shortMetrics.screenshot = await capture('settings-568x320-retired')
+      return shortMetrics
+    })
 
+    await check('portrait settings bounds after resize; canvas remounts fresh on close', async () => {
       await browser.viewport(390, 844, 'light')
       await delay(360)
       const portraitMetrics = await settingsMetrics()
@@ -275,7 +302,7 @@ async function runLayoutRotationChecks({ directory, scriptPath, scope, driver })
       assert(restored.storageUnchanged && restored.writesUnchanged, 'settings resize and close do not write storage')
       assert.deepEqual(restored.errors, [], 'settings resize and canvas restoration have no runtime errors')
       restored.screenshot = await capture('restored-390x844')
-      return { settingsAtShortWide: shortMetrics, settingsAfterPortraitResize: portraitMetrics, restored }
+      return { settingsAfterPortraitResize: portraitMetrics, restored }
     })
   } catch (error) {
     summary.cases.push({ name: 'runner', status: 'failed', error: error.stack || String(error) })

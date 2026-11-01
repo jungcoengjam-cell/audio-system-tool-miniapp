@@ -229,9 +229,21 @@ const stageBeforeFixtureTap = mainNode
 page.drawLayout()
 const staleFixtureTapFrame = [...stageBeforeFixtureTap.frameHistory.values()][0]
 const textCountBeforeFixtureTap = mainTextCalls.length
-page._touchState = { fixtureId: String(page._fixtures[0].stableId), start: { x: 100, y: 100 }, last: { x: 100, y: 100 }, moved: false, dragging: false }
+const fixtureId = String(page._fixtures[0].stableId)
+if (!page._layout.positionsById[fixtureId]) {
+  const seededLayout = JSON.parse(JSON.stringify(page._layout))
+  seededLayout.positionsById[fixtureId] = { rodId: seededLayout.internalRods[0].id, t: .37 }
+  page._layout = seededLayout
+  assert.equal(page.saveLayoutOnly(seededLayout), true, 'fixture-tap lifecycle test needs one real placed lamp')
+  page.updateLayoutData()
+}
+const fixturePosition = page._layout.positionsById[fixtureId]
+const fixtureRod = page.getGeometry().rods.find((item) => String(item.id) === String(fixturePosition.rodId))
+const fixturePoint = pointOnRod(fixtureRod, fixturePosition.t)
+assert.equal(String(page.findFixtureAt(fixturePoint)?.stableId), fixtureId, 'fixture-tap point must hit the placed fixture')
+page._touchState = { fixtureId, start: fixturePoint, last: fixturePoint, moved: false, dragging: false, startedAt: Date.now(), touchId: 0 }
 page._gesture = { type: 'single', view: { ...page._view } }
-page.onCanvasTouchEnd({ touches: [] })
+page.onCanvasTouchEnd({ touches: [], changedTouches: [{ identifier: 0, x: fixturePoint.x, y: fixturePoint.y }] })
 assert.equal(page.data.placementVisible, true, 'a fixture tap should open its placement card')
 assert.equal(page._canvasNode, null, 'fixture-tap placement must also suspend the native stage node')
 assert.equal(stageBeforeFixtureTap.frames.size, 0, 'fixture-tap placement must cancel any pending stage RAF')
@@ -251,7 +263,7 @@ const emptyRod = page.getGeometry().rods.find((item) => !Object.values(page._lay
 const emptyRodPoint = pointOnRod(emptyRod, .5)
 page._touchState = { fixtureId: '', rodId: String(emptyRod.id), start: emptyRodPoint, last: emptyRodPoint, moved: false, dragging: false }
 page._gesture = { type: 'single', view: { ...page._view } }
-page.onCanvasTouchEnd({ touches: [] })
+page.onCanvasTouchEnd({ touches: [], changedTouches: [{ x: emptyRodPoint.x, y: emptyRodPoint.y }] })
 assert.equal(page.data.placementVisible, true, 'a rod tap should open its placement card')
 assert.equal(page._canvasNode, null, 'rod-tap placement must suspend the native stage node')
 assert.equal(stageBeforeRodTap.frames.size, 0, 'rod-tap placement must cancel any pending stage RAF')

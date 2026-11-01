@@ -115,10 +115,11 @@ function testLandscapeRouteRetired() {
   const app = JSON.parse(fs.readFileSync(path.join(root, 'app.json'), 'utf8'))
   const portrait = JSON.parse(fs.readFileSync(path.join(root, 'pages/dmx-layout/dmx-layout.json'), 'utf8'))
   assert(!app.pages.includes('pages/dmx-layout-landscape/dmx-layout-landscape'), 'landscape page is no longer registered')
+  assert(app.pages.includes('pages/dmx-layout/dmx-layout'), 'the registered layout page is the shared route for both orientations')
   assert.equal(portrait.pageOrientation, 'portrait', 'layout route is explicitly portrait')
   const factory = fs.readFileSync(path.join(root, 'pages/dmx-layout/page-factory.js'), 'utf8')
   assert(!factory.includes('openLandscapeLayout'), 'factory exposes no route to the retired page')
-  for (const page of ['pages/dmx-layout/dmx-layout', 'pages/dmx-layout-landscape/dmx-layout-landscape']) {
+  for (const page of ['pages/dmx-layout/dmx-layout']) {
     const markup = fs.readFileSync(path.join(root, page + '.wxml'), 'utf8')
     const styles = fs.readFileSync(path.join(root, page + '.wxss'), 'utf8')
     assert(!markup.includes('layout-orientation-button'), `${page} has no orientation control`)

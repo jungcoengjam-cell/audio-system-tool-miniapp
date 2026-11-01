@@ -1,10 +1,11 @@
 const { vibrate } = require('../../utils/haptics')
 const { startMeasurement } = require('../../utils/performance')
 const { drawAndExportReport } = require('../../utils/report-canvas')
-const { getExportDimensions, roundedRect } = require('../../utils/report-drawing')
+const { getExportDimensions, roundedRect, strokeRoundedRect } = require('../../utils/report-drawing')
+const nativeImagePreview = require('../native-image-preview')
+const { getResultImageTheme } = require('../result-image-theme')
 const {
   isPageContextCurrent,
-  previewGeneratedImage,
   saveGeneratedImage,
   shareGeneratedImage,
 } = require('../../utils/report-image-actions')
@@ -27,6 +28,28 @@ const COLORS = {
   tertiary: '#778181',
   line: '#d8e5e2',
   warningText: '#80530f',
+  mintBorder: '#c5e5de',
+  blueBorder: '#d6e5f4',
+  card: '#ffffff',
+  parameterLine: '#e4e8e8',
+  warningBorder: '#f0d4ad',
+}
+const DARK_COLORS = {
+  background: '#000000',
+  mint: '#123a34',
+  blue: '#14283a',
+  warning: '#302616',
+  text: '#f5f5f7',
+  accent: '#54d6bb',
+  secondary: '#c5c5cb',
+  tertiary: '#aeaeb2',
+  line: '#38383a',
+  warningText: '#ffd18a',
+  mintBorder: '#2d6257',
+  blueBorder: '#33465c',
+  card: '#1c1c1e',
+  parameterLine: '#38383a',
+  warningBorder: '#684c24',
 }
 
 function fontString(size, weight = 400) {
@@ -188,76 +211,59 @@ function drawLines(context, lines, x, y, lineHeight, size, color, weight = 400, 
   lines.forEach((line, index) => context.fillText(line, x, y + (index * lineHeight)))
 }
 
-function strokeRoundedRect(context, x, y, width, height, radius, color) {
-  const r = Math.min(radius, width / 2, height / 2)
-  context.beginPath()
-  context.moveTo(x + r, y)
-  context.lineTo(x + width - r, y)
-  context.quadraticCurveTo(x + width, y, x + width, y + r)
-  context.lineTo(x + width, y + height - r)
-  context.quadraticCurveTo(x + width, y + height, x + width - r, y + height)
-  context.lineTo(x + r, y + height)
-  context.quadraticCurveTo(x, y + height, x, y + height - r)
-  context.lineTo(x, y + r)
-  context.quadraticCurveTo(x, y, x + r, y)
-  context.closePath()
-  context.setStrokeStyle(color)
-  context.setLineWidth(1)
-  context.stroke()
-}
-
-function drawCableReport(context, payload, layout) {
-  context.setFillStyle(COLORS.background)
+function drawCableReport(context, payload, layout, theme = 'light') {
+  const colors = theme === 'dark' ? DARK_COLORS : COLORS
+  context.setFillStyle(colors.background)
   context.fillRect(0, 0, REPORT_WIDTH, layout.height)
 
   layout.sections.forEach((section) => {
     if (section.type === 'title') {
-      drawLines(context, section.lines, SIDE_MARGIN, section.y + 30, section.lineHeight, 30, COLORS.text, 650)
+      drawLines(context, section.lines, SIDE_MARGIN, section.y + 30, section.lineHeight, 30, colors.text, 650)
       return
     }
 
     if (section.type === 'main') {
-      roundedRect(context, SIDE_MARGIN, section.y, CARD_WIDTH, section.height, 22, COLORS.mint)
-      strokeRoundedRect(context, SIDE_MARGIN, section.y, CARD_WIDTH, section.height, 22, '#c5e5de')
+      roundedRect(context, SIDE_MARGIN, section.y, CARD_WIDTH, section.height, 22, colors.mint)
+      strokeRoundedRect(context, SIDE_MARGIN, section.y, CARD_WIDTH, section.height, 22, colors.mintBorder)
       const center = REPORT_WIDTH / 2
       let lineY = section.y + 26
-      drawLines(context, section.labelLines, center, lineY + 23, 32, 23, COLORS.accent, 650, 'center')
+      drawLines(context, section.labelLines, center, lineY + 23, 32, 23, colors.accent, 650, 'center')
       lineY += (section.labelLines.length * 32) + 10
-      drawLines(context, section.specLines, center, lineY + 72, 84, 72, COLORS.text, 700, 'center')
+      drawLines(context, section.specLines, center, lineY + 72, 84, 72, colors.text, 700, 'center')
       lineY += (section.specLines.length * 84) + 12
-      drawLines(context, section.descriptionLines, center, lineY + 22, 32, 22, COLORS.secondary, 400, 'center')
+      drawLines(context, section.descriptionLines, center, lineY + 22, 32, 22, colors.secondary, 400, 'center')
       return
     }
 
     if (section.type === 'metrics') {
       section.metrics.forEach((metric) => {
-        roundedRect(context, metric.x, section.y, metric.width, section.height, 22, COLORS.blue)
-        strokeRoundedRect(context, metric.x, section.y, metric.width, section.height, 22, '#d6e5f4')
+        roundedRect(context, metric.x, section.y, metric.width, section.height, 22, colors.blue)
+        strokeRoundedRect(context, metric.x, section.y, metric.width, section.height, 22, colors.blueBorder)
         const center = metric.x + (metric.width / 2)
         let metricY = section.y + ((section.height - metric.contentHeight) / 2)
-        drawLines(context, metric.labelLines, center, metricY + 24, 32, 24, COLORS.secondary, 600, 'center')
+        drawLines(context, metric.labelLines, center, metricY + 24, 32, 24, colors.secondary, 600, 'center')
         metricY += (metric.labelLines.length * 32) + 10
-        drawLines(context, metric.valueLines, center, metricY + 30, 40, 30, COLORS.text, 650, 'center')
+        drawLines(context, metric.valueLines, center, metricY + 30, 40, 30, colors.text, 650, 'center')
       })
       return
     }
 
     if (section.type === 'parameters') {
-      drawLines(context, section.titleLines, SIDE_MARGIN, section.y + 32, 40, 32, COLORS.text, 650)
-      roundedRect(context, SIDE_MARGIN, section.cardY, CARD_WIDTH, section.cardHeight, 22, '#ffffff')
-      strokeRoundedRect(context, SIDE_MARGIN, section.cardY, CARD_WIDTH, section.cardHeight, 22, COLORS.line)
+      drawLines(context, section.titleLines, SIDE_MARGIN, section.y + 32, 40, 32, colors.text, 650)
+      roundedRect(context, SIDE_MARGIN, section.cardY, CARD_WIDTH, section.cardHeight, 22, colors.card)
+      strokeRoundedRect(context, SIDE_MARGIN, section.cardY, CARD_WIDTH, section.cardHeight, 22, colors.line)
       let rowY = section.cardY
       section.parameterRows.forEach((row, index) => {
         drawLines(context, row.labelLines, section.labelX, rowY + 14 + 26,
-          row.lineHeight, 26, COLORS.secondary, 650)
+          row.lineHeight, 26, colors.secondary, 650)
         drawLines(context, row.valueLines, section.valueX, rowY + 14 + 26,
-          row.lineHeight, 26, COLORS.text, 500)
+          row.lineHeight, 26, colors.text, 500)
         rowY += row.height
         if (index < section.parameterRows.length - 1) {
           context.beginPath()
           context.moveTo(SIDE_MARGIN + 18, rowY)
           context.lineTo(SIDE_MARGIN + CARD_WIDTH - 18, rowY)
-          context.setStrokeStyle('#e4e8e8')
+          context.setStrokeStyle(colors.parameterLine)
           context.setLineWidth(1)
           context.stroke()
         }
@@ -266,15 +272,15 @@ function drawCableReport(context, payload, layout) {
     }
 
     if (section.type === 'warnings') {
-      roundedRect(context, SIDE_MARGIN, section.y, CARD_WIDTH, section.height, 22, COLORS.warning)
-      strokeRoundedRect(context, SIDE_MARGIN, section.y, CARD_WIDTH, section.height, 22, '#f0d4ad')
+      roundedRect(context, SIDE_MARGIN, section.y, CARD_WIDTH, section.height, 22, colors.warning)
+      strokeRoundedRect(context, SIDE_MARGIN, section.y, CARD_WIDTH, section.height, 22, colors.warningBorder)
       const x = SIDE_MARGIN + CARD_PADDING
       let lineY = section.y + 24
       if (section.warningLines.length) {
-        drawLines(context, [section.title], x, lineY + 18, 22, 18, COLORS.warningText, 650)
+        drawLines(context, [section.title], x, lineY + 18, 22, 18, colors.warningText, 650)
         lineY += 22 + 8
         section.warningLines.forEach((lines) => {
-          drawLines(context, lines, x, lineY + 18, 30, 21, COLORS.warningText, 400)
+          drawLines(context, lines, x, lineY + 18, 30, 21, colors.warningText, 400)
           lineY += (lines.length * 30) + 12
         })
       }
@@ -289,21 +295,6 @@ function cancelReportPreviewClose(page) {
 
 function buildReportSignature(record) {
   return record ? [record.module, record.title, record.summary, record.resultText].join('|') : ''
-}
-
-function rectOf(value) {
-  if (!value?.rect || typeof value.rect !== 'object') return value
-  return {
-    ...value.rect,
-    width: value.rect.width ?? value.width,
-    height: value.rect.height ?? value.height,
-  }
-}
-
-function styleNumber(value, name, fallback) {
-  const style = value?.computedStyle || value || {}
-  const number = Number.parseFloat(style[name])
-  return Number.isFinite(number) ? number : fallback
 }
 
 function createCableReportMethods() {
@@ -337,12 +328,14 @@ function createCableReportMethods() {
       }
 
       const signature = this.getResultReportSignature(record)
+      const theme = getResultImageTheme()
       const inputRevision = this._inputRevision || 0
       const reopeningPreview = this.data.resultReportPreviewVisible && this.data.resultReportPreviewClosing
       const wasPreviewVisible = Boolean(this.data.resultReportPreviewVisible)
       cancelReportPreviewClose(this)
       this._reportPreviewLayoutRevision = (this._reportPreviewLayoutRevision || 0) + 1
-      if (this.data.resultReportImagePath && this.resultReportSignature === signature) {
+      if (this.data.resultReportImagePath && this.resultReportSignature === signature
+        && this._resultReportImageTheme === theme) {
         const cachedPath = this.data.resultReportImagePath
         const revision = (this.resultReportRevision || 0) + 1
         this.resultReportRevision = revision
@@ -352,13 +345,25 @@ function createCableReportMethods() {
           resultReportPreviewVisible: reopeningPreview,
           resultReportPreviewClosing: false,
         }, () => {
-          const isCurrent = () => !this._isUnloaded
+          const cacheCheckCurrent = () => !this._isUnloaded
             && this._reportCacheCheckRevision === revision
             && this.resultReportRevision === revision
             && (this._inputRevision || 0) === inputRevision
             && this.getResultReportSignature(this.getRecordPayload()) === signature
+          const retryWithCurrentTheme = () => {
+            if (!cacheCheckCurrent()) return
+            this._reportCacheCheckRevision = 0
+            this.setData({ isCheckingResultReportCache: false }, () => {
+              if (!this._isUnloaded && this.resultReportRevision === revision
+                && (this._inputRevision || 0) === inputRevision
+                && this.getResultReportSignature(this.getRecordPayload()) === signature) {
+                this.generateResultReportImage()
+              }
+            })
+          }
           const showCached = () => {
-            if (!isCurrent()) return
+            if (!cacheCheckCurrent()) return
+            if (getResultImageTheme() !== theme) return retryWithCurrentTheme()
             this._reportCacheCheckRevision = 0
             cancelReportPreviewClose(this)
             this.setData({ isCheckingResultReportCache: false, resultReportPreviewVisible: true, resultReportPreviewClosing: false }, () => {
@@ -370,7 +375,7 @@ function createCableReportMethods() {
             })
           }
           const regenerate = () => {
-            if (!isCurrent()) return
+            if (!cacheCheckCurrent()) return
             this._reportCacheCheckRevision = 0
             this.resultReportSignature = ''
             this.setData({
@@ -424,25 +429,34 @@ function createCableReportMethods() {
         resultReportPreviewClosing: false,
       }, () => {
         if (this.resultReportRevision !== revision) return
+        const generationCurrent = () => !this._isUnloaded
+          && this.resultReportRevision === revision
+          && (this._inputRevision || 0) === inputRevision
+          && this.getResultReportSignature(this.getRecordPayload()) === signature
+        const isCurrent = () => {
+          if (!generationCurrent()) return false
+          if (getResultImageTheme() === theme) return true
+          this.finishResultReportGeneration(revision)
+          return false
+        }
         if (typeof wx.showLoading === 'function') wx.showLoading({ title: '正在生成图片', mask: true })
         try {
           drawAndExportReport(this, {
             canvasId: REPORT_CANVAS_ID,
-            isCurrent: () => !this._isUnloaded
-              && this.resultReportRevision === revision
-              && (this._inputRevision || 0) === inputRevision
-              && this.getResultReportSignature(this.getRecordPayload()) === signature,
+            isCurrent,
             width: REPORT_WIDTH,
             height: layout.height,
             draw: (context) => {
               const finishDrawing = startMeasurement('线材选型/结果图绘制')
-              drawCableReport(context, payload, layout)
+              drawCableReport(context, payload, layout, theme)
               finishDrawing({ height: layout.height })
             },
             getExportOptions: () => getExportDimensions(layout.height),
             startExportMeasurement: (dimensions) => startMeasurement('线材选型/结果图导出', dimensions),
             onSuccess: (tempFilePath) => {
+              if (!isCurrent()) return
               this.resultReportSignature = signature
+              this._resultReportImageTheme = theme
               this.finishResultReportGeneration(revision, {
                 resultReportImagePath: tempFilePath,
                 resultReportPreviewVisible: true,
@@ -451,11 +465,13 @@ function createCableReportMethods() {
                 && isPageContextCurrent(this)) vibrate('medium')
             },
             onFailure: () => {
+              if (!isCurrent()) return
               this.finishResultReportGeneration(revision)
               wx.showToast({ title: '图片生成失败，请重试', icon: 'none' })
             },
           })
         } catch (error) {
+          if (!isCurrent()) return
           this.finishResultReportGeneration(revision)
           wx.showToast({ title: '图片生成失败，请重试', icon: 'none' })
         }
@@ -463,6 +479,7 @@ function createCableReportMethods() {
     },
 
     hideResultReportPreview() {
+      nativeImagePreview.cancel(this)
       cancelReportPreviewClose(this)
       this._reportPreviewLayoutRevision = (this._reportPreviewLayoutRevision || 0) + 1
       this._reportCacheCheckRevision = 0
@@ -486,107 +503,16 @@ function createCableReportMethods() {
     updateResultReportPreviewLayout() {
       const path = this.data.resultReportImagePath
       const signature = this.resultReportSignature
-      const inputRevision = this._inputRevision || 0
       if (!this._pageVisible || this._isUnloaded || !this.data.resultReportPreviewVisible
         || this.data.resultReportPreviewClosing || !path || !signature) return false
-      const revision = (this._reportPreviewLayoutRevision || 0) + 1
-      this._reportPreviewLayoutRevision = revision
+      this._reportPreviewLayoutRevision = (this._reportPreviewLayoutRevision || 0) + 1
       if (this.data.resultReportPreviewStyle) this.setData({ resultReportPreviewStyle: '' })
-      if (typeof wx.createSelectorQuery !== 'function') return false
-      const nodes = {}
-      let query
-      try {
-        query = wx.createSelectorQuery().in(this)
-        const read = (selector, styles = []) => {
-          const selection = query.select(selector)
-          const callback = (value) => { nodes[selector] = value }
-          if (typeof selection.fields === 'function') {
-            selection.fields({ rect: true, size: true, computedStyle: styles }, callback)
-          } else {
-            selection.boundingClientRect(callback)
-          }
-        }
-        read('.page-root')
-        read('.result-report-preview-overlay', ['paddingTop', 'paddingBottom'])
-        read('.result-report-preview-sheet', ['paddingTop', 'paddingBottom', 'borderTopWidth', 'borderBottomWidth'])
-        read('.result-report-preview-header')
-        read('.result-report-preview-actions')
-        read('.result-report-preview-scroll', [
-          'borderTopWidth', 'borderBottomWidth', 'borderLeftWidth', 'borderRightWidth',
-        ])
-        read('.result-report-preview-image')
-      } catch (error) {
-        return false
-      }
-      const current = () => revision === this._reportPreviewLayoutRevision
-        && !this._isUnloaded && this._pageVisible
-        && this.data.resultReportPreviewVisible && !this.data.resultReportPreviewClosing
-        && this.data.resultReportImagePath === path
-        && this.resultReportSignature === signature
-        && (this._inputRevision || 0) === inputRevision
-        && this.getResultReportSignature(this.getRecordPayload()) === signature
-      try {
-        query.exec(() => {
-          if (!current()) return
-          const root = rectOf(nodes['.page-root'])
-          const overlay = rectOf(nodes['.result-report-preview-overlay'])
-          const sheet = rectOf(nodes['.result-report-preview-sheet'])
-          const header = rectOf(nodes['.result-report-preview-header'])
-          const actions = rectOf(nodes['.result-report-preview-actions'])
-          const scroll = rectOf(nodes['.result-report-preview-scroll'])
-          const image = rectOf(nodes['.result-report-preview-image'])
-          const rootTop = Number(root?.top) || 0
-          const rootHeight = Number(root?.height) || 0
-          const overlayTop = Number(overlay?.top)
-          const overlayHeight = Number(overlay?.height)
-          const viewportTop = Math.max(rootTop, Number.isFinite(overlayTop) ? overlayTop : rootTop)
-          const rootBottom = rootTop + rootHeight
-          const overlayBottom = Number.isFinite(overlay?.bottom)
-            ? overlay.bottom
-            : (Number.isFinite(overlayHeight) ? (Number.isFinite(overlayTop) ? overlayTop : rootTop) + overlayHeight : rootBottom)
-          const viewportBottom = Math.min(rootBottom || overlayBottom, overlayBottom)
-          const viewportHeight = Math.max(0, viewportBottom - viewportTop)
-          const scale = (Number(root?.width) || 390) / REPORT_WIDTH
-          const overlayPaddingTop = styleNumber(nodes['.result-report-preview-overlay'], 'paddingTop', 32 * scale)
-          const overlayPaddingBottom = styleNumber(nodes['.result-report-preview-overlay'], 'paddingBottom', 16 * scale)
-          const sheetPaddingTop = styleNumber(nodes['.result-report-preview-sheet'], 'paddingTop', 20 * scale)
-          const sheetPaddingBottom = styleNumber(nodes['.result-report-preview-sheet'], 'paddingBottom', 16 * scale)
-          const sheetRectHeight = Number(sheet?.height) || 0
-          const sheetTopGap = sheetRectHeight > 0 ? Math.max(0, Number(sheet.top) - viewportTop) : 0
-          const sheetBottomGap = sheetRectHeight > 0 ? Math.max(0, viewportBottom - Number(sheet.bottom)) : 0
-          const sheetSweepHeight = sheetRectHeight + sheetTopGap + sheetBottomGap
-          const availableSheetHeight = Math.max(0, Math.min(viewportHeight,
-            sheetSweepHeight > 0 ? sheetSweepHeight : viewportHeight)
-            - overlayPaddingTop - overlayPaddingBottom)
-          const sheetBorders = styleNumber(nodes['.result-report-preview-sheet'], 'borderTopWidth', 1)
-            + styleNumber(nodes['.result-report-preview-sheet'], 'borderBottomWidth', 1)
-          const fixedHeight = sheetPaddingTop + sheetPaddingBottom + sheetBorders
-            + (Number(header?.height) || 0) + (Number(actions?.height) || 0)
-          const availableScrollHeight = Math.max(0, availableSheetHeight - fixedHeight)
-          const scrollBorders = styleNumber(nodes['.result-report-preview-scroll'], 'borderTopWidth', 1)
-            + styleNumber(nodes['.result-report-preview-scroll'], 'borderBottomWidth', 1)
-          const horizontalBorders = styleNumber(nodes['.result-report-preview-scroll'], 'borderLeftWidth', 1)
-            + styleNumber(nodes['.result-report-preview-scroll'], 'borderRightWidth', 1)
-          const scrollWidth = Number(scroll?.width) || Math.max(0, (Number(root?.width) || 0) - (76 * scale))
-          const imageWidth = Number(image?.width) || Math.max(0, scrollWidth - horizontalBorders)
-          const naturalImageHeight = (Number(this.data.resultReportCanvasHeight) || 0)
-            * imageWidth / REPORT_WIDTH
-          if (!viewportHeight || !availableSheetHeight || !imageWidth || !naturalImageHeight) return
-          const scrollHeight = Math.min(naturalImageHeight + scrollBorders, availableScrollHeight)
-          const nextStyle = '--cable-report-sheet-max-height:' + Math.round(availableSheetHeight * 100) / 100
-            + 'px;--cable-report-scroll-height:' + Math.round(scrollHeight * 100) / 100 + 'px'
-          if (this.data.resultReportPreviewStyle !== nextStyle) {
-            this.setData({ resultReportPreviewStyle: nextStyle })
-          }
-        })
-      } catch (error) {
-        return false
-      }
       return true
     },
     closeResultReportPreview(immediate) {
       if (!this.data.resultReportPreviewVisible
         || (this.data.resultReportPreviewClosing && immediate !== true)) return false
+      nativeImagePreview.cancel(this)
       if (immediate !== true && this._pageVisible && !this._isUnloaded && isPageContextCurrent(this)) vibrate('light')
       if (immediate === true || !this._pageVisible || this._isUnloaded) {
         this.setData(this.hideResultReportPreview())
@@ -621,15 +547,16 @@ function createCableReportMethods() {
         this.setData(this.invalidateResultReportPreview())
         return false
       }
-      return previewGeneratedImage(path)
+      return nativeImagePreview.preview(this, path,
+        () => this.setData(this.hideResultReportPreview()))
     },
 
     shareResultReportImage() {
       const path = this.data.resultReportImagePath
       if (!path || !this.data.resultReportPreviewVisible || this.data.resultReportPreviewClosing
         || !this._pageVisible || this._isUnloaded) return false
-      shareGeneratedImage(path)
-      return true
+      return nativeImagePreview.share(this, path, shareGeneratedImage,
+        () => this.setData(this.hideResultReportPreview()))
     },
 
     saveResultReportImage() {

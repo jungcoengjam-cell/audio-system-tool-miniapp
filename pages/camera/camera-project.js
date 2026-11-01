@@ -222,13 +222,12 @@ function createCameraProjectMethods() {
     },
 
     onCameraProjectSearch(event) {
-      if (!this.data.projectDialogVisible || this.data.projectDialogClosing) return false
+      if (!this.data.projectDialogVisible || this.data.projectDialogClosing) return
       const projectSearchText = String(event?.detail?.value || '')
       this.setData({
         projectSearchText,
         filteredProjects: getFilteredProjects(this.data.projectProjects, projectSearchText),
       })
-      return true
     },
 
     openCameraProjectCreateForm() {
@@ -244,21 +243,18 @@ function createCameraProjectMethods() {
     },
 
     onCameraProjectNameInput(event) {
-      if (!isDialogCurrent(this) || this.data.projectDialogStep !== 'create') return false
+      if (!isDialogCurrent(this) || this.data.projectDialogStep !== 'create') return
       this.setData({ projectNameText: String(event?.detail?.value || ''), projectError: '', projectLoadFailed: false })
-      return true
     },
 
     onCameraProjectConfigNameInput(event) {
-      if (!isDialogCurrent(this) || this.data.projectDialogStep !== 'confirm') return false
+      if (!isDialogCurrent(this) || this.data.projectDialogStep !== 'confirm') return
       this.setData({ projectConfigName: String(event?.detail?.value || ''), projectNameError: '', projectError: '' })
-      return true
     },
 
     onCameraProjectConfigNoteInput(event) {
-      if (!isDialogCurrent(this) || this.data.projectDialogStep !== 'confirm') return false
+      if (!isDialogCurrent(this) || this.data.projectDialogStep !== 'confirm') return
       this.setData({ projectConfigNote: String(event?.detail?.value || ''), projectNoteError: '', projectError: '' })
-      return true
     },
 
     beginCameraProjectInputFocus(event) {

@@ -45,6 +45,10 @@
 .interior-record-symbol,.interior-kind-symbol{display:flex;box-sizing:border-box;width:44px;height:44px;flex:0 0 44px;align-items:center;justify-content:center;border-radius:15rpx;background:var(--theme-accent-soft);color:var(--theme-accent-text);font-size:22px;font-weight:650}
 .interior-kind-wiring{background:rgba(255,159,10,.14);color:#b66a00}
 .interior-kind-lighting{background:rgba(52,199,89,.14);color:#188548}
+.interior-lighting-summary{gap:10rpx}
+.interior-lighting-summary-main{display:flex;box-sizing:border-box;min-width:0;min-height:44px;flex:1;align-items:center;gap:14rpx}
+button.interior-lighting-address{box-sizing:border-box;display:inline-flex;width:auto;min-width:76px;max-width:none;flex:0 0 auto;padding-right:12rpx;padding-left:12rpx;align-items:center;justify-content:center;white-space:nowrap}
+.interior-lighting-error-address{margin-top:8rpx}
 .interior-item-copy{min-width:0;flex:1}
 .interior-item-title-row{min-width:0;flex-wrap:wrap;gap:6rpx 10rpx}
 .interior-item-title{min-width:0;flex:1;color:var(--theme-text);font-size:15px;font-weight:650;line-height:1.4;overflow-wrap:anywhere}

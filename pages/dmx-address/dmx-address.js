@@ -36,6 +36,7 @@ getFixtureSearchScrollMetrics,
 getAddressCardChipColumns,
 } = require('./viewport')
 const { vibrate } = require('../../utils/haptics')
+const nativeImagePreview = require('../native-image-preview')
 const { isPageContextCurrent } = require('../../utils/report-image-actions')
 const {
 cancelResultReportGeneration,
@@ -238,6 +239,7 @@ return `${fixtures[0].addressText}–${endAddressText(fixtures[fixtures.length -
 }
 function getFixturePlacementLabel(layout, stableId) {
 const position = layout?.positionsById?.[stableId]
+if (position?.kind === 'ground' || position?.ground === true) return '舞台地面'
 if (!position?.rodId) return '未放置'
 const rods = [
 ...(layout.internalRods || []),
@@ -499,6 +501,7 @@ vibrate('light')
 this.setData({ activeWorkspace: workspace })
 },
 onShow() {
+nativeImagePreview.onShow(this)
 this._pageVisible = true
 this.resumeDeleteUndoExpiry()
 const restoreFixtureSearch = Boolean(this._fixtureSearchNeedsRefresh
@@ -721,6 +724,8 @@ modelLine: fixture ? `${fixture.name} ${fixture.model}` : group.name || '历史�
 rangeText: getFixtureRange(fixtures),
 fixtureCountValue: Number(group.fixtureCount) || 0,
 checkedCount,
+hasAddressMarks: fixtures.length > 0,
+addressMarkCountText: `已设 ${checkedCount}/${fixtures.length}`,
 hasChannelGuide: fixtures.some((item) => item.channelGuideAvailable),
 fixtureChips: fixtures,
 cardChipColumns,
@@ -1038,6 +1043,7 @@ this._pendingProjectSave.replace,
 )
 },
 onHide() {
+const returningFromPreview = nativeImagePreview.onHide(this)
 this._pageVisible = false
 this._viewportUpdateToken += 1
 this._modalEpoch += 1
@@ -1054,7 +1060,7 @@ this.flushFixtureProgressWrite()
 const preserveFixturePicker = !this.data.fixturePickerClosing
 && Boolean(this.data.fixtureSearchOpen || this.data.fixtureBatchOpen)
 this.cancelFixtureSearch(preserveFixturePicker)
-this.dismissMainSheetsImmediately({ preserveFixturePicker })
+this.dismissMainSheetsImmediately({ preserveFixturePicker, preserveResultReportPreview: returningFromPreview })
 },
 onUnload() {
 this._pageAlive = false
@@ -2014,7 +2020,11 @@ const rodIds = new Set(rods.map((rod) => String(rod.id)))
 const snapshotPositions = snapshotLayout.positionsById || {}
 for (const fixtureId of current.fixtureIdsByGroup[groupId]) {
 const position = snapshotPositions[fixtureId]
-if (position?.rodId && rodIds.has(String(position.rodId))) layout.positionsById[fixtureId] = position
+const groundPosition = (position?.kind === 'ground' || position?.ground === true)
+&& Number.isFinite(Number(position.x)) && Number.isFinite(Number(position.y))
+&& Number(position.x) >= 0 && Number(position.x) <= 1
+&& Number(position.y) >= 0 && Number(position.y) <= 1
+if ((position?.rodId && rodIds.has(String(position.rodId))) || groundPosition) layout.positionsById[fixtureId] = position
 }
 current.layout = layout
 }

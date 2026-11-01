@@ -1,11 +1,11 @@
-const { getProductDetail, markProductViewed } = require('../../utils/products')
+const { getProductDetail, markProductViewed } = require('./utils/products')
 const { readPreferences, writePreferencesDetailed } = require('../../utils/preferences')
 const { vibrate } = require('../../utils/haptics')
 const {
   inspectDmxPreferences,
   readDmxPreferencesStatus,
   saveDmxProductImport,
-} = require('../../utils/dmx-product-import')
+} = require('./utils/dmx-product-import')
 
 const CALCULATOR_PATHS = {
   limiter: '/pages/limiter/limiter',

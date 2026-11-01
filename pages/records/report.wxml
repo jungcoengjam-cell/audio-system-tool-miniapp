@@ -19,7 +19,6 @@
       <view class="report-project-card">
         <view class="report-kicker">项目</view>
         <view class="report-project-name">{{project.name}}</view>
-        <view class="report-project-id">项目编号：{{project.id}}</view>
       </view>
 
       <view wx:if="{{!totalCount}}" class="report-state-card report-empty-card">

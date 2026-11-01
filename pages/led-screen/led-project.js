@@ -190,10 +190,9 @@ function createLedProjectMethods() {
     },
 
     onProjectSearch(event) {
-      if (!isCurrentProjectEvent(this, event, 'select') || this.data.projectDialogStep !== 'select') return false
+      if (!isCurrentProjectEvent(this, event, 'select') || this.data.projectDialogStep !== 'select') return
       const projectSearchText = String(event?.detail?.value || '')
       this.setData({ projectSearchText, filteredProjects: filterProjects(this.data.projectProjects, projectSearchText) })
-      return true
     },
 
     beginProjectInputFocus(event) {
@@ -252,21 +251,18 @@ function createLedProjectMethods() {
     },
 
     onProjectNameInput(event) {
-      if (!isCurrentProjectEvent(this, event, 'create') || this.data.projectDialogStep !== 'create') return false
+      if (!isCurrentProjectEvent(this, event, 'create') || this.data.projectDialogStep !== 'create') return
       this.setData({ projectNameText: String(event?.detail?.value || ''), projectError: '', projectLoadFailed: false })
-      return true
     },
 
     onProjectConfigNameInput(event) {
-      if (!isCurrentProjectEvent(this, event, 'confirm') || this.data.projectDialogStep !== 'confirm') return false
+      if (!isCurrentProjectEvent(this, event, 'confirm') || this.data.projectDialogStep !== 'confirm') return
       this.setData({ projectConfigName: String(event?.detail?.value || ''), projectNameError: '', projectError: '' })
-      return true
     },
 
     onProjectConfigNoteInput(event) {
-      if (!isCurrentProjectEvent(this, event, 'confirm') || this.data.projectDialogStep !== 'confirm') return false
+      if (!isCurrentProjectEvent(this, event, 'confirm') || this.data.projectDialogStep !== 'confirm') return
       this.setData({ projectConfigNote: String(event?.detail?.value || ''), projectNoteError: '', projectError: '' })
-      return true
     },
 
     openProjectCreateForm(event) {

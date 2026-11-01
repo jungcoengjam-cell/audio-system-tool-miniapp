@@ -1,11 +1,14 @@
 const { vibrate } = require('../../utils/haptics')
-const { previewGeneratedImage, saveGeneratedImage, shareGeneratedImage } = require('../../utils/report-image-actions')
+const { saveGeneratedImage, shareGeneratedImage } = require('../../utils/report-image-actions')
+const nativeImagePreview = require('../native-image-preview')
+const { getResultImageTheme } = require('../result-image-theme')
 const {
   readLightingWorkspace,
   getLightingContexts,
   saveLightingScheme,
   switchLightingContext,
   calculateScheme,
+  fixtureFingerprint,
   TEMPORARY_CONTEXT_ID,
 } = require('./lighting-workspace')
 const {
@@ -47,6 +50,21 @@ function decodeRouteDisplayLabel(value) {
   const label = String(value || '')
   if (!/%[0-9a-f]{2}/i.test(label)) return label
   try { return decodeURIComponent(label) } catch (_) { return label }
+}
+
+function isGroundPosition(position) {
+  return Boolean(position && (position.kind === 'ground' || position.ground === true))
+}
+
+function readableTextOnColor(color) {
+  const match = /^#?([\da-f]{6})$/i.exec(String(color || ''))
+  if (!match) return '#1d1d1f'
+  const channels = [0, 2, 4].map((offset) => parseInt(match[1].slice(offset, offset + 2), 16) / 255)
+  const luminance = channels.map((value) => value <= 0.04045
+    ? value / 12.92
+    : ((value + 0.055) / 1.055) ** 2.4)
+    .reduce((sum, value, index) => sum + value * [0.2126, 0.7152, 0.0722][index], 0)
+  return luminance > 0.179 ? '#111111' : '#ffffff'
 }
 
 function landscapeContentBounds(geometry) {
@@ -109,13 +127,7 @@ function makeId(kind) {
 }
 
 function getThemeName() {
-  try {
-    const appInfo = typeof wx.getAppBaseInfo === 'function' ? wx.getAppBaseInfo() : null
-    const system = typeof wx.getSystemInfoSync === 'function' ? wx.getSystemInfoSync() : {}
-    return (appInfo && appInfo.theme) || system.theme || 'light'
-  } catch (error) {
-    return 'light'
-  }
+  return getResultImageTheme()
 }
 
 function rodRows(layout) {
@@ -207,10 +219,13 @@ function makeGroups(groups, fixtures, scheme, layout) {
       id,
       color: group.color,
       fixtureType: classifyFixtureVisualType({ ...fixture, groupName: fixture.groupName || group.name, fixtureModel: fixture.fixtureModel || group.fixtureModel }),
-      placed: Boolean(position && position.rodId && rodRows(layout).some((rod) => rod.id === position.rodId)),
+      placed: Boolean(isGroundPosition(position)
+        || position && position.rodId && rodRows(layout).some((rod) => rod.id === position.rodId)),
+      groundPlaced: isGroundPosition(position),
       rodId: position && position.rodId || '',
-      rodName: position && position.rodId ? rodName(layout, position.rodId) : '',
-      checked: Boolean(scheme && scheme.checksById && scheme.checksById[id]),
+      rodName: isGroundPosition(position) ? '舞台地面' : position && position.rodId ? rodName(layout, position.rodId) : '',
+      checked: Boolean(scheme && scheme.checksById && scheme.checksById[id]
+        && scheme.checksById[id].fingerprint === fixtureFingerprint(fixture)),
     })
   })
   return [...byGroup.values()].map((group) => ({ ...group, fixtures: group.fixtures.slice().sort(fixtureSort) }))
@@ -289,7 +304,8 @@ function createDmxLayoutPage(options = {}) {
   })
   const layoutInteractionDependencies = {
     ...layoutMethodRuntime,
-    LOCATE_RESULT_ROW_HEIGHT, classifyFixtureVisualType, clone, fixtureSort, layoutFingerprint, layoutFixturePoint,
+    LOCATE_RESULT_ROW_HEIGHT, calculateScheme, classifyFixtureVisualType, clone, fixtureFingerprint, fixtureSort,
+    layoutFingerprint, layoutFixturePoint, readLightingWorkspace, saveLightingScheme, schemeFingerprint,
     pointFromTouch, pointOnRod, projectPointToRod, rodName, rodRows, touchDistance,
     transformViewPointInverse, vibrate, zoomViewAt,
   }
@@ -299,8 +315,8 @@ function createDmxLayoutPage(options = {}) {
     ...layoutMethodRuntime,
     CANVAS_THEMES, EXPORT_CANVAS_ID, EXPORT_HEIGHT, EXPORT_WIDTH, buildLightingExportPages, calculateScheme, clone,
     configureCanvas2DNode, createCanvas2DAdapter, createDefaultStageLayout, createStageGeometry, layoutFingerprint, makeId,
-    migrateLegacyLayout, previewGeneratedImage, readLightingWorkspace, renderLightingExportPage, saveGeneratedImage,
-    schemeFingerprint, shareGeneratedImage, vibrate,
+    migrateLegacyLayout, readLightingWorkspace, renderLightingExportPage, saveGeneratedImage,
+    schemeFingerprint, shareGeneratedImage, vibrate, getTheme: getResultImageTheme,
   })
   const page = {
     data: {
@@ -356,9 +372,18 @@ function createDmxLayoutPage(options = {}) {
       previewViewportLeft: 0,
       previewViewportWidth: 100,
       previewRangeText: '暂无灯具',
+      placementTargetSummary: '当前目标：舞台地面',
+      placementPreviewEmptyText: '舞台地面暂无灯具',
+      placementTargets: [{ id: 'ground', name: '舞台地面', selected: true }],
+      groundPreviewItems: [],
       previewScrollIntoView: '',
       panelScrollIntoView: '',
-      placementNotice: '点选灯具即可上杆或下杆',
+      placementScrollIntoView: '',
+      placementPreviewFocus: false,
+      selectedFixtureAddress: '',
+      selectedFixtureChecked: false,
+      selectedFixtureInfoText: '',
+      selectedFixtureUnplaceEnabled: false,
       searchText: '',
       searchResultText: '',
       searchFixtureType: '',
@@ -370,6 +395,7 @@ function createDmxLayoutPage(options = {}) {
       lightingContexts: [],
       contextPickerIndex: 0,
       placementFilterText: '',
+      placementSearchExpanded: false,
       arrangementMode: 'preserve',
       layoutUndoVisible: false,
       layoutUndoLabel: '灯具已均匀排列',
@@ -405,6 +431,7 @@ function createDmxLayoutPage(options = {}) {
       this._fixtures = []
       this._groups = []
       this._layout = null
+      this._placementOrderSnapshot = null
       this._persistedLayoutFingerprint = layoutFingerprint(null)
       this._geometry = null
       this._geometryKey = ''
@@ -462,12 +489,13 @@ function createDmxLayoutPage(options = {}) {
     },
 
     onShow() {
+      nativeImagePreview.onShow(this)
       this._visible = true
       this._visibilityToken += 1
       const nextTheme = getThemeName() === 'dark' ? 'dark' : 'light'
       if (nextTheme !== this._theme || Boolean(this.data.darkMode) !== (nextTheme === 'dark')) {
         this._theme = nextTheme
-        this.clearImage()
+        if (this.data.isGeneratingImage) this.cancelExportGeneration()
       }
       if (this._layoutUndoSnapshot && Date.now() >= Number(this._layoutUndoExpiresAt || 0)) {
         this._layoutUndoSnapshot = null
@@ -514,7 +542,7 @@ function createDmxLayoutPage(options = {}) {
       const nextTheme = theme === 'dark' ? 'dark' : 'light'
       if (nextTheme === this._theme && Boolean(this.data.darkMode) === (nextTheme === 'dark')) return
       this._theme = nextTheme
-      this.clearImage()
+      if (this.data.isGeneratingImage) this.cancelExportGeneration()
       const visibilityToken = this._visibilityToken
       this.setData({ darkMode: nextTheme === 'dark' }, () => {
         if (!this._alive || !this._visible || this._visibilityToken !== visibilityToken) return
@@ -530,6 +558,7 @@ function createDmxLayoutPage(options = {}) {
     },
 
     invalidateExportPreview() {
+      nativeImagePreview.cancel(this)
       this.cancelSheetClose('export')
       this._generationToken += 1
       this._exportSnapshot = null
@@ -717,6 +746,12 @@ function createDmxLayoutPage(options = {}) {
     },
 
     onHide() {
+      const returningFromPreview = nativeImagePreview.onHide(this)
+      if (this._placementTransferPending || (this._queuedPanelFixtureTaps || []).length) this._placementTapCancelled = true
+      this.preparePlacementForHide()
+      this.cancelPendingFixtureTap()
+      this.cancelPlacementTransfer()
+      this._placementOrderSnapshot = null
       this._visible = false
       this._visibilityToken += 1
       this._measureToken += 1
@@ -735,7 +770,7 @@ function createDmxLayoutPage(options = {}) {
       if (this._undoTimer) clearTimeout(this._undoTimer)
       this._undoTimer = null
       this.clearPendingGesture()
-      this.invalidateExportPreview()
+      if (!returningFromPreview) this.invalidateExportPreview()
       this.setData({
         layoutPanelVisible: false,
         layoutPanelClosing: false,
@@ -743,8 +778,7 @@ function createDmxLayoutPage(options = {}) {
         placementClosing: false,
         reductionConfirm: null,
         reductionClosing: false,
-        previewVisible: false,
-        previewClosing: false,
+        ...(!returningFromPreview ? { previewVisible: false, previewClosing: false } : {}),
       })
       this.cancelExportGeneration()
       this.cancelSaveAllImages()
@@ -752,6 +786,8 @@ function createDmxLayoutPage(options = {}) {
 
     onUnload() {
       this._alive = false
+      this.cancelPendingFixtureTap()
+      this.cancelPlacementTransfer()
       this._visible = false
       this._visibilityToken += 1
       this._measureToken += 1
@@ -787,6 +823,7 @@ function createDmxLayoutPage(options = {}) {
 
     loadWorkspace() {
       if (!this._alive || !this._visible) return
+      this.cancelPendingFixtureTap()
       const loadToken = ++this._workspaceLoadToken
       const activeLoad = () => this._alive && this._visible && this._workspaceLoadToken === loadToken
       const previousContextId = this._contextId
@@ -819,6 +856,7 @@ function createDmxLayoutPage(options = {}) {
       this._persistedLayoutFingerprint = layoutFingerprint(workspace.scheme.layout)
       this._fixtures = calculated.result.fixtures || []
       this._groups = calculated.result.groups || []
+      this.setData({ selectedFixtureId: '' })
       let layout = clone(calculated.scheme.layout)
       let migrated = null
       if (!layout) {
@@ -989,15 +1027,42 @@ function createDmxLayoutPage(options = {}) {
     updateLayoutData(extra = {}) {
       const layout = this._layout || {}
       const groups = makeGroups(this._groups, this._fixtures, this._scheme, layout)
+      const targetId = String(this._activeRodId || '') || 'ground'
+      if (!this.data.placementVisible) this._placementOrderSnapshot = null
+      if (this.data.placementVisible && (!this._placementOrderSnapshot || this._placementOrderSnapshot.targetId !== targetId)) {
+        const orderedFixtures = groups.flatMap((group) => group.fixtures)
+        const isOnTarget = (fixture) => {
+          const position = layout.positionsById && layout.positionsById[String(fixture.stableId)]
+          return targetId === 'ground' ? isGroundPosition(position)
+            : Boolean(position && !isGroundPosition(position) && String(position.rodId) === targetId)
+        }
+        const priorityIds = orderedFixtures.filter(isOnTarget).map((fixture) => String(fixture.stableId))
+        const prioritySet = new Set(priorityIds)
+        this._placementOrderSnapshot = {
+          targetId,
+          priorityIds,
+          remainingIds: orderedFixtures.filter((fixture) => !prioritySet.has(String(fixture.stableId)))
+            .map((fixture) => String(fixture.stableId)),
+        }
+      }
+      const placementOrder = this._placementOrderSnapshot
+      const priorityIds = new Set(placementOrder && placementOrder.targetId === targetId ? placementOrder.priorityIds : [])
       const legend = makeCanvasLegend(groups, this.data.canvasShellHeight)
       const validRodIds = new Set(rodRows(layout).map((rod) => String(rod.id)))
       let placed = 0
       Object.values(layout.positionsById || {}).forEach((position) => {
-        if (position && validRodIds.has(String(position.rodId))) placed += 1
+        if ((position && validRodIds.has(String(position.rodId))) || isGroundPosition(position)) placed += 1
       })
-      const fixturesByRod = (layout.positionsById || {})[this._activeRodId]
       const activeRod = rodRows(layout).find((rod) => rod.id === this._activeRodId)
+      const rods = rodRows(layout)
       const fixtureById = new Map(this._fixtures.map((fixture) => [String(fixture.stableId), fixture]))
+      const selectedFixture = fixtureById.get(String(this.data.selectedFixtureId || ''))
+      const selectedCheck = selectedFixture && this._scheme && this._scheme.checksById
+        && this._scheme.checksById[String(selectedFixture.stableId)]
+      const selectedFixtureChecked = Boolean(selectedCheck
+        && selectedCheck.fingerprint === fixtureFingerprint(selectedFixture))
+      const groundFixtures = this._fixtures.filter((fixture) => isGroundPosition(layout.positionsById[String(fixture.stableId)]))
+      const groundCount = groundFixtures.length
       const preview = Object.entries(layout.positionsById || {})
         .filter(([, position]) => String(position.rodId) === String(this._activeRodId))
         .map(([id, position]) => ({ fixture: fixtureById.get(id), position }))
@@ -1013,6 +1078,17 @@ function createDmxLayoutPage(options = {}) {
         t: Number(position.t),
         scrollId: 'preview-' + String(fixture.stableId),
       }))
+      const groundPreviewItems = groundFixtures.map((fixture) => {
+        const position = layout.positionsById[String(fixture.stableId)]
+        return {
+          id: String(fixture.stableId), addressText: fixture.addressText,
+          fixtureModel: fixture.fixtureModel || fixture.groupName || '灯具',
+          fixtureType: classifyFixtureVisualType(fixture),
+          color: LAYOUT_GROUP_COLORS[Math.max(0, Number(fixture.groupIndex) || 0) % LAYOUT_GROUP_COLORS.length],
+          xPercent: Math.max(0, Math.min(100, Number(position.x) * 100)),
+          yPercent: Math.max(0, Math.min(100, Number(position.y) * 100)),
+        }
+      })
       const filter = String(this.data.placementFilterText || '').trim().toLocaleLowerCase()
       const filteredGroups = filter
         ? groups.map((group) => ({
@@ -1021,15 +1097,61 @@ function createDmxLayoutPage(options = {}) {
             .some((value) => String(value || '').toLocaleLowerCase().includes(filter))),
         })).filter((group) => group.fixtures.length)
         : groups
+      const withPlacementState = (fixture) => {
+        const placedOnSelectedRod = Boolean(this._activeRodId && fixture.placed
+          && !fixture.groundPlaced && String(fixture.rodId) === String(this._activeRodId))
+        const placedOnSelectedGround = Boolean(!this._activeRodId && fixture.groundPlaced)
+        const placedOnSelectedTarget = this._activeRodId ? placedOnSelectedRod : placedOnSelectedGround
+        const placedElsewhere = Boolean(fixture.placed && !placedOnSelectedTarget)
+        const placementLabel = placedOnSelectedTarget
+          ? this._activeRodId ? '已放在当前灯杆' : '已放在舞台地面'
+          : placedElsewhere ? '已放在' + fixture.rodName : '未放置'
+        return {
+          ...fixture,
+          placedOnSelectedRod,
+          placedOnSelectedGround,
+          placedOnSelectedTarget,
+          placedElsewhere,
+          shortRodName: fixture.groundPlaced ? '地面' : fixture.rodName.replace('灯杆', '杆').replace('面光杆', '面光'),
+          placedTextColor: readableTextOnColor(fixture.color),
+          priorityOnOpen: priorityIds.has(String(fixture.stableId)),
+          accessibleLabel: fixture.addressText + '，' + placementLabel + '，地址' + (fixture.checked ? '已设' : '未设'),
+        }
+      }
       const visibleGroups = filteredGroups.map((group) => ({
         ...group,
-        fixtures: group.fixtures.map((fixture) => ({
-          ...fixture,
-          placedOnSelectedRod: fixture.placed && String(fixture.rodId) === String(this._activeRodId),
-          placedElsewhere: fixture.placed && String(fixture.rodId) !== String(this._activeRodId),
-          shortRodName: fixture.rodName.replace('灯杆', '杆').replace('面光杆', '面光'),
-        })),
+        fixtures: group.fixtures.map(withPlacementState),
       }))
+      const visibleFixturesById = new Map(visibleGroups.flatMap((group) => group.fixtures)
+        .map((fixture) => [String(fixture.id), fixture]))
+      const makePriorityGroups = (ids) => {
+        const visibleIds = new Set(ids.map(String))
+        return visibleGroups.map((group) => ({
+          ...group,
+          fixtures: group.fixtures.filter((fixture) => visibleIds.has(String(fixture.id))),
+        })).filter((group) => group.fixtures.length)
+      }
+      const orderedPriorityIds = placementOrder && placementOrder.targetId === targetId ? placementOrder.priorityIds : []
+      const orderedRemainingIds = placementOrder && placementOrder.targetId === targetId ? placementOrder.remainingIds : []
+      const visiblePriorityIds = orderedPriorityIds.filter((id) => visibleFixturesById.has(String(id)))
+      const classifiedIds = new Set([...orderedPriorityIds, ...orderedRemainingIds].map(String))
+      const newlyVisibleIds = [...visibleFixturesById.keys()].filter((id) => !classifiedIds.has(String(id)))
+      const visibleRemainingIds = orderedRemainingIds.filter((id) => visibleFixturesById.has(String(id)))
+        .concat(newlyVisibleIds)
+      const priorityGroups = makePriorityGroups(visiblePriorityIds)
+      const remainingGroups = makePriorityGroups(visibleRemainingIds)
+      const placementGroups = [
+        ...priorityGroups.map((group) => ({
+          ...group,
+          renderId: 'priority:' + String(group.id),
+          showPriorityDivider: false,
+        })),
+        ...remainingGroups.map((group, index) => ({
+          ...group,
+          renderId: 'remaining:' + String(group.id),
+          showPriorityDivider: index === 0 && priorityGroups.length > 0,
+        })),
+      ]
       const previewStep = Math.max(1, Number(this._previewColumnStep) || 56)
       const previewTrackWidth = Math.max(1, previewItems.length * previewStep + (Number(this._previewTrackPadding) || 28))
       const selectedRodId = String(this._activeRodId || '')
@@ -1046,23 +1168,39 @@ function createDmxLayoutPage(options = {}) {
       const previewViewportLeft = maxScroll ? previewScrollLeft / maxScroll * Math.max(0, 100 - viewportWidth) : 0
       this._lastPreviewRodId = selectedRodId
       this._previewScrollLeft = previewScrollLeft
+      const selectedFixtureInfoText = selectedFixture
+        ? (selectedFixture.fixtureModel || selectedFixture.groupName || '灯具') + ' · ' + selectedFixture.channelCount + ' CH · 地址'
+          + (selectedFixtureChecked ? '已设置' : '未设置')
+        : ''
       this.setData({
         ...extra,
         layout: clone(layout),
         placedFixtureCount: placed,
         unplacedFixtureCount: Math.max(0, this._fixtures.length - placed),
-        placementGroups: visibleGroups,
+        placementGroups,
         ...legend,
         selectedRodId: this._activeRodId,
-        selectedRodName: activeRod ? rodName(layout, activeRod.id) : '选择一根灯杆',
+        selectedRodName: activeRod ? rodName(layout, activeRod.id) : '舞台地面',
         selectedRodCount: previewItems.length,
         selectedRodOverview: previewItems,
         previewItems,
+        placementTargets: [
+          { id: 'ground', name: '舞台地面', selected: !activeRod },
+          ...rods.map((rod) => ({ id: String(rod.id), name: rodName(layout, rod.id), selected: String(rod.id) === String(this._activeRodId) })),
+        ],
+        groundPreviewItems,
+        placementTargetSummary: activeRod
+          ? '当前目标：' + rodName(layout, activeRod.id) + ' · ' + previewItems.length + ' 台灯具'
+          : '当前目标：舞台地面 · ' + groundCount + ' 台灯具',
+        placementPreviewEmptyText: activeRod ? '当前灯杆暂无灯具' : groundCount ? '点地址图标查看灯具信息' : '舞台地面暂无灯具',
         previewViewportLeft,
         previewViewportWidth: viewportWidth,
         previewRangeText: previewItems.length
           ? '当前 ' + rangeStart + '–' + rangeEnd + ' / 共 ' + previewItems.length + ' 台'
-          : '暂无灯具',
+          : activeRod ? '当前灯杆暂无灯具' : '舞台地面已有 ' + groundCount + ' 台灯具',
+        selectedFixtureAddress: selectedFixture ? String(selectedFixture.addressText || '') : '',
+        selectedFixtureChecked,
+        selectedFixtureInfoText,
         geometryDirectionText: layout.apronDirection || 'bottom',
       })
     },
@@ -1156,9 +1294,13 @@ function createDmxLayoutPage(options = {}) {
           || this.isStageCanvasBlocked()
           || this._drawToken !== drawToken || this._canvasNode !== node || !this._layout || !this._canvasAdapter) return
         const size = this.canvasDimensions()
+        const checksById = this._scheme && this._scheme.checksById || {}
         const snapshot = {
           layout: this._layout,
-          fixtures: this._fixtures,
+          fixtures: this._fixtures.map((fixture) => ({
+            ...fixture,
+            checked: checksById[String(fixture.stableId)]?.fingerprint === fixtureFingerprint(fixture),
+          })),
           geometry: this.getGeometry(),
           theme: getCanvasTheme(this._theme || (this.data.darkMode ? 'dark' : 'light')),
           selectedFixtureId: this.data.selectedFixtureId || '',
@@ -1278,6 +1420,7 @@ function createDmxLayoutPage(options = {}) {
         this.setData({ contextPickerIndex: currentIndex })
         return
       }
+      this.cancelPendingFixtureTap()
       if (this._layoutDirty && !this.saveLayoutOnly(this._layout)) {
         const currentIndex = Math.max(0, (this.data.lightingContexts || []).findIndex((item) => String(item.id) === String(this._contextId)))
         this.setData({ contextPickerIndex: currentIndex })
@@ -1299,6 +1442,10 @@ function createDmxLayoutPage(options = {}) {
         return
       }
       if (String(switched.contextId || nextId) !== String(current.contextId)) {
+        this._placementOrderSnapshot = null
+        this.cancelPlacementTransfer()
+        this._placementTapCancelled = false
+        this._placementTargetNeedsReselect = false
         this.cancelAllSheetCloses()
         this.invalidatePendingSettingsConfirm()
         this.invalidatePendingClear()

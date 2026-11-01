@@ -32,6 +32,7 @@ const { attachResultEditor, captureEditorBaseline, createEditorNavigationMethods
 const { saveEditorRecord: saveEditorRecordAction, requestEditorLeave } = require('../../utils/result-record-actions')
 const wiringProject = require('./wiring-project')
 const { getWiringGuide } = require('./wiring-display')
+const { getResultImageTheme } = require('../result-image-theme')
 const {
   getLoadedScreenPhotos,
   loadScreenSolderPhotos,
@@ -106,21 +107,6 @@ function getWindowWidth() {
   return 375
 }
 
-function rectOf(value) {
-  if (!value?.rect || typeof value.rect !== 'object') return value
-  return {
-    ...value.rect,
-    width: value.rect.width ?? value.width,
-    height: value.rect.height ?? value.height,
-  }
-}
-
-function styleNumber(value, name, fallback) {
-  const style = value?.computedStyle || value || {}
-  const number = Number.parseFloat(style[name])
-  return Number.isFinite(number) ? number : fallback
-}
-
 function getPixelRatio() {
   try {
     const info = typeof wx.getWindowInfo === 'function' ? wx.getWindowInfo() : wx.getSystemInfoSync()
@@ -180,12 +166,7 @@ function distanceToPolyline(x, y, points) {
 }
 
 function getCurrentTheme() {
-  try {
-    const info = typeof wx.getAppBaseInfo === 'function' ? wx.getAppBaseInfo() : wx.getSystemInfoSync()
-    return info && info.theme === 'dark' ? 'dark' : 'light'
-  } catch (error) {
-    return 'light'
-  }
+  return getResultImageTheme()
 }
 
 function canUseResultReportPreview(page) {
@@ -504,16 +485,20 @@ Page({
     this._diagramRequestRevision = 0
     this._reportPending = false
     this._reportLoading = false
+    this._reportImageTheme = ''
     this._reportPreviewCloseTimer = null
     this._reportPreviewCloseRevision = 0
     this._selectorCloseTimer = null
     this._selectorCloseRevision = 0
     this._themeChangeHandler = ({ theme } = {}) => {
-      const nextTheme = theme === 'dark' ? 'dark' : 'light'
+      const nextTheme = theme === 'light' || theme === 'dark' ? theme : getCurrentTheme()
       if (nextTheme === this.data.theme || this._pageUnloaded) return
-      this.invalidateWiringGeneration()
+      this.cancelWiringGenerationForTheme()
       this.invalidateDiagramRender()
-      this.setData({ theme: nextTheme, diagramError: '' }, () => this.renderDiagram())
+      this.setData({ theme: nextTheme, diagramError: '' }, () => {
+        if (this.data.resultReportPreviewVisible) this.updateResultReportPreviewLayout()
+        else this.renderDiagram()
+      })
     }
     if (typeof wx.onThemeChange === 'function') wx.onThemeChange(this._themeChangeHandler)
 
@@ -612,8 +597,17 @@ Page({
     this._isWiringVisible = true
     this._wiringLifecycle.setVisible(true)
     syncPageFavorite(this)
-    if (this.data.resultReportPreviewVisible) this.updateResultReportPreviewLayout()
-    if (this._pageReady) this.renderDiagram()
+    const refreshVisibleContent = () => {
+      if (this.data.resultReportPreviewVisible) this.updateResultReportPreviewLayout()
+      else if (this._pageReady) this.renderDiagram()
+    }
+    const theme = getCurrentTheme()
+    if (theme === this.data.theme) refreshVisibleContent()
+    else {
+      this.cancelWiringGenerationForTheme()
+      this.invalidateDiagramRender()
+      this.setData({ theme, diagramError: '' }, refreshVisibleContent)
+    }
   },
 
   onResize() {
@@ -662,6 +656,7 @@ Page({
   },
 
   clearWiringGenerationState(clearImage = true, updatePage = true) {
+    if (clearImage) this._reportImageTheme = ''
     if (this._reportLoading && typeof wx.hideLoading === 'function') wx.hideLoading()
     this._reportLoading = false
     this._reportPending = false
@@ -696,6 +691,18 @@ Page({
     this.clearResultReportPreviewCloseTimer()
     if (this._wiringLifecycle) this._wiringLifecycle.invalidate()
     this.clearWiringGenerationState()
+  },
+
+  cancelWiringGenerationForTheme() {
+    if (!this._reportPending && !this._reportLoading && !this.data.isGeneratingResultReport) return false
+    if (this._wiringLifecycle) this._wiringLifecycle.invalidate()
+    if (this._reportLoading && typeof wx.hideLoading === 'function') wx.hideLoading()
+    this._reportLoading = false
+    this._reportPending = false
+    if (!this._pageUnloaded && this.data.isGeneratingResultReport) {
+      this.setData({ isGeneratingResultReport: false })
+    }
+    return true
   },
 
   clearResultReportPreviewCloseTimer() {
@@ -856,8 +863,9 @@ Page({
     return this.openWiringProjectSheet()
   },
 
-  finishWiringGeneration(token, changes = {}) {
+  finishWiringGeneration(token, changes = {}, imageTheme) {
     commitIfWiringTaskCurrent(this, token, () => {
+      if (imageTheme && changes.resultReportImagePath) this._reportImageTheme = imageTheme
       if (this._reportLoading && typeof wx.hideLoading === 'function') wx.hideLoading()
       this._reportLoading = false
       this._reportPending = false
@@ -1294,7 +1302,8 @@ Page({
       return
     }
     if (this.data.isGeneratingResultReport || this._reportPending) return
-    if (this.data.resultReportImagePath) {
+    const imageTheme = getCurrentTheme()
+    if (this.data.resultReportImagePath && this._reportImageTheme === imageTheme) {
       const previewWasHidden = !this.data.resultReportPreviewVisible
       this.clearResultReportPreviewCloseTimer()
       this.invalidateDiagramRender()
@@ -1311,11 +1320,12 @@ Page({
 
     this.clearResultReportPreviewCloseTimer()
     const width = EXPORT_WIDTH
-    const reportOptions = getReportOptions(this.data)
+    const reportOptions = getReportOptions({ ...this.data, theme: imageTheme })
     const height = getReportHeight(width, model, reportOptions)
     const revision = this._wiringLifecycle.begin()
     this._reportPending = true
     this._reportLoading = true
+    this._reportImageTheme = ''
     this.setData({
       resultReportCanvasWidth: width,
       resultReportCanvasHeight: height,
@@ -1361,7 +1371,7 @@ Page({
                       this.finishWiringGeneration(revision, {
                         resultReportImagePath: tempFilePath,
                         resultReportPreviewVisible: true,
-                      })
+                      }, imageTheme)
                     })
                   },
                   fail: () => commitIfWiringTaskCurrent(this, revision, () => {
@@ -1389,103 +1399,10 @@ Page({
   updateResultReportPreviewLayout() {
     const path = this.data.resultReportImagePath
     const recordSignature = JSON.stringify(this.getRecordPayload())
-    const lifecycle = this._wiringLifecycle
-    const lifecycleToken = lifecycle?.currentToken()
     if (!this._pageVisible || this._pageUnloaded || !this.data.resultReportPreviewVisible
       || this.data.resultReportPreviewClosing || !path || !recordSignature) return false
-    const revision = (this._reportPreviewLayoutRevision || 0) + 1
-    this._reportPreviewLayoutRevision = revision
+    this._reportPreviewLayoutRevision = (this._reportPreviewLayoutRevision || 0) + 1
     if (this.data.resultReportPreviewStyle) this.setData({ resultReportPreviewStyle: '' })
-    if (typeof wx.createSelectorQuery !== 'function') return false
-
-    const nodes = {}
-    let query
-    try {
-      query = wx.createSelectorQuery().in(this)
-      const read = (selector, styles = []) => {
-        const selection = query.select(selector)
-        const callback = (value) => { nodes[selector] = value }
-        if (typeof selection.fields === 'function') {
-          selection.fields({ rect: true, size: true, computedStyle: styles }, callback)
-        } else {
-          selection.boundingClientRect(callback)
-        }
-      }
-      read('.page-root')
-      read('.result-report-preview-overlay', ['paddingTop', 'paddingBottom'])
-      read('.result-report-preview-sheet', ['paddingTop', 'paddingBottom', 'borderTopWidth', 'borderBottomWidth'])
-      read('.result-report-preview-header')
-      read('.result-report-preview-actions')
-      read('.result-report-preview-scroll', ['borderTopWidth', 'borderBottomWidth', 'borderLeftWidth', 'borderRightWidth'])
-      read('.result-report-preview-image')
-    } catch (error) {
-      return false
-    }
-
-    const current = () => revision === this._reportPreviewLayoutRevision
-      && !this._pageUnloaded && this._pageVisible && this.data.resultReportPreviewVisible
-      && !this.data.resultReportPreviewClosing && this.data.resultReportImagePath === path
-      && JSON.stringify(this.getRecordPayload()) === recordSignature
-      && (!lifecycle || lifecycle.isCurrent(lifecycleToken))
-    try {
-      query.exec(() => {
-        if (!current()) return
-        const root = rectOf(nodes['.page-root'])
-        const overlay = rectOf(nodes['.result-report-preview-overlay'])
-        const sheet = rectOf(nodes['.result-report-preview-sheet'])
-        const header = rectOf(nodes['.result-report-preview-header'])
-        const actions = rectOf(nodes['.result-report-preview-actions'])
-        const scroll = rectOf(nodes['.result-report-preview-scroll'])
-        const image = rectOf(nodes['.result-report-preview-image'])
-        const rootTop = Number(root?.top) || 0
-        const rootHeight = Number(root?.height) || 0
-        const overlayTop = Number(overlay?.top)
-        const overlayHeight = Number(overlay?.height)
-        const viewportTop = Math.max(rootTop, Number.isFinite(overlayTop) ? overlayTop : rootTop)
-        const rootBottom = rootTop + rootHeight
-        const overlayBottom = Number.isFinite(overlay?.bottom)
-          ? overlay.bottom
-          : (Number.isFinite(overlayHeight)
-            ? (Number.isFinite(overlayTop) ? overlayTop : rootTop) + overlayHeight
-            : rootBottom)
-        const viewportBottom = Math.min(rootBottom || overlayBottom, overlayBottom)
-        const viewportHeight = Math.max(0, viewportBottom - viewportTop)
-        const scale = (Number(root?.width) || 390) / 750
-        const overlayPaddingTop = styleNumber(nodes['.result-report-preview-overlay'], 'paddingTop', 32 * scale)
-        const overlayPaddingBottom = styleNumber(nodes['.result-report-preview-overlay'], 'paddingBottom', 16 * scale)
-        const sheetPaddingTop = styleNumber(nodes['.result-report-preview-sheet'], 'paddingTop', 20 * scale)
-        const sheetPaddingBottom = styleNumber(nodes['.result-report-preview-sheet'], 'paddingBottom', 16 * scale)
-        const sheetRectHeight = Number(sheet?.height) || 0
-        const sheetTopGap = sheetRectHeight > 0 ? Math.max(0, Number(sheet.top) - viewportTop) : 0
-        const sheetBottomGap = sheetRectHeight > 0 ? Math.max(0, viewportBottom - Number(sheet.bottom)) : 0
-        const sheetSweepHeight = sheetRectHeight + sheetTopGap + sheetBottomGap
-        const availableSheetHeight = Math.max(0, Math.min(viewportHeight,
-          sheetSweepHeight > 0 ? sheetSweepHeight : viewportHeight)
-          - overlayPaddingTop - overlayPaddingBottom)
-        const sheetBorders = styleNumber(nodes['.result-report-preview-sheet'], 'borderTopWidth', 1)
-          + styleNumber(nodes['.result-report-preview-sheet'], 'borderBottomWidth', 1)
-        const fixedHeight = sheetPaddingTop + sheetPaddingBottom + sheetBorders
-          + (Number(header?.height) || 0) + (Number(actions?.height) || 0)
-        const availableScrollHeight = Math.max(0, availableSheetHeight - fixedHeight)
-        const scrollBorders = styleNumber(nodes['.result-report-preview-scroll'], 'borderTopWidth', 1)
-          + styleNumber(nodes['.result-report-preview-scroll'], 'borderBottomWidth', 1)
-        const horizontalBorders = styleNumber(nodes['.result-report-preview-scroll'], 'borderLeftWidth', 1)
-          + styleNumber(nodes['.result-report-preview-scroll'], 'borderRightWidth', 1)
-        const scrollWidth = Number(scroll?.width) || Math.max(0, (Number(root?.width) || 0) - (76 * scale))
-        const imageWidth = Number(image?.width) || Math.max(0, scrollWidth - horizontalBorders)
-        const naturalImageHeight = (Number(this.data.resultReportCanvasHeight) || 0)
-          * imageWidth / EXPORT_WIDTH
-        if (!viewportHeight || !availableSheetHeight || !imageWidth || !naturalImageHeight) return
-        const scrollHeight = Math.min(naturalImageHeight + scrollBorders, availableScrollHeight)
-        const nextStyle = '--cable-report-sheet-max-height:' + Math.round(availableSheetHeight * 100) / 100
-          + 'px;--cable-report-scroll-height:' + Math.round(scrollHeight * 100) / 100 + 'px'
-        if (this.data.resultReportPreviewStyle !== nextStyle) {
-          this.setData({ resultReportPreviewStyle: nextStyle })
-        }
-      })
-    } catch (error) {
-      return false
-    }
     return true
   },
 

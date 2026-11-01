@@ -7,7 +7,6 @@
 .report-project-card{padding:24rpx 26rpx}
 .report-kicker{color:var(--theme-text-secondary);font-size:13px;font-weight:600}
 .report-project-name{margin-top:7rpx;color:var(--theme-text);font-size:16px;font-weight:700;line-height:1.35;word-break:break-all;overflow-wrap:anywhere}
-.report-project-id{margin-top:9rpx;color:var(--theme-text-tertiary);font-size:12px;line-height:1.4;word-break:break-all}
 .report-select-all{display:flex;box-sizing:border-box;min-height:44px;margin-top:16rpx;padding:0 20rpx;align-items:center}
 .report-check{display:flex;box-sizing:border-box;width:38rpx;height:38rpx;flex:0 0 38rpx;align-items:center;justify-content:center;border:2rpx solid var(--theme-divider);border-radius:11rpx;color:#fff;font-size:13px;font-weight:700}
 .report-check-active{border-color:var(--theme-primary-fill);background:var(--theme-primary-fill)}

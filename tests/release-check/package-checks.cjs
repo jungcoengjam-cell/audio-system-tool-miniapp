@@ -13,7 +13,8 @@ function createPackageChecks(context) {
     total: 5120 * 1024,
     // Source-only ceiling; the compiled WeChat package still needs a DevTools size check.
     mainTotal: 2460 * 1024,
-    mainJavaScript: 1536 * 1024,
+    // Includes the measured 22,161-byte DMX UI JS delta; DevTools preview on 2026-10-30 measured __APP__ at 1,995,646 B / 2 MiB.
+    mainJavaScript: 1558 * 1024,
     subPackageJavaScript: 352 * 1024,
     '.wxss': 576 * 1024,
     '.wxml': 368 * 1024,
@@ -50,6 +51,12 @@ function createPackageChecks(context) {
     'pages/troubleshoot/index',
     'pages/control-protocol/index',
     'pages/control-protocol/detail',
+  ])
+
+  const EXPECTED_TOOL_PRELOAD_PACKAGES = Object.freeze([
+    'pages/audio-wiring',
+    'pages/project-wiring',
+    'pages/dmx-address',
   ])
 
   const SENSITIVE_WECHAT_APIS = Object.freeze([
@@ -208,10 +215,27 @@ function createPackageChecks(context) {
   function checkReleasePackageGates() {
     const projectConfig = JSON.parse(fs.readFileSync(path.join(root, 'project.config.json'), 'utf8'))
     const appConfig = JSON.parse(fs.readFileSync(path.join(root, 'app.json'), 'utf8'))
+    const packageFiles = getEffectivePackageFiles(projectConfig)
+    const toolPreloadRule = appConfig.preloadRule?.['pages/tools/tools']
+    assert(toolPreloadRule && Array.isArray(toolPreloadRule.packages), '工具页 Wi-Fi 预加载清单缺失')
+    const toolPreloadPackages = toolPreloadRule.packages
+    assert.strictEqual(toolPreloadRule.network, 'wifi', '工具页预加载网络条件应保持 Wi-Fi')
+    assert.deepStrictEqual([...toolPreloadPackages].sort(), [...EXPECTED_TOOL_PRELOAD_PACKAGES].sort(),
+      '为避免 80058，工具页只预加载三项既有子包；控制协议与产品库必须按需加载')
+    assert(toolPreloadPackages.every((rootPath) => (appConfig.subPackages || []).some((item) => item.root === rootPath)),
+      '工具页预加载目标必须都是有效注册的分包根目录')
     assert.strictEqual(appConfig.darkmode, true, 'app.json 未开启系统深色模式')
     assert.strictEqual(appConfig.themeLocation, 'theme.json', 'app.json 未配置主题文件')
     const themeConfig = JSON.parse(fs.readFileSync(path.join(root, 'theme.json'), 'utf8'))
-    const themeKeys = ['navBgColor', 'navTextColor', 'bgTextStyle', 'pageBgColor', 'tabBgColor', 'tabTextColor', 'tabSelectedColor', 'tabBorderColor', 'exploreIcon', 'exploreSelectedIcon', 'toolsIcon', 'toolsSelectedIcon', 'projectsIcon', 'projectsSelectedIcon']
+    const tabItems = appConfig.tabBar?.list || []
+    assert.strictEqual(tabItems.length, 3, 'app.json 应保留三个当前 tab 页签')
+    const tabIconAliases = tabItems.flatMap((item) => [item.iconPath, item.selectedIconPath])
+    assert(
+      tabIconAliases.every((alias) => typeof alias === 'string' && alias.startsWith('@')),
+      '当前 tab 图标必须使用主题别名',
+    )
+    const tabIconKeys = tabIconAliases.map((alias) => alias.slice(1))
+    const themeKeys = ['navBgColor', 'navTextColor', 'bgTextStyle', 'pageBgColor', 'tabBgColor', 'tabTextColor', 'tabSelectedColor', 'tabBorderColor', ...tabIconKeys]
     for (const mode of ['light', 'dark']) {
       assert(themeConfig[mode] && themeKeys.every((key) => themeConfig[mode][key]), `theme.json 缺少 ${mode} 主题键`)
     }
@@ -444,18 +468,29 @@ function createPackageChecks(context) {
       Object.fromEntries(['color', 'selectedColor', 'backgroundColor', 'borderStyle'].map((key) => [key, appConfig.tabBar[key]])),
       { color: '@tabTextColor', selectedColor: '@tabSelectedColor', backgroundColor: '@tabBgColor', borderStyle: '@tabBorderColor' },
     )
-    const iconKeys = ['exploreIcon', 'exploreSelectedIcon', 'toolsIcon', 'toolsSelectedIcon', 'projectsIcon', 'projectsSelectedIcon']
-    for (const mode of ['light', 'dark']) iconKeys.forEach((key) => assert(fs.existsSync(path.join(root, themeConfig[mode][key])), `${mode} 主题图标缺失：${key}`))
-    for (const item of appConfig.tabBar.list) {
-      assert(item.iconPath.startsWith('@') && item.selectedIconPath.startsWith('@'), `${item.text}页签图标未使用主题变量`)
+    const packagePaths = new Set(packageFiles.map(normalizeRelativePath))
+    for (const mode of ['light', 'dark']) {
+      tabIconKeys.forEach((key) => {
+        const relativePath = normalizeRelativePath(path.resolve(root, themeConfig[mode][key]))
+        assert(packagePaths.has(relativePath), `${mode} 当前 tab 图标未进入有效打包文件：${key} -> ${relativePath}`)
+      })
     }
-    const layoutFactorySource = fs.readFileSync(path.join(root, 'pages/dmx-layout/page-factory.js'), 'utf8')
+    const layoutFactorySource = fs.readFileSync(path.join(root, 'pages/dmx-layout/page-factory.js'), 'utf8').replace(/\r\n?/g, '\n')
     const layoutRendererSource = fs.readFileSync(path.join(root, 'pages/dmx-layout/layout-renderer.js'), 'utf8')
     const layoutCanvasSource = `${layoutFactorySource}\n${layoutRendererSource}`
+    const layoutOnShowSource = layoutFactorySource.match(/    onShow\(\) \{([\s\S]*?)\n    \},\n\n    handleThemeChange/)?.[1] || ''
+    const layoutOnShowThemeBranch = layoutOnShowSource.match(/if \(nextTheme !== this\._theme \|\| Boolean\(this\.data\.darkMode\) !== \(nextTheme === 'dark'\)\) \{([\s\S]*?)\n      \}/)?.[1] || ''
+    const layoutThemeChangeSource = layoutFactorySource.match(/    handleThemeChange\(theme\) \{([\s\S]*?)\n    \},\n\n    clearImage/)?.[1] || ''
+    const cancelActiveExport = 'if (this.data.isGeneratingImage) this.cancelExportGeneration()'
     assert(layoutCanvasSource.includes('CANVAS_THEMES') && layoutCanvasSource.includes('getCanvasTheme') &&
       layoutFactorySource.includes('wx.onThemeChange') && layoutFactorySource.includes('wx.offThemeChange') &&
-      layoutFactorySource.includes('this.clearImage()') && layoutRendererSource.includes('theme.background') &&
-      layoutRendererSource.includes('theme.stage'), '位置图 Canvas 缺少浅深色调色板或主题切换清图重绘机制')
+      layoutOnShowThemeBranch.includes(cancelActiveExport) &&
+      !layoutOnShowThemeBranch.includes('clearImage()') && !layoutOnShowThemeBranch.includes('invalidateExportPreview()') &&
+      layoutThemeChangeSource.includes(cancelActiveExport) &&
+      !layoutThemeChangeSource.includes('clearImage()') && !layoutThemeChangeSource.includes('invalidateExportPreview()') &&
+      layoutThemeChangeSource.includes('this.measureCanvas(') && layoutThemeChangeSource.includes('this.drawLayout()') &&
+      layoutRendererSource.includes('theme.background') && layoutRendererSource.includes('theme.stage'),
+    '位置图 Canvas 缺少浅深色调色板、保留已生成快照、取消进行中导出或主题重绘机制')
     ;['pages/dmx-layout/dmx-layout.wxss'].forEach((file) => {
       const source = fs.readFileSync(path.join(root, file), 'utf8')
       const layoutDarkCss = source.slice(source.search(/@media\s*\(prefers-color-scheme:\s*dark\)/)).replace(/\s+/g, '')
@@ -465,7 +500,6 @@ function createPackageChecks(context) {
         /--theme-control:\s*#2c2c2e\b/.test(layoutDarkCss) && /--theme-text:\s*#fff\b/.test(layoutDarkCss) &&
         /\.settings-apply,\.reduction-confirm,\.export-share\{background:#007aff\}/.test(source), `${file} 缺少核心深色层级覆盖`)
     })
-    const packageFiles = getEffectivePackageFiles(projectConfig)
     const draftProtocolGate = evaluateDraftProtocolPackageGate(
       packageFiles.map(normalizeRelativePath),
     )
@@ -481,6 +515,21 @@ function createPackageChecks(context) {
     const basisSubPackage = (appConfig.subPackages || []).find((subPackage) => subPackage.root === 'pages/basis')
     assert(basisSubPackage?.pages?.includes('detail'), '依据详情页未注册为独立分包')
     assert(!appConfig.pages.includes('pages/basis/detail'), '依据详情页仍位于主包 pages 中')
+    const productsSubPackage = (appConfig.subPackages || []).find((subPackage) => subPackage.root === 'pages/products')
+    assert(productsSubPackage?.pages?.includes('library') && productsSubPackage?.pages?.includes('detail'), '产品库页面未注册为按需独立分包')
+    assert(!appConfig.pages.includes('pages/products/library') && !appConfig.pages.includes('pages/products/detail'), '产品库页面仍位于主包 pages 中')
+    const mainPackagePaths = new Set(mainPackage.files.map(normalizeRelativePath))
+    const productsSubPackagePaths = new Set((packageGroups.find((group) => group.root === 'pages/products')?.files || []).map(normalizeRelativePath))
+    ;['pages/products/utils/products.js', 'pages/products/utils/dmx-product-import.js', 'pages/products/data/speaker-specifications.js'].forEach((file) => {
+      assert(productsSubPackagePaths.has(file), `${file} 未包含在产品分包中`)
+      assert(!mainPackagePaths.has(file), `${file} 被计入主包`)
+    })
+    ;['utils/dmx-address.js', 'utils/camera-fov.js', 'data/app-meta.js', 'data/equipment.js', 'data/cameras.js', 'data/stage-lighting.js'].forEach((file) => {
+      assert(mainPackagePaths.has(file), `${file} 共用依赖不在主包中`)
+    })
+    assert(!mainPackagePaths.has('data/speaker-specifications.js'), '产品专用音箱补充规格仍计入主包')
+    assert(!mainPackagePaths.has('utils/products.js') && !mainPackagePaths.has('utils/dmx-product-import.js'),
+      '产品专用 helper 仍位于主包')
     assert(fs.existsSync(path.join(root, 'pages/basis/assets/cable.png')))
     assert(!fs.existsSync(path.join(root, 'assets/basis')), '依据详情图仍位于主包 assets')
     const dmxSubPackage = (appConfig.subPackages || []).find((subPackage) => subPackage.root === 'pages/dmx-address')
@@ -577,6 +626,7 @@ function createPackageChecks(context) {
       + `最大 JS ${normalizeRelativePath(largestJavaScript.file)} ${formatKiB(largestJavaScript.bytes)} / ${formatKiB(PACKAGE_BUDGETS.singleJavaScript)}。`,
     )
     console.log(`页面清单门禁：${appConfig.pages.length} 个主包页面、${registeredPages.length - appConfig.pages.length} 个分包页面、${tabPages.length} 个 tabBar 页面均完整。`)
+    console.log('工具页 Wi-Fi 预加载门禁：三项既有分包有效；控制协议与产品库按需加载。')
     console.log('敏感 API 静态扫描：0 命中；用户触发的剪贴板、相册保存、震动与 Canvas API 保持允许。')
   }
 

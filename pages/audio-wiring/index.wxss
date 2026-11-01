@@ -553,36 +553,10 @@
   justify-content: center;
   border: 0;
   border-radius: 50%;
-  background: var(--theme-control);
-  color: var(--theme-text-secondary);
+  background:var(--theme-panel-close-bg);
+  color:var(--theme-panel-close-color);
 }
 
-.selector-close-icon {
-  position: relative;
-  display: block;
-  width: 18px;
-  height: 18px;
-}
-
-.selector-close-icon::before,
-.selector-close-icon::after {
-  position: absolute;
-  top: 8px;
-  left: 1px;
-  width: 16px;
-  height: 2px;
-  border-radius: 1px;
-  background: currentColor;
-  content: '';
-}
-
-.selector-close-icon::before {
-  transform: rotate(45deg);
-}
-
-.selector-close-icon::after {
-  transform: rotate(-45deg);
-}
 
 .selector-list {
   box-sizing: border-box;
@@ -714,18 +688,21 @@
   line-height: 1.35;
 }
 
-.wiring-page .result-report-preview-close {
+.wiring-page .result-report-preview-close.panel-close-control {
   box-sizing: border-box;
-  width: 60px;
+  width: 44px;
+  min-width: 44px;
+  max-width: 44px;
   height: 44px;
   min-height: 44px;
+  max-height: 44px;
   margin: 0;
   padding: 0;
   border: 0;
-  border-radius: 999px;
-  background: var(--theme-control);
-  color: var(--theme-text-secondary);
-  font-size: 13px;
+  border-radius: 50%;
+  background:var(--theme-panel-close-bg);
+  color:var(--theme-panel-close-color);
+  font-size: 0;
 }
 
 .wiring-page .result-report-preview-scroll {
@@ -831,7 +808,7 @@
 
 .wiring-page .project-header-copy { min-width: 0; flex: 1; }
 .wiring-page .project-title { color: var(--theme-text); font-size: 20px; font-weight: 700; line-height: 1.4; }
-.wiring-page .project-close { box-sizing: border-box; display: flex; width: 44px; min-width: 44px; height: 44px; min-height: 44px; flex: 0 0 44px; margin: 0; padding: 0; align-items: center; justify-content: center; border: 0; border-radius: 50%; background: var(--theme-control); color: var(--theme-text-secondary); font-size: 35rpx; line-height: 1; }
+.wiring-page .project-close { box-sizing: border-box; display: flex; width: 44px; min-width: 44px; height: 44px; min-height: 44px; flex: 0 0 44px; margin: 0; padding: 0; align-items: center; justify-content: center; border: 0; border-radius: 50%; background:var(--theme-panel-close-bg); color:var(--theme-panel-close-color); font-size: 35rpx; line-height: 1; }
 .wiring-page .project-close::after,
 .wiring-page .project-button::after,
 .wiring-page .project-row::after { border: 0; }

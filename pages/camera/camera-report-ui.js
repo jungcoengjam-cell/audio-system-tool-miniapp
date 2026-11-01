@@ -1,5 +1,6 @@
 const { vibrate } = require('../../utils/haptics')
-const { isPageContextCurrent, previewGeneratedImage } = require('../../utils/report-image-actions')
+const { isPageContextCurrent } = require('../../utils/report-image-actions')
+const nativeImagePreview = require('../native-image-preview')
 
 const PREVIEW_CLOSE_DURATION = 320
 
@@ -25,6 +26,10 @@ function currentSignature(page) {
   } catch (error) {
     return ''
   }
+}
+
+function currentImageTheme(page) {
+  return page?.data?.theme === 'dark' ? 'dark' : 'light'
 }
 
 function isPageActive(page) {
@@ -67,6 +72,7 @@ function hiddenPreviewChanges(page) {
 
 function cancelCameraReportUi(page) {
   if (!page) return
+  nativeImagePreview.cancel(page)
   const changes = hiddenPreviewChanges(page)
   if (typeof page.setData !== 'function' || !page.data
     || page._cameraUnloaded || page._isUnloaded) return
@@ -94,21 +100,6 @@ function accessLocalImage(path, onSuccess, onFailure) {
   } catch (error) {
     onFailure()
   }
-}
-
-function rectOf(value) {
-  if (!value?.rect || typeof value.rect !== 'object') return value
-  return {
-    ...value.rect,
-    width: value.rect.width ?? value.width,
-    height: value.rect.height ?? value.height,
-  }
-}
-
-function styleNumber(value, name, fallback) {
-  const style = value?.computedStyle || value || {}
-  const number = Number.parseFloat(style[name])
-  return Number.isFinite(number) ? number : fallback
 }
 
 function createCameraReportUiMethods(baseMethods = {}) {
@@ -139,7 +130,9 @@ function createCameraReportUiMethods(baseMethods = {}) {
 
       const path = this.data?.resultReportImagePath
       const signature = currentSignature(this)
-      if (!path || !signature || this.resultReportSignature !== signature) {
+      const imageTheme = currentImageTheme(this)
+      if (!path || !signature || this.resultReportSignature !== signature
+        || this._resultReportImageTheme !== imageTheme) {
         return base.generateResultReportImage.call(this)
       }
 
@@ -156,6 +149,8 @@ function createCameraReportUiMethods(baseMethods = {}) {
 
       const isCurrent = () => this._cameraReportCacheCheckRevision === revision
         && (this._inputRevision || 0) === inputRevision
+        && currentImageTheme(this) === imageTheme
+        && this._resultReportImageTheme === imageTheme
         && isCurrentReport(this, path, signature)
       const openCached = () => {
         if (!isCurrent()) return
@@ -180,6 +175,7 @@ function createCameraReportUiMethods(baseMethods = {}) {
         this._cameraReportCacheCheckRevision = 0
         cancelPreviewClose(this)
         this.resultReportSignature = ''
+        this._resultReportImageTheme = ''
         this.resultReportPendingSignature = ''
         this.setData({
           ...hiddenPreviewChanges(this),
@@ -203,6 +199,7 @@ function createCameraReportUiMethods(baseMethods = {}) {
 
     invalidateResultReportPreview() {
       this.resultReportSignature = ''
+      this._resultReportImageTheme = ''
       return {
         ...hiddenPreviewChanges(this),
         resultReportImagePath: '',
@@ -212,109 +209,19 @@ function createCameraReportUiMethods(baseMethods = {}) {
     updateResultReportPreviewLayout() {
       const path = this.data?.resultReportImagePath
       const signature = this.resultReportSignature
-      const inputRevision = this._inputRevision || 0
       if (!isPageActive(this) || !this.data?.resultReportPreviewVisible
         || this.data.resultReportPreviewClosing || !path || !signature
         || currentSignature(this) !== signature) return false
 
-      const revision = bump(this, '_cameraReportPreviewLayoutRevision')
+      bump(this, '_cameraReportPreviewLayoutRevision')
       if (this.data.resultReportPreviewStyle) this.setData({ resultReportPreviewStyle: '' })
-      if (typeof wx === 'undefined' || typeof wx.createSelectorQuery !== 'function') return false
-
-      const nodes = {}
-      let query
-      try {
-        query = wx.createSelectorQuery().in(this)
-        const read = (selector, styles = []) => {
-          const selection = query.select(selector)
-          const callback = (value) => { nodes[selector] = value }
-          if (typeof selection.fields === 'function') {
-            selection.fields({ rect: true, size: true, computedStyle: styles }, callback)
-          } else {
-            selection.boundingClientRect(callback)
-          }
-        }
-        read('.page-root')
-        read('.result-report-preview-overlay', ['paddingTop', 'paddingBottom'])
-        read('.result-report-preview-sheet', ['paddingTop', 'paddingBottom', 'borderTopWidth', 'borderBottomWidth'])
-        read('.result-report-preview-header')
-        read('.result-report-preview-actions')
-        read('.result-report-preview-scroll', [
-          'borderTopWidth', 'borderBottomWidth', 'borderLeftWidth', 'borderRightWidth',
-        ])
-        read('.result-report-preview-image')
-      } catch (error) {
-        return false
-      }
-
-      const current = () => revision === this._cameraReportPreviewLayoutRevision
-        && isCurrentReport(this, path, signature)
-        && (this._inputRevision || 0) === inputRevision
-        && this.data.resultReportPreviewVisible && !this.data.resultReportPreviewClosing
-      try {
-        query.exec(() => {
-          if (!current()) return
-          const root = rectOf(nodes['.page-root'])
-          const overlay = rectOf(nodes['.result-report-preview-overlay'])
-          const sheet = rectOf(nodes['.result-report-preview-sheet'])
-          const header = rectOf(nodes['.result-report-preview-header'])
-          const actions = rectOf(nodes['.result-report-preview-actions'])
-          const scroll = rectOf(nodes['.result-report-preview-scroll'])
-          const image = rectOf(nodes['.result-report-preview-image'])
-          const rootTop = Number(root?.top) || 0
-          const rootHeight = Number(root?.height) || 0
-          const overlayTop = Number(overlay?.top)
-          const overlayHeight = Number(overlay?.height)
-          const viewportTop = Math.max(rootTop, Number.isFinite(overlayTop) ? overlayTop : rootTop)
-          const rootBottom = rootTop + rootHeight
-          const overlayBottom = Number.isFinite(overlay?.bottom)
-            ? overlay.bottom
-            : (Number.isFinite(overlayHeight)
-              ? (Number.isFinite(overlayTop) ? overlayTop : rootTop) + overlayHeight
-              : rootBottom)
-          const viewportBottom = Math.min(rootBottom || overlayBottom, overlayBottom)
-          const viewportHeight = Math.max(0, viewportBottom - viewportTop)
-          const scale = (Number(root?.width) || 390) / 750
-          const overlayPaddingTop = styleNumber(nodes['.result-report-preview-overlay'], 'paddingTop', 32 * scale)
-          const overlayPaddingBottom = styleNumber(nodes['.result-report-preview-overlay'], 'paddingBottom', 16 * scale)
-          const sheetRectHeight = Number(sheet?.height) || 0
-          const sheetTopGap = sheetRectHeight > 0 ? Math.max(0, Number(sheet.top) - viewportTop) : 0
-          const sheetBottomGap = sheetRectHeight > 0 ? Math.max(0, viewportBottom - Number(sheet.bottom)) : 0
-          const sheetSweepHeight = sheetRectHeight + sheetTopGap + sheetBottomGap
-          const availableSheetHeight = Math.max(0, Math.min(viewportHeight,
-            sheetSweepHeight > 0 ? sheetSweepHeight : viewportHeight)
-            - overlayPaddingTop - overlayPaddingBottom)
-          const sheetBorders = styleNumber(nodes['.result-report-preview-sheet'], 'borderTopWidth', 1)
-            + styleNumber(nodes['.result-report-preview-sheet'], 'borderBottomWidth', 1)
-          const fixedHeight = styleNumber(nodes['.result-report-preview-sheet'], 'paddingTop', 20 * scale)
-            + styleNumber(nodes['.result-report-preview-sheet'], 'paddingBottom', 16 * scale)
-            + sheetBorders + (Number(header?.height) || 0) + (Number(actions?.height) || 0)
-          const availableScrollHeight = Math.max(0, availableSheetHeight - fixedHeight)
-          const scrollBorders = styleNumber(nodes['.result-report-preview-scroll'], 'borderTopWidth', 1)
-            + styleNumber(nodes['.result-report-preview-scroll'], 'borderBottomWidth', 1)
-          const horizontalBorders = styleNumber(nodes['.result-report-preview-scroll'], 'borderLeftWidth', 1)
-            + styleNumber(nodes['.result-report-preview-scroll'], 'borderRightWidth', 1)
-          const scrollWidth = Number(scroll?.width) || Math.max(0, (Number(root?.width) || 0) - (76 * scale))
-          const imageWidth = Number(image?.width) || Math.max(0, scrollWidth - horizontalBorders)
-          const naturalImageHeight = (Number(this.data.resultReportCanvasHeight) || 0)
-            * imageWidth / (Number(this.data.resultReportCanvasWidth) || 750)
-          if (!viewportHeight || !availableSheetHeight || !imageWidth || !naturalImageHeight) return
-          const scrollHeight = Math.min(naturalImageHeight + scrollBorders, availableScrollHeight)
-          const nextStyle = '--camera-report-sheet-max-height:' + Math.round(availableSheetHeight * 100) / 100
-            + 'px;--camera-report-scroll-height:' + Math.round(scrollHeight * 100) / 100 + 'px'
-          if (this.data.resultReportPreviewStyle !== nextStyle) {
-            this.setData({ resultReportPreviewStyle: nextStyle })
-          }
-        })
-      } catch (error) {
-        return false
-      }
       return true
     },
 
     closeResultReportPreview(immediate) {
       if (!this.data?.resultReportPreviewVisible
         || (this.data.resultReportPreviewClosing && immediate !== true)) return false
+      nativeImagePreview.cancel(this)
       if (immediate !== true && isPageActive(this) && isPageContextCurrent(this)) vibrate('light')
       if (immediate === true || !isPageActive(this)) {
         this.setData(hiddenPreviewChanges(this))
@@ -357,7 +264,7 @@ function createCameraReportUiMethods(baseMethods = {}) {
         && isCurrentReport(this, path, signature)
       const openPreview = () => {
         if (!isCurrent()) return
-        if (!previewGeneratedImage(path)) {
+        if (!nativeImagePreview.preview(this, path, () => cancelCameraReportUi(this))) {
           showToast('原图预览暂不可用，请重试')
           return
         }
@@ -366,6 +273,7 @@ function createCameraReportUiMethods(baseMethods = {}) {
       const invalidate = () => {
         if (!isCurrent()) return
         this.resultReportSignature = ''
+        this._resultReportImageTheme = ''
         this.setData({
           ...hiddenPreviewChanges(this),
           resultReportImagePath: '',
@@ -381,7 +289,8 @@ function createCameraReportUiMethods(baseMethods = {}) {
       if (!this.data?.resultReportPreviewVisible || this.data.resultReportPreviewClosing
         || !isCurrentReport(this, this.data.resultReportImagePath, this.resultReportSignature)
         || typeof base.shareResultReportImage !== 'function') return false
-      return base.shareResultReportImage.call(this)
+      return nativeImagePreview.share(this, this.data.resultReportImagePath,
+        () => base.shareResultReportImage.call(this), () => cancelCameraReportUi(this))
     },
 
     saveResultReportImage() {

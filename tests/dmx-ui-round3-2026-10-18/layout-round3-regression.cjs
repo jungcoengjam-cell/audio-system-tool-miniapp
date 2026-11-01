@@ -194,13 +194,11 @@ function testLandscapeStatusAndUiContract() {
   assert.equal(page.data.statusBarHeight, 8, 'valid landscape capsule should override a stale portrait status bar')
   assert.equal(page.data.navigationHeight, 52, 'landscape navigation should follow the capsule geometry')
 
-  for (const relative of ['pages/dmx-layout/dmx-layout.wxml', 'pages/dmx-layout-landscape/dmx-layout-landscape.wxml']) {
+  for (const relative of ['pages/dmx-layout/dmx-layout.wxml']) {
     const source = fs.readFileSync(path.join(root, relative), 'utf8')
     assert(!/定位灯具|class="locate-overlay|class="locate-card/.test(source), `${relative}: locator entry and panel should be absent`)
     assert(/class="context-row"[\s\S]*?class="context-native-picker"[\s\S]*?class="context-share/.test(source),
       `${relative}: share must be a sibling to the context picker`)
-    assert(/layout-orientation-button[\s\S]*?layout-orientation-device[\s\S]*?layout-orientation-arrow/.test(source),
-      `${relative}: orientation control should use isolated view glyphs`)
     assert(/class="layout-undo-action"/.test(source), `${relative}: undo control should use its local hit target style`)
   }
   runtime.dispose()

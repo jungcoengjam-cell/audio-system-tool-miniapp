@@ -71,6 +71,38 @@ const PREFERENCE_LABELS_BY_MODULE = Object.freeze({
   }),
 })
 
+const PREFERENCE_VALUE_LABELS_BY_MODULE = Object.freeze({
+  spl: Object.freeze({
+    summationMode: Object.freeze({ distributed: '常规叠加（推荐）', coherent: '同相叠加（理想）' }),
+  }),
+  cable: Object.freeze({
+    mode: Object.freeze({ constant: '定压广播', professional: '专业音箱' }),
+    environment: Object.freeze({ indoor: '室内', outdoor: '室外' }),
+  }),
+  camera: Object.freeze({
+    sceneMode: Object.freeze({ ground: '地面区域', plane: '垂直平面' }),
+    heightMode: Object.freeze({ auto: '自动建议高度', fixed: '已有安装高度' }),
+  }),
+  limiter: Object.freeze({
+    wiring: Object.freeze({ parallel: '并联', series: '串联' }),
+    mode: Object.freeze({ stereo: '立体声/单通道', bridge: '桥接' }),
+  }),
+  gainStructure: Object.freeze({
+    mode: Object.freeze({ stereo: '立体声/单通道', bridge: '桥接' }),
+  }),
+  dmxAddress: Object.freeze({
+    allocationMode: Object.freeze({ auto: '连续自动', manual: '按组分域' }),
+  }),
+  ledScreen: Object.freeze({
+    unitKey: Object.freeze({
+      module: '模组 · 320 × 160 mm',
+      cabinetStandard: '常规箱体 · 640 × 480 mm',
+      cabinetPremiumA: '高端 A 系列 · 600 × 337.5 mm',
+    }),
+    pitch: Object.freeze({ recommended: '系统推荐' }),
+  }),
+})
+
 const LINE_LABELS = Object.freeze({
   buildType: { finished: '成品线', bulk: '散线制作' },
   cableType: { balanced: '平衡音频线', unbalanced: '非平衡音频线', speaker: '扬声器线', custom: '自定义线材' },
@@ -309,32 +341,12 @@ function flattenEntries(value, labels = COMMON_PREFERENCE_LABELS, prefix = []) {
   return [{ label, value: formatValue(value) }]
 }
 
-function linesForPreferences(preferences, module) {
-  return formatPreferenceRows(preferences, module).map((entry) => `${entry.label}：${entry.value}`)
-}
-
 function formatPreferenceRows(preferences, module) {
   const labels = { ...COMMON_PREFERENCE_LABELS, ...(PREFERENCE_LABELS_BY_MODULE[module] || {}) }
   return flattenEntries(preferences, labels)
 }
 
-function mapLineValue(value, labelSet) {
-  return labelSet[value] || (value ? String(value) : '未填写')
-}
-
-function linesForCalculation(record) {
-  const moduleMeta = require('../../utils/records').getModuleMetadata(record.module)
-  const lines = [
-    { text: `计算记录 · ${moduleMeta?.label || record.module}`, style: 'section' },
-    { text: record.title || record.summary || '计算记录', style: 'heading' },
-    { text: `记录编号：${record.id}`, style: 'mono' },
-    { text: `保存时间：${new Date(record.updatedAt || record.createdAt || 0).toLocaleString('zh-CN')}`, style: 'muted' },
-  ]
-  if (record.hasProjectMetadata) {
-    if (record.title) lines.push({ text: `项目方案名称：${record.title}`, style: 'body' })
-    if (record.projectNote) lines.push({ text: `项目备注：${record.projectNote}`, style: 'body' })
-  }
-  if (record.summary) lines.push({ text: `关键结果：${record.summary}`, style: 'body' })
+function getCalculationKeyFields(record) {
   const keyFields = {
     spl: ['speakerModel', 'speakerCount', 'distanceText', 'summationMode'],
     cable: ['mode', 'environment', 'constantPowerText', 'constantDistanceText', 'professionalPowerText', 'professionalDistanceText'],
@@ -344,12 +356,63 @@ function linesForCalculation(record) {
     limiter: ['amplifierModel', 'speakerModel', 'count', 'wiring', 'mode', 'sensitivityVoltage', 'highPassFrequency'],
     gainStructure: ['amplifierModel', 'stageValue', 'mode', 'loadImpedance', 'targetPeakDbfs'],
   }[record.module] || []
+
+  const preferences = record.preferences || {}
+  if (record.module === 'cable') {
+    if (preferences.mode === 'constant') {
+      return keyFields.filter((key) => !['professionalPowerText', 'professionalDistanceText'].includes(key))
+    }
+    if (preferences.mode === 'professional') {
+      return keyFields.filter((key) => !['environment', 'constantPowerText', 'constantDistanceText'].includes(key))
+    }
+  }
+  if (record.module === 'camera') {
+    const inactive = []
+    if (preferences.sceneMode === 'ground') inactive.push('planeWidthText', 'planeHeightText', 'planeBottomHeightText')
+    else if (preferences.sceneMode === 'plane') inactive.push('groundWidthText', 'groundDepthText', 'subjectHeightText')
+    if (preferences.heightMode === 'auto') inactive.push('fixedCameraHeightText')
+    return keyFields.filter((key) => !inactive.includes(key))
+  }
+  return keyFields
+}
+
+function formatCalculationPreferenceValue(module, key, value) {
+  const valueLabels = PREFERENCE_VALUE_LABELS_BY_MODULE[module]?.[key]
+  if (valueLabels && own(valueLabels, String(value))) return valueLabels[String(value)]
+  return formatValue(value)
+}
+
+function mapLineValue(value, labelSet) {
+  return labelSet[value] || (value ? String(value) : '未填写')
+}
+
+function linesForCalculation(record) {
+  const moduleMeta = require('../../utils/records').getModuleMetadata(record.module)
+  const heading = record.title || record.summary || '计算记录'
+  const lines = [
+    { text: `计算记录 · ${moduleMeta?.label || record.module}`, style: 'section' },
+    { text: heading, style: 'heading' },
+    { text: `保存时间：${new Date(record.updatedAt || record.createdAt || 0).toLocaleString('zh-CN')}`, style: 'muted' },
+  ]
+  if (record.hasProjectMetadata) {
+    if (record.projectNote) lines.push({ text: `项目备注：${record.projectNote}`, style: 'body' })
+  }
+  if (record.summary && record.summary !== heading) {
+    lines.push({ text: `关键结果：${record.summary}`, style: 'body' })
+  }
+  const keyFields = getCalculationKeyFields(record)
   const selectedPreferences = Object.fromEntries(keyFields
-    .filter((key) => own(record.preferences, key))
+    .filter((key) => own(record.preferences, key)
+      && record.preferences[key] !== null && record.preferences[key] !== undefined && record.preferences[key] !== '')
     .map((key) => [key, record.preferences[key]]))
   if (Object.keys(selectedPreferences).length) {
     lines.push({ text: '关键输入', style: 'subhead' })
-    linesForPreferences(selectedPreferences, record.module).forEach((text) => lines.push({ text, style: 'body' }))
+    const labels = { ...COMMON_PREFERENCE_LABELS, ...(PREFERENCE_LABELS_BY_MODULE[record.module] || {}) }
+    Object.entries(selectedPreferences).forEach(([key, value]) => {
+      const label = labels[key] || `原始字段 ${key}`
+      const displayValue = formatCalculationPreferenceValue(record.module, key, value)
+      lines.push({ text: `${label}：${displayValue}`, style: 'body' })
+    })
   }
   if (record.module === 'gainStructure') {
     const conditionPrefixes = ['输入级档位：', '工作条件：', 'DSP 标定：']
@@ -370,41 +433,84 @@ function linesForWiring(item) {
   return [
     { text: '线路', style: 'section' },
     { text: `${line.code || '线路'} · ${line.purpose || '用途未填写'}`, style: 'heading' },
-    { text: `线路编号：${line.id}`, style: 'mono' },
-    { text: `来源设备：${item.fromDeviceName || line.fromDevice} · 端口：${line.fromPort}${line.fromDeviceId ? ` · 设备编号：${line.fromDeviceId}` : ''}`, style: 'body' },
-    { text: `去向设备：${item.toDeviceName || line.toDevice} · 端口：${line.toPort}${line.toDeviceId ? ` · 设备编号：${line.toDeviceId}` : ''}`, style: 'body' },
+    { text: `来源设备：${item.fromDeviceName || line.fromDevice} · 端口：${line.fromPort}`, style: 'body' },
+    { text: `去向设备：${item.toDeviceName || line.toDevice} · 端口：${line.toPort}`, style: 'body' },
     { text: `线材类型：${mapLineValue(line.cableType, LINE_LABELS.cableType)}`, style: 'body' },
     { text: `规格：${line.spec || '待确认'} · 长度：${line.lengthText ? `${line.lengthText} m` : '待确认'}`, style: 'body' },
     { text: `制作方式：${mapLineValue(line.buildType, LINE_LABELS.buildType)}`, style: 'body' },
-    { text: `来源端接头：${mapLineValue(line.connectorA, LINE_LABELS.connector)}（${line.connectorA || '未填写'}）`, style: 'body' },
-    { text: `去向端接头：${mapLineValue(line.connectorB, LINE_LABELS.connector)}（${line.connectorB || '未填写'}）`, style: 'body' },
+    { text: `来源端接头：${mapLineValue(line.connectorA, LINE_LABELS.connector)}`, style: 'body' },
+    { text: `去向端接头：${mapLineValue(line.connectorB, LINE_LABELS.connector)}`, style: 'body' },
     { text: `施工状态：${mapLineValue(line.status, LINE_LABELS.status)}`, style: 'body' },
     { text: `备注：${line.notes || '未填写'}`, style: 'body' },
   ]
 }
 
+function lightingPositionLabel(position, layout) {
+  if (position === null || position === undefined) return '未布置'
+  if (!isObject(position)) return '无法识别'
+
+  const isGround = position.kind === 'ground' || position.ground === true
+  if (isGround) {
+    const hasConflictingGroundMarker = (own(position, 'kind') && position.kind !== 'ground')
+      || (own(position, 'ground') && position.ground !== true)
+    const hasRodPosition = own(position, 'rodId') || own(position, 't')
+    const validCoordinates = Number.isFinite(position.x) && position.x >= 0 && position.x <= 1
+      && Number.isFinite(position.y) && position.y >= 0 && position.y <= 1
+    return !hasConflictingGroundMarker && !hasRodPosition && validCoordinates ? '舞台地面' : '无法识别'
+  }
+
+  if (typeof position.rodId !== 'string' || !position.rodId.trim()
+    || !Number.isFinite(position.t) || position.t < 0 || position.t > 1) return '无法识别'
+
+  const rodLists = [
+    ['internal', Array.isArray(layout?.internalRods) ? layout.internalRods : []],
+    ['front', Array.isArray(layout?.frontRods) ? layout.frontRods : []],
+    ['legacy-side', Array.isArray(layout?.legacySideRods) ? layout.legacySideRods : []],
+  ]
+  const matches = rodLists.flatMap(([type, rods]) => rods
+    .map((rod, index) => ({ type, rod, index }))
+    .filter(({ rod }) => isObject(rod) && rod.id === position.rodId))
+  if (matches.length !== 1) return '无法识别'
+
+  const [{ type, rod, index }] = matches
+  if (!Number.isFinite(rod.distance) || rod.distance <= 0) return '无法识别'
+  if (type === 'internal') return `灯杆${index + 1}`
+  if (type === 'front') return `面光杆${index + 1}`
+  if ((rod.side !== 'left' && rod.side !== 'right')
+    || !Number.isInteger(rod.positionIndex) || rod.positionIndex < 0) return '无法识别'
+  return `${rod.side === 'left' ? '左' : '右'}侧光${rod.positionIndex + 1}`
+}
+
 function linesForLighting(lighting) {
+  const preferences = lighting.scheme.preferences || {}
+  const modeText = lighting.plan.modeText
+    || (preferences.allocationMode === 'manual' ? '按组分域' : '连续自动')
   const lines = [
     { text: '灯位方案', style: 'section' },
-    { text: `项目灯位方案 · 第 ${lighting.revision} 版`, style: 'heading' },
-    { text: `项目编号：${lighting.projectId} · 工作区版本：${lighting.scheme.version} · 修订：${lighting.revision}`, style: 'mono' },
-    { text: '完整编址参数', style: 'subhead' },
+    { text: '项目灯位方案', style: 'heading' },
+    { text: `起始地址：${preferences.startAddressText || '未填写'} · 编址方式：${modeText}`, style: 'body' },
   ]
-  linesForPreferences(lighting.scheme.preferences, 'dmxAddress').forEach((text) => lines.push({ text, style: 'body' }))
   lines.push({ text: '灯具地址与布置位置', style: 'subhead' })
   const fixturesById = new Map(lighting.fixtures.map((fixture) => [fixture.stableId, fixture]))
   lighting.scheme.groupIds.forEach((groupId, groupIndex) => {
-    const preference = lighting.scheme.preferences.groups[groupIndex] || {}
-    lines.push({ text: `灯具组：${preference.name || `第 ${groupIndex + 1} 组`} · 组编号：${groupId}`, style: 'heading' })
-    lines.push({ text: `型号：${preference.fixtureModel || '自定义灯具'} · 数量：${preference.fixtureCount} 台 · 模式：${preference.channelCount} CH/台 · 域：${preference.targetUniverse || '自动'}`, style: 'body' })
+    const preference = preferences.groups[groupIndex] || {}
+    const fixtureModel = preference.fixtureSource === 'custom'
+      ? (preference.customName || preference.fixtureModel || '自定义灯具')
+      : (preference.fixtureModel || preference.customName || '自定义灯具')
     const groupFixtures = (lighting.scheme.fixtureIdsByGroup[groupId] || []).map((fixtureId) => fixturesById.get(fixtureId)).filter(Boolean)
+    const actualDomains = [...new Set(groupFixtures.map((fixture) => fixture.universeLabel).filter(Boolean))]
+    const domainText = actualDomains.length
+      ? actualDomains.join('、')
+      : (preferences.allocationMode === 'manual' ? preference.targetUniverse || '未编址' : '未编址')
+    lines.push({ text: `灯具组：${preference.name || `第 ${groupIndex + 1} 组`}`, style: 'heading' })
+    lines.push({ text: `型号/名称：${fixtureModel} · 数量：${preference.fixtureCount} 台 · 通道模式：${preference.channelCount} CH/台 · 实际 DMX 域：${domainText}`, style: 'body' })
     groupFixtures.forEach((fixture) => {
       const unplaced = fixture.position === null || fixture.position === undefined
-      const positionText = unplaced ? '未布置（未进入灯位图）' : JSON.stringify(fixture.position)
-      lines.push({ text: `灯具 ${fixture.fixtureIndex} · 灯具编号：${fixture.stableId}`, style: 'body' })
-      lines.push({ text: `完整地址：${fixture.addressText} · 占用范围：${fixture.rangeText} · 通道：${fixture.channelCount} CH`, style: 'body' })
-      lines.push({ text: `位置关联编号：${fixture.stableId}`, style: 'body' })
-      lines.push({ text: `${unplaced ? '布置状态' : '布置数据'}：${positionText}`, style: unplaced ? 'muted' : 'body' })
+      const positionText = lightingPositionLabel(fixture.position, lighting.scheme.layout)
+      const placementText = unplaced ? '未布置（未进入灯位图）' : positionText
+      lines.push({ text: `灯具 ${fixture.fixtureIndex}`, style: 'body' })
+      lines.push({ text: `完整地址：${fixture.addressText} · 占用范围：${fixture.rangeText}`, style: 'body' })
+      lines.push({ text: `布置位置：${placementText}`, style: unplaced || positionText === '无法识别' ? 'muted' : 'body' })
     })
   })
   if (!lighting.fixtures.length) lines.push({ text: '此方案当前没有已编址灯具。', style: 'muted' })
@@ -420,7 +526,6 @@ function buildReportPayload(source, selectedIds) {
   const lines = [
     { text: '项目资料', style: 'section' },
     { text: `项目：${source.project.name}`, style: 'heading' },
-    { text: `项目编号：${source.project.id}`, style: 'mono' },
     { text: `场地：${source.project.venueName || '未填写'} · 日期：${source.project.projectDate || '未填写'} · 负责人：${source.project.engineer || '未填写'}`, style: 'body' },
   ]
   const dimensions = [source.project.roomLengthText, source.project.roomWidthText, source.project.roomHeightText]

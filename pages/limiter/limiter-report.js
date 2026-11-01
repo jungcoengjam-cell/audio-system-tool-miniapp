@@ -4,6 +4,7 @@ const {
   drawText,
   setText,
 } = require('../../utils/report-drawing')
+const { DARK_RESULT_COLORS } = require('../result-image-theme')
 
 const COLORS = {
   background: '#f5f5f7',
@@ -20,7 +21,6 @@ const COLORS = {
   reminderText: '#8a5700',
   reminderBorder: '#f0d4ad',
 }
-
 const LEFT = 44
 const CONTENT_WIDTH = REPORT_WIDTH - (LEFT * 2)
 const INPUT_LABEL_WIDTH = 228
@@ -456,21 +456,22 @@ function strokeRoundedRect(context, command) {
   context.stroke()
 }
 
-function drawResultReport(context, payload, height) {
+function drawResultReport(context, payload, height, theme = 'light') {
   const model = buildReportModel(payload, context)
   if (model.height > height) {
     throw new RangeError('结果图片高度与实际文字排版不匹配。')
   }
-  context.setFillStyle(COLORS.background)
+  const color = (value) => theme === 'dark' ? (DARK_RESULT_COLORS[value] || value) : value
+  context.setFillStyle(color(COLORS.background))
   context.fillRect(0, 0, REPORT_WIDTH, height)
   model.commands.forEach((command) => {
     if (command.type === 'roundRect') {
       roundedRect(context, command.x, command.y, command.width, command.height,
-        command.radius, command.fill)
+        command.radius, color(command.fill))
     } else if (command.type === 'roundRectStroke') {
-      strokeRoundedRect(context, command)
+      strokeRoundedRect(context, { ...command, color: color(command.color) })
     } else if (command.type === 'line') {
-      context.setStrokeStyle(command.color)
+      context.setStrokeStyle(color(command.color))
       context.setLineWidth(command.width)
       context.beginPath()
       context.moveTo(command.x1, command.y1)
@@ -478,7 +479,7 @@ function drawResultReport(context, payload, height) {
       context.stroke()
     } else if (command.type === 'text') {
       drawText(context, command.text, command.x, command.y, command.size,
-        command.color, command.weight, command.align)
+        color(command.color), command.weight, command.align)
     }
   })
 }

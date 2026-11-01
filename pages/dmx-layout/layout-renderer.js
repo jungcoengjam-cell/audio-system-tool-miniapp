@@ -21,6 +21,10 @@ const CANVAS_THEMES = {
 light: { background: '#f5f5f7', text: '#1d1d1f', secondary: '#6e6e73', stage: '#ffffff', border: '#88888d', rail: '#7a808a', accent: '#007aff', side: '#00b8ba', selected: '#111111', markerText: '#ffffff', markerOutline: '#ffffff', success: '#248a3d' },
 dark: { background: '#000000', text: '#ffffff', secondary: '#c7c7cc', stage: '#1c1c1e', border: '#88888d', rail: '#8e8e93', accent: '#0a84ff', side: '#63d391', selected: '#ffffff', markerText: '#ffffff', markerOutline: '#ffffff', success: '#63d391' },
 }
+const EXPORT_COLORS = {
+light: { background: '#ffffff', title: '#17243b', secondary: '#55647b', card: '#f5f7fb', border: '#d7deea', heading: '#283a56', text: '#334155', footer: '#7b8492' },
+dark: { background: '#000000', title: '#ffffff', secondary: '#c7c7cc', card: '#1c1c1e', border: '#444449', heading: '#f5f5f7', text: '#d1d1d6', footer: '#98989d' },
+}
 function getCanvasTheme(theme) {
 return CANVAS_THEMES[theme === 'dark' ? 'dark' : 'light']
 }
@@ -370,6 +374,28 @@ function classifyFixtureVisualType(fixture = {}) {
   return 'soft'
 }
 
+function isGroundPosition(position) {
+  return Boolean(position && (position.kind === 'ground' || position.ground === true))
+}
+
+function drawAddressSetBadge(ctx, point, fixtureSize, theme) {
+  const radius = Math.max(5, Math.min(8, Number(fixtureSize) * .38))
+  const x = point.x + radius * 1.35
+  const y = point.y - radius * 1.35
+  ctx.beginPath()
+  ctx.setFillStyle(theme.stage)
+  ctx.setStrokeStyle(theme.success)
+  ctx.setLineWidth(1.5)
+  ctx.arc(x, y, radius, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.stroke()
+  ctx.setFillStyle(theme.success)
+  ctx.setFontSize(Math.max(8, radius * 1.65))
+  ctx.setTextAlign('center')
+  ctx.fillText('✓', x, y + radius * .36)
+  ctx.setTextAlign('left')
+}
+
 function drawFixtureMiniature(ctx, point, type, color, size) {
   const unit = Math.max(5, Number(size) || 12)
   const centerX = point.x
@@ -650,9 +676,15 @@ function renderStageDiagram(ctx, snapshot, options = {}) {
   const fixtureById = new Map((snapshot.fixtures || []).map((fixture) => [String(fixture.id || fixture.stableId), fixture]))
   const positions = snapshot.layout?.positionsById || {}
   const placedByRod = new Map()
+  const placedOnGround = []
   Object.entries(positions).forEach(([fixtureId, position]) => {
     const fixture = fixtureById.get(String(fixtureId))
-    if (!fixture || !position?.rodId) return
+    if (!fixture || !position) return
+    if (isGroundPosition(position)) {
+      placedOnGround.push({ fixture, position })
+      return
+    }
+    if (!position.rodId) return
     const list = placedByRod.get(String(position.rodId)) || []
     list.push({ fixture, position })
     placedByRod.set(String(position.rodId), list)
@@ -713,6 +745,7 @@ function renderStageDiagram(ctx, snapshot, options = {}) {
       const dragging = String(fixture.id || fixture.stableId) === String(snapshot.draggingFixtureId || '')
       const size = miniatureSize + (highlighted || dragging ? 4 * scale : 0)
       drawFixtureMiniature(ctx, point, classifyFixtureVisualType(fixture), color, size)
+      if (!options.exportMode && fixture.checked) drawAddressSetBadge(ctx, point, size, theme)
       if (highlighted || selected || dragging) {
         ctx.setStrokeStyle(highlighted || dragging ? theme.accent : theme.text)
         ctx.setLineWidth(Math.max(2, 2.5 * scale))
@@ -730,6 +763,28 @@ function renderStageDiagram(ctx, snapshot, options = {}) {
           highlighted || selected || dragging ? 116 : 45, offsets)
       }
     })
+  })
+  placedOnGround.forEach(({ fixture, position }) => {
+    const worldPoint = layoutFixturePoint(geometry, null, position)
+    const point = stageScreenPoint(worldPoint, view)
+    const color = LAYOUT_GROUP_COLORS[Math.max(0, Number(fixture.groupIndex) || 0) % LAYOUT_GROUP_COLORS.length]
+    const selected = String(fixture.id || fixture.stableId) === String(snapshot.selectedFixtureId || '')
+    const highlighted = String(fixture.id || fixture.stableId) === String(snapshot.highlightFixtureId || '')
+    const dragging = String(fixture.id || fixture.stableId) === String(snapshot.draggingFixtureId || '')
+    const size = 16 * scale + (highlighted || dragging ? 4 * scale : 0)
+    drawFixtureMiniature(ctx, point, classifyFixtureVisualType(fixture), color, size)
+    if (highlighted || selected || dragging) {
+      ctx.setStrokeStyle(theme.accent)
+      ctx.setLineWidth(Math.max(2, 2.5 * scale))
+      ctx.beginPath()
+      ctx.arc(point.x, point.y, size * .7 + 4 * scale, 0, Math.PI * 2)
+      ctx.stroke()
+    }
+    if (!options.exportMode && fixture.checked) drawAddressSetBadge(ctx, point, size, theme)
+    const label = stageScreenPoint({ x: worldPoint.x + 14, y: worldPoint.y + 19 }, view)
+    queueAnnotation('地 · ' + String(fixture.addressText || ''), label.x, label.y, 12, color, 'left',
+      highlighted || selected || dragging ? 116 : 65,
+      annotationOffsets([0, 14 * pixelRatio, -14 * pixelRatio, 28 * pixelRatio, -28 * pixelRatio], [0, -12 * pixelRatio, 12 * pixelRatio, -24 * pixelRatio, 24 * pixelRatio]))
   })
   if (snapshot.siteLabel) {
     const site = stageScreenPoint({ x: stage.left + 8, y: stage.top + 24 }, view)
@@ -773,14 +828,17 @@ function buildLightingAddressSections(snapshot, geometry) {
     sectionsByRod.set(String(rod.id), { label: rod.label, addresses: [] })
   })
   const unplaced = []
+  const ground = { label: '舞台地面灯', addresses: [] }
   ;(snapshot.fixtures || []).slice().sort(fixtureSort).forEach((fixture) => {
     const id = String(fixture.id || fixture.stableId || '')
     const position = positions[id]
     const section = position && position.rodId ? sectionsByRod.get(String(position.rodId)) : null
-    if (section) section.addresses.push(String(fixture.addressText || ''))
+    if (isGroundPosition(position)) ground.addresses.push(String(fixture.addressText || ''))
+    else if (section) section.addresses.push(String(fixture.addressText || ''))
     else unplaced.push(String(fixture.addressText || ''))
   })
   const sections = [...sectionsByRod.values()].filter((section) => section.addresses.length > 0)
+  if (ground.addresses.length) sections.push(ground)
   if (unplaced.length) sections.push({ label: '未上杆', addresses: unplaced })
   return sections
 }
@@ -904,20 +962,23 @@ function buildLightingExportPages(snapshot = {}, options = {}) {
   }]
 }
 
-function renderLightingExportPage(ctx, snapshot, page = {}) {
+function renderLightingExportPage(ctx, snapshot, page = {}, theme = 'light') {
+  const dark = theme === 'dark'
+  const colors = EXPORT_COLORS[dark ? 'dark' : 'light']
+  const diagramTheme = getCanvasTheme(theme)
   const width = page.width || 1120
   const height = page.height || 1160
   const diagramTop = Number(page.diagramTop) || 112
   const diagramX = Number(page.diagramX) || 36
   const diagramWidth = Number(page.diagramWidth) || width - 72
   const diagramHeight = Number(page.diagramHeight) || height - diagramTop - 48
-  ctx.setFillStyle('#ffffff')
+  ctx.setFillStyle(colors.background)
   ctx.fillRect(0, 0, width, height)
   ctx.setTextAlign('center')
-  ctx.setFillStyle('#17243b')
+  ctx.setFillStyle(colors.title)
   ctx.setFontSize(42)
   ctx.fillText('灯位图', width / 2, 54)
-  ctx.setFillStyle('#55647b')
+  ctx.setFillStyle(colors.secondary)
   ctx.setFontSize(22)
   ;(page.projectLines || [String(snapshot.contextLabel || '临时设置')]).forEach((line, index) => {
     ctx.fillText(line, width / 2, 94 + index * 28)
@@ -926,7 +987,7 @@ function renderLightingExportPage(ctx, snapshot, page = {}) {
   renderStageDiagram(ctx, {
     ...snapshot,
     geometry,
-    theme: CANVAS_THEMES.light,
+    theme: diagramTheme,
     siteLabel: '',
     selectedRodId: '',
     selectedFixtureId: '',
@@ -941,13 +1002,14 @@ function renderLightingExportPage(ctx, snapshot, page = {}) {
     forceAllAddresses: true,
     addressFontSize: page.addressFontSize || 12,
     addressLabelLaneCount: page.addressLabelLaneCount || 1,
+    exportMode: true,
   })
   const addressLayout = page.addressLayout
   if (addressLayout && addressLayout.sections.length) {
     const tableLeft = 36
     const titleY = Number(page.addressListTop) + 25
     ctx.setTextAlign('left')
-    ctx.setFillStyle('#17243b')
+    ctx.setFillStyle(colors.title)
     ctx.setFontSize(20)
     ctx.fillText(`完整地址清单（${(snapshot.fixtures || []).length} 台）`, tableLeft, titleY)
     let rowTop = titleY + 16
@@ -956,15 +1018,15 @@ function renderLightingExportPage(ctx, snapshot, page = {}) {
       rowSections.forEach((section) => {
         const x = tableLeft + section.column * (addressLayout.columnWidth + addressLayout.gap)
         const boxHeight = 42 + section.lines.length * addressLayout.lineHeight
-        ctx.setFillStyle('#f5f7fb')
+        ctx.setFillStyle(colors.card)
         ctx.fillRect(x, rowTop, addressLayout.columnWidth, boxHeight)
-        ctx.setStrokeStyle('#d7deea')
+        ctx.setStrokeStyle(colors.border)
         ctx.setLineWidth(1)
         ctx.strokeRect(x, rowTop, addressLayout.columnWidth, boxHeight)
-        ctx.setFillStyle('#283a56')
+        ctx.setFillStyle(colors.heading)
         ctx.setFontSize(17)
         ctx.fillText(`${section.label}（${section.addresses.length}台）`, x + 12, rowTop + 25)
-        ctx.setFillStyle('#334155')
+        ctx.setFillStyle(colors.text)
         ctx.setFontSize(addressLayout.fontSize)
         section.lines.forEach((line, index) => {
           ctx.fillText(line, x + 12, rowTop + 48 + index * addressLayout.lineHeight)
@@ -973,7 +1035,7 @@ function renderLightingExportPage(ctx, snapshot, page = {}) {
       rowTop += addressLayout.rowHeights[row] + 14
     }
   }
-  ctx.setFillStyle('#7b8492')
+  ctx.setFillStyle(colors.footer)
   ctx.setTextAlign('center')
   ctx.setFontSize(14)
   ctx.fillText('TuneBuddy', width / 2, Number(page.footerY) || height - 24)

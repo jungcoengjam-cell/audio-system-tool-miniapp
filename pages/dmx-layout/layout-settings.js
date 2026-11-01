@@ -193,7 +193,8 @@ function createLayoutSettingsMethods(dependencies = {}) {
         return
       }
       const uniformArrange = arrangementMode === 'uniform'
-      const placedCount = Object.values(next.positionsById).filter((position) => !removedIds.has(String(position.rodId))).length
+      const placedCount = Object.values(next.positionsById)
+        .filter((position) => position && position.rodId && !removedIds.has(String(position.rodId))).length
       if (uniformArrange && placedCount) {
         wx.showModal({
           title: '重新均匀排列',

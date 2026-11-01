@@ -69,6 +69,7 @@ function cameraOptionsFromPage(page) {
   const sceneMode = state.sceneModes[state.sceneModeIndex].value
   const options = {
     sceneMode,
+    calculationVersion: Number(state.cameraCalculationVersion) === 1 ? 1 : 2,
     heightMode: state.heightModes[state.heightModeIndex].value,
     cameraHeightMeters: Number(state.fixedCameraHeightText),
     marginRatio: Number(state.marginOptions[state.marginIndex]) / 100,
@@ -95,14 +96,15 @@ function assertCameraPageCoverage(assert, finiteTree, page, label) {
     return null
   }
   const fov = page.getFovDefinition(page.data)
-  return cameraCoverage.assertCompletePlacementCoverage(
-    assert, finiteTree, fov, cameraOptionsFromPage(page), result, label,
-  )
+  const options = cameraOptionsFromPage(page)
+  return Number(result.framingVersion) === 2
+    ? cameraCoverage.assertFramedPlacementCoverage(assert, finiteTree, fov, options, result, label)
+    : cameraCoverage.assertCompletePlacementCoverageV1(assert, finiteTree, fov, options, result, label)
 }
 
 module.exports = function register({ test, assert, finiteTree, close }) {
   for (const [name, modulePath] of pageCases) {
-    test(name + (name === 'limiter'
+    test(name + (name === 'limiter' || name === 'camera'
       ? ' page result text and record payload agree'
       : ' page output, copied text, and record payload agree'), () => {
       const context = bootPage(modulePath)
@@ -134,6 +136,18 @@ module.exports = function register({ test, assert, finiteTree, close }) {
           const record = page.getRecordPayload()
           assert(record, name + ' valid result should produce a record payload')
           assert.strictEqual(text, record.resultText, 'limiter result text must match saved record text')
+        } else if (name === 'camera') {
+          assert.strictEqual(page.data.sourceModeIndex, 0, 'camera result should use the current library-only input path')
+          assert.strictEqual(typeof page.getResultText, 'function', name + ' must expose visible result text')
+          const text = page.getResultText()
+          assert(typeof text === 'string' && text.trim().length > 0, name + ' result text must be present')
+          assert(!/NaN|Infinity/.test(text), name + ' result text must not expose non-finite values')
+          const record = page.getRecordPayload()
+          assert(record, name + ' valid result should produce a record payload')
+          assert.strictEqual(record.module, 'camera')
+          assert.strictEqual(record.preferences.sourceMode, 'library')
+          assert.strictEqual(record.preferences.cameraModel, page.data.selectedCamera.model)
+          assert.strictEqual(record.resultText, text, 'camera record text must match the visible result text')
         } else {
           assert.strictEqual(typeof page.copyResult, 'function', name + ' should implement copyResult')
           page.copyResult()
@@ -206,59 +220,55 @@ module.exports = function register({ test, assert, finiteTree, close }) {
     } finally { context.restore() }
   }, { classification: 'implementation bug', basis: 'Camera scene mode is a real input mode and must recalculate the displayed result through the page handler.' })
 
-  test('camera page case #9 keeps raw and displayed two-axis coverage through copy and record', () => {
+  test('camera page library selection keeps raw and displayed V2 coverage in its result record', () => {
     const context = bootPage('../../pages/camera/camera')
     try {
       const page = context.page
       page.onLoad()
       assertCameraPageCoverage(assert, finiteTree, page, 'case #9 page default before input changes')
-      page.commitCalculatedState({
-        sourceModeIndex: 1,
-        definitionModeIndex: 0,
-        sceneModeIndex: 1,
-        heightModeIndex: 1,
-        marginIndex: 0,
-        customHorizontalFovText: '60',
-        customVerticalFovText: '10',
-        planeWidthText: '10',
-        planeHeightText: '3',
-        planeBottomHeightText: '0',
-        fixedCameraHeightText: '10',
-      })
+      assert.strictEqual(page.openCameraSelector(), true)
+      const cameraOption = page.data.selectorItems.find((item) => item.model === 'TS-0650JSP')
+      assert(cameraOption, 'supported library camera should appear in the model selector')
+      page.selectCamera({ currentTarget: { dataset: { index: cameraOption.index } } })
+      assert.strictEqual(page.data.selectedCamera.model, 'TS-0650JSP')
+      page.onSceneModeTap({ currentTarget: { dataset: { index: 1 } } })
+      page.onHeightModeTap({ currentTarget: { dataset: { index: 1 } } })
+
       const result = page.data.result
       const fov = page.getFovDefinition(page.data)
       const options = cameraOptionsFromPage(page)
-      cameraCoverage.assertCompletePlacementCoverage(
-        assert, finiteTree, fov, options, result, 'camera page case #9',
-      )
-      assert.strictEqual(result.distanceMeters, 10.05,
-        'case #9 should display the rounded calculation distance')
-      assert(result.verticalMinimumDistanceMeters > result.horizontalMinimumDistanceMeters,
-        'case #9 vertical check should begin at the horizontal constraint and move to the far feasible branch')
-      const calculationText = result.calculationRows
-        .map((row) => `${row.title} ${row.formula} ${row.substitution}`)
-        .join('\n')
-      assert(calculationText.includes('水平视场角') && calculationText.includes('tan('),
-        'camera result should explain the horizontal FOV width boundary')
-      assert(calculationText.includes('垂直包络角') && calculationText.includes('垂直视场角'),
-        'camera result should explain the independent vertical envelope check')
-      assert(!result.calculationRows.some((row) => row.formula.includes('max(')),
-        'the calculation narrative must not describe the branch-aware solution as max(Dh, Dv)')
-      const displayedCoverage = cameraCoverage.evaluatePlacementCoverage(fov, options, result.distanceMeters)
+      assert.strictEqual(options.calculationVersion, 2)
+      assert.strictEqual(result.framingVersion, 2)
+      assert.strictEqual(result.calculationHorizontalFov, 21,
+        'camera FOV should come from the selected manufacturer library view')
+      assert.strictEqual(result.calculationVerticalFov, 12,
+        'camera FOV should use the selected view’s documented vertical angle')
+      assertCameraPageCoverage(assert, finiteTree, page, 'camera page supported library selection')
+      assert.strictEqual(result.presentation.statusKind, 'verified-v2',
+        'current library result should retain its verified V2 display state')
+      const displayedCoverage = cameraCoverage.evaluatePresentedFramingCoverage(fov, options, result.presentation)
+      assert(displayedCoverage.valid,
+        'parsed displayed distance, height, and pitch must keep every target corner in front of the lens')
+      close(displayedCoverage.distanceMeters, result.presentedMinimumDistanceMeters,
+        1e-12, 'displayed distance text should match the result presentation value')
       assert(displayedCoverage.horizontalCovered && displayedCoverage.verticalCovered,
-        'the displayed 10.05 m distance on the real page must cover both axes')
+        'the displayed distance/height/pitch tuple must cover both axes under independent V2 corner projection')
+      assert.strictEqual(result.presentation.validation.fits, true,
+        'production display validation should agree with the independently projected displayed tuple')
 
-      page.copyResult()
-      const copiedText = context.copied[context.copied.length - 1]
+      const visibleText = page.getResultText()
       const record = page.getRecordPayload()
-      assert(record, 'case #9 should produce a record payload')
-      assert.strictEqual(copiedText, page.getResultText(), 'copied result must match the visible case #9 result')
-      assert.strictEqual(record.resultText, copiedText, 'saved case #9 record must match the copied result')
-      assert(copiedText.includes('10.05 m'), 'copied result should retain the displayed case #9 distance')
-      assert(copiedText.includes('垂直包络角') && copiedText.includes('tan('),
-        'visible, copied, and recorded result should retain the two-axis calculation model')
+      assert(record, 'supported library result should produce a record payload')
+      assert.strictEqual(record.preferences.cameraModel, 'TS-0650JSP')
+      assert.strictEqual(record.preferences.sceneMode, 'plane')
+      assert.strictEqual(record.preferences.heightMode, 'fixed')
+      assert.strictEqual(record.resultText, visibleText,
+        'saved camera record should retain the visible result text')
+      assert(visibleText.includes(result.presentation.distanceText),
+        'visible result text should retain the verified displayed distance')
+      assert(!/NaN|Infinity/.test(visibleText), 'visible camera result text must remain finite')
     } finally { context.restore() }
-  }, { classification: 'implementation bug', basis: 'The actual camera page must preserve the raw and displayed case #9 coverage result through its copy and record paths.' })
+  }, { classification: 'implementation bug', basis: 'The current camera page must calculate from a selected library model and preserve raw and displayed V2 coverage in its saved record payload.' })
 
   test('LED frame width input uses centimeters and invalid input clears the displayed result', () => {
     const context = bootPage('../../pages/led-screen/led-screen')

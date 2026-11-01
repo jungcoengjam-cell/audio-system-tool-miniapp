@@ -759,7 +759,19 @@ function buildLightingTask(item, projectName) {
         modeName: `${fixture.channelCount} CH`,
       }
     }
-    if (!savedPosition || typeof savedPosition !== 'object' || Array.isArray(savedPosition)
+    const isGroundPosition = Boolean(savedPosition && typeof savedPosition === 'object' && !Array.isArray(savedPosition)
+      && (savedPosition.kind === 'ground' || savedPosition.ground === true))
+    if (isGroundPosition) {
+      const conflictingGroundMarker = (hasOwn(savedPosition, 'kind') && savedPosition.kind !== 'ground')
+        || (hasOwn(savedPosition, 'ground') && savedPosition.ground !== true)
+      const hasRodPosition = hasOwn(savedPosition, 'rodId') || hasOwn(savedPosition, 't')
+      if (conflictingGroundMarker || hasRodPosition
+        || typeof savedPosition.x !== 'number' || !Number.isFinite(savedPosition.x) || savedPosition.x < 0 || savedPosition.x > 1
+        || typeof savedPosition.y !== 'number' || !Number.isFinite(savedPosition.y) || savedPosition.y < 0 || savedPosition.y > 1) {
+        invalidPosition = true
+        return null
+      }
+    } else if (!savedPosition || typeof savedPosition !== 'object' || Array.isArray(savedPosition)
       || typeof savedPosition.rodId !== 'string' || !savedPosition.rodId.trim()
       || !Number.isFinite(savedPosition.t) || savedPosition.t < 0 || savedPosition.t > 1
       || !rodsById.has(String(savedPosition.rodId))) {

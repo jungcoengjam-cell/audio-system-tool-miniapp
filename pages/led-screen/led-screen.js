@@ -3,6 +3,8 @@ const finishLedScreenModuleLoad = startMeasurement('LED大屏/脚本加载')
 const { calculateLedScreenPlan, LED_PIXEL_PITCHES, LED_UNIT_SPECS, PREFERRED_RATIO_ERROR } = require('../../utils/led-screen')
 const { findValueIndex, readPreferences, writePreferences, writePreferencesDetailed } = require('../../utils/preferences')
 const { vibrate } = require('../../utils/haptics')
+const nativeImagePreview = require('../native-image-preview')
+const { getResultImageTheme } = require('../result-image-theme')
 const {
   createOperationMethods,
   prepareOperation,
@@ -16,7 +18,6 @@ const { saveEditorRecord: saveEditorRecordAction, requestEditorLeave } = require
 const { getExportDimensions } = require('../../utils/report-drawing')
 const {
   isPageContextCurrent,
-  previewGeneratedImage,
   saveGeneratedImage,
   shareGeneratedImage,
 } = require('../../utils/report-image-actions')
@@ -458,6 +459,7 @@ Page({
   },
 
   onShow() {
+    nativeImagePreview.onShow(this)
     this._pageVisible = true
     measure(this)
     if (this.data.result) {
@@ -483,12 +485,15 @@ Page({
   },
 
   onHide() {
+    const returningFromPreview = nativeImagePreview.onHide(this)
     this._pageVisible = false
     this.flushInputCalculation()
     this.cancelLedProjectDialogForHide()
-    this.closeReportPreview(true)
-    if (this.data.isGeneratingReport) this.invalidateReportGeneration()
-    this.setData({ reportPreviewVisible: false, reportPreviewClosing: false, reportPreviewError: false, isGeneratingReport: false })
+    if (!returningFromPreview) {
+      this.closeReportPreview(true)
+      if (this.data.isGeneratingReport) this.invalidateReportGeneration()
+      this.setData({ reportPreviewVisible: false, reportPreviewClosing: false, reportPreviewError: false, isGeneratingReport: false })
+    }
   },
   onUnload() {
     this._pageVisible = false
@@ -879,7 +884,9 @@ Page({
     const payload = buildLedScreenReportPayload(state)
     if (!payload || !capture || this.data.isGeneratingReport || this.data.inputPending || this.data.inputError) return false
     const signature = this.getReportSignature(state)
-    if (this.data.reportImagePath && this.reportSignature === signature) {
+    const theme = getResultImageTheme()
+    if (this.data.reportImagePath && this.reportSignature === signature
+      && this._reportImageTheme === theme) {
       if (!this.isCapturedOutputCurrent(capture)) return false
       if (this.hasAccessibleReportImage()) {
         const shouldNotifyOpen = !this.data.reportPreviewVisible
@@ -911,9 +918,15 @@ Page({
     const revision = (this.reportRevision || 0) + 1
     this.reportRevision = revision
     this.reportPendingSignature = signature
-    const isCurrent = () => this._pageVisible !== false && !this._ledUnloaded
+    const generationCurrent = () => this._pageVisible !== false && !this._ledUnloaded
       && this.reportRevision === revision && this.isCapturedOutputCurrent(capture)
       && this.reportPendingSignature === signature
+    const isCurrent = () => {
+      if (!generationCurrent()) return false
+      if (getResultImageTheme() === theme) return true
+      this.finishReportGeneration(revision)
+      return false
+    }
     this.setData({
       isGeneratingReport: true,
       reportPreviewVisible: false,
@@ -932,7 +945,7 @@ Page({
           draw: (context) => {
             const finishReportDrawing = startMeasurement('LED大屏/长图绘制')
             try {
-              drawLedScreenReport(context, payload, layout)
+              drawLedScreenReport(context, payload, layout, theme)
             } finally {
               finishReportDrawing()
             }
@@ -942,6 +955,7 @@ Page({
           onSuccess: (tempFilePath) => {
             if (!isCurrent()) return
             this.reportSignature = signature
+            this._reportImageTheme = theme
             this.openReportPreview({ reportImagePath: tempFilePath })
             this.finishReportGeneration(revision)
             if (this.reportRevision === revision && !this.reportPendingSignature
@@ -997,6 +1011,7 @@ Page({
   },
 
   closeReportPreview(immediate = false) {
+    nativeImagePreview.cancel(this)
     if (immediate === true) {
       const hadPreview = Boolean(this.data.reportPreviewVisible || this.data.reportPreviewClosing || this.data.reportPreviewError)
       this.cancelReportPreviewCloseTimer()
@@ -1042,7 +1057,7 @@ Page({
       this.setData({ reportImagePath: '', reportPreviewError: false })
       return this.generateReportImage()
     }
-    return previewGeneratedImage(path)
+    return nativeImagePreview.preview(this, path, () => this.closeReportPreview(true))
   },
 
   onReportPreviewImageError(event) {
@@ -1081,7 +1096,8 @@ Page({
       this.setData({ reportImagePath: '', reportPreviewError: true })
       return false
     }
-    return shareGeneratedImage(path)
+    return nativeImagePreview.share(this, path, shareGeneratedImage,
+      () => this.closeReportPreview(true))
   },
 
   saveReportImage() {

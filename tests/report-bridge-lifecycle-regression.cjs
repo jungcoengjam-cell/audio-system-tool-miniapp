@@ -300,6 +300,7 @@ function createRecordFixture(version) {
     },
   }
   const mocks = {
+    '../../utils/report-bridge-lifecycle': require('../utils/report-bridge-lifecycle'),
     '../../utils/report-canvas': { drawAndExportReport() {} },
     '../../utils/report-drawing': { getExportDimensions() { return {} } },
     '../../utils/haptics': { vibrate() {} },

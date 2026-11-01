@@ -1,6 +1,6 @@
 # 产品数据说明
 
-当前产品参数来自用户提供的公司产品说明书 PDF。核心计算字段记录在 `data/equipment.js`，资料库补充规格记录在 `data/speaker-specifications.js`、`data/cameras.js` 与 `data/stage-lighting.js`。
+当前产品参数来自用户提供的公司产品说明书 PDF。核心计算字段记录在 `data/equipment.js`，资料库补充规格记录在 `pages/products/data/speaker-specifications.js`、`data/cameras.js` 与 `data/stage-lighting.js`。
 
 截至 2026-08-01，已复核：
 
@@ -43,7 +43,7 @@ C:\Users\wxx\Desktop\E05-专业扩声音箱
 
 ```text
 data/equipment.js
-data/speaker-specifications.js
+pages/products/data/speaker-specifications.js
 data/cameras.js
 data/stage-lighting.js
 ```

@@ -21,6 +21,7 @@
       bindtouchstart="onCanvasTouchStart" catchtouchmove="onCanvasTouchMove"
       bindtouchend="onCanvasTouchEnd" bindtouchcancel="onCanvasTouchCancel"></canvas>
     <view class="canvas-badge">舞台 · {{layout.stageWidthText || '12'}} m × {{layout.stageDepthText || '8'}} m</view>
+    <view wx:if="{{!layoutPanelVisible && !locateVisible && !placementVisible && !previewVisible && !isGeneratingImage && !exportCanvasActive}}" class="canvas-tap-tip">点击舞台或灯杆进行操作</view>
     <view wx:if="{{!layoutPanelVisible && !locateVisible && !placementVisible && !previewVisible && !isGeneratingImage && !exportCanvasActive && layoutLegend.length}}" class="canvas-legend">
       <view class="canvas-legend-title">灯具图例</view>
       <view class="canvas-legend-list">
@@ -46,52 +47,79 @@
     <view class="placement-card {{placementClosing ? 'sheet-closing' : ''}}" style="max-height:{{placementCardMaxHeight}}px;" catchtap="stopTap">
       <view class="sheet-handle"></view>
       <view class="placement-heading">
-        <view class="placement-title-wrap">
-          <view class="placement-titlebar"><view class="placement-title">{{selectedRodName}}</view><view class="placement-actions"><button class="placement-clear-button placement-clear-rod-button" disabled="{{selectedRodCount === 0 || clearLayoutPending}}" bindtap="clearSelectedRodLayout">清空当前杆</button><button class="placement-clear-button" disabled="{{placedFixtureCount === 0 || clearLayoutPending}}" bindtap="clearLayoutImage">清空全图</button></view></view>
-          <view class="placement-subtitle">{{previewRangeText}}</view>
-        </view>
+        <view class="placement-title-wrap"><view class="placement-title">灯具位置</view><view class="placement-subtitle">{{placementTargetSummary}}</view></view>
+        <button class="placement-search-toggle" aria-label="{{placementSearchExpanded ? '收起搜索' : '搜索地址和灯具'}}" bindtap="togglePlacementSearch">⌕</button>
+        <button class="placement-tool-button" aria-label="整理与清空灯位" bindtap="openPlacementActions">整理</button>
+        <button class="sheet-close panel-close-control" aria-label="关闭灯具位置面板" bindtap="closePlacementPanel"><view class="panel-close-icon" aria-hidden="true"></view></button>
       </view>
-      <view class="rod-overview">
-        <view class="overview-track">
-          <view class="overview-rail"></view>
-          <view wx:for="{{previewItems}}" wx:key="id" class="overview-tick {{item.id === selectedFixtureId ? 'overview-tick-selected' : ''}}" style="left: {{item.t * 100}}%; background: {{item.color}}"></view>
-          <view wx:if="{{selectedRodCount > 0}}" class="overview-viewport" style="left:{{previewViewportLeft}}%;width:{{previewViewportWidth}}%;"></view>
-          <view wx:if="{{selectedRodCount === 0}}" class="overview-empty">此灯杆暂无灯具</view>
-        </view>
-      </view>
-
-      <scroll-view class="placement-preview-strip" scroll-x enhanced show-scrollbar="{{false}}" scroll-into-view="{{previewScrollIntoView}}" bindscroll="onPreviewScroll">
-        <view class="preview-track">
-          <view wx:if="{{previewItems.length}}" class="preview-rail"></view>
-          <view wx:for="{{previewItems}}" wx:key="id" id="{{item.scrollId}}" class="preview-light-column {{item.id === selectedFixtureId ? 'preview-light-selected' : ''}}" data-fixture-id="{{item.id}}" bindtap="onPreviewFixtureTap">
-            <view class="preview-light-head fixture-thumbnail fixture-type-{{item.fixtureType}}" style="border-color:{{item.color}};"><image class="fixture-sprite-image" src="/assets/lighting/fixture-types.png" mode="scaleToFill" /></view>
-            <text class="preview-light-address" style="color:{{item.color}}">{{item.addressText}}</text>
+      <view wx:if="{{placementSearchExpanded}}" class="placement-search"><text>⌕</text><input value="{{placementFilterText}}" placeholder="搜索地址、灯具组或型号" confirm-type="search" bindinput="onPlacementFilterInput" /></view>
+      <view class="placement-preview-top">
+        <view wx:if="{{selectedRodId}}" class="rod-overview">
+          <view class="overview-caption"><text>{{selectedRodName}}</text><text>{{selectedRodCount}} 台</text></view>
+          <view class="overview-track">
+            <view class="overview-rail"></view>
+            <view wx:for="{{previewItems}}" wx:key="id" class="overview-tick {{item.id === selectedFixtureId ? 'overview-tick-selected' : ''}}" style="left: {{item.t * 100}}%; background: {{item.color}}"></view>
+            <view wx:if="{{selectedRodCount > 0}}" class="overview-viewport" style="left:{{previewViewportLeft}}%;width:{{previewViewportWidth}}%;"></view>
+            <view wx:if="{{selectedRodCount === 0}}" class="overview-empty">{{placementPreviewEmptyText}}</view>
           </view>
-          <view wx:if="{{selectedRodCount === 0}}" class="preview-empty">上杆后在此查看整杆布局</view>
+          <scroll-view class="placement-preview-strip" scroll-x enhanced show-scrollbar="{{false}}" scroll-into-view="{{previewScrollIntoView}}" bindscroll="onPreviewScroll">
+            <view class="preview-track">
+              <view wx:if="{{previewItems.length}}" class="preview-rail"></view>
+              <view wx:for="{{previewItems}}" wx:key="id" id="{{item.scrollId}}" class="preview-light-column {{item.id === selectedFixtureId ? 'preview-light-selected' : ''}}" data-fixture-id="{{item.id}}" bindtap="onPreviewFixtureTap" aria-label="查看地址 {{item.addressText}}">
+                <view class="preview-light-head fixture-thumbnail fixture-type-{{item.fixtureType}}" style="border-color:{{item.color}};"><image class="fixture-sprite-image" src="/assets/lighting/fixture-types.png" mode="scaleToFill" /></view>
+                <text class="preview-light-address" style="color:{{item.color}}">{{item.addressText}}</text>
+              </view>
+              <view wx:if="{{selectedRodCount === 0}}" class="preview-empty">{{placementPreviewEmptyText}}</view>
+            </view>
+          </scroll-view>
         </view>
-      </scroll-view>
-
-      <view class="placement-search"><text>⌕</text><input value="{{placementFilterText}}" placeholder="搜索地址、灯具组或型号" confirm-type="search" bindinput="onPlacementFilterInput" /></view>
-      <scroll-view class="fixture-selection-list" scroll-y enhanced show-scrollbar="{{false}}" scroll-into-view="{{panelScrollIntoView}}">
-        <view wx:for="{{placementGroups}}" wx:key="id" class="fixture-group">
-          <view class="fixture-group-heading">
-            <view class="group-color-dot" style="background: {{item.color}}"></view>
-            <view class="fixture-group-copy"><view class="fixture-group-name">{{item.fixtureDisplayTitle}}</view><view class="fixture-group-meta">{{item.channelCount}} CH · {{item.fixtures.length}} 台</view></view>
-          </view>
-          <view class="fixture-address-grid">
-            <view wx:for="{{item.fixtures}}" wx:for-item="fixture" wx:key="id" id="fixture-{{fixture.id}}"
-              class="fixture-address-chip {{fixture.placedOnSelectedRod ? 'fixture-chip-placed' : ''}} {{fixture.placedElsewhere ? 'fixture-chip-other-rod' : ''}} {{selectedFixtureId === fixture.id ? 'fixture-address-selected' : ''}}"
-              style="--fixture-color:{{fixture.color}};"
-              data-fixture-id="{{fixture.id}}" bindtap="onPanelFixtureTap">
-              <text class="fixture-chip-address">{{fixture.addressText}}</text>
-              <view wx:if="{{selectedFixtureId === fixture.id}}" class="fixture-chip-selected-marker">选</view>
-              <view wx:if="{{fixture.placedOnSelectedRod}}" class="fixture-chip-check">✓</view>
-              <text wx:elif="{{fixture.placedElsewhere}}" class="fixture-chip-origin">{{fixture.shortRodName}}</text>
+        <view wx:else class="ground-preview-panel">
+          <view class="ground-preview-label">舞台地面 · {{groundPreviewItems.length}} 台</view>
+          <view class="ground-preview-stage" aria-hidden="true">
+            <view wx:for="{{groundPreviewItems}}" wx:key="id" class="ground-preview-marker {{item.id === selectedFixtureId ? 'ground-preview-marker-selected' : ''}}"
+              style="left:{{item.xPercent}}%;top:{{item.yPercent}}%">
+              <view class="ground-preview-dot" style="background:{{item.color}}"></view>
             </view>
           </view>
+          <scroll-view wx:if="{{groundPreviewItems.length}}" class="ground-preview-strip" scroll-x enhanced show-scrollbar="{{false}}">
+            <view class="preview-track">
+              <view wx:for="{{groundPreviewItems}}" wx:key="id" class="preview-light-column {{item.id === selectedFixtureId ? 'preview-light-selected' : ''}}" data-fixture-id="{{item.id}}" bindtap="onPreviewFixtureTap" aria-label="查看地址 {{item.addressText}}">
+                <view class="preview-light-head fixture-thumbnail fixture-type-{{item.fixtureType}}" style="border-color:{{item.color}};"><image class="fixture-sprite-image" src="/assets/lighting/fixture-types.png" mode="scaleToFill" /></view>
+                <text class="preview-light-address" style="color:{{item.color}}">{{item.addressText}}</text>
+              </view>
+            </view>
+          </scroll-view>
+          <view class="ground-preview-info">{{placementPreviewEmptyText}}</view>
         </view>
-        <view wx:if="{{placementGroups.length === 0}}" class="no-fixture-results">没有匹配的灯具</view>
-        <view class="fixture-list-tail"></view>
+        <view wx:if="{{selectedFixtureId}}" class="placement-selection-panel" aria-live="polite">
+          <view class="placement-selected-state">{{selectedFixtureAddress}}</view>
+          <view class="placement-check-summary">{{selectedFixtureInfoText}}</view>
+        </view>
+      </view>
+      <view class="placement-gesture-hint">单击放置或撤出当前目标；双击只切换地址勾</view>
+      <scroll-view class="placement-body" scroll-y enhanced show-scrollbar="{{false}}" scroll-into-view="{{placementScrollIntoView}}" bindscroll="onPlacementListScroll">
+        <view id="placement-list-anchor" class="fixture-selection-list">
+          <view wx:for="{{placementGroups}}" wx:key="renderId" class="fixture-group">
+            <view wx:if="{{item.showPriorityDivider}}" class="fixture-priority-divider"></view>
+            <view class="fixture-group-heading">
+              <view class="group-color-dot" style="background: {{item.color}}"></view>
+              <view class="fixture-group-copy"><view class="fixture-group-name">{{item.fixtureDisplayTitle}}</view><view class="fixture-group-meta">{{item.channelCount}} CH · {{item.fixtures.length}} 台</view></view>
+            </view>
+            <view class="fixture-address-grid">
+              <view wx:for="{{item.fixtures}}" wx:for-item="fixture" wx:key="id" id="fixture-{{fixture.id}}"
+                class="fixture-address-chip {{fixture.placed ? 'fixture-chip-placed' : ''}} {{fixture.placedElsewhere ? 'fixture-chip-other-rod' : ''}} {{selectedFixtureId === fixture.id ? 'fixture-address-selected' : ''}}"
+                style="--fixture-color:{{fixture.color}};--fixture-ink:{{fixture.placedTextColor}};"
+                data-fixture-id="{{fixture.id}}" bindtap="onPanelFixtureTap" aria-label="{{fixture.accessibleLabel}}">
+                <text class="fixture-chip-address">{{fixture.addressText}}</text>
+                <view wx:if="{{selectedFixtureId === fixture.id}}" class="fixture-chip-selected-marker">选</view>
+                <text wx:if="{{fixture.placedElsewhere}}" class="fixture-chip-origin">{{fixture.shortRodName}}</text>
+                <view wx:if="{{fixture.checked}}" class="fixture-chip-address-checked" aria-hidden="true">✓</view>
+              </view>
+            </view>
+          </view>
+          <view wx:if="{{placementGroups.length === 0}}" class="no-fixture-results">没有匹配的灯具</view>
+          <view class="fixture-list-tail"></view>
+        </view>
       </scroll-view>
     </view>
   </view>
@@ -161,16 +189,16 @@
   <canvas wx:if="{{exportCanvasActive}}" type="2d" id="dmxLayoutExportCanvas"
     class="export-canvas" style="width:1px;height:1px;"></canvas>
 
-  <view wx:if="{{previewVisible}}" class="export-overlay {{previewClosing ? 'overlay-closing' : ''}}" style="padding-top:{{overlaySafeTop + 12}}px;">
-    <view class="export-sheet {{previewClosing ? 'sheet-closing' : ''}}">
+  <view wx:if="{{previewVisible}}" class="export-overlay result-sheet-overlay {{previewClosing ? 'overlay-closing' : ''}}" style="padding-top:{{overlaySafeTop + 12}}px;">
+    <view class="export-sheet result-sheet result-share {{previewClosing ? 'sheet-closing' : ''}}">
       <view class="sheet-handle"></view>
-      <view class="export-heading"><view class="export-heading-copy"><view class="export-title">灯位图已生成</view><view class="export-subtitle">{{contextLabel}}</view></view><button class="sheet-close" bindtap="closePreview">关闭</button></view>
-      <scroll-view class="export-image-scroll" style="height:{{(canvasWidth > 706 ? 654 : canvasWidth - 50) * exportCanvasHeight / exportCanvasWidth}}px;" scroll-y enhanced show-scrollbar="{{false}}">
+      <view class="export-heading result-header"><view class="export-heading-copy"><view class="export-title result-title">灯位图已生成</view><view class="export-subtitle result-copy">{{contextLabel}}</view></view><button class="sheet-close panel-close-control" aria-label="关闭灯位图预览" bindtap="closePreview"><view class="panel-close-icon" aria-hidden="true"></view></button></view>
+      <scroll-view class="export-image-scroll result-scroll" scroll-y enhanced show-scrollbar="{{false}}">
         <image class="export-image" src="{{layoutImagePath}}" mode="widthFix" bindtap="previewImage"></image>
       </scroll-view>
-      <view class="export-actions">
-        <button class="export-share" bindtap="shareImage">转发图片</button>
-        <button class="export-save-current" bindtap="saveImage">保存图片</button>
+      <view class="export-actions result-footer">
+        <button class="export-share" bindtap="shareImage">分享图片</button>
+        <button class="export-save-current" bindtap="saveImage">保存到相册</button>
       </view>
     </view>
   </view>

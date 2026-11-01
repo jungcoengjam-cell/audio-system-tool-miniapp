@@ -121,7 +121,6 @@ function createLimiterProjectMethods(runtime = {}) {
       if (!this._projectKeyboardBaselineHeight) {
         this._projectKeyboardBaselineHeight = this._projectKeyboardCurrentWindowHeight
       }
-      this.setData(projectKeyboardLayout(this))
     },
 
     onProjectInputBlur(event) {

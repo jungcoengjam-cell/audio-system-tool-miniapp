@@ -420,6 +420,14 @@ function pointOnRod(rod, t) {
 }
 
 function layoutFixturePoint(geometry, rod, position = {}) {
+  if ((position.kind === 'ground' || position.ground === true) && geometry?.stage) {
+    const x = Number(position.x)
+    const y = Number(position.y)
+    return {
+      x: geometry.stage.left + clamp(Number.isFinite(x) ? x : .5, 0, 1) * geometry.stage.width,
+      y: geometry.stage.top + clamp(Number.isFinite(y) ? y : .5, 0, 1) * geometry.stage.height,
+    }
+  }
   if (position.legacyPoint && geometry?.stage) {
     return {
       x: geometry.stage.left + Number(position.legacyPoint.x) * geometry.stage.width,

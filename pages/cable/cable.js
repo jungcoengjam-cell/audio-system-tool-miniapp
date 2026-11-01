@@ -5,6 +5,7 @@ const {
 } = require('../../utils/cable')
 const { findValueIndex, readPreferences, writePreferencesDetailed } = require('../../utils/preferences')
 const { vibrate } = require('../../utils/haptics')
+const nativeImagePreview = require('../native-image-preview')
 const { isPageContextCurrent } = require('../../utils/report-image-actions')
 const {
   cancelResultReportGeneration,
@@ -204,6 +205,7 @@ Page({
   },
 
   onShow() {
+    nativeImagePreview.onShow(this)
     this._pageVisible = true
     measure(this)
     if (this.data.resultReportPreviewVisible) this.updateResultReportPreviewLayout()
@@ -221,13 +223,14 @@ Page({
   },
 
   onHide() {
+    const returningFromPreview = nativeImagePreview.onHide(this)
     this._pageVisible = false
     cancelProjectCloseTimer(this)
     if (this.data.projectDialogVisible) this.closeProjectDialog(true)
     this.flushInputCalculation()
     cancelResultReportGeneration(this)
     this._reportCacheCheckRevision = 0
-    this.setData(this.hideResultReportPreview())
+    if (!returningFromPreview) this.setData(this.hideResultReportPreview())
   },
 
   onUnload() {

@@ -1,9 +1,12 @@
 'use strict'
 
+const nativeImagePreview = require('../native-image-preview')
+const { getResultImageTheme } = require('../result-image-theme')
+
 function createLayoutExportMethods(dependencies = {}) {
-  const { CANVAS_THEMES, EXPORT_CANVAS_ID, EXPORT_HEIGHT, EXPORT_WIDTH, buildLightingExportPages, calculateScheme, clone, configureCanvas2DNode, createCanvas2DAdapter, createDefaultStageLayout, createStageGeometry, layoutFingerprint, makeId, migrateLegacyLayout, previewGeneratedImage, readLightingWorkspace, renderLightingExportPage, saveGeneratedImage, schemeFingerprint, shareGeneratedImage, vibrate, wx, Date, setTimeout, clearTimeout } = dependencies
+  const { CANVAS_THEMES, EXPORT_CANVAS_ID, EXPORT_HEIGHT, EXPORT_WIDTH, buildLightingExportPages, calculateScheme, clone, configureCanvas2DNode, createCanvas2DAdapter, createDefaultStageLayout, createStageGeometry, layoutFingerprint, makeId, migrateLegacyLayout, readLightingWorkspace, renderLightingExportPage, saveGeneratedImage, schemeFingerprint, shareGeneratedImage, vibrate, wx, Date, setTimeout, clearTimeout, getTheme = getResultImageTheme } = dependencies
   return {
-    buildExportSnapshot() {
+    buildExportSnapshot(theme = 'light') {
       const latest = this._contextId ? readLightingWorkspace(this._contextId) : null
       if (!latest || !latest.ok) {
         this.invalidateExportPreview()
@@ -51,22 +54,27 @@ function createLayoutExportMethods(dependencies = {}) {
         fixtures,
         geometry,
         contextLabel: this.data.contextLabel,
-        theme: CANVAS_THEMES.light,
+        theme: CANVAS_THEMES[theme === 'dark' ? 'dark' : 'light'],
       }
     },
     generateLayoutImage() {
       if (!this._alive || !this._visible || this.data.isGeneratingImage || !this._layout || typeof wx.canvasToTempFilePath !== 'function') return
+      const theme = getTheme() === 'dark' ? 'dark' : 'light'
       this.cancelSheetClose('export')
       if (this.data.previewClosing) this.setData({ previewClosing: false })
       if (this._layoutDirty && !this.saveLayoutOnly(this._layout)) return
-      const snapshot = this.buildExportSnapshot()
+      const snapshot = this.buildExportSnapshot(theme)
       if (!snapshot || !this._alive || !this._visible) return
       this._generationToken += 1
       const token = this._generationToken
       const visibilityToken = this._visibilityToken
-      const active = () => this._alive && this._visible
-        && this._visibilityToken === visibilityToken
-        && this._generationToken === token
+      const active = () => {
+        if (!this._alive || !this._visible || this._visibilityToken !== visibilityToken
+          || this._generationToken !== token) return false
+        if (getTheme() === theme) return true
+        this.cancelExportGeneration()
+        return false
+      }
       this._exportSnapshot = snapshot
       this._exportPages = buildLightingExportPages(this._exportSnapshot, { width: EXPORT_WIDTH, height: EXPORT_HEIGHT })
       this._exportPaths = []
@@ -112,6 +120,7 @@ function createLayoutExportMethods(dependencies = {}) {
             exportPageIndex: 0,
             previewVisible: true,
           }, () => { if (active()) vibrate('medium') })
+          this._layoutImageTheme = theme
           return
         }
         const page = this._exportPages[index]
@@ -121,7 +130,7 @@ function createLayoutExportMethods(dependencies = {}) {
           const configured = configureCanvas2DNode(node, page.width, page.height, 1)
           this._exportCanvasContext = configured.context
           this._exportCanvasAdapter = createCanvas2DAdapter(configured.context)
-          renderLightingExportPage(this._exportCanvasAdapter, this._exportSnapshot, page)
+          renderLightingExportPage(this._exportCanvasAdapter, this._exportSnapshot, page, theme)
           if (!active() || this._exportCanvasNode !== node) return
           wx.canvasToTempFilePath({
             canvas: node,
@@ -179,6 +188,7 @@ function createLayoutExportMethods(dependencies = {}) {
     },
     closePreview() {
       if (!this.data.previewVisible || this.data.previewClosing) return
+      nativeImagePreview.cancel(this)
       this.beginSheetClose('export', 'previewClosing', () => {
         this.setData({ previewVisible: false, previewClosing: false, exportCanvasActive: false }, () => this.restoreStageCanvas())
       })
@@ -210,12 +220,12 @@ function createLayoutExportMethods(dependencies = {}) {
       if (!this.data.previewVisible || this.data.previewClosing) return
       const paths = this.data.layoutImagePaths || []
       const current = this.data.layoutImagePath
-      if (paths.length > 1 && typeof wx.previewImage === 'function') wx.previewImage({ current, urls: paths })
-      else previewGeneratedImage(current)
+      return nativeImagePreview.preview(this, current, () => this.invalidateExportPreview(), paths, wx)
     },
     shareImage() {
       if (!this.data.previewVisible || this.data.previewClosing) return
-      shareGeneratedImage(this.data.layoutImagePath)
+      return nativeImagePreview.share(this, this.data.layoutImagePath, shareGeneratedImage,
+        () => this.invalidateExportPreview(), null, wx)
     },
     saveImage() {
       if (!this.data.previewVisible || this.data.previewClosing) return

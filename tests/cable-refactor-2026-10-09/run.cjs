@@ -8,6 +8,7 @@ const evidenceRoot = process.env.CABLE_QA_EVIDENCE_ROOT
   || 'C:/Users/wxx/Documents/Codex/2026-10-10/tunebuddy-cable-revision-010048'
 const baselineCablePath = path.join(evidenceRoot, 'baseline/source/pages/cable/cable.js')
 const currentCablePath = path.join(root, 'pages/cable/cable.js')
+const selectedCableSourcePath = process.env.CABLE_PROJECT_PAGE_SOURCE || currentCablePath
 const storage = new Map()
 const storageWrites = []
 const toastCalls = []
@@ -127,7 +128,7 @@ function loadPage(sourcePath, localSource = fs.readFileSync(sourcePath, 'utf8'))
 }
 
 const baselineConfig = loadPage(baselineCablePath)
-const currentConfig = loadPage(currentCablePath)
+const currentConfig = loadPage(currentCablePath, fs.readFileSync(selectedCableSourcePath, 'utf8'))
 const records = require(path.join(root, 'utils/records.js'))
 const cableMath = require(path.join(root, 'utils/cable.js'))
 const report = require(path.join(root, 'pages/cable/cable-report.js'))
@@ -312,7 +313,7 @@ function testResetAndPreferencePersistence() {
   assert.equal(page.resetInputs(), true, 'resetting an already-default record exercises successful no-op persistence')
   assert.equal(page.data.preferenceSaveError, '', 'writePreferencesDetailed ok+unchanged is success')
   assert.deepEqual(storage.get(STORAGE.records), beforeRecords)
-  assert.equal(records.getWorkspaceSnapshot({ forceRefresh: true }).activeProject.id, active.id)
+  assert.equal(records.getActiveProject()?.id, active.id)
 
   page.commitCalculatedState({ modeIndex: 1, professionalPowerText: '450' })
   const preferencesBeforeFailedReset = page.getPreferences()
@@ -415,7 +416,7 @@ function testPendingInputCannotReplaceFailedResetIntent() {
       assert.equal(deferredSetDataCallbacks.length, 1, 'flush must leave one deferred setData preference callback')
       assert.deepEqual(storage.get(STORAGE.records), recordsBefore)
       assert.equal(storage.get(STORAGE.active), activeBefore)
-      assert.equal(records.getWorkspaceSnapshot({ forceRefresh: true }).activeProject.id, active.id)
+      assert.equal(records.getActiveProject()?.id, active.id)
 
       writeFailureKey = ''
       deferredSetDataCallbacks.shift()()
@@ -448,9 +449,9 @@ function testProjectFlows() {
   const [active, target] = resetWorkspace(['Active', 'Target'], 'Active')
   let page = readyPage()
   page.openProjectSheet()
-  assert.equal(page.data.projectActiveId, active.id)
+  assert.equal(records.getActiveProject()?.id, active.id)
   page.selectProjectTarget({ currentTarget: { dataset: { id: target.id } } })
-  assert.equal(records.getWorkspaceSnapshot({ forceRefresh: true }).activeProject.id, active.id,
+  assert.equal(records.getActiveProject()?.id, active.id,
     'selecting an existing project must not change the active project')
   page.closeProjectDialog(true)
   assert.deepEqual(storage.get(STORAGE.records), [], 'canceling project confirmation must not write a record')
@@ -461,10 +462,34 @@ function testProjectFlows() {
   page.selectProjectTarget({ currentTarget: { dataset: { id: target.id } } })
   assert.equal(page.data.projectConfigName, originalPayload.title,
     'a new project configuration defaults to the canonical result title')
-  page.data.projectConfigName = '礼堂主扩'
-  page.data.projectConfigNote = '东侧机柜，线槽已预留'
+  const configNameInput = (value) => page.onProjectConfigNameInput({ detail: { value } })
+  const configNoteInput = (value) => page.onProjectConfigNoteInput({ detail: { value } })
+  assert.equal(configNameInput('临时配置'), undefined,
+    'valid configuration-name input does not return a boolean')
+  assert.equal(page.data.projectConfigName, '临时配置')
+  assert.equal(configNameInput('替换配置名'), undefined)
+  assert.equal(page.data.projectConfigName, '替换配置名')
+  assert.equal(configNameInput(''), undefined)
+  assert.equal(page.data.projectConfigName, '')
+  assert.equal(configNameInput('礼堂主扩'), undefined)
+  assert.equal(page.data.projectConfigName, '礼堂主扩')
+  assert.equal(configNoteInput('abc'), undefined,
+    'valid note input does not return a boolean')
+  assert.equal(page.data.projectConfigNote, 'abc')
+  assert.equal(configNoteInput('替换后的备注'), undefined)
+  assert.equal(page.data.projectConfigNote, '替换后的备注')
+  assert.equal(configNoteInput(''), undefined)
+  assert.equal(page.data.projectConfigNote, '')
+  assert.equal(configNoteInput('东侧机柜，线槽已预留'), undefined)
+  assert.equal(page.data.projectConfigNote, '东侧机柜，线槽已预留')
   assert.equal(page.saveProjectTarget(), true)
   assert.equal(page.data.projectDialogStep, 'success')
+  assert.equal(configNameInput('保存后过期配置'), undefined)
+  assert.equal(configNoteInput('保存后过期备注'), undefined)
+  assert.equal(page.data.projectConfigName, '礼堂主扩',
+    'configuration-name input from the completed save step cannot change the saved state')
+  assert.equal(page.data.projectConfigNote, '东侧机柜，线槽已预留',
+    'note input from the completed save step cannot change the saved state')
   const saved = records.getWorkspaceSnapshot({ forceRefresh: true }).records[0]
   assert(saved.projectIds.includes(target.id))
   assert.equal(saved.signature, JSON.stringify(['cable', originalPayload.preferences]))
@@ -527,7 +552,13 @@ function testProjectFlows() {
   assert(page.saveProjectTarget())
   assert(records.getWorkspaceSnapshot({ forceRefresh: true }).records[0].projectMetadata.p2)
   assert(records.deleteProject('p2'))
-  assert.deepEqual(storage.get(STORAGE.records), [], 'deleting the only project must also clear its project metadata')
+  const recoverableDeletedProjectRecord = records.getRecords()[0]
+  assert(recoverableDeletedProjectRecord?.projectIds.includes('p2'),
+    'deleting a project keeps its record association while recovery can restore the project')
+  assert.equal(recoverableDeletedProjectRecord.projectMetadata.p2.name, 'Delete with project')
+  assert.equal(records.getProjects().some((project) => project.id === 'p2'), false)
+  assert(records.getRecoveryEntries().some((entry) => entry.kind === 'project' && entry.targetId === 'p2'),
+    'deleted project and its linked record remain available through recovery')
 
   resetWorkspace(['Active', 'Target'], 'Active')
   page = readyPage()
@@ -583,12 +614,32 @@ function testProjectFlows() {
   resetWorkspace(['Active', 'Target'], 'Active')
   page = readyPage()
   page.openProjectSheet()
+  assert.equal(page.onProjectSearch({ detail: { value: 'Target' } }), undefined,
+    'project search input does not return a boolean')
+  assert.equal(page.data.projectSearchText, 'Target')
   page.openProjectCreateForm()
-  page.data.projectNameText = 'New Created'
+  const projectNameInput = (value) => page.onProjectNameInput({ detail: { value } })
+  assert.equal(projectNameInput('abc'), undefined,
+    'valid project-name input does not return a boolean')
+  assert.equal(page.data.projectNameText, 'abc')
+  assert.equal(projectNameInput('替换项目名'), undefined)
+  assert.equal(page.data.projectNameText, '替换项目名')
+  assert.equal(projectNameInput(''), undefined)
+  assert.equal(page.data.projectNameText, '')
+  assert.equal(projectNameInput('New Created'), undefined)
+  assert.equal(page.data.projectNameText, 'New Created')
   assert.equal(page.createProjectFromForm(), true)
   const created = records.getWorkspaceSnapshot({ forceRefresh: true }).projects.find((item) => item.name === 'New Created')
   assert(created)
   page.closeProjectDialog(true)
+  const closedProjectName = page.data.projectNameText
+  const closedSearchText = page.data.projectSearchText
+  assert.equal(projectNameInput('关闭后的项目名'), undefined)
+  assert.equal(page.onProjectSearch({ detail: { value: '关闭后的搜索' } }), undefined)
+  assert.equal(page.data.projectNameText, closedProjectName,
+    'a create-name event received after close cannot change page data')
+  assert.equal(page.data.projectSearchText, closedSearchText,
+    'a search event received after close cannot change page data')
   assert(records.getWorkspaceSnapshot({ forceRefresh: true }).projects.some((item) => item.id === created.id),
     'closing after creation must leave the newly created project')
   assert.deepEqual(storage.get(STORAGE.records), [])
@@ -600,8 +651,8 @@ function testProjectFlows() {
   page.data.projectNameText = 'Target'
   assert.equal(page.createProjectFromForm(), true)
   assert.equal(page.data.projectTarget.id, 'p2', 'same-name creation must reuse the existing project')
-  assert.equal(records.getWorkspaceSnapshot({ forceRefresh: true }).activeProject.id, 'p2',
-    'same-name creation retains createProject active-project behavior')
+  assert.equal(records.getActiveProject()?.id, 'p1',
+    'same-name creation does not switch the legacy active project')
 
   resetWorkspace([], '')
   page = readyPage()
@@ -1370,6 +1421,22 @@ function testMarkupAndStyleContracts() {
 }
 
 async function main() {
+  const selectedCases = process.env.CABLE_TEST_CASES
+    ? process.env.CABLE_TEST_CASES.split(',').map((name) => name.trim()).filter(Boolean)
+    : []
+  if (selectedCases.length) {
+    const cases = {
+      testProjectFlows,
+      testAnimatedCloseLifecycle,
+      testResetAndPreferencePersistence,
+    }
+    for (const name of selectedCases) {
+      assert.equal(typeof cases[name], 'function', `unknown CABLE_TEST_CASES entry: ${name}`)
+      cases[name]()
+    }
+    console.log(`Cable selected cases passed: ${selectedCases.join(', ')}`)
+    return
+  }
   testBaselineBusinessParity()
   testDebounceAndActionFlush()
   testResetAndPreferencePersistence()

@@ -21,6 +21,7 @@ const {
   buildReportImageTasks,
   splitTaskIntoSegments,
 } = require('./report-snapshot-adapter')
+const { CANCEL } = require('../../utils/report-bridge-lifecycle')
 const BRIDGE_RETURN_SETTLE_MS = 500
 const CANVAS_ID = 'projectReportExportCanvas'
 const PDF_CANVAS_ID = 'projectReportPdfCanvas'
@@ -135,7 +136,7 @@ Page({
       clearTimeout(active.returnTimer)
       active.returnTimer = null
     }
-    active.channel?.emit('cancel-report', { ticket: active.ticket })
+    active.channel?.emit(CANCEL, { ticket: active.ticket })
     this._activeReportBridge = null
   },
 
@@ -444,7 +445,7 @@ Page({
         },
         success: (result) => {
           if (this._unloaded || revision !== this._reportRevision || this._activeReportBridge !== active) {
-            result?.eventChannel?.emit('cancel-report', { ticket })
+            result?.eventChannel?.emit(CANCEL, { ticket })
             return
           }
           const channel = result?.eventChannel

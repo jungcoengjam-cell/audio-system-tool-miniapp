@@ -47,12 +47,12 @@ global.wx = {
   showToast(options) { toasts.push(options.title) },
 }
 
-const products = require('../utils/products')
+const products = require('../pages/products/utils/products')
 const { dmxFixtures } = require('../data/stage-lighting')
 const {
   DMX_PREFERENCES_KEY,
   buildDmxProductImport,
-} = require('../utils/dmx-product-import')
+} = require('../pages/products/utils/dmx-product-import')
 const multiModeFixture = dmxFixtures.find((fixture) => fixture.channelModes.length > 1)
 const product = products.getProductDetail('lighting', multiModeFixture.model)
 const detailPath = require.resolve('../pages/products/detail')

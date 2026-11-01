@@ -1,5 +1,7 @@
 const REPORT_CANVAS_ID = 'wiringReportCanvas'
 const dataset = (event) => event && event.currentTarget && event.currentTarget.dataset || {}
+const nativeImagePreview = require('../native-image-preview')
+const { getResultImageTheme } = require('../result-image-theme')
 
 function createReportController({ exportTypes: EXPORT_TYPES, safeToast, vibrate, shareGeneratedImage }) {
   return {
@@ -12,7 +14,8 @@ function createReportController({ exportTypes: EXPORT_TYPES, safeToast, vibrate,
       vibrate('light')
     },
 
-    invalidateExport(clearImages) {
+    invalidateExport(clearImages, preservePreview = false) {
+      if (!preservePreview) nativeImagePreview.cancel(this)
       const wasRunning = Boolean(this._reportSaveJob)
       this.cancelReportSaveJob()
       const wasPending = Boolean(this._reportPending)
@@ -20,7 +23,7 @@ function createReportController({ exportTypes: EXPORT_TYPES, safeToast, vibrate,
       this._reportPending = false
       if (wasPending && typeof wx !== 'undefined' && typeof wx.hideLoading === 'function') wx.hideLoading()
       const changes = {
-        reportPreviewVisible: false,
+        reportPreviewVisible: Boolean(preservePreview && this.data?.reportPreviewVisible),
         reportSaveRunning: false,
         reportSaveInFlight: Boolean(this._reportSaveInFlight),
       }
@@ -33,6 +36,7 @@ function createReportController({ exportTypes: EXPORT_TYPES, safeToast, vibrate,
       const clearToken = this._workspaceReportClearPending ? this._workspaceReportClearToken : 0
       if (clearImages) {
         this._reportSignature = ''
+        this._reportImageTheme = ''
         if (this._reportSavedPages) this._reportSavedPages.clear()
       }
       const reportMounted = Boolean(this.data && (this.data.reportPreviewVisible
@@ -61,10 +65,12 @@ function createReportController({ exportTypes: EXPORT_TYPES, safeToast, vibrate,
       const type = EXPORT_TYPES.some((option) => option.id === typeOverride)
         ? typeOverride
         : (selectedType || 'lines')
+      const theme = getResultImageTheme()
       const expectedProjectId = this.projectId
       const expectedScheduleRevision = this._schedule.revision
       const signature = `${expectedProjectId}:${expectedScheduleRevision}:${type}`
-      if (signature === this._reportSignature && this.data.reportImages.length) {
+      if (signature === this._reportSignature && this._reportImageTheme === theme
+        && this.data.reportImages.length) {
         this.syncReportSaveView()
         this.showReportPage(0)
         return
@@ -100,10 +106,20 @@ function createReportController({ exportTypes: EXPORT_TYPES, safeToast, vibrate,
       this.invalidateExport(true)
       const revision = this._reportRevision
       const pageImages = []
-      const isCurrent = () => !this._destroyed && !this._hidden && this._reportRevision === revision
+      const requestCurrent = () => !this._destroyed && !this._hidden && this._reportRevision === revision
         && this.projectId === expectedProjectId
         && this._schedule.revision === expectedScheduleRevision
         && !this.data.editorVisible && !this.data.batchVisible
+      let themeInvalidated = false
+      const isCurrent = () => {
+        if (!requestCurrent()) return false
+        if (getResultImageTheme() === theme) return true
+        if (!themeInvalidated) {
+          themeInvalidated = true
+          this.invalidateExport(false)
+        }
+        return false
+      }
       this._reportPending = true
       if (typeof wx.showLoading === 'function') wx.showLoading({ title: '正在生成图片', mask: true })
   
@@ -118,6 +134,7 @@ function createReportController({ exportTypes: EXPORT_TYPES, safeToast, vibrate,
         }
         vibrate('medium')
         this._reportSignature = signature
+        this._reportImageTheme = theme
         this.setData({
           reportImages: pageImages,
           reportPageIndex: 0,
@@ -143,7 +160,7 @@ function createReportController({ exportTypes: EXPORT_TYPES, safeToast, vibrate,
           if (!isCurrent()) return
           try {
             const context = wx.createCanvasContext(REPORT_CANVAS_ID, this)
-            reportModule.drawScheduleReport(context, page, { theme: 'light' })
+            reportModule.drawScheduleReport(context, page, { theme })
             context.draw(false, () => {
               if (!isCurrent()) return
               wx.canvasToTempFilePath({
@@ -215,6 +232,7 @@ function createReportController({ exportTypes: EXPORT_TYPES, safeToast, vibrate,
     },
 
     closeReportPreview() {
+      nativeImagePreview.cancel(this)
       this.nextWorkspaceTransitionRevision()
       const wasRunning = Boolean(this._reportSaveJob)
       this.cancelReportSaveJob()
@@ -228,8 +246,9 @@ function createReportController({ exportTypes: EXPORT_TYPES, safeToast, vibrate,
 
     previewReportImage() {
       const urls = this.data.reportImages.map((image) => image.path).filter(Boolean)
-      if (!this.data.reportImagePath || !urls.length || typeof wx.previewImage !== 'function') return
-      wx.previewImage({ current: this.data.reportImagePath, urls })
+      if (!this.data.reportImagePath || !urls.length) return false
+      return nativeImagePreview.preview(this, this.data.reportImagePath,
+        () => this.invalidateExport(false), urls)
     },
 
     saveReportImage() {
@@ -420,7 +439,8 @@ function createReportController({ exportTypes: EXPORT_TYPES, safeToast, vibrate,
     },
 
     shareReportImage() {
-      shareGeneratedImage(this.data.reportImagePath)
+      return nativeImagePreview.share(this, this.data.reportImagePath, shareGeneratedImage,
+        () => this.invalidateExport(false))
     },
 
     shareProject(event) {
