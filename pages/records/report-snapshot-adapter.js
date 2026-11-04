@@ -1,28 +1,3 @@
-const { speakers } = require('../../data/equipment')
-const { cameras } = require('../../data/cameras')
-const {
-  calculateGroundAreaPlacement,
-  calculateHorizontalOnlyPlacement,
-  calculateVerticalPlanePlacement,
-  getCameraMountLabel,
-  getCameraMountType,
-  getHorizontalCameraViews,
-  resolveLibraryOptics,
-} = require('../../utils/camera-fov')
-const { calculateSpeakerSpl } = require('../../utils/spl')
-const { calculateConstantVoltageCable, calculateProfessionalSpeakerCable } = require('../../utils/cable')
-const { calculateLedScreenPlan, LED_UNIT_SPECS, LED_PIXEL_PITCHES, PREFERRED_RATIO_ERROR } = require('../../utils/led-screen')
-const { calculateDmxAddressPlan } = require('../../utils/dmx-address')
-const { buildResultReportPayload, calculateResultReportHeight, drawResultReport } = require('../../utils/result-report')
-const limiterReport = require('../limiter/limiter-report')
-const splReport = require('../spl/spl-report')
-const cableReport = require('../cable/cable-report')
-const cameraReport = require('../camera/camera-report')
-const ledReport = require('../led-screen/report')
-const gainReport = require('../gain-structure/gain-report')
-const { buildLightingExportPages, renderLightingExportPage } = require('../dmx-layout/layout-renderer')
-const { APRON_DIRECTIONS, createStageGeometry } = require('../dmx-layout/layout-model')
-
 const REPORT_WIDTH = 750
 const REPORT_MAX_CANVAS_HEIGHT = 3600
 const REPORT_SEGMENT_HEIGHT = 3600
@@ -102,13 +77,18 @@ function splitTaskIntoSegments(task, segmentHeight = REPORT_SEGMENT_HEIGHT) {
 }
 
 function buildGenericTasks(record, measureContext) {
+  const {
+    buildResultReportPayload,
+    calculateResultReportHeight,
+    drawResultReport,
+  } = require('../../utils/result-report')
   const initialPayload = buildResultReportPayload(record)
   if (!initialPayload) return fail('该模块的保存结果无法由原生结果图片渲染器读取。')
   if (!hasNativeMeasureContext(measureContext)) {
     return fail('当前环境无法测量原生结果文字，未生成可能裁切的图片。')
   }
-  const renderer = record.module === 'limiter' ? limiterReport
-    : record.module === 'gainStructure' ? gainReport : null
+  const renderer = record.module === 'limiter' ? require('../limiter/limiter-report')
+    : record.module === 'gainStructure' ? require('../gain-structure/gain-report') : null
   const pages = splitResultReportRecord(record, GENERIC_PAGE_LINES, measureContext)
   if (!pages.length || pages.some((page) => !buildResultReportPayload(page))) return fail('保存结果为空，无法生成工具图片。')
   const tasks = []
@@ -201,6 +181,7 @@ function gainSupplementLines(lines) {
 }
 
 function splitResultReportLines(record, bodyLines, pageSize = MAX_RESULT_LINES, measureContext) {
+  const { buildResultReportPayload } = require('../../utils/result-report')
   const initial = buildResultReportPayload(record)
   if (!initial || !hasNativeMeasureContext(measureContext)) return []
   const canonical = getCanonicalResultLines(record, initial.moduleLabel)
@@ -240,6 +221,9 @@ function splitResultReportRecord(record, pageSize = MAX_RESULT_LINES, measureCon
 }
 
 function buildSplTask(record, measureContext) {
+  const { speakers } = require('../../data/equipment')
+  const { calculateSpeakerSpl } = require('../../utils/spl')
+  const splReport = require('../spl/spl-report')
   if (!hasNativeMeasureContext(measureContext)) return fail('当前环境无法测量声压级结果文字，未生成可能裁切的图片。')
   const issue = validPreferences(record, ['speakerModel', 'speakerCount', 'distanceText', 'summationMode'])
   if (issue) return fail(issue)
@@ -277,6 +261,8 @@ function buildSplTask(record, measureContext) {
 }
 
 function buildCableTask(record, measureContext) {
+  const { calculateConstantVoltageCable, calculateProfessionalSpeakerCable } = require('../../utils/cable')
+  const cableReport = require('../cable/cable-report')
   if (!hasNativeMeasureContext(measureContext)) return fail('当前环境无法测量线材结果文字，未生成可能裁切的图片。')
   const required = ['mode', 'environment', 'constantPowerText', 'constantDistanceText', 'professionalPowerText', 'professionalDistanceText']
   const issue = validPreferences(record, required)
@@ -321,6 +307,7 @@ function buildCableTask(record, measureContext) {
 }
 
 function decorateLedResult(result, prefs) {
+  const { LED_UNIT_SPECS, LED_PIXEL_PITCHES, PREFERRED_RATIO_ERROR } = require('../../utils/led-screen')
   const unit = LED_UNIT_SPECS[result.unitKey]
   if (!unit) return null
   const exactRatio = result.columns * unit.widthMm / (result.rows * unit.heightMm)
@@ -349,6 +336,8 @@ function decorateLedResult(result, prefs) {
 }
 
 function buildLedTask(record, measureContext) {
+  const { calculateLedScreenPlan, LED_UNIT_SPECS, LED_PIXEL_PITCHES } = require('../../utils/led-screen')
+  const ledReport = require('../led-screen/report')
   if (!hasNativeMeasureContext(measureContext)) return fail('当前环境无法测量 LED 结果文字，未生成可能裁切的图片。')
   const required = ['wallWidthText', 'wallHeightText', 'topReserveText', 'bottomReserveText', 'frameWidthText', 'viewingDistanceText', 'aspectRatio', 'unitKey', 'pitch']
   const issue = validPreferences(record, required)
@@ -496,6 +485,7 @@ function buildCameraResultText(result) {
 }
 
 function decorateCameraResult(result, camera, prefs) {
+  const { getCameraMountLabel, getCameraMountType } = require('../../utils/camera-fov')
   const view = camera.views[prefs.viewIndex]
   const mountType = getCameraMountType(camera, prefs.viewIndex)
   result.displayModel = camera.model
@@ -565,6 +555,16 @@ function decorateCameraResult(result, camera, prefs) {
 }
 
 function buildCameraTask(record, measureContext) {
+  const { cameras } = require('../../data/cameras')
+  const {
+    calculateGroundAreaPlacement,
+    calculateHorizontalOnlyPlacement,
+    calculateVerticalPlanePlacement,
+    getCameraMountLabel,
+    getHorizontalCameraViews,
+    resolveLibraryOptics,
+  } = require('../../utils/camera-fov')
+  const cameraReport = require('../camera/camera-report')
   if (!hasNativeMeasureContext(measureContext)) return fail('当前环境无法测量摄像机结果文字，未生成可能裁切的图片。')
   const required = [
     'cameraCalculationVersion', 'sourceMode', 'cameraModel', 'viewIndex', 'viewLabel',
@@ -636,6 +636,7 @@ function buildCameraTask(record, measureContext) {
 }
 
 function buildDmxAddressTask(record, measureContext) {
+  const { calculateDmxAddressPlan } = require('../../utils/dmx-address')
   const issue = validPreferences(record, ['startAddressText', 'allocationMode', 'groups'])
   if (issue) return fail(issue)
   const prefs = record.preferences
@@ -688,6 +689,7 @@ function adaptLegacyLightingContext(context) {
 }
 
 function hasRenderableLightingLayout(layout) {
+  const { APRON_DIRECTIONS } = require('../dmx-layout/layout-model')
   if (!layout || typeof layout !== 'object' || Array.isArray(layout)) return false
   const width = number(layout.stageWidthText)
   const depth = number(layout.stageDepthText)
@@ -713,6 +715,8 @@ function hasRenderableLightingLayout(layout) {
 }
 
 function buildLightingTask(item, projectName) {
+  const { buildLightingExportPages, renderLightingExportPage } = require('../dmx-layout/layout-renderer')
+  const { createStageGeometry } = require('../dmx-layout/layout-model')
   const lighting = item.lighting
   if (!lighting?.scheme?.layout || !Array.isArray(lighting.fixtures)
     || !Array.isArray(lighting.scheme?.preferences?.groups)

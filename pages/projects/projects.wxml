@@ -62,7 +62,7 @@
           </view>
           <view class="favorite-card-title">{{item.title}}</view>
           <view class="favorite-card-summary">{{item.summary}}</view>
-          <view class="favorite-card-footer">独立计算快照 · 点开查看参数和结果</view>
+          <view class="favorite-card-footer" role="button" aria-label="查看保存时的参数和结果" data-id="{{item.id}}" catchtap="openFavoriteDetail">查看保存时的参数和结果</view>
         </view>
       </view>
       <view wx:elif="{{!workspaceError}}" class="home-empty-state home-panel">

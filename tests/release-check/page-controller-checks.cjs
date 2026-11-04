@@ -3062,11 +3062,32 @@ function createPageControllerChecks(context) {
     assert(projectsWxml.includes('class="project-tabs"') && projectsWxml.includes('bindtap="onTabTap"'))
     assert(projectsWxml.includes('class="home-panel project-list-card"') && projectsWxml.includes('data-id="{{item.id}}" bindtap="openProject"'))
     assert(projectsWxml.includes('class="home-panel favorite-list-card') && projectsWxml.includes('data-id="{{item.id}}" bindtap="openFavorite"'))
+    assert(projectsWxml.includes('class="favorite-card-footer" role="button" aria-label="查看保存时的参数和结果" data-id="{{item.id}}" catchtap="openFavoriteDetail">'),
+      '收藏卡片详情触区应使用无冒泡 catchtap 和读屏标签')
     assert(projectsWxml.includes('bindtap="openRecovery"') && projectsWxml.includes('project-recovery-button'))
     assert(!projectsWxml.includes('catchtap="openProjectWiring"') && !projectsWxml.includes('catchtap="openProjectReport"'),
       '项目列表卡片应由单一入口打开详情')
     projectsPage.openFavorite({ currentTarget: { dataset: { id: limiterFavorite.id } } })
-    assert.strictEqual(navigatedUrl, `/pages/projects/favorite-detail?id=${encodeURIComponent(limiterFavorite.id)}`)
+    const favoriteEditorUrl = new URL(navigatedUrl, 'https://miniapp.local')
+    assert.strictEqual(favoriteEditorUrl.pathname, '/pages/limiter/limiter',
+      '可重算收藏应直接进入对应计算工具')
+    const favoriteSessionId = favoriteEditorUrl.searchParams.get('editorSessionId')
+    const resultRecordContext = require(path.join(root, 'utils/result-record-context.js'))
+    const favoriteSession = resultRecordContext.getSession(favoriteSessionId)
+    assert(favoriteSession && favoriteSession.sourceKind === 'favorite' && !favoriteSession.recordId,
+      '收藏直达工具应创建独立收藏编辑会话')
+    assert.deepStrictEqual(favoriteSession.preferences, limiterFavorite.preferences,
+      '收藏会话应完整带入保存时的参数')
+    const favoriteEditorPage = { data: {}, setData(value) { Object.assign(this.data, value) } }
+    assert(resultRecordContext.attachResultEditor(favoriteEditorPage, 'limiter', { editorSessionId: favoriteSessionId }))
+    assert(resultRecordContext.finalizeResultEditor(favoriteEditorPage), '结束收藏编辑会话应恢复原临时参数')
+    projectsPage.onShow()
+    assert(projectsWxml.includes('查看保存时的参数和结果'))
+    assert(/\.favorite-card-footer\{[^}]*min-height:44px/.test(projectsWxssCompact),
+      '收藏详情独立触区必须至少为 44px 高')
+    projectsPage.openFavoriteDetail({ currentTarget: { dataset: { id: limiterFavorite.id } } })
+    assert.strictEqual(navigatedUrl, `/pages/projects/favorite-detail?id=${encodeURIComponent(limiterFavorite.id)}`,
+      '收藏快照详情仍可单独打开')
     projectsPage.openProject({ currentTarget: { dataset: { id: project.id } } })
     assert.strictEqual(navigatedUrl, `/pages/records/project?id=${encodeURIComponent(project.id)}`)
 

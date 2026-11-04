@@ -16,6 +16,7 @@ const SAVE_FAILURE = String.fromCodePoint(0x4fdd, 0x5b58, 0x5931, 0x8d25)
 
 let storage
 let writeCounts
+let writeAttempts
 let readFailureKey
 let writeFailureKey
 let actionSheets
@@ -50,6 +51,7 @@ function projectFixture(id, name, updatedAt) {
 function setup(projectNames = [], activeName = '') {
   storage = new Map()
   writeCounts = new Map()
+  writeAttempts = []
   readFailureKey = ''
   writeFailureKey = ''
   actionSheets = []
@@ -71,6 +73,7 @@ function setup(projectNames = [], activeName = '') {
     },
     setStorageSync(key, value) {
       writeCounts.set(key, (writeCounts.get(key) || 0) + 1)
+      writeAttempts.push({ key, value: clone(value) })
       if (key === writeFailureKey) throw new Error('write failed')
       storage.set(key, clone(value))
     },
@@ -291,9 +294,22 @@ function checkReadAndWriteFailures() {
   actions.addPageToActiveProject(writePage)
   chooseProject(actionSheets[0], 'A Project')
   writeFailureKey = RECORDS_KEY
-  const writesBefore = writeCount()
+  const originalRecords = clone(storage.get(RECORDS_KEY))
+  const originalProjects = clone(storage.get(PROJECTS_KEY))
+  const originalFavorites = clone(storage.get(FAVORITES_KEY))
+  const recordsAttemptsBefore = writeAttempts.filter((attempt) => attempt.key === RECORDS_KEY).length
   confirmLatestModal(true)
-  assert.equal(writeCount(), writesBefore + 1, 'the failing storage write is attempted exactly once')
+  const recordsAttempts = writeAttempts.filter((attempt) => attempt.key === RECORDS_KEY).slice(recordsAttemptsBefore)
+  assert.equal(recordsAttempts.length, 2, 'one new records snapshot is attempted, then the original array is restored')
+  assert.equal(recordsAttempts[0].value.length, 1, 'the first attempt contains exactly one new record')
+  assert.equal(recordsAttempts[0].value[0].title, 'Limiter current')
+  assert.deepEqual(recordsAttempts[0].value[0].preferences, payload().preferences)
+  assert.deepEqual(recordsAttempts[1].value, originalRecords, 'the second attempt restores the exact raw records array')
+  assert.deepEqual(storage.get(RECORDS_KEY), originalRecords)
+  assert.deepEqual(storage.get(PROJECTS_KEY), originalProjects, 'project data remains unchanged')
+  assert.deepEqual(storage.get(FAVORITES_KEY), originalFavorites, 'favorite data remains unchanged')
+  assert.deepEqual(records.getProjects().map((project) => project.id), originalProjects.map((project) => project.id))
+  assert.deepEqual(records.getFavorites(), originalFavorites)
   assert.equal(records.getRecords().length, 0)
   assert(toastTitles.some((title) => title.includes(SAVE_FAILURE)))
 }

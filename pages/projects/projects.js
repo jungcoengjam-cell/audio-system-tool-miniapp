@@ -56,6 +56,7 @@ Page({
 
   onShow() {
     this._pageVisible = true
+    this._favoriteOpenSessionId = ''
     this.refresh({ forceRefresh: true })
   },
 
@@ -231,6 +232,43 @@ Page({
   },
 
   openFavorite(event) {
+    const favoriteId = String(event.currentTarget.dataset.id || '')
+    if (!favoriteId) return false
+    if (this._favoriteOpenSessionId) {
+      const { getSession } = require('../../utils/result-record-context')
+      const pending = getSession(this._favoriteOpenSessionId)
+      if (pending && pending.interrupted !== true && pending.restorationPending !== true) return false
+      this._favoriteOpenSessionId = ''
+    }
+
+    const snapshot = getWorkspaceSnapshot({ forceRefresh: true })
+    if (!snapshot.ok) {
+      wx.showToast({ title: snapshot.error || '收藏读取失败，请重试', icon: 'none' })
+      return false
+    }
+    const favorite = (snapshot.favorites || []).find((item) => item.id === favoriteId)
+    if (!favorite) {
+      wx.showToast({ title: '此收藏不存在，或已移入回收站', icon: 'none' })
+      return false
+    }
+
+    const { checkFavoriteLoad } = require('./favorite-load-check')
+    if (!checkFavoriteLoad(favorite).canLoad) {
+      wx.navigateTo({ url: `/pages/projects/favorite-detail?id=${encodeURIComponent(favoriteId)}` })
+      return false
+    }
+
+    const { openRecordEditor } = require('../../utils/result-record-context')
+    const sessionId = openRecordEditor(favorite, 'favorite')
+    if (!sessionId) {
+      wx.showToast({ title: '无法打开计算副本，请检查本地存储或参数', icon: 'none' })
+      return false
+    }
+    this._favoriteOpenSessionId = sessionId
+    return sessionId
+  },
+
+  openFavoriteDetail(event) {
     const favoriteId = String(event.currentTarget.dataset.id || '')
     if (favoriteId) wx.navigateTo({ url: `/pages/projects/favorite-detail?id=${encodeURIComponent(favoriteId)}` })
   },

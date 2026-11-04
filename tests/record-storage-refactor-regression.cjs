@@ -10,6 +10,7 @@ const { createRequire } = require('node:module')
 const root = path.resolve(__dirname, '..')
 const beforeRoot = path.join(root, 'tmp/architecture-continuation-2026-10-25/before')
 const phase2BeforeRoot = path.join(root, 'tmp/architecture-continuation-2026-10-25/phase2-migration/before')
+const storageRecoveryBeforePath = path.join(root, 'tmp/storage-recovery-2026-11-03/before/utils/record-storage.js')
 const currentRecordsPath = path.join(root, 'utils/records.js')
 const currentRecordsRequire = createRequire(currentRecordsPath)
 const intentionalRecoveryExports = new Set([
@@ -19,6 +20,7 @@ const intentionalRecoveryExports = new Set([
 ])
 const keys = {
   schema: 'audioTool.storageSchemaVersion',
+  writeJournal: 'audioTool.recordWriteJournal.v1',
   projects: 'audioTool.projects.v1',
   records: 'audioTool.records.v1',
   favorites: 'audioTool.favorites.v1',
@@ -26,6 +28,7 @@ const keys = {
   backups: 'audioTool.storageMigrationBackups.v1',
   journal: 'audioTool.storageMigrationJournal.v1',
 }
+const businessKeys = [keys.projects, keys.records, keys.favorites, keys.recovery]
 const project = { id: 'project-one', name: '项目一', createdAt: 100, updatedAt: 200 }
 const record = {
   id: 'record-one', module: 'spl', title: '声压估算', summary: '摘要',
@@ -49,6 +52,80 @@ const FIXED_NOW = Date.UTC(2026, 9, 25, 12)
 function copy(value) {
   if (value === undefined) return { $type: 'undefined' }
   return JSON.parse(JSON.stringify(value))
+}
+
+function isTraceArray(value) {
+  return Array.isArray(value) && value.length > 0
+    && value.every((item) => item && typeof item === 'object'
+      && typeof item.operation === 'string' && typeof item.key === 'string')
+}
+
+function isStorageSnapshot(value) {
+  return Array.isArray(value) && value.length > 0
+    && value.every((item) => Array.isArray(item) && item.length === 2 && typeof item[0] === 'string')
+}
+
+function comparableTrace(trace) {
+  const ignored = new Set()
+  trace.forEach((event, index) => {
+    if (event.operation !== 'set' || event.key !== keys.writeJournal) return
+    let start = -1
+    for (let previous = index - 1; previous >= 0; previous -= 1) {
+      if (trace[previous].operation === 'get' && trace[previous].key === keys.writeJournal) {
+        start = previous
+        break
+      }
+    }
+    assert(start >= 0, 'WAL write must follow its explicit pending-journal read')
+    assert.equal(trace[start].ok, true, 'WAL gate read must succeed')
+    assert.equal(trace[start].value?.$type, 'undefined', 'WAL must be absent before a new transaction starts')
+    const journal = event.value
+    assert.equal(journal.version, 1)
+    assert.equal(journal.schemaVersion, 4)
+    assert.equal(new Set(journal.entries.map((entry) => entry.key)).size, journal.entries.length)
+    assert(journal.entries.every((entry) => businessKeys.includes(entry.key)))
+    const expectedReads = [keys.schema, ...journal.entries.map((entry) => entry.key)]
+    const actualReads = trace.slice(start + 1, index)
+    assert.equal(actualReads.length, expectedReads.length, 'WAL preflight must read only the schema and touched raw keys')
+    actualReads.forEach((read, readIndex) => {
+      assert.equal(read.operation, 'get')
+      assert.equal(read.ok, true)
+      assert.equal(read.key, expectedReads[readIndex])
+      if (readIndex === 0) assert.equal(read.value, 4)
+      else {
+        const entry = journal.entries[readIndex - 1]
+        const value = read.value?.$type === 'undefined' ? undefined : read.value
+        assert.equal(entry.present, value !== undefined)
+        if (entry.present) assert.deepEqual(value, entry.value)
+      }
+    })
+    for (let internal = start; internal <= index; internal += 1) ignored.add(internal)
+  })
+  return trace.filter((event, index) => !ignored.has(index) && event.key !== keys.writeJournal)
+}
+
+function withoutTraceArrays(value) {
+  if (Array.isArray(value)) {
+    if (isTraceArray(value)) return undefined
+    if (isStorageSnapshot(value)) return value.filter(([key]) => key !== keys.writeJournal)
+      .map((entry) => [entry[0], withoutTraceArrays(entry[1])])
+    return value.map(withoutTraceArrays)
+  }
+  if (!value || typeof value !== 'object') return value
+  return Object.fromEntries(Object.entries(value)
+    .filter(([key]) => !['trace', 'firstTrace', 'secondTrace'].includes(key))
+    .map(([key, item]) => [key, withoutTraceArrays(item)]))
+}
+
+function withoutJournalIO(value) {
+  if (Array.isArray(value)) {
+    if (isTraceArray(value)) return comparableTrace(value)
+    if (isStorageSnapshot(value)) return value.filter(([key]) => key !== keys.writeJournal)
+      .map((entry) => [entry[0], withoutJournalIO(entry[1])])
+    return value.map(withoutJournalIO)
+  }
+  if (!value || typeof value !== 'object') return value
+  return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, withoutJournalIO(item)]))
 }
 
 function clone(value) {
@@ -123,7 +200,9 @@ function createRecordsRealm(version, wx, platform) {
   function requireRecords() {
     if (cachedApi) return cachedApi
     const module = { exports: {} }
-    const loadDependency = (request) => currentRecordsRequire(request)
+    const loadDependency = (request) => version === 'phase2-before' && request === './record-storage'
+      ? require(storageRecoveryBeforePath)
+      : currentRecordsRequire(request)
     const wrapper = new vm.Script(
       `(function (require, module, exports, __filename, __dirname) {\n${source}\n})`,
       { filename: sourcePath },
@@ -152,9 +231,9 @@ function runScenario(version, initial, execute, failureRules = [], platformOptio
     return {
       // The frozen comparison covers the pre-existing API; recovery retention is tested separately.
       exports: Object.keys(api).filter((key) => !intentionalRecoveryExports.has(key)).sort(),
-      outcome: copy(outcome),
-      trace: clone(platform.trace),
-      storage: platform.snapshot(),
+      outcome: withoutJournalIO(copy(outcome)),
+      trace: comparableTrace(platform.trace),
+      storage: withoutJournalIO(platform.snapshot()),
     }
   } finally {
     if (previousWx === undefined) delete global.wx
@@ -258,7 +337,7 @@ function runInstanceIsolationAndDynamicWx(version) {
     const secondApi = realm.requireRecords()
     const secondInstanceRead = secondApi.getProjects()
     const dynamicWxRead = firstApi.getWorkspaceSnapshot({ forceRefresh: true })
-    return {
+    return withoutJournalIO({
       sameBeforeClear: repeatedRequire === firstApi,
       isolatedAfterClear: secondApi !== firstApi,
       exports: Object.keys(firstApi).filter((key) => !intentionalRecoveryExports.has(key)).sort(),
@@ -270,7 +349,7 @@ function runInstanceIsolationAndDynamicWx(version) {
       secondTrace: clone(secondPlatform.trace),
       firstStorage: firstPlatform.snapshot(),
       secondStorage: secondPlatform.snapshot(),
-    }
+    })
   } finally {
     if (previousWx === undefined) delete global.wx
     else global.wx = previousWx
@@ -335,6 +414,39 @@ function digestSuite(suite) {
   return Object.fromEntries(Object.entries(suite).map(([name, value]) => [name, digest(value)]))
 }
 
+function assertFrozenBehavior(currentSuite, beforeSuite) {
+  const transactionFailureScenarios = new Set(['atomicFailures', 'recoveryRetry'])
+  for (const [name, currentValue] of Object.entries(currentSuite)) {
+    const beforeValue = beforeSuite[name]
+    if (transactionFailureScenarios.has(name)) {
+      assert.deepEqual(withoutTraceArrays(currentValue), withoutTraceArrays(beforeValue),
+        `${name}: exported API outcomes and final business storage must match the frozen contract`)
+    } else {
+      assert.deepEqual(currentValue, beforeValue,
+        `${name}: API, business storage, and non-journal IO trace must match the frozen contract`)
+    }
+  }
+}
+
+function assertFrozenDigests(currentSuite) {
+  const transactionFailureScenarios = new Set(['atomicFailures', 'recoveryRetry'])
+  const actual = digestSuite(currentSuite)
+  for (const name of Object.keys(expectedDigests)) {
+    if (transactionFailureScenarios.has(name)) continue
+    assert.equal(actual[name], expectedDigests[name], `${name}: frozen API and IO digest`)
+  }
+}
+
+function selectedDigests(suite, names) {
+  return Object.fromEntries(names.map((name) => [name, digest(suite[name])]))
+}
+
+function transactionFailureBehaviorDigests(suite) {
+  return Object.fromEntries(['atomicFailures', 'recoveryRetry'].map((name) => (
+    [name, digest(withoutTraceArrays(suite[name]))]
+  )))
+}
+
 const expectedDigests = {
   migrationSuccess: '69387f3ebaa898dfccdaee873aaf55f5b5402eac4967c61d7fcc94d5308a3ee3',
   migrationRetry: '02d24ce3bd1b56ef0df8910ae78bd6cb4d752b90971a85167939a22eea63a543',
@@ -351,29 +463,39 @@ const expectedPhase2Digests = {
   rawWriteAndRollbackFailure: '5d3b07b6f08119c7cf92a6c68d1f7207c9ac3df73a82d9ee166a626033014eb7',
   journalCleanupFailure: '4be647e0d9f6b111017e6d5480fe21cb020a535a067613f275d600ab21703e36',
 }
+// Derived from the independently loaded pre-journal records source; kept inline so default release checks need no tmp baseline.
+const expectedTransactionFailureBehaviorDigests = {
+  atomicFailures: '7f19629513787aea6c0f167dc3bf9b0cf5e451ae9e748a066dd25ccfb05d3c90',
+  recoveryRetry: 'c6a425d045be66b7e9b28b1f52b391809439502b5b7f9f8261f22a9f25da8246',
+}
 
 const current = runSuite('current')
 const currentPhase2 = runPhase2Suite('current')
 if (process.argv.includes('--capture-before')) {
   const before = runSuite('before')
-  assert.deepEqual(current, before, 'starting source and before snapshot must behave identically')
-  console.log(JSON.stringify({ digests: digestSuite(before), before }, null, 2))
+  assertFrozenBehavior(current, before)
+  console.log(JSON.stringify({
+    unaffectedDigests: selectedDigests(before, Object.keys(expectedDigests)
+      .filter((name) => !['atomicFailures', 'recoveryRetry'].includes(name))),
+    transactionFailureBehaviorDigests: transactionFailureBehaviorDigests(before),
+  }, null, 2))
 } else if (process.argv.includes('--capture-phase2')) {
-  const before = runPhase2Suite('phase2-before')
-  assert.deepEqual(currentPhase2, before, 'phase2 starting source and current source must match before migration extraction')
-  console.log(JSON.stringify({ digests: digestSuite(before), before }, null, 2))
+  const phase2Before = runPhase2Suite('phase2-before')
+  assert.deepEqual(currentPhase2, phase2Before, 'phase2 starting source and current source must match before migration extraction')
+  console.log(JSON.stringify({ digests: digestSuite(phase2Before), before: phase2Before }, null, 2))
 } else if (process.argv.includes('--compare-before')) {
   const before = runSuite('before')
-  assert.deepEqual(current, before, 'records API, complete wx IO traces, and final storage must match before snapshot')
-  assert.deepEqual(digestSuite(current), expectedDigests)
   const phase2Before = runPhase2Suite('phase2-before')
+  assertFrozenBehavior(current, before)
+  assertFrozenDigests(current)
   assert.deepEqual(currentPhase2, phase2Before, 'migration error and rollback traces must match phase2 starting source')
   assert.deepEqual(digestSuite(currentPhase2), expectedPhase2Digests)
-  console.log('Record storage regression passed (API, IO traces, and final storage match start snapshot).')
+  console.log('Record storage regression passed (frozen API/data contract, unaffected IO traces, and migration behavior).')
 } else {
-  assert.deepEqual(digestSuite(current), expectedDigests,
-    'records API, storage traces, and final snapshots must match frozen pre-refactor behavior')
+  assertFrozenDigests(current)
+  assert.deepEqual(transactionFailureBehaviorDigests(current), expectedTransactionFailureBehaviorDigests,
+    'transaction failure API outcomes and final business storage must match the independent old-source contract')
   assert.deepEqual(digestSuite(currentPhase2), expectedPhase2Digests,
     'migration failure and rollback traces must match phase2 frozen behavior')
-  console.log('Record storage regression passed (frozen API and storage behavior).')
+  console.log('Record storage regression passed (frozen API/data contract, unaffected IO traces, and migration behavior).')
 }

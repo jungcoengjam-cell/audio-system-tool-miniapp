@@ -9,6 +9,7 @@ const RECOVERY_KEY = 'audioTool.recovery.v1'
 const ACTIVE_KEY = 'audioTool.activeProject.v1'
 const SCHEMA_KEY = 'audioTool.storageSchemaVersion'
 const SCHEMA_VERSION = 4
+const WRITE_JOURNAL_KEY = 'audioTool.recordWriteJournal.v1'
 const { amplifiers, speakers } = require('../data/equipment')
 const { calculateLimiter } = require('../utils/limiter')
 
@@ -554,9 +555,10 @@ assert.equal(records.getFavoriteByPayload(payload).id, retainedPayloadFavorite.i
   '独立收藏在删除和恢复项目时保持不变')
 
 assert.equal(records.STORAGE_SCHEMA_VERSION, SCHEMA_VERSION, '不升级存储 schema')
+assert.equal(storage.get(WRITE_JOURNAL_KEY), '', 'fallback清理后不残留待恢复journal')
 assert.deepEqual([...storage.keys()].sort(), [ACTIVE_KEY, FAVORITES_KEY, PROJECTS_KEY, RECORDS_KEY,
   RECOVERY_KEY, SCHEMA_KEY, 'audioTool.dmxLightingWorkspace.v2', 'audioTool.limiter.preferences',
-  'audioTool.resultEditorSessions.v1'].sort(), '独立收藏、恢复和编辑上下文使用各自存储键')
+  'audioTool.resultEditorSessions.v1', WRITE_JOURNAL_KEY].sort(), '仅新增已知的journal键，其他业务存储键保持不变')
 const projectMarkup = fs.readFileSync(path.resolve(__dirname, '../pages/records/project.wxml'), 'utf8')
 assert(projectMarkup.includes('{{record.title}}'), '项目计算记录以项目投影标题呈现')
 assert(projectMarkup.includes('{{record.projectNote}}'), '项目记录仍呈现本项目配置备注')

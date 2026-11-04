@@ -25,6 +25,18 @@ const migrationState = {
   set error(value) { storageMigrationError = value },
 }
 
+function invalidateNormalizedStorageCaches() {
+  normalizedRecordSource = undefined
+  normalizedRecords = []
+  recordSignatureIndex = new Map()
+  normalizedProjectSource = undefined
+  normalizedProjects = []
+  normalizedFavoriteSource = undefined
+  normalizedFavorites = []
+  normalizedRecoverySource = undefined
+  normalizedRecoveryEntries = []
+}
+
 const { createRecordStorage } = require('./record-storage')
 const {
   withStorageMutation,
@@ -38,7 +50,14 @@ const {
   removeStorageValue,
   storageValueCache,
   storageReadFailures,
-} = createRecordStorage({ getWx: () => wx, getMigrationError: () => storageMigrationError })
+} = createRecordStorage({
+  getWx: () => wx,
+  getMigrationError: () => storageMigrationError,
+  storageSchemaKey: STORAGE_SCHEMA_KEY,
+  storageSchemaVersion: STORAGE_SCHEMA_VERSION,
+  atomicStorageKeys: [RECORDS_KEY, PROJECTS_KEY, FAVORITES_KEY, RECOVERY_KEY],
+  onRecoveryInvalidate: invalidateNormalizedStorageCaches,
+})
 
 const { MODULES, LEGACY_MODULES, getModuleMetadata } = require('./record-modules')
 const { createRecordMigration } = require('./record-migration')
