@@ -169,7 +169,7 @@ async function run(){
     if(phase==='layout'||phase==='all')for(const profile of layoutProfiles){
       executedLayoutProfiles.push(profile)
       const tag=`${profile.theme}-${profile.width}x${profile.height}`
-      await check('layout, placement search and full PNG export '+tag,async()=>{
+      await check('layout, placement search and diagram PNG export '+tag,async()=>{
         await navigate(profile,'layout',{lightingContextName:encodeURIComponent('临时设置')})
         assert.equal(await evaluate('window.__lightingQa.data.contextLabel'),'临时设置')
         await seedPhotoLayout()
@@ -289,21 +289,16 @@ async function run(){
         assert(generated.texts.includes('灯位图'),'diagram title rendered')
         assert(!generated.texts.some(t=>/灯具编址与灯位图|灯具地址清单|未上杆灯具|通道模式|\bCH\b/.test(t)),'no retired report text '+JSON.stringify(generated.texts))
         assert(generated.texts.some(t=>/^[A-Z]+\d{3,}$/.test(t)),'diagram keeps placed addresses')
-        const addressListTitle=generated.textCalls.find(call=>call.text===`完整地址清单（${inventory.source.length} 台）`)
-        assert(addressListTitle,'export includes the current full address list')
-        const addressListCalls=generated.textCalls.filter(call=>call.top>addressListTitle.bottom)
-        for(const section of ['灯杆1（9台）','灯杆2（8台）','面光杆1（10台）'])assert(addressListCalls.some(call=>call.text===section),'export retains rod address section '+section)
-        const listedAddresses=inventory.source.filter(fixture=>addressListCalls.some(call=>call.text.split(/\s+/).includes(fixture.address)))
-        assert.deepEqual(listedAddresses.map(f=>f.address).sort(),inventory.source.map(f=>f.address).sort(),'address appendix includes every real fixture address')
+        assert(!generated.texts.some(t=>/完整地址清单|未上杆/.test(t)),'diagram export omits the address appendix and unplaced fixtures')
         for(const text of ['台口','观众区','12 m','8 m'])assert(generated.texts.includes(text),'export keeps '+text)
         await panel('.export-sheet',{header:'.export-heading',scroll:'.export-image-scroll',footer:'.export-actions'})
         await capture('layout-preview-'+tag)
-        const file=path.join(out,'layout-with-address-list-'+tag+'.png'),bytes=Buffer.from(generated.exports[0].url.split(',')[1],'base64');fs.writeFileSync(file,bytes)
+        const file=path.join(out,'layout-diagram-'+tag+'.png'),bytes=Buffer.from(generated.exports[0].url.split(',')[1],'base64');fs.writeFileSync(file,bytes)
         assert(bytes.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10])),'export bytes have the real PNG signature')
         assert.equal(bytes.readUInt32BE(16),generated.exports[0].width,'PNG header width matches the exported dimensions')
         assert.equal(bytes.readUInt32BE(20),generated.exports[0].height,'PNG header height matches the exported dimensions')
         assert(generated.exports[0].width>0&&generated.exports[0].height>0,'real PNG has nonzero dimensions')
-        exports.push({name:tag,file,width:generated.exports[0].width,height:generated.exports[0].height,bytes:bytes.length,sha256:crypto.createHash('sha256').update(bytes).digest('hex'),addressListCount:inventory.source.length,texts:generated.texts})
+        exports.push({name:tag,file,width:generated.exports[0].width,height:generated.exports[0].height,bytes:bytes.length,sha256:crypto.createHash('sha256').update(bytes).digest('hex'),placedAddressLabelCount:generated.texts.filter(t=>/^[A-Z]+\d{3,}$/.test(t)).length,texts:generated.texts})
         assert(bytes.length>8000,'real nonempty diagram PNG')
       })
     }

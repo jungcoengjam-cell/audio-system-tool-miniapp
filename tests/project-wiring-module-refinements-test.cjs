@@ -35,6 +35,20 @@ function setPreference(env, value) { env.storage[preferenceKey] = clone(value) }
 function deviceEvent(page, type, id) { return { currentTarget: { dataset: {
   deleteType: type, actionType: 'delete', projectId: page.projectId, id, revision: page._schedule.revision,
 } } } }
+function addReverseFixtureLine(project) {
+  const schedule = project.wiringSchedule
+  const base = schedule.lines[0]
+  const receiver = schedule.devices.find((device) => device.id === 'receiver-1')
+  const mixer = schedule.devices.find((device) => device.id === 'mixer-1')
+  const line = {
+    ...base, id: 'qa-reverse-line', code: 'A005',
+    fromDeviceId: mixer.id, fromDevice: mixer.name, fromPort: 'REV-ONLY',
+    toDeviceId: receiver.id, toDevice: receiver.name, toPort: 'REV-IN',
+  }
+  schedule.lines.push(line)
+  schedule.nextNumber = Math.max(Number(schedule.nextNumber) || 1, 6)
+  return line
+}
 function withWorkspaceRecords(overrides, run) {
   const originalLoad = Module._load
   Module._load = function(request, parent, isMain) {
@@ -447,6 +461,105 @@ check('legacy same-name endpoint deletes only its exact legacy line IDs', () => 
   assert.ok(saved.devices.some((device) => device.id === 'receiver-1'))
   assert.equal(saved.lines.some((line) => line.id === 'legacy-same-name-line'), false)
   assert.equal(saved.lines.length, 4)
+})
+
+check('bidirectional groups keep pair numbers, direction headings, and editor labels through search', () => {
+  const env = createRuntime()
+  addReverseFixtureLine(currentProject(env))
+  const page = env.page({ id: 'qa-project-1' })
+  page.onWorkspaceTab({ currentTarget: { dataset: { tab: 'lines' } } })
+  const group = page.data.groups.find((item) => item.fromDeviceId === 'receiver-1' && item.toDeviceId === 'mixer-1')
+  assert.ok(group)
+  assert.equal(group.bidirectional, true)
+  assert.equal(Object.hasOwn(group, 'directions'), false, 'the UI projection does not duplicate direction line arrays')
+  assert.deepEqual(group.lines.map((line) => [line.id, line.circleLabel, line.showDirectionHeading]), [
+    ['qa-line-1', '1', true], ['qa-line-2', '2', false], ['qa-line-3', '3', false], ['qa-reverse-line', '4', true],
+  ])
+  assert.match(group.toDeviceLabel, /调音台 ·/)
+  const singleDirectionGroup = page.data.groups.find((item) => item.toDeviceId === 'mixer-duplicate')
+  assert.equal(singleDirectionGroup.bidirectional, false)
+  assert.equal(singleDirectionGroup.lines[0].showDirectionHeading, false, 'single-direction groups reuse their group header')
+
+  page.applySearch({ detail: { value: 'REV-ONLY' } })
+  assert.equal(page.data.groups.length, 1)
+  assert.deepEqual(page.data.groups[0].lines.map((line) => [line.id, line.circleLabel, line.showDirectionHeading]), [
+    ['qa-reverse-line', '4', true],
+  ], 'search does not renumber a partial direction match')
+  assert.match(page.data.groups[0].lines[0].directionHeadingLabel, /调音台 ·.*→.*无线接收机/)
+  page.onLineTap({ currentTarget: { dataset: { id: 'qa-reverse-line' } } })
+  assert.equal(page.data.detailLine.circleLabel, '4', 'detail uses the current pair-local number')
+  page.editLine({ currentTarget: { dataset: { id: 'qa-reverse-line' } } })
+  assert.equal(page.data.draftCircleLabel, '4', 'editor uses the same pair-local number')
+})
+
+check('group delete route rejects a stale project or revision before writing', () => {
+  const env = createRuntime()
+  addReverseFixtureLine(currentProject(env))
+  const page = env.page({ id: 'qa-project-1' })
+  page.onWorkspaceTab({ currentTarget: { dataset: { tab: 'lines' } } })
+  const group = page.data.groups[0]
+  const wrongProject = deviceEvent(page, 'group', group.key)
+  wrongProject.currentTarget.dataset.projectId = 'qa-project-2'
+  page.deleteWorkspaceRecord(wrongProject)
+  assert.equal(env.events.modals.length, 0)
+  assertNoProjectWrites(env)
+
+  page.deleteWorkspaceRecord(deviceEvent(page, 'group', group.key))
+  const modal = env.events.modals.at(-1)
+  page._schedule = { ...page._schedule, revision: page._schedule.revision + 1 }
+  modal.success({ confirm: true })
+  assert.equal(env.events.writes.filter((write) => write.key === projectKey).length, 0)
+  assert.equal(currentProject(env).wiringSchedule.lines.length, 5)
+  page.invalidateWorkspaceDeletion()
+})
+
+check('group deletion uses full IDs after partial search and preserves state on cancel/failure', () => {
+  const env = createRuntime()
+  addReverseFixtureLine(currentProject(env))
+  const calls = []
+  let fail = true
+  const page = withWorkspaceRecords((actual) => ({
+    saveProjectWiring(...args) {
+      calls.push(args)
+      return fail ? { ok: false, error: 'QA save failure' } : actual.saveProjectWiring(...args)
+    },
+  }), () => env.page({ id: 'qa-project-1' }))
+  page.onWorkspaceTab({ currentTarget: { dataset: { tab: 'lines' } } })
+  page.applySearch({ detail: { value: 'A001' } })
+  const visibleGroup = page.data.groups[0]
+  assert.deepEqual(visibleGroup.lines.map((line) => line.id), ['qa-line-1'], 'the search hit only shows one line')
+  const before = clone(currentProject(env).wiringSchedule)
+  page.deleteWorkspaceRecord(deviceEvent(page, 'group', visibleGroup.key))
+  const cancel = env.events.modals.at(-1)
+  assert.equal(cancel.confirmText, '删除整组')
+  assert.match(cancel.content, /无线接收机.*调音台/)
+  assert.match(cancel.content, /调音台 · 2/, 'confirmation disambiguates the selected same-name device ID')
+  assert.match(cancel.content, /全部 4 条线路（含两个方向）/)
+  cancel.success({ confirm: false, cancel: true })
+  assert.equal(calls.length, 0)
+  assert.deepEqual(currentProject(env).wiringSchedule, before)
+
+  page.deleteWorkspaceRecord(deviceEvent(page, 'group', visibleGroup.key))
+  env.respondModal(true)
+  assert.equal(page.data.saving, false)
+  assert.equal(calls.length, 1)
+  assert.deepEqual(currentProject(env).wiringSchedule, before, 'save failure leaves all lines and devices intact')
+
+  fail = false
+  page.deleteWorkspaceRecord(deviceEvent(page, 'group', visibleGroup.key))
+  env.respondModal(true)
+  assert.equal(calls.length, 2)
+  assert.deepEqual(calls[1][1], {
+    type: 'delete-lines', ids: ['qa-line-1', 'qa-line-2', 'qa-line-3', 'qa-reverse-line'],
+  }, 'deletion uses every unfiltered line ID in source storage order')
+  const saved = currentProject(env).wiringSchedule
+  assert.deepEqual(saved.lines.map((line) => line.id), ['qa-line-4'], 'all lines in the target pair are removed, including reverse direction')
+  assert.ok(saved.devices.some((device) => device.id === 'receiver-1'))
+  assert.ok(saved.devices.some((device) => device.id === 'mixer-1'))
+  assert.ok(saved.devices.some((device) => device.id === 'mixer-duplicate'), 'other device-pair endpoints remain')
+  assert.equal(env.events.writes.filter((write) => write.key === projectKey).length, 1, 'one successful group deletion writes the project once')
+  assert.equal(page._workspace.groups.some((item) => item.key === visibleGroup.key), false)
+  assert.equal(env.events.toasts.at(-1).title, '线路组已删除')
 })
 
 check('filtered later line group deletes by stable line ID, not source group index', () => {

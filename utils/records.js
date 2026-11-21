@@ -931,12 +931,12 @@ function isValidStoredWiringSchedule(value) {
     'id', 'code', 'purpose', 'fromDevice', 'fromPort', 'toDevice', 'toPort', 'buildType', 'cableType',
     'spec', 'connectorA', 'connectorB', 'lengthText', 'status', 'notes',
   ])
-  const allowedLineKeys = new Set([...lineKeys, 'fromDeviceId', 'toDeviceId'])
+  const allowedLineKeys = new Set([...lineKeys, 'fromDeviceId', 'toDeviceId', 'fromLocation', 'toLocation'])
   const lineTextLimits = {
     id: 100, code: 32, purpose: 100, fromDevice: 100, fromPort: 80, toDevice: 100, toPort: 80,
     buildType: 20, cableType: 20, spec: 120, connectorA: 60, connectorB: 60,
     lengthText: projectWiring.MAX_LENGTH_TEXT, status: 20, notes: 300,
-    fromDeviceId: 100, toDeviceId: 100,
+    fromDeviceId: 100, toDeviceId: 100, fromLocation: 100, toLocation: 100,
   }
   for (const line of value.lines) {
     if (!line || typeof line !== 'object' || Array.isArray(line)
@@ -944,8 +944,7 @@ function isValidStoredWiringSchedule(value) {
     if (Array.from(lineKeys).some((key) => !Object.prototype.hasOwnProperty.call(line, key))
       || Object.keys(line).some((key) => typeof line[key] !== 'string')) return false
     if (Object.keys(line).some((key) => line[key].length > lineTextLimits[key] || line[key] !== line[key].trim())) return false
-    if (!line.id.trim() || !line.code.trim() || !line.fromDevice.trim() || !line.fromPort.trim()
-      || !line.toDevice.trim() || !line.toPort.trim()) return false
+    if (!line.id.trim() || !line.code.trim() || !line.fromPort.trim() || !line.toPort.trim()) return false
     if (!['finished', 'bulk'].includes(line.buildType)
       || !['balanced', 'unbalanced', 'speaker', 'custom'].includes(line.cableType)
       || !['pending', 'connected', 'checked'].includes(line.status)) return false

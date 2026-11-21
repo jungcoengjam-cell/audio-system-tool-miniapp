@@ -9,16 +9,14 @@ const CABLE_SPEC_OPTIONS = {
 }
 const DEFAULT_AUDIO_SPEC = 'RVPE 2×0.5 mm²'
 const DRAFT_FIELDS = new Set([
-  'purpose', 'fromDevice', 'fromPort', 'toDevice', 'toPort', 'buildType', 'cableType',
+  'purpose', 'fromLocation', 'fromDevice', 'fromPort', 'toLocation', 'toDevice', 'toPort', 'buildType', 'cableType',
   'spec', 'connectorA', 'connectorB', 'lengthText', 'status', 'notes',
 ])
 const REQUIRED_ROUTE_FIELDS = [
-  { field: 'fromDevice', label: '来源设备', target: 'wiring-field-from-device' },
-  { field: 'fromPort', label: '来源端口', target: 'wiring-field-from-port' },
-  { field: 'toDevice', label: '去向设备', target: 'wiring-field-to-device' },
-  { field: 'toPort', label: '去向端口', target: 'wiring-field-to-port' },
+  { field: 'fromPort', label: '来源端口', target: 'wiring-pair-0-from' },
+  { field: 'toPort', label: '去向端口', target: 'wiring-pair-0-to' },
 ]
-const ROUTE_ENDPOINT_FIELDS = ['fromDevice', 'fromPort', 'toDevice', 'toPort']
+const ROUTE_ENDPOINT_FIELDS = ['fromLocation', 'fromDevice', 'fromPort', 'toLocation', 'toDevice', 'toPort']
 
 function optionIndex(options, id, fallback = 0) {
   const found = options.findIndex((option) => option.id === id)
@@ -88,11 +86,10 @@ function safeToast(title) {
 
 const CONNECTOR_PICKER_OPTIONS = [{ id: '', label: '待确认' }, ...CONNECTOR_OPTIONS]
 const CUSTOM_CONNECTOR_INDEX = CONNECTOR_PICKER_OPTIONS.findIndex((option) => option.id === 'custom')
-const endpointFields = ['fromDevice', 'fromPort', 'toDevice', 'toPort']
 const text = (value) => String(value === undefined || value === null ? '' : value)
 const dataset = (event) => event && event.currentTarget && event.currentTarget.dataset || {}
 const inputValue = (event) => text(event && event.detail && event.detail.value)
-const endpointPlaceholder = () => ({ id: '', name: '请选择设备', choiceLabel: '请选择设备' })
+const endpointPlaceholder = () => ({ id: '', name: '不选设备', choiceLabel: '不选设备', clear: true })
 function endpointChoices(side, draft, devices) {
   const sourceId = side === 'to' && draft && draft.fromDeviceId ? String(draft.fromDeviceId) : ''
   const choices = (devices || []).filter((device) => !sourceId || device.id !== sourceId)
@@ -115,8 +112,10 @@ function createLineEditor(base, { applyScheduleChange, saveProjectWiring }) {
     makeDefaultDraft() {
       return {
         purpose: '',
+        fromLocation: '',
         fromDevice: '',
         fromPort: '',
+        toLocation: '',
         toDevice: '',
         toPort: '',
         buildType: 'finished',
@@ -150,6 +149,11 @@ function createLineEditor(base, { applyScheduleChange, saveProjectWiring }) {
       const existingLine = !isNew && normalizedDraft.id
         ? this._schedule.lines.find((line) => line.id === normalizedDraft.id)
         : null
+      if (existingLine) {
+        ;['fromLocation', 'toLocation'].forEach((field) => {
+          if (!Object.prototype.hasOwnProperty.call(existingLine, field)) delete normalizedDraft[field]
+        })
+      }
       this._draftBaseline = existingLine ? JSON.stringify(existingLine) : ''
       this._draftTouched = touched
       this._draftIsCopy = isCopy
@@ -614,7 +618,7 @@ function createLineEditor(base, { applyScheduleChange, saveProjectWiring }) {
       const choices = side === 'from' ? this.data.fromDeviceChoices : this.data.toDeviceChoices
       const index = Number(event.detail && event.detail.value)
       const device = Number.isInteger(index) ? choices[index] : null
-      if (!device || !device.id) return
+      if (!device) return
       const previous = this.data.draft || {}
       const previousId = text(previous[`${side}DeviceId`])
       const previousName = text(previous[`${side}Device`])
@@ -626,20 +630,20 @@ function createLineEditor(base, { applyScheduleChange, saveProjectWiring }) {
     },
 
     assignEndpoint(side, device) {
-      if (!['from', 'to'].includes(side) || !device || !device.id) return
-      const draft = { ...this.data.draft, [`${side}Device`]: device.name }
-      if (device.legacy) draft[`${side}DeviceId`] = null
-      else draft[`${side}DeviceId`] = device.id
+      if (!['from', 'to'].includes(side) || !this.data.draft) return
+      const selectedDevice = device && device.id ? device : null
+      const draft = { ...this.data.draft, [`${side}Device`]: selectedDevice ? selectedDevice.name : '' }
+      draft[`${side}DeviceId`] = selectedDevice && !selectedDevice.legacy ? selectedDevice.id : null
       const invalidatedDestination = side === 'from' && Boolean(draft.toDeviceId)
-        && draft.toDeviceId === device.id
+        && selectedDevice && draft.toDeviceId === selectedDevice.id
       const formFieldErrors = { ...this.data.formFieldErrors }
       delete formFieldErrors[`${side}Device`]
       if (invalidatedDestination) {
         draft.toDevice = ''
-        delete draft.toDeviceId
+        draft.toDeviceId = null
         formFieldErrors.toDevice = '\u8bf7\u91cd\u65b0\u9009\u62e9\u4e0d\u540c\u7684\u53bb\u5411\u8bbe\u5907'
       } else if (side === 'from' && draft.toDeviceId) delete formFieldErrors.toDevice
-      if (side === 'to' && draft.fromDeviceId && draft.fromDeviceId === device.id) {
+      if (side === 'to' && selectedDevice && draft.fromDeviceId && draft.fromDeviceId === selectedDevice.id) {
         formFieldErrors.toDevice = '\u6765\u6e90\u8bbe\u5907\u548c\u53bb\u5411\u8bbe\u5907\u4e0d\u80fd\u76f8\u540c'
         this.setData({ formFieldErrors, formError: formFieldErrors.toDevice })
         return
@@ -797,11 +801,9 @@ function createLineEditor(base, { applyScheduleChange, saveProjectWiring }) {
         this.setData({ formError: message, formFieldErrors: { ...this.data.formFieldErrors, toDevice: message } })
         return
       }
-      const missing = endpointFields.filter((field) => field.endsWith('Device') && !text(draft[field]).trim())
       const pairErrors = pairs.map((pair) => ({ fromPort: !text(pair.fromPort).trim(), toPort: !text(pair.toPort).trim() }))
-      if (missing.length || pairErrors.some((error) => error.fromPort || error.toPort)) {
-        const formFieldErrors = Object.fromEntries(missing.map((field) => [field, '请选择设备']))
-        this.setData({ formError: '请选择两端设备，并填写每条线路的两端端口。', formFieldErrors, pairErrors })
+      if (pairErrors.some((error) => error.fromPort || error.toPort)) {
+        this.setData({ formError: '请填写每条线路的两端端口。', formFieldErrors: {}, pairErrors })
         return
       }
       const lines = pairs.map((pair) => {

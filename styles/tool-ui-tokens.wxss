@@ -1,0 +1,1 @@
+page{--tool-card-radius:22px;--tool-list-radius:16px;--tool-control-radius:12px;--tool-control-height:48px;--tool-inline-height:44px;--tool-gutter:16px;--tool-gap:12px;--tool-card-shadow:0 5px 18px var(--theme-shadow)}

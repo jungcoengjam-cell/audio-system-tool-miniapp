@@ -155,7 +155,7 @@ function createCalculationChecks(context) {
   }
 
   function checkData() {
-    assert.strictEqual(APP_VERSION, '6.0.3')
+    assert.strictEqual(APP_VERSION, '6.0.4')
     assert.strictEqual(PRODUCT_DATA_DATE, '2026-09-01')
     assert.strictEqual(fs.readFileSync(path.join(root, 'VERSION'), 'utf8').trim(), APP_VERSION)
     assert(Object.isFrozen(PRODUCT_COUNTS), '产品资料库数量统计必须冻结')
@@ -315,8 +315,8 @@ function createCalculationChecks(context) {
     assert(dmxArticle.sections.some((section) => section.title.includes('按组分域')
       && section.paragraphs.join('').includes('A、B')
       && section.paragraphs.join('').includes('输出域与两条物理线路映射')))
-    assert(dmxArticle.sections.some((section) => section.bullets.join('').includes('不自动溢出')
-      && section.bullets.join('').includes('拆组或换域')))
+    assert(dmxArticle.sections.some((section) => section.bullets.join('').includes('起排域')
+      && section.bullets.join('').includes('后续域已用地址之后顺排')))
     assert.strictEqual(findKnowledgeById('missing-article'), null)
 
     const projectConfig = JSON.parse(fs.readFileSync(path.join(root, 'project.config.json'), 'utf8'))

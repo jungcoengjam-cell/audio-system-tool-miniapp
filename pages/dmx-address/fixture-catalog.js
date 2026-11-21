@@ -1,5 +1,6 @@
 const FIXTURE_SEARCH_LIMIT = 36
 const ALL_FIXTURE_CATEGORIES = '全部'
+const { findModelAliasMatches, formatModelAliasMatches } = require('../../utils/model-alias-search')
 
 function getFixtureCategory(name = '') {
 if (/烟机|雾机|雪花机|泡泡机|火花机|水雾机/.test(name)) return '舞台特效'
@@ -29,12 +30,16 @@ count: label === ALL_FIXTURE_CATEGORIES
 }))
 function searchFixtures(keyword = '', category = ALL_FIXTURE_CATEGORIES) {
 const normalized = keyword.trim().toLowerCase()
-const matches = FIXTURE_SEARCH_ROWS.filter(
-(item) => (
-(category === ALL_FIXTURE_CATEGORIES || item.category === category)
-&& (!normalized || item.searchText.includes(normalized))
-),
-)
+const matches = FIXTURE_SEARCH_ROWS.reduce((results, item) => {
+if (category !== ALL_FIXTURE_CATEGORIES && item.category !== category) return results
+if (!normalized || item.searchText.includes(normalized)) {
+results.push(item)
+return results
+}
+const aliases = findModelAliasMatches(item.model, normalized)
+if (aliases.length) results.push({ ...item, aliasMatch: formatModelAliasMatches(aliases) })
+return results
+}, [])
 return {
 rows: matches.slice(0, FIXTURE_SEARCH_LIMIT),
 total: matches.length,

@@ -204,6 +204,83 @@ assert.match(text, /目的端贴签：A001 ← 调音台 \/ MAIN L/)
 assert.match(text, /材料汇总/)
 assert.doesNotMatch(text, /总长 \d+ 个/, '接头数量不可标成线材长度')
 assert.equal(wiring.normalizeSchedule(undefined).revision, 0)
+const located = change(wiring.emptySchedule(), { type: 'upsert', line: {
+  ...baseLine, fromLocation: '  桌面  ', toLocation: '机柜',
+} })
+const locatedLine = located.schedule.lines[0]
+assert.equal(locatedLine.fromLocation, '桌面')
+assert.equal(locatedLine.toLocation, '机柜')
+assert.deepEqual(wiring.buildMaterialSummary(located.schedule).labels.map(({ local, remote }) => [local, remote]), [
+  ['桌面 / 调音台 / MAIN L', '机柜 / 功放 / CH1'],
+  ['机柜 / 功放 / CH1', '桌面 / 调音台 / MAIN L'],
+], 'endpoint labels include filled locations and omit empty layers')
+const locatedText = wiring.buildScheduleText('演示工程', located.schedule)
+assert.match(locatedText, /源端贴签：A001 → 机柜 \/ 功放 \/ CH1/)
+assert.doesNotMatch(locatedText, /待填写 \/ /)
+const locatedEdit = wiring.applyScheduleChange(located.schedule, {
+  type: 'upsert', line: { id: locatedLine.id, purpose: '编辑后保留位置' },
+})
+assert.equal(locatedEdit.ok, true)
+assert.equal(locatedEdit.schedule.lines[0].fromLocation, '桌面', 'omitted position fields keep stored values')
+const clearedLocation = wiring.applyScheduleChange(locatedEdit.schedule, {
+  type: 'upsert', line: { id: locatedLine.id, fromLocation: '' },
+})
+assert.equal(clearedLocation.ok, true)
+assert.equal(clearedLocation.schedule.lines[0].fromLocation, '', 'an empty string clears a position')
+assert.equal(clearedLocation.schedule.lines[0].toLocation, '机柜')
+const duplicatedLocation = wiring.applyScheduleChange(located.schedule, { type: 'duplicate', id: locatedLine.id })
+assert.equal(duplicatedLocation.ok, true)
+assert.equal(duplicatedLocation.schedule.lines[1].fromLocation, '桌面', 'duplicate preserves endpoint positions')
+const batchLocation = wiring.applyScheduleChange(wiring.emptySchedule(), {
+  type: 'batch', line: { ...baseLine, fromLocation: '桌面', toLocation: '机柜' }, count: 2,
+  fromPrefix: 'OUT-', fromStart: 1, toPrefix: 'IN-', toStart: 1,
+})
+assert.equal(batchLocation.ok, true, batchLocation.error)
+assert.deepEqual(batchLocation.schedule.lines.map((line) => line.fromLocation), ['桌面', '桌面'])
+const appendedLocation = wiring.applyScheduleChange(wiring.emptySchedule(), {
+  type: 'append-lines', lines: [{ ...baseLine, fromLocation: '桌面', toLocation: '机柜' }],
+})
+assert.equal(appendedLocation.ok, true, appendedLocation.error)
+assert.equal(appendedLocation.schedule.lines[0].toLocation, '机柜', 'append-lines preserves positions')
+const renameDevices = wiring.applyScheduleChange(wiring.emptySchedule(), {
+  type: 'add-devices', devices: [{ type: 'mixer', name: '调音台' }, { type: 'amplifier', name: '功放' }],
+})
+const renameLine = wiring.applyScheduleChange(renameDevices.schedule, { type: 'upsert', line: {
+  ...baseLine, fromDeviceId: renameDevices.deviceIds[0], toDeviceId: renameDevices.deviceIds[1],
+  fromLocation: '桌面', toLocation: '机柜',
+} })
+assert.equal(renameLine.ok, true, renameLine.error)
+const renamedDevice = wiring.applyScheduleChange(renameLine.schedule, {
+  type: 'rename-device', id: renameDevices.deviceIds[0], name: '主调音台',
+})
+assert.equal(renamedDevice.ok, true, renamedDevice.error)
+assert.equal(renamedDevice.schedule.lines[0].fromLocation, '桌面', 'device rename keeps position metadata')
+const emptyDevice = wiring.applyScheduleChange(wiring.emptySchedule(), {
+  type: 'upsert', line: { ...baseLine, fromDevice: '', toDevice: '', fromLocation: '', toLocation: '机柜' },
+})
+assert.equal(emptyDevice.ok, true, 'device names may be empty while endpoint ports stay present')
+assert.equal(wiring.applyScheduleChange(wiring.emptySchedule(), {
+  type: 'upsert', line: { ...baseLine, fromDevice: 7 },
+}).ok, false, 'device values remain strings even when blank values are accepted')
+for (const field of ['fromPort', 'toPort']) {
+  const missingPort = wiring.applyScheduleChange(wiring.emptySchedule(), {
+    type: 'upsert', line: { ...baseLine, fromDevice: '', toDevice: '', [field]: '' },
+  })
+  assert.equal(missingPort.ok, false, 'endpoint ports remain required')
+  assert.match(missingPort.error, /端口/)
+}
+const invalidReference = wiring.applyScheduleChange(wiring.emptySchedule(), {
+  type: 'upsert', line: { ...baseLine, fromDevice: '', fromDeviceId: 'missing-device' },
+})
+assert.equal(invalidReference.ok, false, 'empty device names do not disable provided device ID validation')
+const badPosition = wiring.applyScheduleChange(wiring.emptySchedule(), {
+  type: 'upsert', line: { ...baseLine, fromLocation: 'x'.repeat(101) },
+})
+assert.equal(badPosition.ok, false)
+const oldLine = wiring.normalizeSchedule({
+  version: 1, revision: 2, nextNumber: 2, lines: [{ ...baseLine, id: 'legacy-line', code: 'A001' }],
+}).lines[0]
+assert.equal(Object.hasOwn(oldLine, 'fromLocation'), false, 'old rows do not acquire empty position keys')
 for (const options of [wiring.STATUS_OPTIONS, wiring.BUILD_OPTIONS, wiring.CABLE_OPTIONS, wiring.CONNECTOR_OPTIONS]) {
   assert(options.every((option) => typeof option.id === 'string' && typeof option.label === 'string'))
 }

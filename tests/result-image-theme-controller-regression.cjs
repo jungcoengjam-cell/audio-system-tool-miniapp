@@ -1,12 +1,17 @@
 'use strict'
 
 const assert = require('node:assert/strict')
+const { Module } = require('node:module')
 const { createEnvironment } = require('./p2-safety/harness.cjs')
 const { createLayoutExportMethods } = require('../pages/dmx-layout/layout-export-controller')
 const layoutRenderer = require('../pages/dmx-layout/layout-renderer')
 const layoutModel = require('../pages/dmx-layout/layout-model')
 const canvasAdapter = require('../pages/dmx-layout/layout-canvas-adapter')
+const longImageModulePath = require.resolve('../pages/project-wiring/report-long-image')
+const longImageCacheBeforeControllerLoad = require.cache[longImageModulePath]
 const { createReportController } = require('../pages/project-wiring/report-controller')
+assert.equal(require.cache[longImageModulePath], longImageCacheBeforeControllerLoad,
+  'loading the project report controller does not eagerly load the long-image helper')
 const wiring = require('../utils/project-wiring')
 
 function createRuntime() {
@@ -369,11 +374,39 @@ function runProjectWiringFixture(runtime) {
   global.wx = runtime.env.wx
   const report = require('../pages/project-wiring/report')
   const originalBuilder = report.buildScheduleReportPages
+  const originalLongBuilder = report.buildProjectWiringLongReport
   const originalDraw = report.drawScheduleReport
   const contentMarkers = []
+  const longBuilds = []
+  const longExports = []
+  const releasedLongImages = []
+  let helperLookupCount = 0
+  const previousLongImageModule = require.cache[longImageModulePath]
+  const longImageModule = new Module(longImageModulePath, module)
+  longImageModule.filename = longImageModulePath
+  longImageModule.loaded = true
+  longImageModule.exports = Object.defineProperty({}, 'exportLongProjectImage', {
+    enumerable: true,
+    get() {
+      helperLookupCount += 1
+      return (options) => {
+        longExports.push({ theme: options.theme, page: options.page })
+        const context = runtime.env.wx.createCanvasContext(options.canvasId, options.pageContext)
+        options.draw(context, options.page, { theme: options.theme, top: 0, height: options.page.height })
+        const tempFilePath = `wxfile://wiring-project-${options.theme}-${longExports.length}.png`
+        options.success({ tempFilePath, release: () => releasedLongImages.push(tempFilePath) })
+      }
+    },
+  })
+  require.cache[longImageModulePath] = longImageModule
+  assert.equal(helperLookupCount, 0, 'loading the export helper module does not access its export')
   report.buildScheduleReportPages = (name, schedule, type) => {
     contentMarkers.push([name, schedule.revision, type])
     return originalBuilder(name, schedule, type)
+  }
+  report.buildProjectWiringLongReport = (name, schedule) => {
+    longBuilds.push([name, schedule.revision])
+    return originalLongBuilder(name, schedule)
   }
   try {
     const draws = []
@@ -405,12 +438,18 @@ function runProjectWiringFixture(runtime) {
     global.getCurrentPages = () => [page]
     const complete = (path) => {
       const options = runtime.pendingExports.shift()
-      assert(options, 'project wiring image export is pending')
+      assert(options, 'paged report image export is pending')
       options.success({ tempFilePath: path })
     }
     const start = (type = 'project') => {
       const contextCount = runtime.contexts.length
+      const longExportCount = longExports.length
       page.generateExport(type)
+      if (type === 'project') {
+        assert.equal(longExports.length, longExportCount + 1, 'project wiring uses the long-image helper')
+        assert(runtime.contexts.length > contextCount, 'project wiring creates a report canvas for the long-image helper')
+        return
+      }
       assert(runtime.pendingDraws.length, 'project wiring report draw is pending')
       assert(runtime.contexts.length > contextCount, 'project wiring creates the share canvas')
       runtime.finishDraw()
@@ -420,8 +459,11 @@ function runProjectWiringFixture(runtime) {
     runtime.setTheme('light')
     start()
     assert.equal(draws.at(-1), 'light', 'project wiring light theme reaches its renderer')
-    complete('wxfile://wiring-light.png')
-    assert.equal(page.data.reportImagePath, 'wxfile://wiring-light.png')
+    assert.equal(longExports.at(-1).theme, 'light')
+    assert.equal(longBuilds.length, 1, 'project list uses the long report builder')
+    assert.equal(helperLookupCount, 1, 'project export resolves the long-image helper once')
+    assert.equal(require.cache[longImageModulePath], longImageModule, 'the resolved helper stays in CommonJS cache')
+    assert.equal(page.data.reportImagePath, 'wxfile://wiring-project-light-1.png')
     assert.equal(page._reportImageTheme, 'light')
     const signature = page._reportSignature
     assert.equal(signature, 'project-theme-fixture:7:project')
@@ -435,6 +477,7 @@ function runProjectWiringFixture(runtime) {
     page.data.reportPreviewVisible = false
     start('lines')
     assert.equal(draws.at(-1), 'light', 'line list report receives the light theme')
+    assert.equal(helperLookupCount, 1, 'paged report types do not resolve the long-image helper export again')
     complete('wxfile://wiring-lines-light.png')
     const lightLineFills = runtime.contexts.at(-1).fills.slice()
 
@@ -442,9 +485,12 @@ function runProjectWiringFixture(runtime) {
     runtime.setTheme('dark')
     start()
     assert.equal(draws.at(-1), 'dark', 'project wiring dark theme reaches its renderer')
-    complete('wxfile://wiring-dark.png')
-    assert.equal(page.data.reportImagePath, 'wxfile://wiring-dark.png')
+    assert.equal(page.data.reportImagePath, 'wxfile://wiring-project-dark-2.png')
     assert.equal(page._reportImageTheme, 'dark')
+    assert.equal(longBuilds.length, 2, 'a theme mismatch rebuilds the long project report')
+    assert.equal(helperLookupCount, 2, 'a theme mismatch resolves the cached helper export again')
+    assert(releasedLongImages.includes('wxfile://wiring-project-light-1.png'),
+      'replacing a long project report releases the prior private PNG')
     const darkFills = runtime.contexts.at(-1).fills
     assert(darkFills.includes('#000000'), 'project wiring project report uses its dark background')
     assert.equal(page._reportSignature, signature, 'theme is not added to project content signature')
@@ -463,6 +509,7 @@ function runProjectWiringFixture(runtime) {
       page.data.reportPreviewVisible = false
       start(type)
       assert.equal(draws.at(-1), 'dark', `${type} report receives the dark theme`)
+      assert.equal(helperLookupCount, 2, `${type} report does not resolve the long-image helper`)
       complete(`wxfile://wiring-${type}-dark.png`)
       assert.equal(page._reportSignature, `project-theme-fixture:7:${type}`)
       assert.equal(page._reportImageTheme, 'dark')
@@ -495,7 +542,10 @@ function runProjectWiringFixture(runtime) {
       themes: draws.slice(), reportCalls: contentMarkers.length }
   } finally {
     report.buildScheduleReportPages = originalBuilder
+    report.buildProjectWiringLongReport = originalLongBuilder
     report.drawScheduleReport = originalDraw
+    if (previousLongImageModule) require.cache[longImageModulePath] = previousLongImageModule
+    else delete require.cache[longImageModulePath]
   }
 }
 

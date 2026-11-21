@@ -12,7 +12,7 @@
   <text class="selector-count device-picker-count">匹配 {{selectorTotalCount}} 个型号</text>
   <scroll-view class="selector-list device-picker-list" scroll-y enhanced show-scrollbar="{{false}}" bindscrolltolower="appendSelectorItems">
     <view wx:for="{{selectorItems}}" wx:key="model" class="selector-row device-picker-row" data-index="{{item.index}}" bindtap="selectAmplifier">
-      <view class="selector-row-copy"><text class="selector-model device-picker-item-title">{{item.model}}</text><text class="selector-meta device-picker-item-meta">{{item.category}}</text></view>
+      <view class="selector-row-copy"><text class="selector-model device-picker-item-title">{{item.model}}</text><text class="selector-meta device-picker-item-meta">{{item.category}}</text><text wx:if="{{item.aliasMatch}}" class="selector-meta device-picker-item-meta device-picker-alias-match">对照型号：{{item.aliasMatch}}</text></view>
       <view class="selector-row-actions">
         <button class="selector-detail device-picker-detail" data-model="{{item.model}}" catchtap="openAmplifierDetail">资料</button>
         <text class="selector-row-arrow device-picker-arrow">›</text>

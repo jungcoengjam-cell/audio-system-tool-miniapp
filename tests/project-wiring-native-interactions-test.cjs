@@ -2,6 +2,8 @@ const assert = require('node:assert/strict')
 const fs = require('node:fs')
 const path = require('node:path')
 const { createRuntime } = require('./project-wiring-redesign-2026-10-16/runtime.cjs')
+const projectWiring = require('../utils/project-wiring')
+const { buildWorkspace } = require('../pages/project-wiring/workspace-model')
 
 const root = path.resolve(__dirname, '..')
 const workspaceMarkup = fs.readFileSync(path.join(root, 'pages/project-wiring/workspace.wxml'), 'utf8')
@@ -57,19 +59,33 @@ async function run() {
   const groupHeader = workspaceMarkup.match(/<view class="workspace-group-header"[^>]*>/)?.[0] || ''
   assert.match(groupHeader, /catchtap="toggleGroup"/)
   assert.doesNotMatch(groupHeader, /bindtap="toggleGroup"/)
-  assert.match(groupHeader, /bindtouchcancel="onLineTouchCancel"/)
+  assert.doesNotMatch(groupHeader, /onLineTouch/)
+  const groupSwipeRow = workspaceMarkup.match(/<view class="workspace-swipe-row workspace-group-swipe-row[^>]*>/)?.[0] || ''
+  assert.match(groupSwipeRow, /data-swipe-type="group"/)
+  assert.match(groupSwipeRow, /data-swipe-id="\{\{group\.key\}\}"/)
+  assert.match(groupSwipeRow, /data-swipe-revision="\{\{scheduleRevision\}\}"/)
+  assert.match(groupSwipeRow, /bindtouchstart="onSwipeTouchStart"/)
+  assert.match(groupSwipeRow, /bindtouchmove="onSwipeTouchMove"/)
+  assert.match(groupSwipeRow, /bindtouchend="onSwipeTouchEnd"/)
+  assert.match(groupSwipeRow, /bindtouchcancel="onSwipeTouchCancel"/)
+  assert.match(groupSwipeRow, /catchtap="stopEvent"/)
   assert.match(workspaceMarkup, /loadErrorTitle === '请选择项目' && selectionRequired && !canRetry && !project/)
   assert.match(workspaceMarkup, /class="workspace-line-group-inner"/)
   assert.match(workspaceMarkup, /workspace-line-group-retiring-exit/)
   assert.match(workspaceMarkup, /catchtap="deleteWorkspaceRecord"/)
   assert.match(workspaceMarkup, /catchtap="connectDevice"/)
   const deleteButtons = [...workspaceMarkup.matchAll(/<button[^>]*class="workspace-swipe-delete"[^>]*>/g)].map((match) => match[0])
-  assert.equal(deleteButtons.length, 2)
+  assert.equal(deleteButtons.length, 3)
   deleteButtons.forEach((button) => {
     assert.match(button, /catchtap="deleteWorkspaceRecord"/)
     assert.doesNotMatch(button, /(?:bind|catch)touch(?:start|move|end|cancel)=/)
-    assert.match(button, /disabled="\{\{![a-z]+\.swipeOpen \|\| saving \|\| workspaceDeletingId === [a-z]+\.id\}\}"/)
   })
+  const groupDeleteButton = deleteButtons.find((button) => button.includes('data-delete-type="group"')) || ''
+  assert.match(groupDeleteButton, /aria-label="删除\{\{group\.headerRouteLabel\}\}的全部\{\{group\.lineCount\}\}条线路"/)
+  assert.doesNotMatch(groupDeleteButton, /group\.fromDevice|group\.toDevice/)
+  assert.match(groupDeleteButton, /disabled="\{\{!group\.swipeOpen \|\| saving \|\| workspaceDeletingId === group\.key\}\}"/)
+  const groupDeleteMarkup = workspaceMarkup.match(/<button[^>]*data-delete-type="group"[^>]*>[\s\S]*?<\/button>/)?.[0] || ''
+  assert.match(groupDeleteMarkup, /<view class="workspace-swipe-delete-icon" \/>/)
   const connectButton = workspaceMarkup.match(/<button[^>]*class="workspace-connect-button"[^>]*>/)?.[0] || ''
   assert.match(connectButton, /catchtap="connectDevice"/)
   assert.doesNotMatch(connectButton, /(?:bind|catch)touch(?:start|move|end|cancel)=/)
@@ -90,9 +106,40 @@ async function run() {
   assert.doesNotMatch(workspaceMarkup, /<scroll-view[^>]*class="workspace-device-name|<scroll-view[^>]*class="workspace-port-cell/)
   assert.match(workspaceMarkup, /aria-hidden="\{\{!item\.swipeOpen\}\}" class="workspace-swipe-actions/)
   assert.match(workspaceMarkup, /aria-hidden="\{\{!line\.swipeOpen\}\}" class="workspace-swipe-actions/)
+  assert.match(groupSwipeRow, /aria-hidden="\{\{group\.retiring\}\}"/)
+  assert.match(workspaceMarkup, /aria-hidden="\{\{!group\.swipeOpen\}\}" class="workspace-swipe-actions/)
+  assert.match(workspaceMarkup, /workspace-location-heading">\{\{group\.locationHeadingLabel\}\}/)
+  assert.match(workspaceMarkup, /来源处（选填）/)
+  assert.match(workspaceMarkup, /去向处（选填）/)
+  assert.match(workspaceMarkup, /maxlength="100" value="\{\{draft\.fromLocation\}\}"/)
+  assert.match(workspaceMarkup, /maxlength="100" value="\{\{draft\.toLocation\}\}"/)
+  assert.match(workspaceMarkup, /draft\.fromDevice \|\| '不选设备'/)
+  assert.doesNotMatch(workspaceMarkup, /请先在设备页添加设备/)
   assert.match(workspaceStyle, /\.workspace-swipe-actions\{position:absolute;z-index:2;/)
   assert.match(workspaceMarkup, /style="transform:translateX\(\{\{72 - (?:item|line)\.swipeOffset\}\}px\);"/)
   assert.match(indexMarkup, /workspace-overlay-closing/)
+
+  for (const locations of [
+    { fromLocation: '桌面', toLocation: '音频机柜', expected: /桌面.*音频机柜/ },
+    { fromLocation: '', toLocation: '', expected: /该线路组/ },
+  ]) {
+    const env = createRuntime()
+    const page = env.page({ id: 'qa-project-1' })
+    const scheduleResult = projectWiring.applyScheduleChange(projectWiring.emptySchedule(), {
+      type: 'upsert', line: { ...locations, fromPort: 'OUT', toPort: 'IN' },
+    })
+    assert.equal(scheduleResult.ok, true)
+    const workspace = buildWorkspace(scheduleResult.schedule)
+    page._schedule = scheduleResult.schedule
+    page._workspace = workspace
+    page.data.groups = workspace.groups.map((group) => ({ ...group, lines: group.lines.map((line) => ({ ...line })) }))
+    const confirmation = page.captureWorkspaceDeletion('group', workspace.groups[0].key, scheduleResult.schedule.revision)
+    assert.ok(confirmation)
+    assert.match(confirmation.content, locations.expected)
+    assert.doesNotMatch(confirmation.content, /undefined|待补设备|與|与“”|“”与/)
+    if (locations.fromLocation) assert.doesNotMatch(confirmation.content, /设备对/)
+    page.onUnload()
+  }
 
   {
     const env = createRuntime()
@@ -267,20 +314,79 @@ async function run() {
   {
     const env = createRuntime()
     const page = env.page({ id: 'qa-project-1' })
-    const key = page.data.groups[0].key
-    page.onLineTouchStart({ currentTarget: { dataset: { key } }, touches: [{ identifier: 0, clientX: 10, clientY: 10 }] })
-    page.onLineTouchMove({ touches: [{ identifier: 0, clientX: 20, clientY: 10 }] })
-    assert.equal(page._workspaceGroupGesture.moved, true)
-    page.onLineTouchCancel({ changedTouches: [{ identifier: 0, clientX: 20, clientY: 10 }] })
-    assert.equal(page._workspaceGroupGesture, null, 'touchcancel clears the gesture that can no longer receive touchend')
+    const group = page.data.groups[0]
+    const key = group.key
+    swipeRow(page, 'group', key)
+    assert.equal(page.data.groups[0].swipeOpen, true, 'left swipe exposes the group delete action')
+    assert.equal(page.data.groups[0].swipeOffset, 72)
+    const action = { deleteType: 'group', actionType: 'delete', projectId: page.projectId, id: key, revision: page._schedule.revision }
+    page.deleteWorkspaceRecord(actionTapEvent(action))
+    assert.equal(env.events.modals.length, 0, 'the tap synthesized by the opening swipe cannot confirm a group delete')
 
-    const childStart = { currentTarget: { dataset: { tapKey: `group:${key}` } }, touches: [{ identifier: 0, clientX: 20, clientY: 10 }] }
-    page.onSwipeScrollTouchStart(childStart)
-    const childEnd = { currentTarget: childStart.currentTarget, changedTouches: [{ identifier: 0, clientX: 20, clientY: 10 }] }
-    page.onSwipeScrollTouchEnd(childEnd)
-    page.onLineTouchEnd(childEnd) // the end event can bubble to the header after the child handled its own sequence
+    const lineId = group.lines[0].id
+    swipeRow(page, 'line', lineId)
+    assert.equal(page.data.groups[0].swipeOpen, false, 'opening a line closes the group swipe row')
+    assert.equal(page.data.groups[0].lines.find((line) => line.id === lineId).swipeOpen, true)
+    swipeRow(page, 'group', key)
+    assert.equal(page.data.groups[0].swipeOpen, true, 'opening a group closes the line swipe row')
+    assert.equal(page.data.groups[0].lines.find((line) => line.id === lineId).swipeOpen, false)
+
+    tapRow(page, 'group', key)
     page.toggleGroup(tapEvent({ key }, 0))
-    assert.equal(page._collapsedGroups.has(key), true, 'the next deliberate tap after a canceled drag still toggles the group')
+    assert.equal(page.data.groups[0].swipeOpen, false, 'a tap on an open group header closes its delete action')
+    assert.equal(page._collapsedGroups.has(key), false, 'closing the delete action does not collapse the group')
+    tapRow(page, 'group', key)
+    page.toggleGroup(tapEvent({ key }, 0))
+    assert.equal(page._collapsedGroups.has(key), true, 'a later deliberate tap toggles the group')
+    page.onUnload()
+  }
+
+  {
+    const env = createRuntime()
+    const page = env.page({ id: 'qa-project-1' })
+    const group = page.data.groups[0]
+    const key = group.key
+    const start = { currentTarget: { dataset: { swipeType: 'group', swipeId: key, retiring: false } }, touches: [{ identifier: 0, clientX: 160, clientY: 20 }] }
+    page.onSwipeTouchStart(start)
+    page.onSwipeTouchMove({ touches: [{ identifier: 0, clientX: 162, clientY: 52 }] })
+    page.onSwipeTouchEnd({ currentTarget: start.currentTarget, changedTouches: [{ identifier: 0, clientX: 162, clientY: 52 }] })
+    assert.equal(page.data.groups[0].swipeOpen, false, 'vertical group movement never opens deletion')
+    page.toggleGroup(tapEvent({ key }, 0))
+    assert.equal(page._collapsedGroups.has(key), false, 'a vertical-scroll ghost tap cannot toggle the group')
+
+    const diagonalStart = { currentTarget: { dataset: { swipeType: 'group', swipeId: key, retiring: false } }, touches: [{ identifier: 0, clientX: 10, clientY: 10 }] }
+    page.onSwipeTouchStart(diagonalStart)
+    page.onSwipeTouchMove({ touches: [{ identifier: 0, clientX: 20, clientY: 18 }] })
+    page.onSwipeTouchEnd({ currentTarget: diagonalStart.currentTarget, changedTouches: [{ identifier: 0, clientX: 20, clientY: 18 }] })
+    assert.equal(page.data.groups[0].swipeOpen, false, 'a near-diagonal drag beyond six pixels cannot expose deletion')
+    page.toggleGroup(tapEvent({ key }, 0))
+    assert.equal(page._collapsedGroups.has(key), false, 'a near-diagonal release tap cannot collapse the group')
+
+    swipeRow(page, 'group', key)
+    page.onSwipeTouchStart({ currentTarget: { dataset: { swipeType: 'group', swipeId: key, retiring: false } }, touches: [{ identifier: 0, clientX: 160, clientY: 20 }] })
+    page.onSwipeTouchCancel({ changedTouches: [{ identifier: 0, clientX: 160, clientY: 20 }] })
+    assert.equal(page.data.groups[0].swipeOpen, false, 'touchcancel closes an open group action')
+    page.onUnload()
+  }
+
+  {
+    const env = createRuntime()
+    const page = env.page({ id: 'qa-project-1' })
+    const group = page.data.groups[0]
+    const ids = group.lines.map((line) => line.id)
+    const deviceIds = page._schedule.devices.map((device) => device.id)
+    const action = { deleteType: 'group', actionType: 'delete', projectId: page.projectId, id: group.key, revision: page._schedule.revision }
+    swipeRow(page, 'group', group.key)
+    page.deleteWorkspaceRecord(actionTapEvent(action))
+    assert.equal(env.events.modals.length, 0, 'swipe release alone never starts group deletion')
+    tapRow(page, 'group', group.key)
+    page.deleteWorkspaceRecord(actionTapEvent(action))
+    assert.equal(env.events.modals.length, 1, 'a fresh intentional tap on the revealed trash starts confirmation')
+    assert.deepEqual(page._schedule.lines.map((line) => line.id), ['qa-line-1', 'qa-line-2', 'qa-line-3', 'qa-line-4'], 'confirmation is required before any record is removed')
+    env.respondModal(true)
+    assert.deepEqual(page._schedule.lines.map((line) => line.id), ['qa-line-4'], 'confirmation deletes exactly the target group')
+    assert.deepEqual(page._schedule.devices.map((device) => device.id), deviceIds, 'group deletion retains every device')
+    assert.equal(ids.length, 3)
     page.onUnload()
   }
 

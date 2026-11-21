@@ -49,3 +49,16 @@
 @media(prefers-reduced-motion:reduce){.dmx-import-overlay,.dmx-import-sheet,.dmx-import-overlay.dmx-import-closing,.dmx-import-closing .dmx-import-sheet{animation-duration:1ms!important;animation-iteration-count:1!important}}
 
 .dmx-import-close.panel-close-control{box-sizing:border-box;display:flex;width:44px;min-width:44px;max-width:44px;height:44px;min-height:44px;max-height:44px;margin:0;padding:0;align-items:center;justify-content:center;border:0;border-radius:50%;background:var(--theme-panel-close-bg);color:var(--theme-panel-close-color);font-size:0;line-height:1}
+.cross-reference-note{margin-top:11rpx;color:var(--ts);font-size:11px;line-height:1.5}
+.cross-reference-row{margin-top:18rpx;padding-top:16rpx;border-top:1rpx solid var(--td)}
+.cross-reference-heading{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:7rpx 14rpx;color:var(--ts);font-size:11px;line-height:1.4;word-break:break-all}
+.cross-reference-status{padding:4rpx 10rpx;border-radius:999rpx;background:var(--tws);color:var(--tw);font-size:11px;font-weight:650}
+.cross-reference-group{margin-top:13rpx}
+.cross-reference-brand{margin-bottom:5rpx;color:var(--ta);font-size:12px;font-weight:650}
+.cross-reference-field{display:flex;gap:12rpx;padding:8rpx 0;border-top:1rpx solid var(--td);font-size:13px;line-height:1.45}
+.cross-reference-field-label{flex:0 0 43%;color:var(--ts);font-size:11px;word-break:break-all}
+.cross-reference-field-value{flex:1;min-width:0;color:var(--tx);font-size:13px;text-align:right;word-break:break-all}
+.cross-reference-history{display:flex;flex-wrap:wrap;gap:8rpx 12rpx;margin-top:11rpx;padding:12rpx 14rpx;border-radius:14rpx;background:var(--tc);font-size:13px;line-height:1.45;word-break:break-all}
+.cross-reference-history-label{color:var(--ta);font-size:12px;font-weight:650}
+.cross-reference-source-version{margin-top:9rpx;color:var(--ts);font-size:10px;line-height:1.45;word-break:break-all}
+.cross-reference-history-note{margin-top:9rpx;color:var(--ts);font-size:11px;line-height:1.5;word-break:break-all}

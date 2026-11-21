@@ -4,11 +4,73 @@ const fs = require('fs')
 let pageDefinition = null
 global.Page = (definition) => { pageDefinition = definition }
 
+function imageInfoForPath(value) {
+  const sizes = {
+    'xlr-male-rear.png': [290, 512],
+    'xlr-female-rear.png': [244, 512],
+    'stereo35-rear.png': [141, 512],
+    'trs635-rear.png': [119, 512],
+    'ts-solder-open.png': [141, 512],
+    'rca-rear.png': [512, 972],
+    'terminal.png': [256, 256],
+    'xlr-female-v1.png': [128, 128],
+  }
+  const name = String(value || '').split(/[\\/]/).at(-1)
+  const [width, height] = sizes[name] || [384, 384]
+  return { width, height }
+}
+
+function assertCanvasPhotoRotationScopes(calls, label, expectedRotations) {
+  const stack = []
+  const angles = []
+  let translationCalls = 0
+  let rotatedImageDraws = 0
+  calls.forEach((call) => {
+    if (call[0] === 'save') stack.push({ stage: 0, rotated: false })
+    else if (call[0] === 'translate') {
+      assert(stack.length > 0, `${label}: translate must be forwarded inside a saved Canvas state`)
+      assert(call.slice(1).length >= 2 && call.slice(1).every(Number.isFinite),
+        `${label}: translate must carry real finite Canvas coordinates`)
+      assert.strictEqual(stack.at(-1).stage, 0, `${label}: each photo save must be followed by one translation`)
+      stack.at(-1).stage = 1
+      translationCalls += 1
+    } else if (call[0] === 'rotate') {
+      assert(stack.length > 0, `${label}: rotate must be forwarded inside a saved Canvas state`)
+      assert(Number.isFinite(call[1]), `${label}: rotate must carry a finite angle`)
+      assert.strictEqual(stack.at(-1).stage, 1, `${label}: rotation must immediately follow its translation`)
+      stack.at(-1).stage = 2
+      stack.at(-1).rotated = true
+      angles.push(call[1])
+    } else if (call[0] === 'drawImage' && stack.at(-1)?.rotated) {
+      assert.strictEqual(stack.at(-1).stage, 2, `${label}: photo draw must immediately follow rotate`)
+      stack.at(-1).stage = 3
+      rotatedImageDraws += 1
+    } else if (call[0] === 'restore') {
+      const scope = stack.pop()
+      assert(scope, `${label}: restore must not underflow Canvas state`)
+      if (scope.rotated) assert.strictEqual(scope.stage, 3,
+        `${label}: each photo follows save → translate → rotate → drawImage → restore`)
+    }
+  })
+  assert.strictEqual(stack.length, 0, `${label}: save and restore calls are balanced`)
+  assert.strictEqual(translationCalls, expectedRotations,
+    `${label}: each rotated physical photo gets exactly one Canvas translation`)
+  assert.strictEqual(angles.length, expectedRotations,
+    `${label}: mock records each real photo rotation instead of silently accepting a no-op`)
+  assert.strictEqual(rotatedImageDraws, expectedRotations,
+    `${label}: each rotated physical photo reaches exactly one drawImage call`)
+  angles.forEach((angle) => {
+    assert.strictEqual(angle, Math.PI,
+      `${label}: connector orientation passes Math.PI radians without mirroring`)
+  })
+}
+
 function createRuntime(options = {}) {
   const runtime = {
     toasts: [], clipboard: [], saves: [], shares: [], previews: [], reportExports: [], reportTexts: [], reportLineWidths: [],
     reportDrawCallbacks: [], reportContextIds: [], removedThemeHandlers: [], pendingClipboardCallbacks: [],
-    screenQueries: 0, screenDraws: 0, screenTexts: [], transforms: [], scaleCalls: 0,
+    screenQueries: 0, screenDraws: 0, screenTexts: [], transforms: [], screenCanvasCalls: [], scaleCalls: 0,
+    reportCanvasCalls: [],
     screenPhotoDraws: 0, reportPhotoDraws: 0, imageInfoReads: [],
     screenNodeCreations: 0, deferNextScreenQuery: false, pendingScreenQueries: [], vibrations: 0,
     deferScreenImageLoad: Boolean(options.deferScreenImageLoad), pendingScreenImages: [],
@@ -28,12 +90,21 @@ function createRuntime(options = {}) {
     const context = {
       font: '10px sans-serif', fillStyle: '#000', strokeStyle: '#000', lineWidth: 1,
       textAlign: 'left', textBaseline: 'alphabetic',
-      beginPath() {}, save() {}, restore() {}, rect(...args) { runtime.screenClips = (runtime.screenClips || []).concat([['rect', ...args]]) },
+      beginPath() {},
+      save() { runtime.screenCanvasCalls.push(['save']) },
+      restore() { runtime.screenCanvasCalls.push(['restore']) },
+      translate(...args) { runtime.screenCanvasCalls.push(['translate', ...args]) },
+      rotate(...args) { runtime.screenCanvasCalls.push(['rotate', ...args]) },
+      rect(...args) { runtime.screenClips = (runtime.screenClips || []).concat([['rect', ...args]]) },
       clip() { runtime.screenClips = (runtime.screenClips || []).concat([['clip']]) },
       moveTo() {}, lineTo() {}, quadraticCurveTo() {}, bezierCurveTo() {}, closePath() {},
       fill() {}, stroke() {}, arc() {},
       fillRect(...args) { runtime.screenDraws += 1; runtime.lastScreenFillRect = args },
-      drawImage(...args) { runtime.screenPhotoDraws += 1; runtime.screenImages = (runtime.screenImages || []).concat([args]) },
+      drawImage(...args) {
+        runtime.screenCanvasCalls.push(['drawImage', ...args])
+        runtime.screenPhotoDraws += 1
+        runtime.screenImages = (runtime.screenImages || []).concat([args])
+      },
       fillText(value, x, y) { runtime.screenTexts.push({ value, x, y, font: this.font }) },
       setTransform(...args) { runtime.transforms.push(args) },
       scale() { runtime.scaleCalls += 1 },
@@ -97,7 +168,7 @@ function createRuntime(options = {}) {
   }
   runtime.resolvePendingImageInfo = () => {
     const pending = runtime.pendingImageInfoCallbacks.splice(0)
-    pending.forEach((value) => value.success({ path: value.src, width: 384, height: 384 }))
+    pending.forEach((value) => value.success({ path: value.src, ...imageInfoForPath(value.src) }))
   }
   runtime.resolveNextPreviewQuery = () => {
     const pending = runtime.pendingPreviewQueries.shift()
@@ -122,8 +193,15 @@ function createRuntime(options = {}) {
       fillText(value) { runtime.reportTexts.push(String(value)) }, beginPath() {}, moveTo() {}, lineTo() {}, quadraticCurveTo() {}, bezierCurveTo() {}, closePath() {},
       fill() {}, setStrokeStyle(value) { this.strokeStyle = value },
       setLineWidth(value) { this.lineWidth = value; runtime.reportLineWidths.push(value) },
-      stroke() {}, arc() {}, fillRect() {}, drawImage(...args) { runtime.reportPhotoDraws += 1 },
-      save() {}, restore() {}, rect() {}, clip() {}, scale() {},
+      stroke() {}, arc() {}, fillRect() {}, drawImage(...args) {
+        runtime.reportCanvasCalls.push(['drawImage', ...args])
+        runtime.reportPhotoDraws += 1
+      },
+      save() { runtime.reportCanvasCalls.push(['save']) },
+      restore() { runtime.reportCanvasCalls.push(['restore']) },
+      translate(...args) { runtime.reportCanvasCalls.push(['translate', ...args]) },
+      rotate(...args) { runtime.reportCanvasCalls.push(['rotate', ...args]) },
+      rect() {}, clip() {}, scale() {},
       draw(reserve, callback) {
         runtime.reportDrawCallbacks.push(callback)
       },
@@ -144,7 +222,7 @@ function createRuntime(options = {}) {
         if (value.fail) value.fail(new Error('simulated getImageInfo failure'))
         return
       }
-      if (value.success) value.success({ path: value.src, width: 384, height: 384 })
+      if (value.success) value.success({ path: value.src, ...imageInfoForPath(value.src) })
     },
     ...(runtime.storageApiAvailable ? {
       getStorageSync(key) {
@@ -284,11 +362,32 @@ function getStoredRecords(runtime) {
 }
 
 function pointOnArea(area) {
-  if (Array.isArray(area && area.pathPoints) && area.pathPoints.length) {
-    const [x, y] = area.pathPoints[Math.floor(area.pathPoints.length / 2)]
-    return { x, y }
+  const points = area && area.pathPoints
+  assert(Array.isArray(points) && points.length >= 2,
+    'Canvas connection hit target must expose its actual full wire path')
+  points.forEach((point, index) => {
+    assert(Array.isArray(point) && point.length === 2 && point.every(Number.isFinite),
+      `Canvas wire hit point ${index} must be finite`)
+  })
+  const segments = points.slice(1).map((end, index) => {
+    const start = points[index]
+    return { start, end, length: Math.hypot(end[0] - start[0], end[1] - start[1]) }
+  }).filter((segment) => segment.length > 0)
+  const totalLength = segments.reduce((sum, segment) => sum + segment.length, 0)
+  assert(totalLength > 0, 'Canvas wire hit path must contain a drawable segment')
+  let remaining = totalLength / 2
+  for (const segment of segments) {
+    if (remaining <= segment.length) {
+      const ratio = remaining / segment.length
+      return {
+        x: segment.start[0] + ((segment.end[0] - segment.start[0]) * ratio),
+        y: segment.start[1] + ((segment.end[1] - segment.start[1]) * ratio),
+      }
+    }
+    remaining -= segment.length
   }
-  return { x: area.left + area.width / 2, y: area.top + area.height / 2 }
+  const [x, y] = segments.at(-1).end
+  return { x, y }
 }
 
 function findViewBlockEnd(source, openingIndex) {
@@ -345,6 +444,15 @@ function assertOnePairSuffix(label, context) {
 }
 
 function testStereoBreakoutConnectorCardLabels() {
+  const xlrPage = createPage(createRuntime())
+  choose(xlrPage, 'input', 'xlrBalanced')
+  assert.strictEqual(xlrPage.data.outputEndpoint.displayConnectorType, 'XLR 线缆母头')
+  assert.strictEqual(xlrPage.data.outputEndpoint.image, '/pages/audio-wiring/assets/overview/xlr-female-v1.png',
+    'the output card shows the same female cable connector used on the Canvas')
+  assert.strictEqual(xlrPage.data.inputEndpoint.displayConnectorType, 'XLR 线缆公头')
+  assert.strictEqual(xlrPage.data.inputEndpoint.image, '/assets/home/module-audio-wiring-catalog.png',
+    'the input card reuses the existing male XLR cable overview')
+
   ;['stereo35', 'stereo635'].forEach((outputId) => {
     const runtime = createRuntime()
     const page = createPage(runtime)
@@ -595,6 +703,7 @@ function testWiringPreferencesAndFirstUse() {
 
 function testWiringMainScreenStructure() {
   const wxml = fs.readFileSync(require.resolve('../pages/audio-wiring/index.wxml'), 'utf8')
+  const wxss = fs.readFileSync(require.resolve('../pages/audio-wiring/index.wxss'), 'utf8')
   assert(wxml.startsWith('<view class="wiring-page page-root {{resultReportPreviewClosing ?'),
     'the cable-aligned preview can apply measured limits and closing state to its page root')
   const diagramStart = wxml.indexOf('<view class="diagram-card">')
@@ -603,14 +712,61 @@ function testWiringMainScreenStructure() {
   assert(diagramStart >= 0 && diagramEnd > diagramStart && endpointStart > diagramEnd,
     'the complete wiring diagram card must appear above endpoint selection')
   const diagram = wxml.slice(diagramStart, diagramEnd)
+  const headingStart = wxml.indexOf('<view class="diagram-heading">', diagramStart)
+  const headingEnd = findViewBlockEnd(wxml, headingStart)
+  const actionStart = wxml.indexOf('<view class="wiring-action-rail"', headingStart)
+  const actionEnd = findViewBlockEnd(wxml, actionStart)
+  const mainStart = wxml.indexOf('<view class="diagram-main">', diagramStart)
+  const mainEnd = findViewBlockEnd(wxml, mainStart)
+  assert(headingStart >= diagramStart && headingEnd > headingStart
+    && mainStart >= diagramStart && mainEnd > mainStart
+    && actionStart > mainEnd && actionEnd < diagramEnd,
+  'the four solution actions sit in the vertical right rail beside the diagram content')
   assert.strictEqual((diagram.match(/class="action-button"/g) || []).length, 4,
-    'the diagram heading should contain reset, share, favorite, and project actions')
+    'the right rail contains reset, share, favorite, and project actions')
+  assert(!diagram.includes('connection-list') && !diagram.includes('connection-row')
+    && !diagram.includes('selectConnectionRow') && !diagram.includes('{{connection.fromLabel}}')
+    && !diagram.includes('{{connection.toLabel}}'),
+  'the wiring card contains no clickable mapping-option rows')
+  assert(!wxss.includes('.connection-list') && !wxss.includes('.connection-row'),
+    'styles dedicated to the removed mapping-option rows are absent')
+  assert(diagram.includes('class="wiring-route-guide">{{wiringGuide}}</view>')
+    && !/class="wiring-route-guide"[^>]*(bindtap|role=)/.test(diagram),
+  'the wiring guide remains informational text rather than an option control')
   assert(diagram.includes('aria-label="重置接线方案"')
     && diagram.includes('disabled="{{!outputId && !inputId && !manualSelected.output && !manualSelected.input}}"')
+    && diagram.includes('bindtap="resetWiring"')
     && diagram.includes('aria-label="分享接线方案图片"')
+    && diagram.includes('disabled="{{!supported || isGeneratingResultReport}}"')
+    && diagram.includes('bindtap="generateResultReportImage"')
     && diagram.includes('aria-label="收藏当前接线方案"')
+    && diagram.includes('aria-pressed="{{currentFavorite}}"')
+    && diagram.includes('bindtap="toggleCurrentFavorite"')
     && diagram.includes('aria-label="保存接线方案到项目"'),
   'all four diagram actions should have accessible labels')
+  assert(diagram.includes('disabled="{{!supported}}"') && diagram.includes('bindtap="saveToActiveProject"')
+    && diagram.includes("{{currentFavorite ? 'icon-bookmark-active' : ''}}"),
+  'action disabled states, handlers, and favorite state remain intact')
+  const actionBlock = wxml.slice(actionStart, actionEnd)
+  assert.deepStrictEqual([...actionBlock.matchAll(/aria-label="([^"]+)"/g)].slice(1).map((match) => match[1]),
+    ['重置接线方案', '分享接线方案图片', '收藏当前接线方案', '保存接线方案到项目'],
+    'the right rail preserves the original four-button order')
+  const actionStyle = wxss.match(/\.wiring-action-rail\s*\{([^}]*)\}/)
+  const buttonStyle = wxss.match(/\.action-button\.action-button\s*\{([^}]*)\}/)
+  const headingStyle = wxss.match(/\.diagram-heading\s*\{([^}]*)\}/)
+  assert(actionStyle && /position:\s*absolute/.test(actionStyle[1])
+    && /top:\s*8px/.test(actionStyle[1]) && /right:\s*8px/.test(actionStyle[1])
+    && /width:\s*44px/.test(actionStyle[1]) && /flex-direction:\s*column/.test(actionStyle[1]),
+  'the action rail returns to the 44px vertical overlay at the diagram right edge')
+  assert(buttonStyle && /width:\s*44px/.test(buttonStyle[1]) && /height:\s*44px/.test(buttonStyle[1])
+    && buttonStyle && /min-height:\s*44px/.test(buttonStyle[1]) && /max-height:\s*44px/.test(buttonStyle[1])
+    && headingStyle && /padding-right:\s*54px/.test(headingStyle[1]),
+  'all action controls retain 44px touch targets and the title reserves the rail width')
+  const guideStyle = wxss.match(/\.wiring-route-guide\s*\{([^}]*)\}/)
+  const unsupportedStyle = wxss.match(/\.unsupported-state\s*\{([^}]*)\}/)
+  assert(guideStyle && /56px/.test(guideStyle[1])
+    && unsupportedStyle && /margin-right:\s*56px/.test(unsupportedStyle[1]),
+  'the guide and unsupported state reserve space for the restored right rail')
   assert(!wxml.includes('wiring-state-banner') && !wxml.includes('explanation-card')
     && !wxml.includes('diagram-footnote') && !wxml.includes('wiring-actions-safe-area')
     && !wxml.includes('导出方案图片') && !wxml.includes('复制接法'),
@@ -815,8 +971,18 @@ function testWiringResetInvalidatesPendingWork() {
   const areas = getWiringHitAreas(page.data.model, page.data.diagramCanvasWidth, page.data.diagramCanvasHeight,
     { layout: 'solder-wiring', avoidRail: true, selectedId: '', showTitle: false })
   assert(areas.length)
-  page.onDiagramTap({ detail: pointOnArea(areas[0]) })
+  const linePoint = pointOnArea(areas[0])
+  page.onDiagramTap({ detail: linePoint })
   assert(page.data.selectedId)
+  assert.strictEqual(page.data.selectedId, areas[0].id,
+    'tapping the actual hit polyline selects its connection')
+  page.onDiagramTap({ detail: linePoint })
+  assert.strictEqual(page.data.selectedId, '', 'tapping the same line a second time clears emphasis')
+  assert.strictEqual(page.data.selectedConnection, null,
+    'clearing a line tap also clears its selected mapping')
+  page.onDiagramTap({ detail: linePoint })
+  assert.strictEqual(page.data.selectedId, areas[0].id,
+    'a fresh tap on the same physical line can select it again before export')
   const pendingReport = startReport(page, runtime)
   const pendingProjectSave = selectProjectAction(runtime, page)
 
@@ -854,7 +1020,13 @@ function testWiringResetInvalidatesPendingWork() {
   const reopenedPage = createPage(runtime)
   assert.strictEqual(reopenedPage.data.outputId, '', 'persisted reset should reopen with no output selected')
   assert.strictEqual(reopenedPage.data.inputId, '', 'persisted reset should reopen with no input selected')
+  assert.deepStrictEqual(reopenedPage.data.outputEndpoint, {},
+    'persisted reset should reopen with the output card prompt instead of an unknown placeholder')
   assert.strictEqual(reopenedPage.data.model, null)
+  choose(reopenedPage, 'input', 'xlrBalanced')
+  assert.strictEqual(reopenedPage.data.outputId, '', 'selecting only an input must leave output unselected')
+  assert.deepStrictEqual(reopenedPage.data.outputEndpoint, {},
+    'an input-only model should keep the output card prompt instead of showing an unknown endpoint')
   reopenedPage.onUnload()
   page.onUnload()
 }
@@ -1419,7 +1591,8 @@ function testSupportedOptionsAndCopy(page, runtime) {
 
   const areas = getWiringHitAreas(page.data.model, page.data.diagramCanvasWidth, page.data.diagramCanvasHeight,
     { layout: 'solder-wiring', avoidRail: true, showTitle: false })
-  assert(areas[0].width >= 44)
+  assert(Array.isArray(areas[0].pathPoints) && areas[0].pathPoints.length >= 2,
+    'Canvas exposes the complete physical wire path as its hit target')
   const point = pointOnArea(areas[0])
   page.onDiagramTouchStart({ touches: [{ x: point.x, y: point.y, pageX: point.x + 32, pageY: point.y + 480 }] })
   page.onDiagramTouchEnd({ changedTouches: [{ x: point.x, y: point.y, pageX: point.x + 32, pageY: point.y + 480 }] })
@@ -1461,6 +1634,30 @@ function testFixedWiringRules(page, runtime) {
   const point = pointOnArea(areas[0])
   page.onDiagramTap({ detail: point })
   assert(page.data.selectedConnection)
+
+  const canvasConnection = page.data.model.connections[1]
+  const originalConnections = JSON.stringify(page.data.model.connections)
+  const writesBeforeCanvasSelection = getPreferenceWriteCount(runtime)
+  const vibrationsBeforeCanvasSelection = runtime.vibrations
+  const canvasAreas = getWiringHitAreas(page.data.model, page.data.diagramCanvasWidth, page.data.diagramCanvasHeight,
+    { layout: 'solder-wiring', avoidRail: true, selectedId: '', showTitle: false })
+  const canvasArea = canvasAreas.find((area) => area.id === canvasConnection.id)
+  assert(canvasArea, 'every visible connection has a Canvas hit target')
+  const canvasPoint = pointOnArea(canvasArea)
+  page.onDiagramTap({ detail: canvasPoint })
+  assert.strictEqual(page.data.selectedId, canvasConnection.id)
+  assert.strictEqual(page.data.selectedConnection.mappingText,
+    `${canvasConnection.fromLabel} → ${canvasConnection.toLabel}`,
+    'tapping the visible Canvas wire selects its existing model connection')
+  page.onDiagramTap({ detail: canvasPoint })
+  assert.strictEqual(page.data.selectedId, '', 'tapping the selected Canvas wire again clears its emphasis')
+  assert.strictEqual(page.data.selectedConnection, null)
+  assert.strictEqual(runtime.vibrations, vibrationsBeforeCanvasSelection + 2,
+    'Canvas wire selection and toggle keep the established light haptic feedback')
+  assert.strictEqual(getPreferenceWriteCount(runtime), writesBeforeCanvasSelection,
+    'wire selection does not change saved endpoint preferences')
+  assert.strictEqual(JSON.stringify(page.data.model.connections), originalConnections,
+    'wire selection preserves the fixed electrical mapping and connection order')
 
   choose(page, 'input', 'rcaMono')
   assert.strictEqual(page.data.wiringStatus, 'ready')
@@ -1536,8 +1733,20 @@ function testFixedWiringRules(page, runtime) {
 
 function testScreenCanvasApiAndResize(page, runtime) {
   assert(runtime.screenDraws > 0, 'the 2D screen renderer should draw the initial diagram')
-  assert((runtime.screenClips || []).some((call) => call[0] === 'clip'),
-    'the 2D screen adapter clips source photographs to their cropped content rectangles')
+  const { getModelPhotoSpecs } = require('../pages/audio-wiring/wiring-photos')
+  const photoSpecs = getModelPhotoSpecs(page.data.model)
+  const photoSpecsByPath = new Map(photoSpecs.map((spec) => [spec.path, spec]))
+  assert(runtime.screenPhotoDraws > 0, 'the default solder diagram draws its complete endpoint photos')
+  assert((runtime.screenImages || []).every((args) => args.length === 5),
+    'screen photos use full-source drawImage calls with no source crop rectangle')
+  ;(runtime.screenImages || []).forEach((args) => {
+    const spec = photoSpecsByPath.get(args[0] && args[0]._src)
+    assert(spec, 'the screen draws only loaded solder photos for the current model')
+    assert(Math.abs((args[3] / args[4]) - (spec.width / spec.height)) < 1e-8,
+      'the screen preserves each complete photo’s source aspect ratio')
+  })
+  assert(!(runtime.screenClips || []).some((call) => call[0] === 'clip'),
+    'complete solder photos are not clipped to cropped detail rectangles')
   assert.strictEqual(runtime.reportContextIds.length, 0)
   assert.deepStrictEqual(runtime.transforms.at(-1), [2, 0, 0, 2, 0, 0])
   assert.strictEqual(runtime.screenCanvasNode.width, Math.round(page.data.diagramCanvasWidth * 2))
@@ -1557,6 +1766,32 @@ function testScreenCanvasApiAndResize(page, runtime) {
   assert.strictEqual(page.data.diagramCanvasWidth, 287)
   assert.strictEqual(runtime.screenCanvasNode.width, 574)
   assert(runtime.transforms.every((value) => value[0] === 2 && value[3] === 2))
+}
+
+async function testPhotoRotationCanvasForwarding() {
+  const runtime = createRuntime()
+  const page = createPage(runtime)
+  choose(page, 'output', 'stereo635')
+  choose(page, 'input', 'terminalBalanced')
+  assert.strictEqual(page.data.wiringStatus, 'ready')
+  assert.strictEqual(page.data.outputId, 'stereo635')
+  assert.strictEqual(page.data.inputId, 'terminalBalanced')
+
+  runtime.screenCanvasCalls.length = 0
+  page.renderDiagram()
+  await new Promise((resolve) => setImmediate(resolve))
+  assertCanvasPhotoRotationScopes(runtime.screenCanvasCalls, 'screen stereo635 → terminal drawing', 3)
+  assert.strictEqual(runtime.screenCanvasCalls.filter((call) => call[0] === 'drawImage').length, 3,
+    'the rotated screen diagram draws its stereo plug and both physical terminal inputs once')
+
+  runtime.reportCanvasCalls.length = 0
+  const reportTask = startReport(page, runtime)
+  assertCanvasPhotoRotationScopes(runtime.reportCanvasCalls, 'report stereo635 → terminal drawing', 3)
+  assert.strictEqual(runtime.reportCanvasCalls.filter((call) => call[0] === 'drawImage').length, 3,
+    'the rotated share report draws its stereo plug and both physical terminal inputs once')
+  reportTask.success({ tempFilePath: '/tmp/rotated-photo-wiring.png' })
+  page.closeResultReportPreview(true)
+  page.onUnload()
 }
 
 function testLegacyDualInputPreferenceAliases() {
@@ -2298,6 +2533,10 @@ async function testScreenPhotoCacheRetriesAfterSynchronousSrcFailure() {
   const { getModelPhotoSpecs, getLoadedScreenPhotos, loadScreenSolderPhotos } = require('../pages/audio-wiring/wiring-photos')
   const model = require('../pages/audio-wiring/wiring-model').getWiringModel('xlrBalanced', 'terminalBalanced')
   const specs = getModelPhotoSpecs(model)
+  assert(!specs.some((spec) => spec.key.startsWith('overview-'))
+    && specs.some((spec) => spec.key === 'xlr-female-rear')
+    && specs.some((spec) => spec.key === 'terminal-block'),
+  'the solder-photo loader requires the actual soldering photos only')
   let failOnce = true
   let attempts = 0
   const canvas = {
@@ -2338,16 +2577,32 @@ async function testReportPhotoPathsAreNormalizedAndValidated() {
     './pages/audio-wiring/assets/terminal.png',
   ]
   let pathIndex = 0
-  global.wx.getImageInfo = (options) => options.success({
-    path: relativePaths[pathIndex++], width: 384, height: 384,
-  })
+  global.wx.getImageInfo = (options) => {
+    const path = relativePaths[pathIndex++]
+    options.success({ path, ...imageInfoForPath(path) })
+  }
   const photos = await loadReportSolderPhotos(model)
   assert.deepStrictEqual(Object.values(photos), [
     '/pages/audio-wiring/assets/solder/xlr-female-rear.png',
     '/pages/audio-wiring/assets/terminal.png',
-  ], 'only known package-relative image paths gain the required leading slash')
+  ], 'solder photos resolve package-relative paths with the required leading slash')
 
-  const externalPaths = ['wxfile://tmp/audio-wiring.png', 'https://tmp/audio-wiring.png']
+  const xlrPairModel = getWiringModel('xlrBalanced', 'xlrBalanced')
+  const xlrPairPaths = [
+    'pages/audio-wiring/assets/solder/xlr-female-rear.png',
+    'pages/audio-wiring/assets/solder/xlr-male-rear.png',
+  ]
+  pathIndex = 0
+  global.wx.getImageInfo = (options) => options.success({
+    path: xlrPairPaths[pathIndex++], width: 256, height: 256,
+  })
+  const xlrPairPhotos = await loadReportSolderPhotos(xlrPairModel)
+  assert.deepStrictEqual(Object.values(xlrPairPhotos), [
+    '/pages/audio-wiring/assets/solder/xlr-female-rear.png',
+    '/pages/audio-wiring/assets/solder/xlr-male-rear.png',
+  ], 'report normalization covers both XLR solder photos')
+
+  const externalPaths = ['wxfile://tmp/audio-wiring.png', 'https://tmp/audio-wiring-rca.png']
   pathIndex = 0
   global.wx.getImageInfo = (options) => options.success({
     tempFilePath: externalPaths[pathIndex++], width: 384, height: 384,
@@ -2387,13 +2642,18 @@ async function testLatePhotoLoadsCannotDrawAnOldWiringChoice() {
   assert.strictEqual(page.data.wiringStatus, 'ready')
   const pendingPaths = runtime.pendingScreenImages.map((image) => image._src).sort()
   assert(pendingPaths.some((path) => path.endsWith('/stereo35-rear.png')))
+  assert(pendingPaths.some((path) => path.endsWith('/ts-solder-open.png')),
+    'the shared screen loader waits for each current endpoint solder photo')
   assert(pendingPaths.some((path) => /\/xlr-(?:male|female)-rear\.png$/.test(path)))
+  assert(pendingPaths.some((path) => path.endsWith('/terminal.png')))
   runtime.resolvePendingScreenImages()
   await new Promise((resolve) => setImmediate(resolve))
   assert(runtime.screenDraws > 0, 'the current photo combination draws after its images resolve')
-  assert(runtime.screenImages.every((args) => !/\/xlr-(?:male|female)-rear\.png$/.test(String(args[0]._src))),
+  assert(runtime.screenImages.every((args) => !/\/(?:xlr-(?:male|female)-rear|terminal)\.(?:png)$/.test(String(args[0]._src))),
     'late image callbacks for the old XLR choice cannot draw over the current stereo output')
   assert(runtime.screenImages.some((args) => String(args[0]._src).endsWith('/stereo35-rear.png')))
+  assert(runtime.screenImages.some((args) => String(args[0]._src).endsWith('/ts-solder-open.png')),
+    'the current TS photo is drawn after its image resolves')
 }
 
 function testLateReportImageInfoCannotRenderBehindSelector() {
@@ -2413,6 +2673,7 @@ async function run() {
   await testScreenPhotoCacheRetriesAfterSynchronousSrcFailure()
   await testReportPhotoPathsAreNormalizedAndValidated()
   require('../pages/audio-wiring/index')
+  await testPhotoRotationCanvasForwarding()
   testWiringPreferencesAndFirstUse()
   testLegacyDualInputPreferenceAliases()
   testStereoBreakoutConnectorCardLabels()

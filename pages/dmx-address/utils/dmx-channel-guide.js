@@ -1,7 +1,6 @@
 const { stageLightingChannelProfiles } = require('../data/stage-lighting-channels')
-
+const { UNIVERSE_LABELS } = require('../../../utils/dmx-address')
 const DMX_UNIVERSE_SIZE = 512
-const UNIVERSE_LABELS = ['A', 'B', 'C', 'D']
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value))

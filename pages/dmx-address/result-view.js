@@ -1,8 +1,8 @@
 const { startMeasurement } = require('../../utils/performance')
 const { dmxFixtures } = require('../../data/stage-lighting')
+const { UNIVERSE_LABELS } = require('../../utils/dmx-address')
 
 const FIXTURE_DETAIL_PAGE_SIZE = 80
-const UNIVERSE_LABELS = ['A', 'B', 'C', 'D']
 const DMX_UNIVERSE_SIZE = 512
 const FIXTURE_GROUP_TONES = [
 { accent: '#5856d6', soft: 'rgba(88, 86, 214, .08)', border: 'rgba(88, 86, 214, .24)' },

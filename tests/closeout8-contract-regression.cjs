@@ -183,7 +183,7 @@ function modalOpacity(themeSource, selector, reducedMotion) {
   return endKeyframeOpacity(normalSource, animationName)
 }
 
-function backdropFor(themeSource, overlaySelector) {
+function backdropFor(themeSource, overlaySelector, theme) {
   const pageRules = Array.from(themeSource.matchAll(/\.page-root\s*\{([^{}]*)\}/g))
   const page = pageRules.length
     ? declarationsOf(pageRules[pageRules.length - 1][1]).background
@@ -192,7 +192,7 @@ function backdropFor(themeSource, overlaySelector) {
   expect(page && overlay, 'page and bound overlay backgrounds must resolve')
   const alpha = /^rgba\(\s*0\s*,\s*0\s*,\s*0\s*,\s*([\d.]+)\s*\)$/i.exec(overlay)
   expect(alpha, overlaySelector + ' backdrop must retain a measurable black overlay')
-  return composite([0, 0, 0], parseHex(page), Number(alpha[1]))
+  return composite([0, 0, 0], resolvedThemeColor(theme, page), Number(alpha[1]))
 }
 
 function opacityForCurrentElement(themeSource, selectors) {
@@ -234,25 +234,49 @@ function selectedRole(theme, selectors, ancestors, animatedSelectors, overlaySel
   expect(parentOpacity === 1,
     selectedName + ' current ancestor chain must remain fully opaque in its stable state')
   return {
-    background: parseHex(selected.background),
-    foreground: parseHex(effectiveColor),
+    background: resolvedThemeColor(theme, selected.background),
+    foreground: resolvedThemeColor(theme, effectiveColor),
     effectiveColor,
     textOpacity,
     parentOpacity,
-    backdrop: backdropFor(source, overlaySelector),
-    ratio: renderedContrast(parseHex(effectiveColor), parseHex(selected.background),
-      textOpacity, parentOpacity, backdropFor(source, overlaySelector)),
+    backdrop: backdropFor(source, overlaySelector, theme),
+    ratio: renderedContrast(resolvedThemeColor(theme, effectiveColor), resolvedThemeColor(theme, selected.background),
+      textOpacity, parentOpacity, backdropFor(source, overlaySelector, theme)),
   }
 }
 
 function currentThemeTokens(css, selector, propertyNames) {
-  const values = declarationsOf(firstRuleFor(css, selector))
+  const values = declarationsOf(firstRuleFor(css.replace(/@import\s+["'][^"']+["'];?/g, ''), selector))
   const result = {}
   propertyNames.forEach(name => {
     expect(values[name], selector + ' is missing ' + name)
     result[name] = values[name]
   })
   return result
+}
+
+function appTokensForTheme(theme) {
+  if (theme === 'light') return declarationsOf(firstRuleFor(appWxss.replace(/@import\s+["'][^"']+["'];?/g, ''), 'page'))
+  const darkRule = /@media\s*\(prefers-color-scheme:\s*dark\)\s*\{\s*page\s*\{([^{}]*)\}/.exec(appWxss)
+  expect(darkRule, 'app.wxss must define dark theme tokens')
+  return declarationsOf(darkRule[1])
+}
+
+function resolvedThemeColor(theme, value) {
+  const localTokens = currentThemeTokens(dmxWxss, '.page-root', ['--page-bg', '--surface', '--control', '--text', '--muted', '--subtle', '--accent'])
+  const appTokens = appTokensForTheme(theme)
+  const seen = new Set()
+  let resolved = value
+  while (true) {
+    const reference = /^var\((--[\w-]+)\)$/.exec(resolved)
+    if (!reference) break
+    const name = reference[1]
+    expect(!seen.has(name), 'cyclic DMX theme token ' + name)
+    seen.add(name)
+    resolved = Object.prototype.hasOwnProperty.call(localTokens, name) ? localTokens[name] : appTokens[name]
+    expect(resolved, theme + ' theme is missing ' + name)
+  }
+  return parseHex(resolved)
 }
 
 const dmxWxml = read('pages/dmx-address/dmx-address.wxml')
@@ -280,22 +304,16 @@ function devicePickerSelectedCategoryRole(theme) {
   expect((selector.match(/\.[\w-]+/g) || []).length > 1,
     'shared selected category selector must retain scoped cascade priority')
 
-  const lightTokens = declarationsOf(firstRuleFor(appWxss, 'page'))
-  let themeTokens = lightTokens
-  if (theme === 'dark') {
-    const darkRule = /@media\s*\(prefers-color-scheme:\s*dark\)\s*\{\s*page\s*\{([^{}]*)\}/.exec(appWxss)
-    expect(darkRule, 'app.wxss must define dark device-picker theme tokens')
-    themeTokens = declarationsOf(darkRule[1])
-  }
-  const resolveToken = value => {
+  const themeTokens = appTokensForTheme(theme)
+  const resolveAppToken = value => {
     const reference = /^var\((--[\w-]+)\)$/.exec(value)
     expect(reference, 'shared selected color must resolve through an app theme token: ' + value)
     const resolved = themeTokens[reference[1]]
     expect(resolved, theme + ' app theme is missing ' + reference[1])
     return parseHex(resolved)
   }
-  const background = resolveToken(selected.background)
-  const foreground = resolveToken(selected.color)
+  const background = resolveAppToken(selected.background)
+  const foreground = resolveAppToken(selected.color)
   return { background, foreground, ratio: contrast(foreground, background) }
 }
 
@@ -372,23 +390,30 @@ check('dmx-result-summary-and-theme-aliases', () => {
   'group styling must flow through custom properties, not a stale inline fill/border snapshot')
   expect(/\.address-chip\{[^}]*background:var\(--group-tint\)[^}]*color:var\(--group-color\)/.test(dmxWxss),
     'current chips must resolve their surface and color through the group tint tokens')
-  expect(/\.layout-entry\{[^}]*color:var\(--text\)/.test(dmxWxss)
+  expect(/\.layout-entry\{[^}]*color:var\(--(?:text|theme-text)\)/.test(dmxWxss)
     && /\.layout-entry-title\{[^}]*color:var\(--text\)/.test(dmxWxss),
   'layout entry title must inherit the current local primary-text token')
 })
 
 check('dmx-current-theme-token-bindings', () => {
-  const light = currentThemeTokens(dmxWxss, '.page-root', ['--page-bg', '--surface', '--control', '--text', '--muted'])
-  const dark = currentThemeTokens(dmxWxss, '.page-root', ['--page-bg', '--surface', '--control', '--text', '--muted'])
-  const darkRule = /@media\s*\(prefers-color-scheme:\s*dark\)\s*\{\s*\.page-root\s*\{([^{}]*)\}/.exec(dmxWxss)
-  expect(darkRule, 'DMX dark local theme tokens must exist')
-  const darkValues = declarationsOf(darkRule[1])
-  ;['--page-bg', '--surface', '--control', '--text', '--muted'].forEach(name => {
-    expect(darkValues[name], 'DMX dark local theme is missing ' + name)
-    dark[name] = darkValues[name]
+  const tokens = currentThemeTokens(dmxWxss, '.page-root', ['--page-bg', '--surface', '--control', '--text', '--muted'])
+  const expectedBindings = {
+    '--page-bg': 'var(--theme-page-bg)',
+    '--surface': 'var(--theme-surface)',
+    '--control': 'var(--theme-control)',
+    '--text': 'var(--theme-text)',
+    '--muted': 'var(--theme-text-secondary)',
+  }
+  Object.entries(expectedBindings).forEach(([name, value]) => {
+    expect(tokens[name] === value, 'DMX base theme alias ' + name + ' must map to ' + value)
   })
-  ;[light, dark].forEach(tokens => {
-    ;['--page-bg', '--surface', '--control', '--text', '--muted'].forEach(name => parseHex(tokens[name]))
+  const darkRule = /@media\s*\(prefers-color-scheme:\s*dark\)\s*\{\s*\.page-root\s*\{([^{}]*)\}/.exec(dmxWxss)
+  expect(darkRule, 'DMX dark page-root theme override must exist')
+  const darkValues = declarationsOf(darkRule[1])
+  expect(darkValues.background === 'var(--theme-page-bg)' && darkValues.color === 'var(--theme-text)',
+    'DMX dark root must inherit the app page-background and primary-text tokens')
+  ;['light', 'dark'].forEach(theme => {
+    ;['--page-bg', '--surface', '--control', '--text', '--muted'].forEach(name => resolvedThemeColor(theme, tokens[name]))
   })
 })
 

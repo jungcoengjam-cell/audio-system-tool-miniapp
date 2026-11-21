@@ -3,6 +3,7 @@ const fs = require('fs')
 const Module = require('module')
 const path = require('path')
 const vm = require('vm')
+const { findModelAliasMatches } = require('../utils/model-alias-search')
 
 const root = path.resolve(__dirname, '..')
 const pageFile = path.join(root, 'pages/dmx-address/dmx-address.js')
@@ -158,8 +159,14 @@ try {
     '重新显示时没有只恢复一次最新搜索')
   assert.strictEqual(hiddenPage.data.fixtureSearchKeyword, 'SV')
   assert(hiddenPage.data.fixtureSearchResults.length > 0, '重新显示后搜索结果为空')
-  assert(hiddenPage.data.fixtureSearchResults.every((item) => item.model.includes('SV')),
-    '重新显示后未按最新关键词 SV 恢复搜索')
+  assert(hiddenPage.data.fixtureSearchResults.every((item) => (
+    item.model.toLowerCase().includes('sv') || findModelAliasMatches(item.model, 'SV').length > 0
+  )), '重新显示后未按最新关键词 SV 恢复原型号或对照型号搜索')
+  const restoredAliasHit = hiddenPage.data.fixtureSearchResults.find((item) => item.model === 'TL-SE3401')
+  assert(restoredAliasHit, '隐藏后重新显示时未恢复 TL-SE3401 的 SV 对照型号命中')
+  assert(findModelAliasMatches(restoredAliasHit.model, 'SV').includes('P-SV6598'))
+  assert.strictEqual(restoredAliasHit.aliasMatch, 'P-SV6598',
+    '隐藏后重新显示应恢复 TL-SE3401 对照型号 P-SV6598 的可见命中')
   assert(hiddenPage.data.fixtureSearchResults.every((item) => item.category === '效果灯'),
     '重新显示未按最新分类恢复搜索')
   assert.strictEqual(hiddenPage._fixtureSearchNeedsRefresh, false)

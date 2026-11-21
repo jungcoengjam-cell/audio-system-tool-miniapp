@@ -11,7 +11,7 @@ const { stageLightingChannelProfilesFinalB } = require('../pages/dmx-address/dat
 const { stageLightingChannelProfilesExtra: canonicalExtra } = require('./dmx-channel-sources/stage-lighting-channels-extra.source')
 const { stageLightingChannelProfilesFinalA: canonicalFinalA } = require('./dmx-channel-sources/stage-lighting-channels-final-a.source')
 const { stageLightingChannelProfilesFinalB: canonicalFinalB } = require('./dmx-channel-sources/stage-lighting-channels-final-b.source')
-const { calculateDmxAddressPlan } = require('../utils/dmx-address')
+const { calculateDmxAddressPlan, UNIVERSE_LABELS } = require('../utils/dmx-address')
 const { buildActualDmxChannelGuide, buildDmxChannelGuide, getDmxChannelProfile, hasDmxChannelProfile } = require('../pages/dmx-address/utils/dmx-channel-guide')
 const { getProductDetail } = require('../pages/products/utils/products')
 
@@ -90,18 +90,66 @@ function checkDmxAddressPlan() {
   assert.deepStrictEqual(
     interleavedManual.fixtures.map((fixture) => fixture.addressText),
     ['B001', 'B017', 'A500'],
-    '按组分域不应受页面分组顺序限制域顺序',
+    '按组分域应保留灯组列表顺序',
   )
   assert.strictEqual(interleavedManual.nextText, 'A512 / B033')
+
+  const shiftedManual = calculateDmxAddressPlan({
+    startAddress: 481,
+    allocationMode: 'manual',
+    groups: [
+      { name: 'A 后续到 B', channelCount: 16, fixtureCount: 3, targetUniverse: 'A' },
+      { name: 'B 顺延', channelCount: 8, fixtureCount: 2, targetUniverse: 'B' },
+    ],
+  })
+  assert.deepStrictEqual(shiftedManual.fixtures.map((fixture) => fixture.addressText),
+    ['A481', 'A497', 'B001', 'B017', 'B025'])
+  assert.deepStrictEqual(shiftedManual.groups.map((group) => group.fixtures.map((fixture) => fixture.universeLabel)),
+    [['A', 'A', 'B'], ['B', 'B']])
+  assert.strictEqual(shiftedManual.nextText, 'A已满 / B033')
+  assert.deepStrictEqual(shiftedManual.skippedRanges, [])
+  assert.strictEqual(shiftedManual.unusedTailChannels, 0)
+
+  const earlierBManual = calculateDmxAddressPlan({
+    startAddress: 481,
+    allocationMode: 'manual',
+    groups: [
+      { name: '先排 B', channelCount: 8, fixtureCount: 2, targetUniverse: 'B' },
+      { name: '后排 A', channelCount: 16, fixtureCount: 3, targetUniverse: 'A' },
+    ],
+  })
+  assert.deepStrictEqual(earlierBManual.fixtures.map((fixture) => fixture.addressText),
+    ['B001', 'B009', 'A481', 'A497', 'B017'])
+  assert.deepStrictEqual(earlierBManual.groups.map((group) => group.fixtures.map((fixture) => fixture.universeLabel)),
+    [['B', 'B'], ['A', 'A', 'B']])
+
+  const skipInsufficientManual = calculateDmxAddressPlan({
+    startAddress: 1,
+    allocationMode: 'manual',
+    groups: [
+      { name: 'B 第一段', channelCount: 1, fixtureCount: 200, targetUniverse: 'B' },
+      { name: 'B 第二段', channelCount: 1, fixtureCount: 200, targetUniverse: 'B' },
+      { name: 'B 第三段', channelCount: 1, fixtureCount: 96, targetUniverse: 'B' },
+      { name: '跳过 B 尾', channelCount: 20, fixtureCount: 1, targetUniverse: 'B' },
+    ],
+  })
+  assert.strictEqual(skipInsufficientManual.error, undefined)
+  assert.strictEqual(skipInsufficientManual.fixtures.at(-1).addressText, 'C001')
+  assert.strictEqual(skipInsufficientManual.nextText, 'B497 / C021')
+  assert.deepStrictEqual(skipInsufficientManual.skippedRanges, [])
+  assert.strictEqual(skipInsufficientManual.unusedTailChannels, 0)
 
   const manualCapacityError = calculateDmxAddressPlan({
     startAddress: 1,
     allocationMode: 'manual',
-    groups: [{ name: '超容量组', channelCount: 300, fixtureCount: 2, targetUniverse: 'B' }],
+    groups: [
+      { name: 'G满', channelCount: 512, fixtureCount: 1, targetUniverse: 'G' },
+      { name: 'G后溢出', channelCount: 1, fixtureCount: 1, targetUniverse: 'G' },
+    ],
   })
-  assert(manualCapacityError.error.includes('第 1 组'))
-  assert(manualCapacityError.error.includes('B 域'))
-  assert(manualCapacityError.error.includes('拆分'))
+  assert(manualCapacityError.error.includes('第 2 组'))
+  assert(manualCapacityError.error.includes('G512'))
+  assert.strictEqual(manualCapacityError.fixtures, undefined, 'A plan beyond G must not expose a partial fixture list')
 
   const fourUniverses = calculateDmxAddressPlan({
     startAddress: 1,
@@ -111,11 +159,37 @@ function checkDmxAddressPlan() {
     fourUniverses.fixtures.map((fixture) => fixture.addressText),
     ['A001', 'B001', 'C001', 'D001'],
   )
-  assert.strictEqual(fourUniverses.nextText, '已到 D512 上限')
+  assert.strictEqual(fourUniverses.nextText, 'E001')
+  const sevenUniverses = calculateDmxAddressPlan({
+    startAddress: 1,
+    groups: [{ name: '满域灯具', channelCount: 512, fixtureCount: 7 }],
+  })
+  assert.deepStrictEqual(
+    sevenUniverses.fixtures.map((fixture) => fixture.addressText),
+    UNIVERSE_LABELS.map((label) => `${label}001`),
+  )
+  assert.strictEqual(sevenUniverses.nextText, '已到 G512 上限')
   assert(calculateDmxAddressPlan({
     startAddress: 1,
-    groups: [{ name: '超域灯具', channelCount: 512, fixtureCount: 5 }],
+    groups: [{ name: '超域灯具', channelCount: 512, fixtureCount: 8 }],
   }).error)
+
+  const manualLaterDomains = calculateDmxAddressPlan({
+    startAddress: 73,
+    allocationMode: 'manual',
+    groups: [
+      { name: 'A域', channelCount: 16, fixtureCount: 1, targetUniverse: 'A' },
+      { name: 'E域第一组', channelCount: 8, fixtureCount: 2, targetUniverse: 'E' },
+      { name: 'F域', channelCount: 16, fixtureCount: 1, targetUniverse: 'F' },
+      { name: 'G域', channelCount: 8, fixtureCount: 2, targetUniverse: 'G' },
+      { name: 'E域第二组', channelCount: 8, fixtureCount: 1, targetUniverse: 'E' },
+    ],
+  })
+  assert.deepStrictEqual(
+    manualLaterDomains.fixtures.map((fixture) => fixture.addressText),
+    ['A073', 'E001', 'E009', 'F001', 'G001', 'G009', 'E017'],
+  )
+  assert.strictEqual(manualLaterDomains.nextText, 'A089 / E025 / F017 / G017')
 
   assert(calculateDmxAddressPlan({
     startAddress: 1,
@@ -1266,6 +1340,14 @@ function checkDmxChannelGuide() {
     startAddress: 511,
   })
   assert.deepStrictEqual(crossDomain.channels.map((channel) => channel.actualAddress), ['A511', 'A512', 'B001'])
+  const guideInG = buildActualDmxChannelGuide({
+    fixtureModel: 'TL-SL333',
+    channelCount: 3,
+    universe: 7,
+    universeLabel: 'G',
+    startAddress: 501,
+  })
+  assert.deepStrictEqual(guideInG.channels.map((channel) => channel.actualAddress), ['G501', 'G502', 'G503'])
 
   const lightingDetail = getProductDetail('lighting', 'TL-SW6001')
   assert(lightingDetail.dmxChannelGuide)

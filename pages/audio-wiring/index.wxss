@@ -1,4 +1,5 @@
 @import "../../styles/theme-page-shared.wxss";
+@import "../../styles/tool-ui-tokens.wxss";
 
 .wiring-page {
   height: 100vh;
@@ -15,7 +16,7 @@
 
 .page-content {
   box-sizing: border-box;
-  padding: 24rpx 32rpx calc(28rpx + env(safe-area-inset-bottom));
+  padding: 12px var(--tool-gutter) calc(16px + env(safe-area-inset-bottom));
 }
 
 .wiring-storage-warning {
@@ -32,18 +33,19 @@
 .endpoint-row {
   display: flex;
   gap: 12rpx;
-  margin-bottom: 18rpx;
+  margin-bottom: var(--tool-gap);
 }
 
 .endpoint-card {
   box-sizing: border-box;
   min-width: 0;
   flex: 1;
-  padding: 19rpx 17rpx 16rpx;
+  padding: 10px 10px 12px;
   overflow: hidden;
-  border-radius: 24rpx;
+  border: 1px solid var(--theme-divider);
+  border-radius: var(--tool-list-radius);
   background: var(--theme-surface);
-  box-shadow: 0 5rpx 16rpx var(--theme-shadow);
+  box-shadow: 0 4px 14px var(--theme-shadow);
 }
 
 .endpoint-card-pressed {
@@ -59,7 +61,7 @@
 
 .endpoint-selection-state {
   margin-top: 2rpx;
-  color: var(--theme-warning);
+  color: var(--theme-accent-text);
   font-size: 22rpx;
   line-height: 1.25;
 }
@@ -72,13 +74,13 @@
 }
 
 .endpoint-device {
-  overflow: hidden;
+  min-width: 0;
   color: var(--theme-text);
   font-size: 34rpx;
   font-weight: 680;
   line-height: 1.28;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .endpoint-device-hint {
@@ -134,16 +136,18 @@
 
 .diagram-card {
   position: relative;
-  margin-bottom: 18rpx;
-  border-radius: 25rpx;
+  margin: 0 0 var(--tool-gap);
+  padding: var(--tool-gap);
+  border: 1px solid var(--theme-divider);
+  border-radius: var(--tool-card-radius);
   background: var(--theme-surface);
-  box-shadow: 0 5rpx 16rpx var(--theme-shadow);
+  box-shadow: var(--tool-card-shadow);
 }
 
-.diagram-card {
-  margin-left: -12rpx;
-  margin-right: -12rpx;
-  padding: 23rpx 16rpx 19rpx;
+@media (prefers-color-scheme: dark) {
+  .wiring-page .diagram-card {
+    box-shadow: var(--tool-card-shadow);
+  }
 }
 
 .diagram-body {
@@ -277,9 +281,9 @@
   box-sizing: border-box;
   width: 100%;
   margin-top: 18rpx;
-  padding: 5rpx;
-  gap: 5px;
-  border-radius: 18rpx;
+  padding: 4px;
+  gap: 4px;
+  border-radius: 14px;
   background: var(--theme-control);
 }
 
@@ -287,11 +291,11 @@
   display: flex;
   box-sizing: border-box;
   min-width: 0;
-  min-height: 44px;
+  min-height: var(--tool-inline-height);
   flex: 1;
   align-items: center;
   justify-content: center;
-  border-radius: 14rpx;
+  border-radius: 10px;
   color: var(--theme-text-secondary);
   font-size: 30rpx;
   font-weight: 550;
@@ -299,7 +303,7 @@
 
 .segment-item-active {
   background: var(--theme-surface);
-  box-shadow: 0 2rpx 7rpx rgba(0, 0, 0, .1);
+  box-shadow: 0 2px 8px var(--theme-shadow);
   color: var(--theme-accent-text);
 }
 
@@ -361,7 +365,7 @@
 }
 
 .wiring-route-guide {
-  order: 1;
+  order: 3;
   margin: 8rpx 56px 0 0;
   color: var(--theme-text-secondary);
   font-size: 23rpx;
@@ -410,44 +414,6 @@
 
 .unsupported-tip {
   color: var(--theme-text-tertiary);
-}
-
-.selected-mapping {
-  display: flex;
-  order: 2;
-  box-sizing: border-box;
-  margin-top: 11rpx;
-  padding: 14rpx 15rpx;
-  align-items: flex-start;
-  gap: 11rpx;
-  border-radius: 16rpx;
-  background: var(--theme-accent-soft);
-}
-
-.selected-mapping-swatch {
-  width: 20rpx;
-  height: 20rpx;
-  flex: 0 0 20rpx;
-  margin-top: 4rpx;
-  border-radius: 50%;
-}
-
-.selected-mapping-copy {
-  min-width: 0;
-  flex: 1;
-}
-
-.selected-mapping-title {
-  color: var(--theme-accent-text);
-  font-size: 30rpx;
-  font-weight: 700;
-}
-
-.selected-mapping-text {
-  margin-top: 4rpx;
-  color: var(--theme-text-secondary);
-  font-size: 29rpx;
-  line-height: 1.45;
 }
 
 .selector-mask {

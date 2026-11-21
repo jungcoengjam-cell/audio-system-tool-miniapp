@@ -534,7 +534,9 @@ module.exports = ({ test, assert, close, finiteTree }) => {
     assert.equal(automatic.totalChannels, 28)
     assert.equal(manual.totalChannels, 28)
     const manualOverflow = calculateDmxAddressPlan({ startAddress: 500, allocationMode: 'manual', groups: [group('cannot split', 12, 2)] })
-    assert(manualOverflow.error)
+    assert.equal(manualOverflow.error, undefined)
+    assert.deepEqual(manualOverflow.fixtures.map(({ addressText }) => addressText), ['A500', 'B001'])
+    assert.equal(manualOverflow.nextText, 'A512 / B013')
   }, { classification: 'implementation bug', basis: 'DMX slots are inclusive, one fixture cannot cross a universe boundary, and auto allocation resumes at address 1' })
 
   test('DMX caps accept each exact limit and reject the next unit', () => {
@@ -547,20 +549,20 @@ module.exports = ({ test, assert, close, finiteTree }) => {
     assert.equal(exactly500.error, undefined)
     assert.equal(exactly500.totalFixtures, MAX_TOTAL_FIXTURES)
     assert(calculateDmxAddressPlan({ startAddress: 1, groups: [group('over-total-a', 1, 200), group('over-total-b', 1, 200), group('over-total-c', 1, 101)] }).error)
-    const dmxDomainEdge = calculateDmxAddressPlan({ startAddress: 1, groups: [group('512ch', 512, 4)] })
+    const dmxDomainEdge = calculateDmxAddressPlan({ startAddress: 1, groups: [group('512ch', 512, 7)] })
     assert.equal(dmxDomainEdge.error, undefined)
-    assert.equal(dmxDomainEdge.fixtures[3].universeLabel, 'D')
-    assert.equal(dmxDomainEdge.fixtures[3].endAddress, 512)
-    assert(calculateDmxAddressPlan({ startAddress: 1, groups: [group('past D', 512, 5)] }).error)
+    assert.equal(dmxDomainEdge.fixtures[6].universeLabel, 'G')
+    assert.equal(dmxDomainEdge.fixtures[6].endAddress, 512)
+    assert(calculateDmxAddressPlan({ startAddress: 1, groups: [group('past G', 512, 8)] }).error)
     assert(calculateDmxAddressPlan({ startAddress: 1, groups: [group('overwide fixture', 513, 1)] }).error)
     const manualAllDomains = calculateDmxAddressPlan({
       startAddress: 512,
       allocationMode: 'manual',
-      groups: ['A', 'B', 'C', 'D'].map((domain) => group(`${domain} full`, domain === 'A' ? 1 : 512, 1, domain)),
+      groups: ['A', 'B', 'C', 'D', 'E', 'F', 'G'].map((domain) => group(`${domain} full`, domain === 'A' ? 1 : 512, 1, domain)),
     })
     finite(manualAllDomains, finiteTree)
     assert.deepEqual(manualAllDomains.fixtures.map(({ universeLabel, startAddress, endAddress }) => [universeLabel, startAddress, endAddress]), [
-      ['A', 512, 512], ['B', 1, 512], ['C', 1, 512], ['D', 1, 512],
+      ['A', 512, 512], ['B', 1, 512], ['C', 1, 512], ['D', 1, 512], ['E', 1, 512], ['F', 1, 512], ['G', 1, 512],
     ])
   }, { classification: 'implementation bug', basis: 'DMX limits exported by utils/dmx-address.js: 20 groups, 200 per group, 500 total and 512 channels per universe' })
 

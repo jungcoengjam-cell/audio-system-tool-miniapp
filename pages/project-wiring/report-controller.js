@@ -53,6 +53,7 @@ function createReportController({ exportTypes: EXPORT_TYPES, safeToast, vibrate,
           this._workspaceReportClearSignature = ''
         }
         this.setData({ ...changes, ...(clearToken ? this.workspaceReportClearState() : {}) })
+        if (clearToken) this.releaseReportLongImage()
       }
     },
 
@@ -87,18 +88,39 @@ function createReportController({ exportTypes: EXPORT_TYPES, safeToast, vibrate,
         safeToast('图片报告模块暂不可用')
         return
       }
+      let exportLongProjectImage = null
+      if (type === 'project') {
+        if (typeof reportModule.buildProjectWiringLongReport !== 'function') {
+          safeToast('项目长图报告暂不可用')
+          return
+        }
+        try {
+          exportLongProjectImage = require('./report-long-image').exportLongProjectImage
+        } catch (error) {
+          safeToast('项目长图报告暂不可用')
+          return
+        }
+        if (typeof exportLongProjectImage !== 'function') {
+          safeToast('项目长图报告暂不可用')
+          return
+        }
+      }
       if (typeof wx.createCanvasContext !== 'function' || typeof wx.canvasToTempFilePath !== 'function') {
         safeToast('当前微信版本暂不支持生成图片')
         return
       }
       let report
       try {
-        report = reportModule.buildScheduleReportPages(this.data.project.name, this._schedule, type)
+        report = type === 'project'
+          ? reportModule.buildProjectWiringLongReport(this.data.project.name, this._schedule)
+          : reportModule.buildScheduleReportPages(this.data.project.name, this._schedule, type)
       } catch (error) {
         safeToast('图片清单生成失败，请重试')
         return
       }
-      const pages = report && Array.isArray(report.pages) ? report.pages : []
+      const pages = type === 'project'
+        ? (report && report.page ? [report.page] : [])
+        : (report && Array.isArray(report.pages) ? report.pages : [])
       if (!pages.length) {
         safeToast('暂无线路可导出')
         return
@@ -123,12 +145,13 @@ function createReportController({ exportTypes: EXPORT_TYPES, safeToast, vibrate,
       this._reportPending = true
       if (typeof wx.showLoading === 'function') wx.showLoading({ title: '正在生成图片', mask: true })
   
-      const finish = (error) => {
+      const finish = (error, retiredImage = null) => {
         if (!isCurrent()) return
         this._reportPending = false
         if (typeof wx.hideLoading === 'function') wx.hideLoading()
         if (error) {
           this.setData({ reportImages: [], reportImagePath: '', reportPreviewVisible: false })
+          if (retiredImage) this.retireReportLongImageResource(retiredImage.release, retiredImage.path)
           safeToast(error)
           return
         }
@@ -141,6 +164,7 @@ function createReportController({ exportTypes: EXPORT_TYPES, safeToast, vibrate,
           reportSaveMessage: '',
           reportSaveError: '',
         }, () => {
+          if (retiredImage) this.retireReportLongImageResource(retiredImage.release, retiredImage.path)
           if (!isCurrent()) return
           this.syncReportSaveView()
           this.showReportPage(0)
@@ -192,7 +216,69 @@ function createReportController({ exportTypes: EXPORT_TYPES, safeToast, vibrate,
           }
         })
       }
+      if (type === 'project') {
+        try {
+          exportLongProjectImage({
+            wx,
+            pageContext: this,
+            canvasId: REPORT_CANVAS_ID,
+            page: report.page,
+            theme,
+            draw: reportModule.drawScheduleReport,
+            isCurrent,
+            success: ({ tempFilePath, release } = {}) => {
+              if (!isCurrent()) {
+                if (typeof release === 'function') { try { release() } catch (error) {} }
+                return
+              }
+              if (!tempFilePath) {
+                if (typeof release === 'function') { try { release() } catch (error) {} }
+                finish('图片生成失败，请重试')
+                return
+              }
+              const retiredImage = this._reportLongImageRelease && this._reportLongImageReleasePath !== tempFilePath
+                ? { release: this._reportLongImageRelease, path: this._reportLongImageReleasePath }
+                : null
+              this._reportLongImageRelease = typeof release === 'function' ? release : null
+              this._reportLongImageReleasePath = tempFilePath
+              pageImages.push({ path: tempFilePath, title: report.title || '项目线路清单' })
+              finish('', retiredImage)
+            },
+            fail: (error) => {
+              if (!isCurrent()) return
+              const message = String(error && (error.message || error.errMsg) || error || '图片生成失败，请重试')
+              finish(message)
+            },
+          })
+        } catch (error) {
+          if (isCurrent()) finish('图片生成失败，请重试')
+        }
+        return
+      }
       exportPage(0)
+    },
+
+    retireReportLongImageResource(release, path) {
+      if (typeof release !== 'function') return false
+      const request = this._reportSaveInFlight
+      if (request && !request.done && request.filePath === path) {
+        const previousRelease = request.release
+        request.release = previousRelease
+          ? () => { try { previousRelease() } finally { release() } }
+          : release
+        return false
+      }
+      try { release() } catch (error) {}
+      return true
+    },
+
+    releaseReportLongImage() {
+      const release = this._reportLongImageRelease
+      const path = this._reportLongImageReleasePath
+      if (typeof release !== 'function') return false
+      this._reportLongImageRelease = null
+      this._reportLongImageReleasePath = ''
+      return this.retireReportLongImageResource(release, path)
     },
 
     showReportPage(index) {
@@ -287,11 +373,13 @@ function createReportController({ exportTypes: EXPORT_TYPES, safeToast, vibrate,
 
     getInactiveReportSaveMessage() {
       if (this._reportSaveInFlight) {
+        if (this.data.reportImages.length === 1) return '当前图片保存请求仍在处理中，完成后可重试。'
         return '已停止后续请求；当前图片保存无法取消，仍可能完成。完成后可继续。'
       }
       const total = this.data && Array.isArray(this.data.reportImages) ? this.data.reportImages.length : 0
       const saved = this.getReportSavedPageSet().size
       const remaining = Math.max(0, total - saved)
+      if (total === 1) return saved ? '图片已保存。' : '图片尚未保存，可重新保存。'
       if (!remaining) return `已保存 ${saved} / ${total} 张。`
       return `已停止后续请求；已保存 ${saved} / ${total} 张，可继续保存剩余 ${remaining} 张。`
     },
@@ -312,10 +400,14 @@ function createReportController({ exportTypes: EXPORT_TYPES, safeToast, vibrate,
 
     saveReportImageFailureMessage(error) {
       const message = String(error && (error.errMsg || error.message) || '')
+      const singleImage = this.data && this.data.reportImages && this.data.reportImages.length === 1
       if (/auth|authorize|permission|deny/i.test(message)) {
         return '保存权限未开启。请在微信设置中允许保存到相册，再点“继续保存”重试。'
       }
-      if (/cancel/i.test(message)) return '保存已取消；已完成的图片仍保留，可继续保存剩余页。'
+      if (/cancel/i.test(message)) return singleImage
+        ? '保存已取消，可重新保存图片。'
+        : '保存已取消；已完成的图片仍保留，可继续保存剩余页。'
+      if (singleImage) return `保存失败${message ? `：${message}` : '，请重试'}；图片仍可重新保存。`
       return `保存失败${message ? `：${message}` : '，请重试'}；已完成的图片仍保留，可继续保存剩余页。`
     },
 
@@ -368,12 +460,13 @@ function createReportController({ exportTypes: EXPORT_TYPES, safeToast, vibrate,
       if (!this.isCurrentReportSaveJob(job)) return
       if (job.position >= job.queue.length) {
         const savedCount = this.getReportSavedPageSet(job.signature).size
+        const total = this.data.reportImages.length
         this._reportSaveJob = null
         vibrate('medium')
         this.syncReportSaveView({
           reportSaveRunning: false,
           reportSaveError: '',
-          reportSaveMessage: `已保存 ${savedCount} / ${this.data.reportImages.length} 张。`,
+          reportSaveMessage: total === 1 ? '图片已保存。' : `已保存 ${savedCount} / ${total} 张。`,
         })
         return
       }
@@ -387,13 +480,16 @@ function createReportController({ exportTypes: EXPORT_TYPES, safeToast, vibrate,
         })
         return
       }
-      const request = { job, index, done: false }
+      const request = { job, index, done: false, filePath: image.path, release: null }
       this._reportSaveInFlight = request
       this.syncReportSaveView({ reportSaveInFlight: true, reportSaveMessage: `正在保存第 ${index + 1} / ${this.data.reportImages.length} 张…` })
       const finish = (error) => {
         if (request.done) return
         request.done = true
         if (this._reportSaveInFlight === request) this._reportSaveInFlight = null
+        const release = request.release
+        request.release = null
+        if (typeof release === 'function') { try { release() } catch (releaseError) {} }
         if (!error && this._reportSignature === job.signature
           && this.getReportSavedPageSet(job.signature) === job.savedSet) job.savedSet.add(index)
         if (!this.isCurrentReportSaveJob(job)) return
@@ -402,7 +498,9 @@ function createReportController({ exportTypes: EXPORT_TYPES, safeToast, vibrate,
           this.syncReportSaveView({
             reportSaveRunning: false,
             reportSaveError: this.saveReportImageFailureMessage(error),
-            reportSaveMessage: `已保存 ${this.getReportSavedPageSet(job.signature).size} / ${this.data.reportImages.length} 张。`,
+            reportSaveMessage: this.data.reportImages.length === 1
+              ? (this.getReportSavedPageSet(job.signature).size ? '图片已保存。' : '图片尚未保存。')
+              : `已保存 ${this.getReportSavedPageSet(job.signature).size} / ${this.data.reportImages.length} 张。`,
           })
           return
         }
@@ -472,6 +570,7 @@ function createReportController({ exportTypes: EXPORT_TYPES, safeToast, vibrate,
       this._workspaceReportClearPending = false
       this._workspaceReportClearSignature = ''
       this.setData(this.workspaceReportClearState())
+      this.releaseReportLongImage()
       return true
     },
   }

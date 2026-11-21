@@ -406,8 +406,8 @@ function verifyGeneratedRuntimeAndPages() {
   ;['appearanceGroups', 'deviceVariants', 'photos', 'controllerVariants', 'sources', 'protocols']
     .forEach((key) => assert.deepEqual(rootRuntime.catalog[key], [], key + ' remains empty for automatic admission'))
   assert.deepEqual(rootRuntime.catalog.referenceManuals.map((reference) => reference.id), [
-    'reference-smartplc-f300-01', 'reference-kylin-k100r-01',
-  ], 'root formal catalog exposes exactly two separate manual references')
+    'reference-smartplc-f300-01', 'reference-kylin-k100r-01', 'reference-six-channel-power-cabinet-01',
+  ], 'root formal catalog exposes three separate manual references')
 
   const stagedRuntimePath = path.join(manualOutputRoot, 'runtime-catalog.js')
   const developmentCatalog = loadCatalog(stagedRuntimePath, 'develop')
@@ -435,8 +435,9 @@ function verifyGeneratedRuntimeAndPages() {
       envVersion + ' preserves explicit legacy referenceId routes')
 
     ;[
-      { id: 'reference-smartplc-f300-01', model: 'SmartPLC-F300', transport: 'rtu', frame: rootRuntime.catalog.referenceManuals[0].manual.transports[1].commands[0].frame },
-      { id: 'reference-kylin-k100r-01', model: 'K100R', transport: 'rs485', frame: rootRuntime.catalog.referenceManuals[1].manual.transports[0].commands[0].frame },
+      { id: 'reference-smartplc-f300-01', model: 'SmartPLC-F300', transport: 'rtu', count: 84, frame: rootRuntime.catalog.referenceManuals[0].manual.transports[1].commands[0].frame },
+      { id: 'reference-kylin-k100r-01', model: 'K100R', transport: 'rs485', count: 18, frame: rootRuntime.catalog.referenceManuals[1].manual.transports[0].commands[0].frame },
+      { id: 'reference-six-channel-power-cabinet-01', model: '六路智能配电箱', transport: 'udp', count: 14, frame: '00 00 00 00 00 06 01 06 00 00 00 01' },
     ].forEach((expected) => {
       const detailHarness = createWxHarness(envVersion)
       const detailPage = capturePage('pages/control-protocol/detail.js', envVersion, detailHarness.api)
@@ -445,7 +446,7 @@ function verifyGeneratedRuntimeAndPages() {
       detailPage.onLoad.call(detail, { referenceId: expected.id })
       assert.equal(detail.data.reference.id, expected.id, envVersion + ' resolves the explicit ' + expected.model + ' reference')
       assert.equal(detail.data.manual.transports.find((transport) => transport.id === expected.transport).commands.length,
-        expected.transport === 'rtu' ? 84 : 18, envVersion + ' loads the reference command list')
+        expected.count, envVersion + ' loads the reference command list')
       assert.equal(detail.data.protocol, null, envVersion + ' reference details do not enter strict protocol data')
       assert.equal(detail.data.developmentManual, undefined, 'the Page exposes neutral manual state')
       assert.equal(detail.data.photos.length, 1)
@@ -453,7 +454,7 @@ function verifyGeneratedRuntimeAndPages() {
       assert(photoPath.startsWith('/pages/control-protocol/assets/'), 'formal references use production photo paths')
       assert(fs.statSync(path.join(previewDirectory, ...photoPath.slice(1).split('/'))).size > 0,
         envVersion + ' formal reference photo resolves in the staged project')
-      const transportIndex = expected.transport === 'rtu' ? '1' : '0'
+      const transportIndex = detail.data.manual.transports.findIndex((transport) => transport.id === expected.transport)
       detailPage.selectManualTransport.call(detail, { currentTarget: { dataset: { index: transportIndex } } })
       const command = detail.data.commonManualCommands[0]
       detailPage.copyManualCommand.call(detail, { currentTarget: { dataset: { commandId: command.id } } })
@@ -723,7 +724,7 @@ function runPreviewChecks(originalSnapshot) {
     console.log('Profile: ' + finalBuild.manifest.profile)
     console.log('Files mirrored/tracked: ' + finalBuild.manifest.files.length)
     console.log('Config compatibility: legacy and IDE key reorder accepted; semantic edits rejected')
-    console.log('Development records: F300 168 commands; K100R 36 commands; trial/release/unknown use two formal references')
+    console.log('Development records: F300 168 commands; K100R 36 commands; trial/release/unknown use three formal references')
   } finally {
     if (fs.existsSync(unexpectedFile)) fs.unlinkSync(unexpectedFile)
   }

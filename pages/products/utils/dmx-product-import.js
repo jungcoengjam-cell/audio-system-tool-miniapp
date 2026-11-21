@@ -1,4 +1,4 @@
-const { calculateDmxAddressPlan, MAX_GROUPS } = require('../../../utils/dmx-address')
+const { calculateDmxAddressPlan, MAX_GROUPS, UNIVERSE_LABELS } = require('../../../utils/dmx-address')
 
 const DMX_PREFERENCES_KEY = 'audioTool.dmxAddress.preferences'
 
@@ -60,7 +60,7 @@ function createImportedGroup(product, groups, channelCount, fixtureCount, alloca
   const lastUniverse = action === 'append' && allocationMode === 'manual' && groups.length
     ? String(groups[groups.length - 1]?.targetUniverse || '').toUpperCase()
     : 'A'
-  const targetUniverse = ['A', 'B', 'C', 'D'].includes(lastUniverse) ? lastUniverse : 'A'
+  const targetUniverse = UNIVERSE_LABELS.includes(lastUniverse) ? lastUniverse : 'A'
   const fixtureName = product.name || ''
   return {
     id,

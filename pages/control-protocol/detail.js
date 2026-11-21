@@ -97,6 +97,14 @@ function manualTransportTabs(manual) {
     })
 }
 
+function manualTransportForDisplay(transport) {
+  if (!transport) return null
+  return {
+    ...transport,
+    requiresDeviceMac: transport.commands.some((command) => command && command.requiresDeviceMac === true),
+  }
+}
+
 function sameDevice(left, right) {
   return Boolean(left && right && left.type === right.type && left.id === right.id)
 }
@@ -107,7 +115,7 @@ function scopeSummary(reference, group, manual, protocol) {
       const model = String(reference.deviceModel).split('（')[0]
       return `仅限 ${model} 现场样本`
     }
-    if (reference.controllerModel) {
+    if (reference.controllerModel && reference.controllerModel !== '未知') {
       return `仅限照片中 ${reference.controllerModel} 控制卡`
     }
   }
@@ -122,7 +130,9 @@ function categoryOptions(selectedKey) {
 }
 
 function displayModel(reference, group, protocol) {
-  if (reference) return reference.controllerModel || reference.title
+  if (reference) return reference.controllerModel && reference.controllerModel !== '未知'
+    ? reference.controllerModel
+    : reference.title
   if (protocol && protocol.controllerModel) {
     return [protocol.controllerBrand, protocol.controllerModel].filter(Boolean).join(' · ')
   }
@@ -176,6 +186,7 @@ Page({
     this._pageHidden = false
     this._viewerState = viewerState.readViewerState(catalog)
     this._currentScrollTop = 0
+    this._readerScrollRequest = 0
     this._copyContextToken = 0
     this._copyAttempt = 0
     this._copyInFlight = 0
@@ -348,7 +359,7 @@ Page({
       ? resolved.manual.transports.findIndex((transport) => transport.id === modeId)
       : 0
     const manualTransport = manualTransportIndex >= 0 && resolved.manual
-      ? resolved.manual.transports[manualTransportIndex]
+      ? manualTransportForDisplay(resolved.manual.transports[manualTransportIndex])
       : null
     const reading = modeId
       ? viewerState.getReading(this._viewerState, safeRef, modeId, catalog)
@@ -390,8 +401,7 @@ Page({
       statusMessage: resolved.statusMessage || '',
       readerScrollTop: reading.scrollTop,
     }
-    this._currentScrollTop = reading.scrollTop
-    this.setData(nextData)
+    this.applyReaderView(nextData)
     if (modeId) {
       this._viewerState = viewerState.updateDevice(this._viewerState, safeRef, modeId, reading, catalog)
       viewerState.saveViewerState(this._viewerState, catalog)
@@ -406,7 +416,7 @@ Page({
   invalidateDetail(statusMessage) {
     this.invalidateCopyContext()
     this.invalidatePhotoContext()
-    this.setData({
+    this.applyReaderView({
       invalidGroup: true,
       group: null,
       reference: null,
@@ -437,6 +447,42 @@ Page({
     })
   },
 
+  applyReaderView(nextData) {
+    const scrollTop = nextData.readerScrollTop
+    const previousTarget = Number(this.data.readerScrollTop) || 0
+    const hasPreviousReader = Boolean(this.getCurrentDeviceRef())
+    const reissueIfUnchanged = hasPreviousReader && previousTarget === scrollTop
+    const request = (this._readerScrollRequest || 0) + 1
+    this._readerScrollRequest = request
+    this._currentScrollTop = scrollTop
+
+    const data = { ...nextData, readerScrollTop: scrollTop }
+    if (!reissueIfUnchanged) {
+      this.setData(data)
+      return
+    }
+    this.setData(data, () => {
+      if (this._pageUnloaded || request !== this._readerScrollRequest) return
+      this.reissueReaderScroll(scrollTop, request)
+    })
+  },
+
+  reissueReaderScroll(scrollTop, request) {
+    if (typeof wx === 'undefined' || !wx || typeof wx.createSelectorQuery !== 'function') return
+    const query = wx.createSelectorQuery()
+    const reader = query.select('#protocol-reader')
+    if (!reader || typeof reader.node !== 'function') return
+
+    reader.node((result) => {
+      if (this._pageUnloaded || request !== this._readerScrollRequest) return
+      const scrollView = result && result.node
+      if (scrollView && typeof scrollView.scrollTo === 'function') {
+        scrollView.scrollTo({ top: scrollTop, animated: false })
+      }
+    })
+    query.exec()
+  },
+
   returnToGallery() {
     wx.navigateBack({
       delta: 1,
@@ -448,9 +494,6 @@ Page({
     const scrollTop = Number(event.detail && event.detail.scrollTop)
     const nextScrollTop = Number.isFinite(scrollTop) ? Math.max(0, Math.min(200000, scrollTop)) : 0
     this._currentScrollTop = nextScrollTop
-    if (Math.abs((Number(this.data.readerScrollTop) || 0) - nextScrollTop) >= 1) {
-      this.setData({ readerScrollTop: nextScrollTop })
-    }
   },
 
   refreshDirectory() {
@@ -471,7 +514,9 @@ Page({
         type: 'reference',
         id: item.referenceId,
         title: item.title,
-        subtitle: reference ? [reference.controllerBrand, reference.controllerModel].filter(Boolean).join(' · ') : '人工协议参考',
+        subtitle: reference && reference.controllerModel !== '未知'
+          ? [reference.controllerBrand, reference.controllerModel].filter(Boolean).join(' · ')
+          : '人工协议参考',
         photoPath: item.photo && item.photo.path || '',
         imageFailed: false,
       }
@@ -787,9 +832,8 @@ Page({
     const loopCount = manual.loopCount || 40
     const loopIndex = Math.max(0, Math.min(loopCount - 1, this.data.selectedLoopIndex || 0))
     reading.loopIndex = loopIndex
-    this._currentScrollTop = reading.scrollTop
-    this.setData({
-      manualTransport: transport,
+    this.applyReaderView({
+      manualTransport: manualTransportForDisplay(transport),
       manualTransportIndex: index,
       commonManualCommands: decorateManualCommands(allManualWriteCommands.slice(0, quickCommandCount), transport, this.data.deviceMacInput),
       manualWriteCommands: decorateManualCommands(manualWriteCommands, transport, this.data.deviceMacInput),

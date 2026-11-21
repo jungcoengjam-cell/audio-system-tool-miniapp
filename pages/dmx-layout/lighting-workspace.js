@@ -1,4 +1,4 @@
-const { calculateDmxAddressPlan } = require('../../utils/dmx-address')
+const { calculateDmxAddressPlan, UNIVERSE_LABELS } = require('../../utils/dmx-address')
 const { stageLightingProductIndex } = require('../../data/stage-lighting')
 const records = require('../../utils/records')
 
@@ -84,9 +84,7 @@ function validStableId(value) {
   return typeof value === 'string' && value.trim().length > 0 && value.length <= 120
 }
 
-function ensureSchemeIdentity(scheme) {
-  const normalized = normalizeScheme(scheme)
-  if (!normalized) return null
+function ensureNormalizedSchemeIdentity(normalized) {
   const used = new Set()
   normalized.groupIds = normalized.preferences.groups.map((group, index) => {
     const previous = normalized.groupIds[index]
@@ -120,6 +118,11 @@ function ensureSchemeIdentity(scheme) {
   return normalized
 }
 
+function ensureSchemeIdentity(scheme) {
+  const normalized = normalizeScheme(scheme)
+  return normalized ? ensureNormalizedSchemeIdentity(normalized) : null
+}
+
 function fixtureFingerprint(fixture) {
   return JSON.stringify([
     String(fixture.fixtureModel || ''),
@@ -149,13 +152,16 @@ function calculateEngineInput(scheme) {
         return { invalid: `第 ${index + 1} 组的型号或通道模式不在灯具库中，已阻止保存。` }
       }
     }
-    if (preferences.allocationMode === 'manual' && !['A', 'B', 'C', 'D'].includes(String(group.targetUniverse || '').toUpperCase())) {
-      return { invalid: `第 ${index + 1} 组的目标域无效，已阻止保存。` }
+    if (preferences.allocationMode === 'manual' && !UNIVERSE_LABELS.includes(String(group.targetUniverse || '').toUpperCase())) {
+      return { invalid: `第 ${index + 1} 组的起排域无效，已阻止保存。` }
     }
     return {
       ...group,
       id: scheme.groupIds[index] || `validation-group-${index + 1}`,
-      fixtureModel: fixtureSource === 'custom' ? '' : fixtureModel,
+      fixtureModel: group.fixtureSource === 'custom'
+        || (!group.fixtureSource && !stageLightingProductIndex.has(fixtureModel))
+        ? ''
+        : fixtureModel,
     }
   })
   const invalid = groups.find((group) => group?.invalid)
@@ -198,53 +204,42 @@ function calculateEngineInput(scheme) {
 }
 
 function calculateScheme(inputScheme) {
-  let scheme = normalizeScheme(inputScheme)
+  const scheme = normalizeScheme(inputScheme)
   if (!scheme) return { ok: false, valid: false, error: '灯光方案格式异常，已阻止计算。', result: null, scheme: null }
   const validation = calculateEngineInput(scheme)
   if (!validation.valid) {
     return { ok: true, valid: false, error: validation.error, result: { ...(validation.result || {}), error: validation.error, valid: false }, scheme }
   }
-  scheme = ensureSchemeIdentity(scheme)
-  if (!scheme) return { ok: false, valid: false, error: '灯光方案格式异常，已阻止计算。', result: null, scheme: null }
+  ensureNormalizedSchemeIdentity(scheme)
   if (validation.empty) {
     return { ok: true, valid: true, error: '', result: validation.result, scheme }
   }
 
-  const groups = scheme.preferences.groups.map((group, index) => ({
-    ...group,
-    id: scheme.groupIds[index],
-    fixtureModel: (group.fixtureSource === 'custom'
-      || (!group.fixtureSource && !stageLightingProductIndex.has(String(group.fixtureModel || '').trim())))
-      ? ''
-      : String(group.fixtureModel || ''),
-  }))
-  const result = calculateDmxAddressPlan({
-    startAddress: scheme.preferences.startAddressText,
-    allocationMode: scheme.preferences.allocationMode,
-    groups,
-  })
+  const result = validation.result
 
   const activeIds = new Set()
   const checksById = {}
-  const groupById = new Map()
   const mappedGroups = result.groups.map((group, groupIndex) => {
     const groupId = scheme.groupIds[groupIndex]
     const fixtureIds = scheme.fixtureIdsByGroup[groupId] || []
     const mappedFixtures = group.fixtures.map((fixture) => {
       const stableId = fixtureIds[fixture.fixtureIndex - 1] || createId('fixture')
       activeIds.add(stableId)
-      const fingerprint = fixtureFingerprint(fixture)
       const previousCheck = scheme.checksById[stableId]
-      if (previousCheck?.fingerprint === fingerprint) checksById[stableId] = { fingerprint }
-      return { ...fixture, stableId }
+      if (previousCheck && previousCheck.fingerprint === fixtureFingerprint(fixture)) {
+        checksById[stableId] = { fingerprint: previousCheck.fingerprint }
+      }
+      return { ...fixture, groupId, stableId }
     })
-    const mapped = { ...group, stableId: groupId, fixtures: mappedFixtures }
-    groupById.set(groupId, mapped)
-    return mapped
+    return { ...group, id: groupId, stableId: groupId, fixtures: mappedFixtures }
   })
   const fixtures = result.fixtures.map((fixture) => {
-    const group = groupById.get(fixture.groupId)
-    return { ...fixture, stableId: group?.fixtures.find((item) => item.fixtureIndex === fixture.fixtureIndex)?.stableId }
+    const group = mappedGroups[fixture.groupIndex]
+    return {
+      ...fixture,
+      groupId: group ? group.id : fixture.groupId,
+      stableId: group?.fixtures[fixture.fixtureIndex - 1]?.stableId,
+    }
   })
   scheme.checksById = checksById
   if (scheme.layout && isObject(scheme.layout.positionsById)) {

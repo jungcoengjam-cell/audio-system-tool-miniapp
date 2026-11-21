@@ -194,8 +194,8 @@ function getProductFilters(type) {
   return PRODUCT_FILTERS[type] || PRODUCT_FILTERS.amplifier
 }
 
-function filterProducts(type, keyword = '', category = ALL_CATEGORY, capability = 'all') {
-  const normalizedKeyword = keyword.trim().toLowerCase()
+function filterProductCatalog(type, keyword = '', category = ALL_CATEGORY, capability = 'all') {
+  const normalizedKeyword = String(keyword || '').trim().toLowerCase()
   return getProductList(type).filter((item) => (
     (category === ALL_CATEGORY || item.category === category)
     && (capability === 'all' || item.capabilities[capability])
@@ -204,6 +204,37 @@ function filterProducts(type, keyword = '', category = ALL_CATEGORY, capability 
       || item.category.toLowerCase().includes(normalizedKeyword)
       || item.meta.toLowerCase().includes(normalizedKeyword))
   ))
+}
+
+function formatCrossReferenceHint(hits) {
+  const values = [...new Set(hits.map((hit) => (
+    hit.brand ? `${hit.brand} ${hit.value}` : hit.value
+  )))]
+  const visibleValues = values.slice(0, 2).join('、')
+  return values.length > 2 ? `${visibleValues} 等${values.length}项` : visibleValues
+}
+
+function filterProducts(type, keyword = '', category = ALL_CATEGORY, capability = 'all') {
+  const normalizedKeyword = String(keyword || '').trim()
+  const directProducts = filterProductCatalog(type, normalizedKeyword, category, capability)
+  if (!normalizedKeyword) return directProducts
+
+  const { searchProductModelCrossReferences } = require('./model-cross-reference')
+  const referenceMatches = searchProductModelCrossReferences(normalizedKeyword)
+  if (!referenceMatches.size) return directProducts
+
+  const directModels = new Set(directProducts.map((item) => item.model))
+  return filterProductCatalog(type, '', category, capability)
+    .filter((item) => directModels.has(item.model) || referenceMatches.has(item.model))
+    .map((item) => {
+      const hits = referenceMatches.get(item.model) || []
+      const crossReferenceMatched = !directModels.has(item.model) && hits.length > 0
+      return {
+        ...item,
+        crossReferenceMatched,
+        crossReferenceHint: crossReferenceMatched ? formatCrossReferenceHint(hits) : '',
+      }
+    })
 }
 
 function formatPowerMap(powerMap = {}) {
@@ -537,6 +568,7 @@ function getProductDetail(type, model) {
       ? buildCameraDetail(product)
       : type === 'lighting' ? buildLightingDetail(product) : buildSpeakerDetail(product)
 
+  const modelCrossReferenceApi = require('./model-cross-reference')
   return {
     ...detail,
     sourcePageText: Array.isArray(detail.sourcePages) && detail.sourcePages.length
@@ -549,6 +581,8 @@ function getProductDetail(type, model) {
         : `补充规格：${detail.sourcePage.file}（第 ${detail.sourcePage.page} 页）`
       : '',
     reviewDate: PRODUCT_DATA_DATE,
+    modelCrossReferences: modelCrossReferenceApi.getProductModelCrossReferences(detail.model),
+    modelCrossReferenceSourceText: modelCrossReferenceApi.getProductModelCrossReferenceSourceText(),
   }
 }
 

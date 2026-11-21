@@ -75,6 +75,8 @@ function projectProductDetail(detail) {
     source: detail.source,
     sourcePageText: detail.sourcePageText,
     reviewDate: detail.reviewDate,
+    modelCrossReferences: detail.modelCrossReferences || [],
+    modelCrossReferenceSourceText: detail.modelCrossReferenceSourceText || '',
   }
 }
 
@@ -219,7 +221,7 @@ Page({
       dmxImportError: '',
       dmxImportSubmitting: false,
       dmxImportAllocationHint: read.preferences.allocationMode === 'manual'
-        ? '手动分域追加时，新组沿用现有末组域；替换时新组从 A 域开始。'
+        ? '按组分域追加时，新组沿用末组起排域；替换时从 A 域起排。'
         : '',
     })
   },

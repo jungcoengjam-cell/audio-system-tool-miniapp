@@ -487,19 +487,19 @@ function renderStageDiagram(ctx, snapshot, options = {}) {
   const queueAnnotation = (value, x, y, size, color, align, priority, offsets = [{ dx: 0, dy: 0 }]) => {
     annotations.push({ value: String(value), x, y, size, color, align, priority, offsets, order: annotations.length })
   }
-  const annotationBounds = (item, x, y) => {
-    const fontSize = item.size * pixelRatio
-    const width = measureCanvasTextWidth(ctx, item.value, fontSize)
+  const annotationBounds = (item, x, y, fontSize, width) => {
     const left = item.align === 'right' ? x - width : item.align === 'center' ? x - width / 2 : x
     return { left, right: left + width, top: y - fontSize * .96, bottom: y + fontSize * .32 }
   }
   const drawAnnotations = () => {
     const reserved = []
     annotations.sort((a, b) => b.priority - a.priority || a.order - b.order).forEach((item) => {
+      const fontSize = item.size * pixelRatio
+      const width = measureCanvasTextWidth(ctx, item.value, fontSize)
       for (const offset of item.offsets) {
         const x = item.x + offset.dx
         const y = item.y + offset.dy
-        const bounds = annotationBounds(item, x, y)
+        const bounds = annotationBounds(item, x, y, fontSize, width)
         const inset = 6 * pixelRatio
         if (bounds.left < inset || bounds.right > viewportWidth - inset
           || bounds.top < inset || bounds.bottom > viewportHeight - inset) continue
@@ -799,26 +799,11 @@ function groupExportFixtures(fixtures) {
   const groups = new Map()
   fixtures.forEach((fixture) => {
     const key = String(fixture.groupId || fixture.groupIndex || fixture.id || fixture.stableId)
-    let model = String(fixture.fixtureModel || fixture.model || '').trim()
-    const rawName = String(fixture.groupName || fixture.name || '未命名灯具组').trim()
-    let name = model && rawName.toLocaleLowerCase().startsWith(model.toLocaleLowerCase())
-      ? rawName.slice(model.length).replace(/^[\s·:：_-]+/, '').trim() || rawName
-      : rawName
-    if (model && rawName.toLocaleLowerCase() === model.toLocaleLowerCase()) {
-      name = rawName
-      model = ''
-    }
-    const entry = groups.get(key) || {
-      id: key,
-      name,
-      model,
-      mode: fixture.modeName || fixture.channelModeName || fixture.channelModeText || `${fixture.channelCount || 0} CH`,
-      fixtures: [],
-    }
+    const entry = groups.get(key) || { name: String(fixture.groupName || fixture.name || '未命名灯具组'), model: String(fixture.fixtureModel || fixture.model || ''), fixtures: [] }
     entry.fixtures.push(fixture)
     groups.set(key, entry)
   })
-  return [...groups.values()].map((group) => ({ ...group, fixtures: group.fixtures.slice().sort(fixtureSort) }))
+  return [...groups.values()]
 }
 
 function buildLightingAddressSections(snapshot, geometry) {
@@ -929,12 +914,21 @@ function buildLightingExportPages(snapshot = {}, options = {}) {
   const requestedDiagramWidth = Math.ceil(sceneWidthMeters * targetScale + 148)
   const requestedDiagramHeight = Math.ceil(sceneHeightMeters * targetScale + 148)
   const width = Math.min(maxDimension, Math.max(baseWidth, requestedDiagramWidth + 72))
-  const addressLayout = layoutLightingAddressSections(buildLightingAddressSections(snapshot, geometry), width)
+  const addressLayout = options.includeAddressList === false
+    ? layoutLightingAddressSections([], width)
+    : layoutLightingAddressSections(buildLightingAddressSections(snapshot, geometry), width)
   const addressReserve = addressLayout.height ? addressLayout.height + 16 : 0
-  const availableDiagramHeight = Math.max(100, maxDimension - diagramTop - addressReserve - 48)
+  const fixtureLegend = options.includeFixtureLegend
+    ? groupExportFixtures((snapshot.fixtures || []).filter((fixture) => {
+      const position = positions[String(fixture.id || fixture.stableId)]
+      return isGroundPosition(position) || position && (geometry.rods || []).some((rod) => String(rod.id) === String(position.rodId))
+    }))
+    : []
+  const legendReserve = fixtureLegend.length ? 8 + 32 * Math.ceil(fixtureLegend.length / 2) : 0
+  const availableDiagramHeight = Math.max(100, maxDimension - diagramTop - addressReserve - legendReserve - 48)
   const baseDiagramHeight = Math.max(100, baseHeight - diagramTop - addressReserve - 48)
   const diagramHeight = Math.min(availableDiagramHeight, Math.max(requestedDiagramHeight, baseDiagramHeight))
-  const height = Math.min(maxDimension, Math.max(baseHeight, diagramTop + diagramHeight + addressReserve + 48))
+  const height = Math.min(maxDimension, Math.max(baseHeight, diagramTop + diagramHeight + addressReserve + legendReserve + 48))
   const diagramWidth = width - 72
   const availableScale = Math.max(.001, Math.min(
     (diagramWidth - 148) / Math.max(.001, sceneWidthMeters),
@@ -959,6 +953,8 @@ function buildLightingExportPages(snapshot = {}, options = {}) {
     addressLabelLaneCount,
     addressLayout,
     addressListTop: diagramTop + diagramHeight + (addressLayout.height ? 18 : 0),
+    fixtureLegend,
+    fixtureLegendTop: diagramTop + diagramHeight + addressReserve,
   }]
 }
 
@@ -1035,6 +1031,25 @@ function renderLightingExportPage(ctx, snapshot, page = {}, theme = 'light') {
       rowTop += addressLayout.rowHeights[row] + 14
     }
   }
+  if (page.fixtureLegend && page.fixtureLegend.length) {
+    const groups = page.fixtureLegend
+    const columnWidth = (width - 72) / 2
+    ctx.setTextAlign('left')
+    ctx.setFillStyle(colors.title)
+    ctx.setFontSize(20)
+    ctx.fillText('灯具图例', 36, page.fixtureLegendTop + 22)
+    groups.forEach((group, index) => {
+      const fixture = group.fixtures[0]
+      const x = 36 + (index % 2) * columnWidth
+      const y = page.fixtureLegendTop + 45 + Math.floor(index / 2) * 32
+      const color = LAYOUT_GROUP_COLORS[Math.max(0, Number(fixture.groupIndex) || 0) % LAYOUT_GROUP_COLORS.length]
+      drawFixtureMiniature(ctx, { x: x + 15, y: y - 8 }, classifyFixtureVisualType(fixture), color, 20)
+      ctx.setFillStyle(colors.text)
+      ctx.setFontSize(15)
+      const label = group.model && !group.name.includes(group.model) ? `${group.name} · ${group.model}` : group.name
+      ctx.fillText(`${shorten(label, Math.floor((columnWidth - 130) / 16))}  ${group.fixtures.length}台`, x + 34, y)
+    })
+  }
   ctx.setFillStyle(colors.footer)
   ctx.setTextAlign('center')
   ctx.setFontSize(14)
@@ -1049,7 +1064,6 @@ module.exports = {
   drawFixtureMiniature,
   wrapExportText,
   estimateExportTextWidth,
-  groupExportFixtures,
   buildLightingExportPages,
   renderLightingExportPage,
   getCanvasTheme,

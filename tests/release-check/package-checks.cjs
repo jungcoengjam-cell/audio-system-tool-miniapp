@@ -270,10 +270,12 @@ function createPackageChecks(context) {
       const source = fs.readFileSync(path.join(root, file), 'utf8')
       const darkStart = Math.min(...[source.indexOf('@media (prefers-color-scheme: dark)'), source.indexOf('@media (prefers-color-scheme:dark)')].filter((index) => index >= 0))
       const darkCss = darkStart >= 0 ? source.slice(darkStart) : ''
+      const sourceWithoutWhitespace = source.replace(/\s+/g, '')
+      const darkCssWithoutWhitespace = darkCss.replace(/\s+/g, '')
       const hasDarkThemeToken = file === 'pages/gain-structure/gain-structure.wxss'
-        ? darkCss.includes('var(--theme-control)') && darkCss.includes('var(--theme-success)')
+        ? source.includes('var(--theme-control)') && source.includes('var(--theme-success)') && darkCss.includes('var(--tool-card-shadow)')
         : file === 'pages/dmx-address/dmx-address.wxss'
-          ? /--text:\s*#fff\b/.test(darkCss) && /--control:\s*#1c1c1e\b/.test(darkCss)
+          ? ['--page-bg:var(--theme-page-bg)', '--surface:var(--theme-surface)', '--control:var(--theme-control)', '--line:var(--theme-divider)', '--text:var(--theme-text)', '--muted:var(--theme-text-secondary)', '--subtle:var(--theme-text-tertiary)', '--accent:var(--theme-accent)'].every((declaration) => sourceWithoutWhitespace.includes(declaration)) && darkCssWithoutWhitespace.includes('.page-root{background:var(--theme-page-bg);color:var(--theme-text)}')
         : darkCss.includes('var(--theme-text)') || darkCss.includes('var(--tx)')
       assert(source.startsWith('@import "../../styles/theme-page-shared.wxss"') && (source.match(/@import "\.\.\/\.\.\/styles\/theme-page-shared\.wxss"/g) || []).length === 1 && (file === 'pages/knowledge/detail.wxss' || hasDarkThemeToken),
         `${file} 未接入第二批深色主题规则`)
@@ -287,11 +289,11 @@ function createPackageChecks(context) {
       'pages/spl/spl.wxss': ['.settings-card .speaker-field .equipment-value', '.settings-card .speaker-field .equipment-model'],
       'pages/cable/cable.wxss': ['.mode-tab.mode-tab-active .mode-label', '.cable-spec'],
       'pages/camera/camera.wxss': ['.selector-model.selector-model'],
-      'pages/gain-structure/gain-structure.wxss': ['.result-card', '.status-chip', '.sheet-panel', '.project-row-selected'],
+      'pages/gain-structure/gain-structure.wxss': ['.result-card', '.sheet-panel', '.project-row-selected'],
       'pages/led-screen/led-screen.wxss': [],
       'pages/products/library.wxss': [],
       'pages/products/detail.wxss': [],
-      'pages/dmx-address/dmx-address.wxss': ['.address-chip', '.fixture-control-box', '.quantity-box input', '.fixture-name'],
+      'pages/dmx-address/dmx-address.wxss': ['.address-chip', '.fixture-name'],
       'pages/dmx-address/channel-guide.wxss': ['.product-name.product-name', '.mode.mode-active'],
     }
     const darkCssFromFirstMedia = (source) => {
@@ -419,16 +421,17 @@ function createPackageChecks(context) {
     const guideDarkStart = Math.min(...[channelGuideTheme.indexOf('@media (prefers-color-scheme: dark)'), channelGuideTheme.indexOf('@media (prefers-color-scheme:dark)')].filter((index) => index >= 0))
     const guideDark = channelGuideTheme.slice(guideDarkStart)
     assert(guideDark.includes('.mode.mode-active') && !/\.product-name\.product-name[^}]*background\s*:\s*var\(--theme-accent-soft\)/.test(guideDark), '通道页非激活文字规则不得携带激活背景')
-    assertDarkDeclaration(dmxTheme, '.page-root', 'background:#000', 'DMX 深色页面根背景应为预览图纯黑色')
-    assertDarkDeclaration(dmxTheme, '.page-root', '--surface:#111', 'DMX 深色弹层缺少表面背景变量')
-    assertDarkDeclaration(dmxTheme, '.page-root', '--control:#1c1c1e', 'DMX 深色输入缺少控件背景变量')
-    assertDarkDeclaration(dmxTheme, '.page-root', '--text:#fff', 'DMX 深色主文字缺少白色变量')
-    assertDarkDeclaration(dmxTheme, '.quantity-box input', 'color:#fff', 'DMX 数量输入缺少深色可读文字')
+    assertDarkDeclaration(dmxTheme, '.page-root', 'background:var(--theme-page-bg)', 'DMX 深色页面根背景应继承全局主题背景')
+    assertDarkDeclaration(dmxTheme, '.page-root', 'color:var(--theme-text)', 'DMX 深色页面主文字应继承全局主题文字色')
     const dmxBaseCss = dmxTheme.slice(0, dmxDarkStart)
+    const dmxBaseRootDeclarations = (/\.page-root\{([^{}]*)\}/.exec(dmxBaseCss)?.[1] || '').replace(/\s+/g, '')
     const dmxBaseDeclarations = (selector) => [...dmxBaseCss.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
       .filter((match) => match[1].split(',').map((value) => value.trim()).includes(selector))
       .map((match) => match[2].replace(/\s+/g, '')).join(';')
+    assert(['--page-bg:var(--theme-page-bg)', '--surface:var(--theme-surface)', '--control:var(--theme-control)', '--line:var(--theme-divider)', '--text:var(--theme-text)', '--muted:var(--theme-text-secondary)', '--subtle:var(--theme-text-tertiary)', '--accent:var(--theme-accent)'].every((declaration) => dmxBaseRootDeclarations.includes(declaration)),
+    'DMX 页面别名应映射到全局主题 surface/control/text/divider/accent token')
     assert(dmxBaseDeclarations('.page-scroll').includes('background:var(--page-bg)'), 'DMX 滚动页面未继承根主题背景')
+    assert(dmxBaseDeclarations('.quantity-box input').includes('color:var(--theme-text)'), 'DMX 数量输入缺少主题文字色')
     ;['.fixture-search-sheet', '.fixture-channel-guide-sheet', '.floating-card', '.pending-sheet', '.save-project-sheet', '.result-report-preview-sheet']
       .forEach((selector) => assert(dmxBaseDeclarations(selector).includes('background:var(--surface)') &&
         (dmxBaseDeclarations(selector).includes('color:var(--text)') || selector === '.floating-card'),

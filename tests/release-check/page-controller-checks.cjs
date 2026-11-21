@@ -1006,7 +1006,8 @@ function createPageControllerChecks(context) {
     assert.strictEqual(dmxInitializationSetDataCount, 1, 'DMX 编址初始化仍执行多次视图提交')
     assert.strictEqual(dmxPage.data.result.totalFixtures, 4)
     assert.strictEqual(dmxPage.data.result.nextText, 'A065')
-    assert.strictEqual(dmxPage.data.result.universes.length, 4)
+    assert.deepStrictEqual(dmxPage.data.result.universes.map((universe) => universe.label),
+      ['A', 'B', 'C', 'D', 'E', 'F', 'G'])
     assert.strictEqual(dmxPage.data.result.selectedUniverse.label, 'A')
     assert.strictEqual(dmxPage.data.result.selectedUniverse.fixtureCount, 4)
     assert.strictEqual(dmxPage.data.result.selectedUniverse.detailGroups.length, 0)
@@ -1423,7 +1424,8 @@ function createPageControllerChecks(context) {
       'DMX 完整逐台数组仍重复传入视图层')
     assert(!Object.prototype.hasOwnProperty.call(largeDmxPage.data.result, 'groups'),
       'DMX 完整分组逐台数据仍重复传入视图层')
-    assert.strictEqual(largeDmxPage.data.result.universes.length, 4)
+    assert.deepStrictEqual(largeDmxPage.data.result.universes.map((universe) => universe.label),
+      ['A', 'B', 'C', 'D', 'E', 'F', 'G'])
     assert.strictEqual(largeDmxPage.data.result.selectedUniverse.label, 'A')
     assert.strictEqual(largeDmxPage.data.result.selectedUniverse.fixtureCount, 128)
     assert.strictEqual(largeDmxPage.data.result.selectedUniverse.detailGroups.length, 0,
@@ -1894,7 +1896,7 @@ function createPageControllerChecks(context) {
       ['pages/camera/camera.wxss', '.equipment-model', 'color:var(--theme-text)', ['color:#1d1d1f']],
       ['pages/led-screen/led-screen.wxss', '.led-report-title', 'color:var(--theme-text)', ['color:#1d1d1f']],
       ['pages/led-screen/led-screen.wxss', '.led-report-share', 'background:var(--theme-primary-fill)', ['background:#007aff']],
-      ['pages/spl/spl.wxss', '.spl-value', 'color:var(--theme-text)', ['color:#1d1d1f']],
+      ['pages/spl/spl.wxss', '.spl-value', 'color:var(--theme-accent-text)', ['color:#1d1d1f']],
       ['pages/spl/spl.wxss', '.spl-unit', 'color:var(--theme-text-secondary)', ['color:#1d1d1f']],
       ['pages/products/detail.wxss', '.module-action', 'background:var(--theme-primary-fill)', ['background:#007aff']],
       ['pages/knowledge/detail.wxss', '.knowledge-error-button.knowledge-error-button', 'background:var(--tp)', ['background:#007aff']],
@@ -1904,7 +1906,7 @@ function createPageControllerChecks(context) {
       ['pages/spl/spl.wxss', '.result-label', 'color:var(--theme-text-secondary)', ['color:#6e6e73']],
       ['pages/spl/spl.wxss', '.reference-scale', 'background:var(--theme-surface-muted)', ['background:#ffffff']],
       ['pages/spl/spl.wxss', '.distance-tag', 'background:var(--theme-accent-soft)', ['background:#ffffff']],
-      ['pages/gain-structure/gain-structure.wxss', '.status-chip', 'color:var(--theme-success)', ['color:#087f70']],
+      ['pages/gain-structure/gain-structure.wxss', '.page-root .result-card .status-chip', 'color:var(--theme-success)', ['color:#087f70']],
       ['pages/camera/camera.wxss', 'button.camera-action-button', 'background:var(--theme-surface)', ['background:#fff']],
       ['pages/records/project.wxss', '.interior-project-notes-copy', 'color:var(--theme-text)', ['color:#3a3a3c']],
       ['pages/knowledge/detail.wxss', '.distance-visual-title', 'color:var(--theme-text)', ['color:#1d1d1f']],
@@ -1917,7 +1919,7 @@ function createPageControllerChecks(context) {
       ['pages/products/detail.wxss', '.source-text', 'color:var(--theme-text)', ['color:#4f4f55']],
       ['pages/products/detail.wxss', '.source-extra', 'color:var(--theme-text-secondary)', ['color:#74747b']],
       ['pages/products/detail.wxss', '.source-review', 'color:var(--theme-text-secondary)', ['color:#8e8e93']],
-      ['pages/led-screen/led-screen.wxss', '.screen-dimension', 'color:var(--theme-text)', ['color:#1d1d1f']],
+      ['pages/led-screen/led-screen.wxss', '.screen-dimension', 'color:var(--theme-accent-text)', ['color:#1d1d1f']],
       ['pages/led-screen/led-screen.wxss', '.result-label', 'color:var(--theme-text-secondary)', ['color:#7d7d83']],
       ['pages/led-screen/led-screen.wxss', '.viewing-result', 'background:var(--theme-accent-soft)', ['background:#eef6ff']],
       ['pages/led-screen/led-screen.wxss', '.viewing-facts', 'color:var(--theme-text-secondary)', ['color:#6e6e73']],
@@ -1938,7 +1940,7 @@ function createPageControllerChecks(context) {
       ['pages/led-screen/led-screen.wxss', '.wall-width-label', 'color:var(--theme-text-secondary)', ['color:#6e6e73']],
       ['pages/led-screen/led-screen.wxss', '.diagram-clearances', 'color:var(--theme-text-secondary)', ['color:#6e6e73']],
       ['pages/camera/camera.wxss', 'button.camera-action-button', 'background:var(--theme-surface)', ['background:#fff']],
-      ['pages/products/library.wxss', '.hero-counts', 'color:var(--theme-accent-text)', ['color:#2c6fae']],
+      ['pages/products/library.wxss', '.hero-counts', 'color:var(--theme-text-secondary)', ['color:#2c6fae']],
       ['pages/products/library.wxss', '.product-mark', 'background:var(--theme-accent-soft)', ['background:#eaf3ff']],
       ['pages/products/library.wxss', '.product-ability', 'background:var(--theme-accent-soft)', ['background:#f0f5ff']],
       ['pages/products/library.wxss', '.product-status-ready', 'background:var(--theme-control)', ['background:#eaf8ef']],
@@ -2019,8 +2021,8 @@ function createPageControllerChecks(context) {
       'split-band-warning', 'lighting-mode-chip', 'missing-item', 'not-found'].forEach((className) => {
       assert(productsDetailWxmlForTheme.includes(className), `产品详情缺少真实类 ${className}`)
     })
+    assertFinalThemeDeclaration(productsLibraryWxssForTheme, '.type-tabs', 'background:var(--theme-control)', '产品资料库页签容器应使用主题控件表面', ['background:var(--theme-surface)'])
     ;[
-      ['.type-tabs', 'background:var(--theme-control)'],
       ['.recent-card', 'background:var(--theme-surface)'],
       ['.product-comparison-table', 'background:var(--theme-control)'],
       ['.product-comparison-head', 'background:var(--theme-accent-soft)'],
@@ -2077,8 +2079,9 @@ function createPageControllerChecks(context) {
     })
     const closeout8SemanticResult = require('./closeout8-contract-regression.cjs').runCloseout8Contracts({ log: false, failFast: true })
     assert.strictEqual(closeout8SemanticResult.failures.length, 0, `Closeout 8 semantic contracts failed: ${JSON.stringify(closeout8SemanticResult.failures)}`)
+    assertThemeCascade(limiterWxssForTheme, '.result-time-item', 'background:var(--theme-surface-muted)',
+      '限制器结果时间卡片应使用实色主题表面', { darkOnly: false })
     ;[
-      ['.result-time-item', 'background:linear-gradient(145deg,var(--theme-surface),var(--theme-accent-soft))'],
       ['.result-time-label', 'color:var(--theme-text-secondary)'],
       ['.result-time-value', 'color:var(--theme-text)'],
       ['.result-time-source', 'color:var(--theme-text-secondary)'],
@@ -2088,7 +2091,6 @@ function createPageControllerChecks(context) {
     const gainWxssForTheme = fs.readFileSync(path.join(root, 'pages/gain-structure/gain-structure.wxss'), 'utf8')
     assertDarkNoBrightTail(gainWxssForTheme, [
       { selector: '.result-card', forbidden: ['rgba(240,248,255,.92)'] },
-      { selector: '.status-chip', forbidden: ['color:#087f70'] },
       { selector: '.project-row-selected', forbidden: ['background:var(--theme-accent-soft)'] },
     ], '增益结构深色亮色尾部检查')
     assertDarkNoBrightTail(splWxssForTheme, [

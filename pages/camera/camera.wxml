@@ -131,7 +131,7 @@
       <view class="selector-count device-picker-count">共 {{selectorItems.length}} 个型号</view>
       <scroll-view class="selector-list device-picker-list" scroll-y>
         <button wx:for="{{selectorItems}}" wx:key="model" class="selector-row device-picker-row" data-index="{{item.index}}" catchtap="selectCamera">
-          <view class="selector-row-info"><view class="selector-model device-picker-item-title">{{item.model}}</view><view class="selector-meta device-picker-item-meta">{{item.category}} · {{item.sensor}}</view><view wx:for="{{item.opticsLines}}" wx:for-item="opticsLine" wx:key="*this" class="selector-optics device-picker-item-meta">{{opticsLine}}</view></view>
+          <view class="selector-row-info"><view class="selector-model device-picker-item-title">{{item.model}}</view><view class="selector-meta device-picker-item-meta">{{item.category}} · {{item.sensor}}</view><view wx:if="{{item.aliasMatch}}" class="selector-meta device-picker-item-meta device-picker-alias-match">对照型号：{{item.aliasMatch}}</view><view wx:for="{{item.opticsLines}}" wx:for-item="opticsLine" wx:key="*this" class="selector-optics device-picker-item-meta">{{opticsLine}}</view></view>
           <view class="selector-row-arrow device-picker-arrow">›</view>
         </button>
         <view wx:if="{{selectorItems.length == 0}}" class="selector-empty device-picker-empty">没有匹配型号，请尝试缩短关键词。</view>

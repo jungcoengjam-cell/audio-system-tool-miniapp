@@ -1,5 +1,6 @@
 const { formalManual: smartPlcF300Manual } = require('./formal-smartplc-f300-manual')
 const { formalManual: kylinK100RManual } = require('./formal-kylin-k100r-manual')
+const { formalManual: powerCabinetManual } = require('./formal-power-cabinet-manual')
 
 const CATEGORIES = [
   { key: 'all', label: '全部' },
@@ -67,6 +68,36 @@ const referenceManuals = [
       visualCheck,
     },
     manual: kylinK100RManual,
+  },
+  {
+    id: 'reference-six-channel-power-cabinet-01',
+    title: '六路智能配电箱',
+    categoryKey: 'power',
+    categoryLabel: '电源',
+    aliases: ['六路智能配电箱', '六路电箱控制协议', '智能配电箱', '电箱', '配电箱', 'Modbus'],
+    controllerModel: '未知',
+    controllerBrand: '未知',
+    deviceModel: '未知',
+    controllerFirmwareVersion: '未知',
+    protocolVersion: '通信协议版本未单独标注；文档 V1.1（2026-01-06）',
+    sourceTitle: '中控协议',
+    documentVersion: 'V1.1（2026-01-06）',
+    sourceSha256: powerCabinetManual.sourceSha256,
+    sourceWorkbookSha256: powerCabinetManual.sourceWorkbookSha256,
+    publicUseBasis: 'user-request-2026-11-21',
+    applicabilityNote: powerCabinetManual.applicabilityNote,
+    photo: {
+      id: 'reference-six-channel-power-cabinet-photo',
+      path: '/pages/control-protocol/assets/power-cabinet-reference.jpg',
+      angleLabel: '用户提供的六路智能配电箱正面',
+      sha256: '076B5FF035A9A893278D1BCA215AA146B8083963B360C061778DA2E02ABF4085',
+      sourceFileName: '1-Photo-1.jpg',
+      sourceSha256: '7D636B51E6F20D2C1012D5B4ABB6A1775CC80BC25B3A964BBAE1F14617B01409',
+      purpose: '仅供人工核对本次现场样本，不用于自动识别或协议准入。',
+      publicUseBasis: 'user-request-2026-11-21',
+      visualCheck: '主代理实际查看原图：可见 A1/B2/C3/A4/B5/C6、ART-NET、T/RH 与 DMX512 标记；未见人员、客户标识、网络地址或二维码。已无损移除原图 APP1 EXIF，解码像素未变；此检查不构成型号识别或具名协议复核。',
+    },
+    manual: powerCabinetManual,
   },
 ]
 

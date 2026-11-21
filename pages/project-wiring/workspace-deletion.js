@@ -1,5 +1,6 @@
 function createWorkspaceDeletionMethods(runtime) {
   const { wx, buildWorkspace, circleLabel, saveProjectWiring, dataset, text, notify, vibrate } = runtime
+  const deletionControl = (type) => type === 'device' ? 'delete-device' : type === 'group' ? 'delete-group' : 'delete-line'
   return {
     captureWorkspaceDeletion(type, id, viewRevision, deviceKey = '') {
       if (this._workspaceDeletion || this._workspaceDeletionInFlight || this.data.saving
@@ -57,6 +58,30 @@ function createWorkspaceDeletionMethods(runtime) {
         const label = circleLabel(record, schedule)
         content = `将从本项目布线表中删除线路 ${label}。`
         row = { type: 'line', item: group.lines[index], index, group: { ...group, lines: undefined }, groupIndex }
+      } else if (type === 'group') {
+        const workspace = this._workspace || buildWorkspace(schedule)
+        const workspaceGroup = workspace.groups.find((group) => group.key === id)
+        const groupIndex = this.data.groups.findIndex((group) => group.key === id)
+        const visibleGroup = this.data.groups[groupIndex]
+        if (!workspaceGroup || !visibleGroup) return null
+        const idsForGroup = new Set(workspaceGroup.lines.map((line) => line.id))
+        const ids = schedule.lines.filter((line) => idsForGroup.has(line.id)).map((line) => line.id)
+        if (!ids.length) return null
+        command = { type: 'delete-lines', ids }
+        const directions = workspaceGroup.bidirectional ? '（含两个方向）' : ''
+        const endpointName = (side) => {
+          const label = text(workspaceGroup[`${side}EndpointLabel`]).trim()
+          if (label) return label
+          const location = text(workspaceGroup[`${side}Location`]).trim()
+          const device = text(workspaceGroup[`${side}DeviceLabel`] || workspaceGroup[`${side}Device`]).trim()
+          return [location, device].filter(Boolean).join(' / ')
+        }
+        const from = endpointName('from')
+        const to = endpointName('to')
+        const route = from && to ? `“${from}”与“${to}”` : from || to ? `“${from || to}”` : '该线路组'
+        content = `将删除${route}的全部 ${ids.length} 条线路${directions}。其他线路组将保留。`
+        confirmText = '删除整组'
+        row = { type: 'group', item: { ...visibleGroup, lines: visibleGroup.lines.map((line) => ({ ...line })) }, index: groupIndex }
       } else return null
 
       const snapshot = {
@@ -86,7 +111,9 @@ function createWorkspaceDeletionMethods(runtime) {
         && this._schedule && this._schedule.revision === snapshot.revision
         && this._projectLoadRevision === snapshot.loadRevision
         && (snapshot.recordType !== 'device' || !snapshot.deviceKey
-          || this._workspace && this._workspace.devices.some((item) => item.id === snapshot.recordId && item.key === snapshot.deviceKey)))
+          || this._workspace && this._workspace.devices.some((item) => item.id === snapshot.recordId && item.key === snapshot.deviceKey))
+        && (snapshot.recordType !== 'group'
+          || this._workspace && this._workspace.groups.some((item) => item.key === snapshot.recordId)))
     },
 
     workspaceDeletionTraceStatus(snapshot) {
@@ -101,6 +128,7 @@ function createWorkspaceDeletionMethods(runtime) {
         if (snapshot.recordType === 'device') targetPresent = this._workspace.devices.some((item) => item.id === snapshot.recordId
           && (!snapshot.deviceKey || item.key === snapshot.deviceKey))
         else if (snapshot.recordType === 'line') targetPresent = this._workspace.groups.some((group) => group.lines.some((item) => item.id === snapshot.recordId))
+        else if (snapshot.recordType === 'group') targetPresent = this._workspace.groups.some((group) => group.key === snapshot.recordId)
       }
       return {
         destroyed: Boolean(this._destroyed), hidden: Boolean(this._hidden), projectMatch, revisionMatch,
@@ -208,21 +236,21 @@ function createWorkspaceDeletionMethods(runtime) {
         const current = this.isWorkspaceDeletionCurrent(snapshot)
         if (!current) {
           this.traceWorkspaceInteraction('delete-modal-callback', {
-            control: data.deleteType === 'device' ? 'delete-device' : 'delete-line', accepted: false,
+            control: deletionControl(data.deleteType), accepted: false,
             confirmed: Boolean(result && result.confirm === true), reason: this.workspaceDeletionTraceReason(status), ...status,
           })
           return
         }
         if (!result || result.confirm !== true) {
           this.traceWorkspaceInteraction('delete-modal-callback', {
-            control: data.deleteType === 'device' ? 'delete-device' : 'delete-line', accepted: false,
+            control: deletionControl(data.deleteType), accepted: false,
             confirmed: false, reason: 'cancelled', ...status,
           })
           this.invalidateWorkspaceDeletion()
           return
         }
         this.traceWorkspaceInteraction('delete-modal-callback', {
-          control: data.deleteType === 'device' ? 'delete-device' : 'delete-line', accepted: true,
+          control: deletionControl(data.deleteType), accepted: true,
           confirmed: true, reason: 'accepted', ...status,
         })
         this.submitWorkspaceDeletion(snapshot)
@@ -235,14 +263,14 @@ function createWorkspaceDeletionMethods(runtime) {
       }
       this.traceWorkspaceInteraction('delete-modal', { control: this.workspaceActionControl(event), accepted: true, reason: 'requested', targetPresent: true })
       wx.showModal({
-        title: snapshot.recordType === 'device' ? '删除设备？' : '删除线路？',
+        title: snapshot.recordType === 'device' ? '删除设备？' : snapshot.recordType === 'group' ? '删除线路组？' : '删除线路？',
         content,
         confirmText,
         confirmColor: '#d70015',
         success: confirm,
         fail: () => {
           this.traceWorkspaceInteraction('delete-modal-callback', {
-            control: data.deleteType === 'device' ? 'delete-device' : 'delete-line',
+            control: deletionControl(data.deleteType),
             accepted: false, confirmed: false, reason: 'modal-failed',
           })
           if (this._workspaceDeletion === snapshot) this.invalidateWorkspaceDeletion()
@@ -254,14 +282,14 @@ function createWorkspaceDeletionMethods(runtime) {
       if (!this.isWorkspaceDeletionCurrent(snapshot) || snapshot.submitted || this.data.saving) {
         const status = this.workspaceDeletionTraceStatus(snapshot)
         this.traceWorkspaceInteraction('delete-save', {
-          control: snapshot && snapshot.recordType === 'device' ? 'delete-device' : 'delete-line',
+          control: deletionControl(snapshot && snapshot.recordType),
           accepted: false, reason: status.busy ? 'busy' : this.workspaceDeletionTraceReason(status) || 'already-submitted', ...status,
         })
         return false
       }
       snapshot.submitted = true
       this._workspaceDeletionInFlight = snapshot
-      this.traceWorkspaceInteraction('delete-save', { control: snapshot.recordType === 'device' ? 'delete-device' : 'delete-line', accepted: true, reason: 'started', targetPresent: true })
+      this.traceWorkspaceInteraction('delete-save', { control: deletionControl(snapshot.recordType), accepted: true, reason: 'started', targetPresent: true })
       this.closeWorkspaceSwipeRow()
       this.invalidateExport(true)
       this.setData({ saving: true, saveError: '', formError: '', batchError: '' })
@@ -271,7 +299,7 @@ function createWorkspaceDeletionMethods(runtime) {
       const finish = (response) => {
         if (this._workspaceDeletionInFlight === snapshot) this._workspaceDeletionInFlight = null
         this.traceWorkspaceInteraction('delete-save-result', {
-          control: snapshot.recordType === 'device' ? 'delete-device' : 'delete-line',
+          control: deletionControl(snapshot.recordType),
           saveOk: Boolean(response && response.ok === true),
           reason: response && response.ok === true ? 'response-ok' : 'response-failed',
         })
@@ -284,7 +312,7 @@ function createWorkspaceDeletionMethods(runtime) {
         if (this._workspaceDeletion === snapshot) this._workspaceDeletion = null
         if (!current) {
           this.traceWorkspaceInteraction('delete-apply', {
-            control: snapshot.recordType === 'device' ? 'delete-device' : 'delete-line',
+            control: deletionControl(snapshot.recordType),
             accepted: false, reason: 'context-stale', ...this.workspaceDeletionTraceStatus(snapshot),
           })
           this._workspaceDeleteNeedsRefresh = true
@@ -298,7 +326,7 @@ function createWorkspaceDeletionMethods(runtime) {
         }
         this._workspaceDeletionToken += 1
         if (!response || response.ok !== true || !response.schedule) {
-          this.traceWorkspaceInteraction('delete-apply', { control: snapshot.recordType === 'device' ? 'delete-device' : 'delete-line', accepted: false, reason: 'response-invalid' })
+          this.traceWorkspaceInteraction('delete-apply', { control: deletionControl(snapshot.recordType), accepted: false, reason: 'response-invalid' })
           this.setData({ saving: false, workspaceDeletingId: '' })
           const error = response && response.error ? String(response.error) : '删除失败，请重试。'
           notify(error)
@@ -306,7 +334,7 @@ function createWorkspaceDeletionMethods(runtime) {
         }
         if (!response.project || response.project.id !== snapshot.projectId
           || !response.schedule || response.schedule.revision <= snapshot.revision) {
-          this.traceWorkspaceInteraction('delete-apply', { control: snapshot.recordType === 'device' ? 'delete-device' : 'delete-line', accepted: false, reason: 'response-invalid' })
+          this.traceWorkspaceInteraction('delete-apply', { control: deletionControl(snapshot.recordType), accepted: false, reason: 'response-invalid' })
           this.setData({ saving: false, workspaceDeletingId: '' })
           notify('删除结果已变化，请刷新项目后重试。')
           this.refreshProjectWiring()
@@ -316,8 +344,8 @@ function createWorkspaceDeletionMethods(runtime) {
         this.beginWorkspaceRowRemoval(snapshot)
         this.acceptSavedSchedule(response)
         if (!this._destroyed && !this._hidden) vibrate('medium')
-        this.traceWorkspaceInteraction('delete-apply', { control: snapshot.recordType === 'device' ? 'delete-device' : 'delete-line', accepted: true, reason: 'applied' })
-        notify(snapshot.recordType === 'device' ? '设备已删除' : '线路已删除')
+        this.traceWorkspaceInteraction('delete-apply', { control: deletionControl(snapshot.recordType), accepted: true, reason: 'applied' })
+        notify(snapshot.recordType === 'device' ? '设备已删除' : snapshot.recordType === 'group' ? '线路组已删除' : '线路已删除')
       }
       if (result && typeof result.then === 'function') result.then(finish).catch((error) => finish({
         ok: false, error: error && error.message ? error.message : '删除失败，请重试。',

@@ -16,7 +16,12 @@ const dataset = (event) => event && event.currentTarget && event.currentTarget.d
 const targetDataset = (event) => event && event.target && event.target.dataset || {}
 const inputValue = (event) => text(event && event.detail && event.detail.value)
 const datasetBoolean = (value) => value === true || value === 1 || value === '1' || value === 'true'
-const endpointPlaceholder = () => ({ id: '', name: '请选择设备', choiceLabel: '请选择设备' })
+const endpointPlaceholder = () => ({ id: '', name: '不选设备', choiceLabel: '不选设备', clear: true })
+const firstTouch = (event, list = 'touches') => {
+  const touches = event && event[list]
+  return touches && Number(touches.length) > 0 ? touches[0] : null
+}
+const touchIdentifier = (touch) => touch && touch.identifier !== undefined && touch.identifier !== null ? String(touch.identifier) : ''
 function endpointChoices(side, draft, devices) {
   const sourceId = side === 'to' && draft && draft.fromDeviceId ? String(draft.fromDeviceId) : ''
   const choices = (devices || []).filter((device) => !sourceId || device.id !== sourceId)
@@ -30,11 +35,47 @@ function resolveEndpointChoiceIndex(choices, side, draft) {
     : Boolean(device.legacy && device.name === draft[`${side}Device`]))
   return Math.max(0, index)
 }
-const firstTouch = (event, list = 'touches') => {
-  const touches = event && event[list]
-  return touches && Number(touches.length) > 0 ? touches[0] : null
+function endpointLabel(record, side) {
+  if (!record) return ''
+  const existing = text(record[`${side}EndpointLabel`]).trim()
+  if (existing) return existing
+  const location = text(record[`${side}Location`]).trim()
+  const device = text(record[`${side}DeviceLabel`] || record[`${side}DeviceName`] || record[`${side}Device`]).trim()
+  return [location, device].filter(Boolean).join(' / ')
 }
-const touchIdentifier = (touch) => touch && touch.identifier !== undefined && touch.identifier !== null ? String(touch.identifier) : ''
+function routeLabel(record, separator = ' → ') {
+  const from = endpointLabel(record, 'from')
+  const to = endpointLabel(record, 'to')
+  if (from && to) return `${from}${separator}${to}`
+  return from || to || '该线路组'
+}
+function locationHeading(locationGroup, fallbackGroup) {
+  const record = locationGroup || fallbackGroup || {}
+  const from = text(record.fromLocation).trim()
+  const to = text(record.toLocation).trim()
+  if (from && from === to) return from
+  if (from && to) return `${from}${record.bidirectional ? ' ↔ ' : ' → '}${to}`
+  return from || to
+}
+function applyDirectionHeadings(groups) {
+  ;(groups || []).forEach((group) => {
+    const lines = group.lines || []
+    const showDirectionHeadings = Boolean(group.bidirectional
+      || lines.some((line) => line.directionKey && line.directionKey !== group.headerDirectionKey))
+    const seen = new Set()
+    group.lines = lines.map((line) => {
+      const key = line && line.directionKey
+      const firstInDirection = Boolean(key && !seen.has(key))
+      if (key) seen.add(key)
+      const showDirectionHeading = firstInDirection && showDirectionHeadings
+      return {
+        ...line,
+        showDirectionHeading,
+        directionHeadingLabel: showDirectionHeading ? routeLabel(line) : '',
+      }
+    })
+  })
+}
 const notify = (title) => { if (typeof wx !== 'undefined' && typeof wx.showToast === 'function') wx.showToast({ title, icon: 'none' }) }
 const isInlineRenameInputTarget = (event) => datasetBoolean(targetDataset(event).inlineRenameInput)
   || text(event && event.target && event.target.id) === 'wiring-device-inline-rename-name'
@@ -327,23 +368,47 @@ function createWorkspaceUI(base) {
       const profilingEnabled = isPerformanceMeasurementEnabled()
       const finishRefresh = profilingEnabled ? startMeasurement('D1.workspace.refresh-to-callback') : null
       const workspace = buildWorkspace(this._schedule)
-      workspace.lines.forEach((line) => { line.circleNumeric = /^\d{1,4}$/.test(line.circleLabel) })
+      workspace.lines.forEach((line) => {
+        line.circleNumeric = /^\d{1,4}$/.test(line.circleLabel)
+        line.fromEndpointLabel = endpointLabel(line, 'from')
+        line.toEndpointLabel = endpointLabel(line, 'to')
+      })
       const query = text(this.data.searchText).trim().toLocaleLowerCase()
       const openSwipeKey = this._workspaceOpenSwipe && this._workspaceOpenSwipe.key
-      const groups = workspace.groups.map((group, groupIndex) => ({
-        ...group,
-        collapsed: this._collapsedGroups.has(group.key),
-        groupIndex,
-        lines: group.lines.filter((line) => !query || [line.code, line.fromDeviceName, line.toDeviceName, line.fromPort, line.toPort]
-          .some((value) => text(value).toLocaleLowerCase().includes(query)))
-          .map((line, lineIndex) => ({
-            ...line,
-            lineIndex,
-            swipeKey: `line:${line.id}`,
-            swipeOpen: openSwipeKey === `line:${line.id}`,
-            swipeOffset: openSwipeKey === `line:${line.id}` ? this._workspaceOpenSwipe.offset : 0,
-          })),
-      })).filter((group) => group.lines.length).map((group, groupIndex) => ({ ...group, groupIndex }))
+      const locationGroups = new Map((workspace.locationGroups || []).map((group) => [group.key, group]))
+      const groups = workspace.groups.map((group, groupIndex) => {
+        const { directions = [], ...groupView } = group
+        return {
+          ...groupView,
+          headerRouteLabel: routeLabel(group),
+          headerDirectionKey: directions[0] && directions[0].key || '',
+          collapsed: this._collapsedGroups.has(group.key),
+          groupIndex,
+          swipeKey: `group:${group.key}`,
+          swipeOpen: openSwipeKey === `group:${group.key}`,
+          swipeOffset: openSwipeKey === `group:${group.key}` && this._workspaceOpenSwipe ? this._workspaceOpenSwipe.offset : 0,
+          lines: group.lines.filter((line) => !query || [line.code, line.fromLocation, line.toLocation,
+            line.fromEndpointLabel, line.toEndpointLabel, line.fromDeviceName, line.toDeviceName,
+            line.fromPort, line.toPort]
+            .some((value) => text(value).toLocaleLowerCase().includes(query)))
+            .map((line, lineIndex) => ({
+              ...line,
+              lineIndex,
+              swipeKey: `line:${line.id}`,
+              swipeOpen: openSwipeKey === `line:${line.id}`,
+              swipeOffset: openSwipeKey === `line:${line.id}` ? this._workspaceOpenSwipe.offset : 0,
+            })),
+        }
+      }).filter((group) => group.lines.length).map((group, groupIndex) => ({ ...group, groupIndex }))
+      const shownLocationGroups = new Set()
+      groups.forEach((group) => {
+        const key = text(group.locationGroupKey || group.key)
+        const locationGroup = locationGroups.get(key)
+        const heading = locationHeading(locationGroup, group)
+        group.showLocationHeading = Boolean(heading && !shownLocationGroups.has(key))
+        group.locationHeadingLabel = group.showLocationHeading ? heading : ''
+        shownLocationGroups.add(key)
+      })
       const devices = workspace.devices.filter((device) => !query || [device.name, device.typeLabel]
         .some((value) => text(value).toLocaleLowerCase().includes(query)))
         .map((device, deviceIndex) => ({
@@ -354,14 +419,17 @@ function createWorkspaceUI(base) {
           swipeOffset: openSwipeKey === `device:${device.id}` ? this._workspaceOpenSwipe.offset : 0,
         }))
       this.addWorkspaceRetiringRow(devices, groups)
+      applyDirectionHeadings(groups)
       this._workspace = workspace
       const sourceChoices = endpointChoices('from', this.data.draft, workspace.devices)
       const destinationChoices = endpointChoices('to', this.data.draft, workspace.devices)
       const retiring = this._workspaceRetiringRow
       const retiringGhostRendered = Boolean(retiring && retiring.projectId === this.projectId && (retiring.type === 'device'
         ? devices.some((device) => device.id === retiring.item.id && device.retiring)
-        : retiring.type === 'line' && groups.some((group) => group.key === retiring.group.key
-          && (group.retiring || group.lines.some((line) => line.id === retiring.item.id && line.retiring)))))
+        : retiring.type === 'group'
+          ? groups.some((group) => group.key === retiring.item.key && group.retiring)
+          : retiring.type === 'line' && groups.some((group) => group.key === retiring.group.key
+            && (group.retiring || group.lines.some((line) => line.id === retiring.item.id && line.retiring)))))
       const retiringPhaseAtRender = retiring && retiring.phase
       const retiringTokenAtRender = retiring && retiring.token
       const payload = { devices, groups, deviceCount: workspace.devices.length, scheduleRevision: this._schedule.revision,
@@ -383,7 +451,7 @@ function createWorkspaceUI(base) {
         if (retiringGhostRendered && !this._destroyed && !this._hidden && this._workspaceRetiringRow
           && this._workspaceRetiringRow.token === retiringTokenAtRender && retiringTokenAtRender === this._workspaceRemovalToken) {
           this.traceWorkspaceInteraction('delete-render', {
-            control: retiring.type === 'device' ? 'delete-device' : 'delete-line',
+            control: retiring.type === 'device' ? 'delete-device' : retiring.type === 'group' ? 'delete-group' : 'delete-line',
             phase: retiringPhaseAtRender, rendered: true,
           })
           this.scheduleWorkspaceRowExitAfterRender(retiring.token)
@@ -436,6 +504,23 @@ function createWorkspaceUI(base) {
         devices.splice(Math.min(retiring.index, devices.length), 0, ghost)
         return
       }
+      if (retiring.type === 'group') {
+        if (groups.some((group) => group.key === retiring.item.key)) return
+        const index = Math.min(retiring.index, groups.length)
+        groups.splice(index, 0, {
+          ...retiring.item,
+          groupIndex: index,
+          retiring: true,
+          removalPhase: phase,
+          swipeOpen: false,
+          swipeOffset: 0,
+          swipeDragging: false,
+          lines: (retiring.item.lines || []).map((line) => ({
+            ...line, retiring: true, removalPhase: phase, swipeOpen: false, swipeOffset: 0,
+          })),
+        })
+        return
+      }
       if (retiring.type !== 'line') return
       const group = groups.find((item) => item.key === retiring.group.key)
       const targetGroup = group || {
@@ -464,7 +549,7 @@ function createWorkspaceUI(base) {
 
     beginWorkspaceRowRemoval(snapshot) {
       const current = snapshot.row
-      if (!current || (current.type !== 'device' && current.type !== 'line')) return
+      if (!current || !['device', 'line', 'group'].includes(current.type)) return
       this.cancelWorkspaceRemovalTimers()
       const token = ++this._workspaceRemovalToken
       this._workspaceRetiringRow = { ...current, projectId: snapshot.projectId, phase: 'enter', token }
@@ -534,41 +619,15 @@ function createWorkspaceUI(base) {
       const key = dataset(event).key
       if (this.consumeWorkspaceSuppressedTouch(event, `group:${text(key)}`)) return
       if (!key) return
+      if (this._workspaceOpenSwipe && this._workspaceOpenSwipe.type === 'group' && this._workspaceOpenSwipe.id === key) {
+        this.closeWorkspaceSwipeRow()
+        return
+      }
       this.closeWorkspaceSwipeRow()
       this.clearWorkspaceRetiringRow()
       if (this._collapsedGroups.has(key)) this._collapsedGroups.delete(key)
       else this._collapsedGroups.add(key)
       this.refreshWorkspace()
-    },
-
-    onLineTouchStart(event) {
-      this.clearWorkspaceSuppressedTouchForStart(event)
-      const point = firstTouch(event)
-      this._workspaceGroupGesture = point ? {
-        key: text(dataset(event).key), tapKey: `group:${text(dataset(event).key)}`, identifier: touchIdentifier(point),
-        x: Number(point.clientX), y: Number(point.clientY), moved: false,
-      } : null
-    },
-
-    onLineTouchMove(event) {
-      const point = firstTouch(event)
-      const gesture = this._workspaceGroupGesture
-      if (point && gesture && Math.max(Math.abs(Number(point.clientX) - gesture.x), Math.abs(Number(point.clientY) - gesture.y)) > 6) gesture.moved = true
-    },
-
-    onLineTouchEnd(event) {
-      if (this._workspaceGroupGesture && this._workspaceGroupGesture.moved) this.rememberWorkspaceSuppressedTouch(event, this._workspaceGroupGesture.tapKey)
-      this._workspaceGroupGesture = null
-    },
-    onLineTouchCancel(event) {
-      const gesture = this._workspaceGroupGesture
-      if (!gesture) return
-      const point = firstTouch(event, 'changedTouches') || firstTouch(event)
-      const identifier = touchIdentifier(point)
-      if (identifier && gesture.identifier && identifier !== gesture.identifier) return
-      if (gesture.identifier && this._workspaceSuppressedTouches) delete this._workspaceSuppressedTouches[gesture.identifier]
-      this._workspaceSuppressedTapTarget = null
-      this._workspaceGroupGesture = null
     },
     onPortCellScroll() {},
 

@@ -29,6 +29,7 @@ const { readLayoutViewportMetrics } = require('./layout-viewport')
 const { createLayoutExportMethods } = require('./layout-export-controller')
 const { createLayoutSettingsMethods } = require('./layout-settings')
 const { createLayoutPlacementMethods, createLayoutLocateMethods } = require('./layout-interactions')
+const { findModelAliasMatches } = require('../../utils/model-alias-search')
 const {
   GROUP_COLORS,
   LAYOUT_GROUP_COLORS,
@@ -1094,7 +1095,8 @@ function createDmxLayoutPage(options = {}) {
         ? groups.map((group) => ({
           ...group,
           fixtures: group.fixtures.filter((fixture) => [fixture.addressText, fixture.groupName, fixture.fixtureModel]
-            .some((value) => String(value || '').toLocaleLowerCase().includes(filter))),
+            .some((value) => String(value || '').toLocaleLowerCase().includes(filter))
+            || findModelAliasMatches(fixture.fixtureModel, filter).length > 0),
         })).filter((group) => group.fixtures.length)
         : groups
       const withPlacementState = (fixture) => {

@@ -153,6 +153,7 @@ function testFormMarkupBindings() {
   const forms = [
     { name: 'device', markup: markup.slice(deviceStart, detailStart), expected: ['wiring-device-name', 'wiring-device-count'] },
     { name: 'editor', markup: markup.slice(editorStart, continuousStart), expected: [
+      'wiring-editor-from-location', 'wiring-editor-to-location',
       'wiring-pair-{{index}}-from', 'wiring-pair-{{index}}-to',
       'wiring-editor-connector-a', 'wiring-editor-connector-b', 'wiring-editor-spec', 'wiring-editor-length',
     ] },
@@ -190,6 +191,24 @@ function testFormMarkupBindings() {
   assert.doesNotMatch(markup, /wiring-keyboard-open|formKeyboardMaskStyle/)
   assert.doesNotMatch(markup.slice(0, deviceStart), /adjust-position=/,
     'search and new-project inputs retain their native keyboard behavior')
+}
+
+function testLocationFieldKeyboardVisibility() {
+  const runtime = createRuntime()
+  const page = createPage(runtime)
+  page.openNewLine()
+  const field = 'wiring-editor-from-location'
+  page.onFormInputFocus(eventFor(field))
+  flushNextTicks(runtime)
+  assert.equal(runtime.queries[0].selections[0].selector, `#${field}`)
+  assert.equal(runtime.queries[0].selections[1].selector, '.wiring-editor-scroll')
+  completeQuery(runtime, 0,
+    { top: 460, bottom: 520, height: 60 },
+    { top: 100, bottom: 500, height: 400, scrollTop: 0 })
+  assert.equal(page.data.formScrollTop, 32, 'the new position input uses the same keyboard visibility correction')
+  page.onFormKeyboardHeightChange(eventFor(field, { height: 280 }))
+  assert.equal(page.data.formKeyboardSpacerHeight, 280)
+  page.closeEditor()
 }
 
 function testEditorLengthAndMinimumScroll() {
@@ -370,6 +389,7 @@ function testContinuousOverlayFocusTransfer() {
 try {
   testFormMarkupBindings()
   testEditorLengthAndMinimumScroll()
+  testLocationFieldKeyboardVisibility()
   testDeviceCountAndKeyboardViewport()
   testFocusHeightFallbackAndTransfer()
   testCloseHideAndUnloadIgnoreLateQueries()

@@ -1,42 +1,23 @@
 const ASSET_ROOT = '/pages/audio-wiring/assets'
 
-function getTsSolderVariant() {
-  return {
-    key: 'ts-solder-open', path: `${ASSET_ROOT}/solder/ts-solder-open.png`, width: 384, height: 384,
-    contentRect: { x: 168.421053, y: 78.086124, width: 215.578947, height: 205.167464 },
-    pinPoints: { T: { x: 0.815789, y: 0.330941 }, S: { x: 0.909091, y: 0.562201 } },
-    routeAngles: { T: -90, S: 90 },
-  }
-}
-
-// Contact coordinates describe where lines meet the edited pixels in these images.
-// They are visual anchors, not manufacturer dimensions or mechanical tolerances.
+// Contact anchors map to the visible solder lugs in the complete opened plug.
+// They are illustration coordinates, not mechanical dimensions or tolerances.
 const XLR_VARIANTS = {
   male: {
-    key: 'xlr-male-rear',
-    path: `${ASSET_ROOT}/solder/xlr-male-rear.png`,
-    width: 384,
-    height: 384,
-    contentRect: { x: 31.9, y: 22, width: 320.2, height: 340 },
-    routeAngles: { '1': -45, '2': -135, '3': 90 },
-    pinPoints: {
-      '1': { x: 0.736598, y: 0.480677 },
-      '2': { x: 0.242791, y: 0.48583 },
-      '3': { x: 0.487547, y: 0.721998 },
-    },
+    key: 'xlr-male-rear', path: `${ASSET_ROOT}/solder/xlr-male-rear.png`, width: 290, height: 512,
+    contentRect: { x: 0, y: 0, width: 290, height: 512 },
+    pinPoints: { '1': { x: 0.623869, y: 0.241672 }, '2': { x: 0.224869, y: 0.225344 }, '3': { x: 0.415145, y: 0.336381 } },
+    routeAngles: { '1': -45, '2': -135, '3': 180 },
+    routingGeometry: { wiringWindow: { x: 31.436, y: 103.671, width: 224.063, height: 123.736 },
+      bodyRect: { x: 19.731, y: 227.407, width: 254.161, height: 284.593 } },
   },
   female: {
-    key: 'xlr-female-rear',
-    path: `${ASSET_ROOT}/solder/xlr-female-rear.png`,
-    width: 384,
-    height: 384,
-    contentRect: { x: 47.65, y: 22, width: 288.7, height: 340 },
-    routeAngles: { '1': -135, '2': -45, '3': 90 },
-    pinPoints: {
-      '1': { x: 0.270511, y: 0.511132 },
-      '2': { x: 0.723495, y: 0.51627 },
-      '3': { x: 0.490581, y: 0.733771 },
-    },
+    key: 'xlr-female-rear', path: `${ASSET_ROOT}/solder/xlr-female-rear.png`, width: 244, height: 512,
+    contentRect: { x: 0, y: 0, width: 244, height: 512 },
+    pinPoints: { '1': { x: 0.260037, y: 0.290922 }, '2': { x: 0.734217, y: 0.289596 }, '3': { x: 0.499213, y: 0.396289 } },
+    routeAngles: { '1': -135, '2': -45, '3': 180 },
+    routingGeometry: { wiringWindow: { x: 20.358, y: 116.379, width: 213.757, height: 115.361 },
+      bodyRect: { x: 8.482, y: 231.74, width: 235.812, height: 280.26 } },
   },
 }
 
@@ -50,90 +31,134 @@ const PHOTO_MANIFEST = {
   terminalBalanced: {
     getVariant() {
       return {
-        key: 'terminal-block',
-        path: `${ASSET_ROOT}/terminal.png`,
-        width: 256,
-        height: 256,
-        kind: 'terminal',
-        pinPoints: {
-          '+': { x: 0.2109375, y: 0.6015625 },
-          '−': { x: 0.41796875, y: 0.6796875 },
-          G: { x: 0.625, y: 0.75390625 },
-        },
-        labelPoints: {
-          '+': { x: 0.2109375, y: 0.453125 },
-          '−': { x: 0.41796875, y: 0.53125 },
-          G: { x: 0.625, y: 0.60546875 },
-        },
-        routeAngles: { '+': -135, '−': -45, G: 90 },
+        key: 'terminal-block', path: `${ASSET_ROOT}/terminal.png`, width: 256, height: 256,
+        kind: 'terminal', contentRect: { x: 0, y: 0, width: 256, height: 256 },
+        pinPoints: { '+': { x: 0.2109375, y: 0.6015625 }, '−': { x: 0.41796875, y: 0.6796875 }, G: { x: 0.625, y: 0.75390625 } },
+        labelPoints: { '+': { x: 0.2109375, y: 0.453125 }, '−': { x: 0.41796875, y: 0.53125 }, G: { x: 0.625, y: 0.60546875 } },
+        routeAngles: { '+': 135, '−': 135, G: 135 },
+        routingGeometry: { wiringWindow: { x: 18, y: 120, width: 185, height: 105 }, bodyRect: null },
       }
     },
   },
   stereo35: {
     getVariant() {
       return {
-        key: 'stereo35-rear', path: `${ASSET_ROOT}/solder/stereo35-rear.png`, width: 384, height: 384,
-        contentRect: { x: 116.8, y: 22, width: 150.4, height: 340 },
-        pinPoints: { T: { x: 0.520207, y: 0.553272 }, R: { x: 0.384271, y: 0.465098 }, S: { x: 0.512859, y: 0.193227 } },
-        routeAngles: { T: 45, R: 180, S: -90 },
+        key: 'stereo35-rear', path: `${ASSET_ROOT}/solder/stereo35-rear.png`, width: 141, height: 512,
+        contentRect: { x: 0, y: 0, width: 141, height: 512 },
+        pinPoints: { T: { x: 0.479369, y: 0.355775 }, R: { x: 0.210922, y: 0.279867 }, S: { x: 0.529702, y: 0.114191 } },
+        routeAngles: { T: -45, R: 180, S: -90 },
+        routingGeometry: { wiringWindow: { x: 12.842, y: 40.554, width: 125.043, height: 175.736 },
+          bodyRect: { x: 12.842, y: 216.29, width: 125.043, height: 283.881 } },
       }
     },
   },
   trsBalanced: {
     getVariant() {
       return {
-        key: 'trs635-rear', path: `${ASSET_ROOT}/solder/trs635-rear.png`, width: 384, height: 384,
-        contentRect: { x: 115.9, y: 22, width: 152.2, height: 340 },
-        pinPoints: { T: { x: 0.435351, y: 0.460648 }, R: { x: 0.587839, y: 0.460648 }, S: { x: 0.530217, y: 0.851356 } },
-        routeAngles: { T: -135, R: -45, S: 90 },
+        key: 'trs635-rear', path: `${ASSET_ROOT}/solder/trs635-rear.png`, width: 119, height: 512,
+        contentRect: { x: 0, y: 0, width: 119, height: 512 },
+        pinPoints: { T: { x: 0.686538, y: 0.281271 }, R: { x: 0.317092, y: 0.315078 }, S: { x: 0.439269, y: 0.055443 } },
+        routeAngles: { T: -45, R: -135, S: -90 },
+        routingGeometry: { wiringWindow: { x: 5.193, y: 0, width: 114.239, height: 194.553 },
+          bodyRect: { x: 5.193, y: 194.553, width: 114.239, height: 311.562 } },
       }
     },
   },
+  stereo635: {
+    getVariant() { return PHOTO_MANIFEST.trsBalanced.getVariant() },
+  },
   tsMono: {
     getVariant() {
-      return getTsSolderVariant()
+      return {
+        key: 'ts-solder-open', path: `${ASSET_ROOT}/solder/ts-solder-open.png`, width: 141, height: 512,
+        contentRect: { x: 0, y: 0, width: 141, height: 512 },
+        pinPoints: { T: { x: 0.344582, y: 0.106021 }, S: { x: 0.708177, y: 0.051047 } },
+        routeAngles: { T: -135, S: -45 },
+        routingGeometry: { wiringWindow: { x: 6.366, y: 0, width: 135.037, height: 107.225 },
+          bodyRect: { x: 6.366, y: 107.225, width: 135.037, height: 404.775 } },
+      }
     },
   },
   tsStereo: {
-    getVariant() {
-      return getTsSolderVariant()
-    },
+    getVariant() { return PHOTO_MANIFEST.tsMono.getVariant() },
   },
   rcaMono: {
     getVariant() {
       return {
-        key: 'rca-rear', path: `${ASSET_ROOT}/solder/rca-rear.png`, width: 384, height: 384,
-        contentRect: { x: 215, y: 150, width: 147, height: 133 },
-        pinPoints: { core: { x: 0.68292, y: 0.541281 }, shell: { x: 0.803917, y: 0.605339 } },
-        routeAngles: { core: -90, shell: 45 },
+        key: 'rca-rear', path: `${ASSET_ROOT}/solder/rca-rear.png`, width: 512, height: 972,
+        contentRect: { x: 0, y: 0, width: 512, height: 972 },
+        pinPoints: { core: { x: 0.590068, y: 0.288934 }, shell: { x: 0.72983, y: 0.149876 } },
+        routeAngles: { core: -180, shell: -45 },
+        routingGeometry: { wiringWindow: { x: 0, y: 0, width: 512, height: 335 },
+          bodyRect: { x: 105, y: 335, width: 300, height: 637 } },
       }
     },
   },
   rcaStereo: {
-    getVariant() {
-      return {
-        key: 'rca-rear', path: `${ASSET_ROOT}/solder/rca-rear.png`, width: 384, height: 384,
-        contentRect: { x: 215, y: 150, width: 147, height: 133 },
-        pinPoints: { core: { x: 0.68292, y: 0.541281 }, shell: { x: 0.803917, y: 0.605339 } },
-        routeAngles: { core: -90, shell: 45 },
-      }
-    },
+    getVariant() { return PHOTO_MANIFEST.rcaMono.getVariant() },
   },
+}
+
+const OVERVIEW_PHOTO_MANIFEST = {
+  xlrBalanced(endpoint) {
+    const gender = endpoint && endpoint.cableConnectorGender
+    if (!['公头', '母头'].includes(gender)) return null
+    const female = gender === '母头'
+    return {
+      key: female ? 'overview-xlr-female-v1' : 'overview-xlr-male-v1',
+      path: female ? `${ASSET_ROOT}/overview/xlr-female-v1.png` : '/assets/home/module-audio-wiring-catalog.png',
+      width: female ? 128 : 256,
+      height: female ? 128 : 256,
+      viewLabel: '接头外形',
+    }
+  },
+  trsBalanced: () => ({
+    key: 'overview-trs-v1', path: `${ASSET_ROOT}/trs.png`, width: 256, height: 256, viewLabel: '接头外形',
+  }),
+  stereo635: () => ({
+    key: 'overview-trs-v1', path: `${ASSET_ROOT}/trs.png`, width: 256, height: 256, viewLabel: '接头外形',
+  }),
+  stereo35: () => ({
+    key: 'overview-stereo35-v1', path: `${ASSET_ROOT}/stereo35.png`, width: 256, height: 256, viewLabel: '接头外形',
+  }),
+  tsMono: () => ({
+    key: 'overview-ts-v1', path: `${ASSET_ROOT}/ts.png`, width: 256, height: 256, viewLabel: '接头外形',
+  }),
+  tsStereo: () => ({
+    key: 'overview-ts-v1', path: `${ASSET_ROOT}/ts.png`, width: 256, height: 256, viewLabel: '接头外形',
+  }),
+  rcaMono: () => ({
+    key: 'overview-rca-v1', path: `${ASSET_ROOT}/rca.png`, width: 256, height: 256, viewLabel: '接头外形',
+  }),
+  rcaStereo: () => ({
+    key: 'overview-rca-v1', path: `${ASSET_ROOT}/rca.png`, width: 256, height: 256, viewLabel: '接头外形',
+  }),
+  terminalBalanced: () => ({
+    key: 'overview-terminal-v1', path: `${ASSET_ROOT}/terminal.png`, width: 256, height: 256, viewLabel: '端子外形',
+  }),
 }
 
 const screenImageCache = new WeakMap()
 
 function getSolderPhotoSpec(endpoint) {
-  const entry = endpoint && (PHOTO_MANIFEST[endpoint.id]
-    || (endpoint.id === 'stereo635' ? PHOTO_MANIFEST.trsBalanced : null))
+  if (!endpoint || typeof endpoint.id !== 'string') return null
+  const entry = Object.prototype.hasOwnProperty.call(PHOTO_MANIFEST, endpoint.id) ? PHOTO_MANIFEST[endpoint.id] : null
   return entry && typeof entry.getVariant === 'function' ? entry.getVariant(endpoint) : null
+}
+
+function getConnectorOverviewPhotoSpec(endpoint) {
+  if (!endpoint || typeof endpoint.id !== 'string'
+    || !Object.prototype.hasOwnProperty.call(OVERVIEW_PHOTO_MANIFEST, endpoint.id)) return null
+  const entry = OVERVIEW_PHOTO_MANIFEST[endpoint.id]
+  return typeof entry === 'function' ? entry(endpoint) : null
 }
 
 function getModelPhotoSpecs(model) {
   const unique = new Map()
   ;['output', 'input'].forEach((side) => {
-    const spec = getSolderPhotoSpec(model && model[side])
-    if (spec) unique.set(spec.key, spec)
+    const endpoint = model && model[side]
+    const solderSpec = getSolderPhotoSpec(endpoint)
+    if (solderSpec) unique.set(solderSpec.key, solderSpec)
   })
   return [...unique.values()]
 }
@@ -208,7 +233,7 @@ function loadScreenSolderPhotos(canvas, model) {
 function normalizeReportPhotoPath(value) {
   if (typeof value !== 'string' || !value.trim()) return ''
   const path = value.trim()
-  if (/^\.?\/?pages\/audio-wiring\/assets\//.test(path)) {
+  if (/^\.?\/?(?:pages\/audio-wiring\/assets|assets\/home)\//.test(path)) {
     return `/${path.replace(/^\.?\//, '')}`
   }
   return path
@@ -276,6 +301,7 @@ function loadReportSolderPhotos(model, isCurrent = () => true, onComplete) {
 
 module.exports = {
   getSolderPhotoSpec,
+  getConnectorOverviewPhotoSpec,
   getModelPhotoSpecs,
   getLoadedScreenPhotos,
   loadScreenSolderPhotos,

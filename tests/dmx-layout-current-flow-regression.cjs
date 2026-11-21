@@ -499,6 +499,40 @@ test('reversed fixture batches retain stable interleave order and address identi
   assert.equal(new Set(mixedA3B3C3.map(fixture => `${fixture.groupIndex}:${fixture.fixtureIndex}`)).size, 9)
 })
 
+test('manual-domain fixture sorting includes E through G in address order', () => {
+  const runtime = createRuntime()
+  try {
+    runtime.seed([
+      { name: 'G 组', fixtureSource: 'library', fixtureModel: 'TL-SL323', channelCount: '2', fixtureCount: '2', targetUniverse: 'G' },
+      { name: 'E 组', fixtureSource: 'library', fixtureModel: 'TL-SL323', channelCount: '2', fixtureCount: '2', targetUniverse: 'E' },
+      { name: 'F 组', fixtureSource: 'library', fixtureModel: 'TL-SL323', channelCount: '2', fixtureCount: '1', targetUniverse: 'F' },
+      { name: 'D 组', fixtureSource: 'library', fixtureModel: 'TL-SL323', channelCount: '2', fixtureCount: '1', targetUniverse: 'D' },
+    ])
+    const preferences = runtime.storage.get('audioTool.dmxAddress.preferences')
+    preferences.allocationMode = 'manual'
+    runtime.storage.set('audioTool.dmxAddress.preferences', preferences)
+    const page = makeCurrentPage(runtime)
+    const rodId = page._layout.internalRods[0].id
+    page.openPlacementPanel(rodId)
+    page._fixtures.slice().reverse().forEach((fixture) => page.assignFixtureToRod(fixture, rodId))
+
+    const fixtureIdsBefore = page._fixtures.map((fixture) => fixture.stableId)
+    const addressesBefore = page._fixtures.map((fixture) => fixture.addressText)
+    page.sortSelectedRodByAddress()
+    assert.match(runtime.modals[0].content, /A、B、C、D、E、F、G/)
+    runtime.answer(true)
+    const orderedAddresses = Object.entries(page._layout.positionsById)
+      .filter(([, position]) => String(position.rodId) === String(rodId))
+      .sort((a, b) => a[1].t - b[1].t)
+      .map(([id]) => page._fixtures.find((fixture) => fixture.stableId === id).addressText)
+    assert.deepEqual(orderedAddresses, ['D001', 'E001', 'E003', 'F001', 'G001', 'G003'])
+    assert.deepEqual(page._fixtures.map((fixture) => fixture.stableId), fixtureIdsBefore,
+      'Sorting must preserve stable fixture identities')
+    assert.deepEqual(page._fixtures.map((fixture) => fixture.addressText), addressesBefore,
+      'Sorting must not change fixture addresses')
+  } finally { runtime.dispose() }
+})
+
 async function run() {
   const failures = []
   for (const item of cases) {

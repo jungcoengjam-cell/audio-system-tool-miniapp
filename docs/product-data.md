@@ -2,6 +2,8 @@
 
 当前产品参数来自用户提供的公司产品说明书 PDF。核心计算字段记录在 `data/equipment.js`，资料库补充规格记录在 `pages/products/data/speaker-specifications.js`、`data/cameras.js` 与 `data/stage-lighting.js`。
 
+现库型号与公司表格型号的对应范围、字段口径和搜索边界见[型号对照导入记录](product-model-cross-reference-2026-11-03.md)。
+
 截至 2026-08-01，已复核：
 
 - 功放：38 个型号

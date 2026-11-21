@@ -211,7 +211,9 @@ const resultText = result.groups.map((group) => {
 const firstFixture = group.fixtures[0]
 const lastFixture = group.fixtures[group.fixtures.length - 1]
 const endAddress = lastFixture.rangeText.split('–').pop()
-const groupDomain = result.allocationMode === 'manual' ? ` · ${group.targetUniverse}域` : ''
+const groupDomain = result.allocationMode === 'manual'
+? ` · ${[...new Set(group.fixtures.map((fixture) => fixture.universeLabel))].join('、')}域`
+: ''
 return `${group.groupIndex + 1}. ${group.name} · ${group.fixtureCount} 台 × ${group.channelCount} CH${groupDomain} · ${firstFixture.addressText} → ${endAddress}`
 }).join('\n')
 return {

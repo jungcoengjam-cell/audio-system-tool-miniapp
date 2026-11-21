@@ -5,9 +5,9 @@
       <view class="diagram-card">
         <view class="diagram-body">
           <view class="diagram-main">
-        <view class="diagram-heading">
-          <view class="diagram-title">接线图</view>
-        </view>
+            <view class="diagram-heading">
+              <view class="diagram-title">接线图</view>
+            </view>
             <view wx:if="{{supported}}" class="diagram-canvas-wrap" style="height:{{diagramCanvasHeight}}px;">
               <canvas type="2d" id="wiringDiagramCanvas" class="diagram-canvas" style="height:{{diagramCanvasHeight}}px;" hidden="{{selectorVisible || resultReportPreviewVisible || projectDialogVisible || diagramError}}" bindtouchstart="onDiagramTouchStart" bindtouchend="onDiagramTouchEnd" bindtouchcancel="onDiagramTouchCancel"></canvas>
               <view wx:if="{{diagramError}}" class="diagram-error" bindtap="retryDiagram">{{diagramError}} · 点按重试</view>
@@ -24,13 +24,6 @@
               <view class="unsupported-tip">请分别选择输出端与输入端，查看可用的接口和信号类型。</view>
             </view>
             <view wx:if="{{supported && wiringGuide}}" class="wiring-route-guide">{{wiringGuide}}</view>
-            <view wx:if="{{selectedConnection}}" class="selected-mapping">
-              <view class="selected-mapping-swatch" style="background:{{selectedConnection.color}};"></view>
-              <view class="selected-mapping-copy">
-                <view class="selected-mapping-title">已选 · {{selectedConnection.label}}</view>
-                <view class="selected-mapping-text">{{selectedConnection.mappingText}}</view>
-              </view>
-            </view>
           </view>
           <view class="wiring-action-rail" aria-label="方案操作">
             <button class="action-button" aria-label="重置接线方案" disabled="{{!outputId && !inputId && !manualSelected.output && !manualSelected.input}}" bindtap="resetWiring"><view class="action-icon icon-reset"></view></button>

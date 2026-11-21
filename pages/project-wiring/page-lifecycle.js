@@ -99,6 +99,7 @@ function createPageLifecycle({ emptySchedule, resetFormKeyboardAvoidance, isPerf
     if (this._searchTimer) clearTimeout(this._searchTimer)
     this._searchTimer = null
     this.invalidateExport(false)
+    if (typeof this.releaseReportLongImage === 'function') this.releaseReportLongImage()
   }
 
   return {
@@ -113,7 +114,6 @@ function createPageLifecycle({ emptySchedule, resetFormKeyboardAvoidance, isPerf
       this._workspaceInteractionTraceSequence = 0
       this._workspaceInteractionTraceStartedAt = 0
       this._workspaceActionTouch = null
-      this._workspaceGroupGesture = null
       this._workspaceDraftBaseline = ''
       this._draftStoredEndpointNames = null
       this._deviceDraftBaseline = ''
@@ -226,7 +226,6 @@ function createPageLifecycle({ emptySchedule, resetFormKeyboardAvoidance, isPerf
       this.closeWorkspaceSwipeRow()
       this.cancelWorkspaceSwipeGesture()
       this._workspaceScrollGesture = null
-      this._workspaceGroupGesture = null
       this._workspaceActionTouch = null
       this._workspaceSuppressedTapTarget = null
       this._workspaceSuppressedTouches = Object.create(null)
@@ -243,7 +242,6 @@ function createPageLifecycle({ emptySchedule, resetFormKeyboardAvoidance, isPerf
       if (this._inlineRename) this.clearInlineRename(this._inlineRename, { invalidated: true })
       this.cancelWorkspaceSwipeGesture()
       this._workspaceScrollGesture = null
-      this._workspaceGroupGesture = null
       this._workspaceActionTouch = null
       this._workspaceSuppressedTapTarget = null
       this._workspaceSuppressedTouches = Object.create(null)

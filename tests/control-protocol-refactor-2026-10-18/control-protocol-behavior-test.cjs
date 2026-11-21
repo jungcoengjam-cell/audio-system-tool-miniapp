@@ -35,6 +35,7 @@ function makeHarness(options = {}) {
     toasts: [],
     routes: [],
     networkCalls: 0,
+    selectorQueries: [],
     storage: options.storage || {},
     storageWrites: 0,
   }
@@ -80,6 +81,23 @@ function makeHarness(options = {}) {
     connectSocket: () => { effects.networkCalls += 1 },
     sendSocketMessage: () => { effects.networkCalls += 1 },
   }
+  if (options.selectorQueries === true) {
+    api.createSelectorQuery = () => {
+      const queryRecord = { selector: '', nodeCallback: null, executed: false }
+      effects.selectorQueries.push(queryRecord)
+      return {
+        select(selector) {
+          queryRecord.selector = selector
+          return {
+            node(callback) {
+              queryRecord.nodeCallback = callback
+            },
+          }
+        },
+        exec() { queryRecord.executed = true },
+      }
+    }
+  }
   return { api, effects }
 }
 
@@ -87,7 +105,9 @@ function makePageState(definition) {
   return {
     ...definition,
     data: { ...definition.data },
+    setDataCalls: [],
     setData(patch, callback) {
+      this.setDataCalls.push(patch)
       this.data = { ...this.data, ...patch }
       if (callback) callback()
     },
@@ -226,9 +246,9 @@ function directoryAndPhotoChecks() {
     page.openDeviceSelector.call(state)
     assert.equal(state.data.activeOverlay, 'device')
     assert.equal(state.data.sheetOpen, true)
-    assert.equal(state.data.directoryItems.length, 2, 'directory reuses the two real independent references')
+    assert.equal(state.data.directoryItems.length, 3, 'directory lists all three independent references')
     assert.equal(state.data.categories.length, 7, 'all seven existing directory categories remain available')
-    assert.equal(state.data.directoryListHeight, 276, 'two results use their content height on a 320px viewport')
+    assert.equal(state.data.directoryListHeight, 414, 'three results use their content height on a 320px viewport')
 
     page.onSearchInput.call(state, { detail: { value: 'K100R' } })
     assert.deepEqual(state.data.directoryItems.map((item) => item.id), ['reference-kylin-k100r-01'])
@@ -257,7 +277,7 @@ function directoryAndPhotoChecks() {
     assert.equal(state.data.directoryIsEmpty, true, 'an unmatched category shows a real empty result')
     assert.equal(state.data.selectedDeviceHidden, true)
     page.clearFilters.call(state)
-    assert.equal(state.data.directoryItems.length, 2, 'clear filters restores the directory')
+    assert.equal(state.data.directoryItems.length, 3, 'clear filters restores the directory')
     page.selectDevice.call(state, { currentTarget: { dataset: { type: 'reference', id: 'reference-kylin-k100r-01' } } })
     assert.equal(state.data.currentDeviceRef.id, 'reference-kylin-k100r-01')
     assert.equal(state.data.manualTransport.id, 'rs485')
@@ -510,17 +530,26 @@ async function clipboardChecks() {
 }
 
 function loopAndRouteChecks() {
-  const harness = makeHarness({ reducedMotion: true })
+  const harness = makeHarness({ reducedMotion: true, selectorQueries: true })
   withWx(harness.api, () => {
     const page = capturePage(detailPath)
     const state = makePageState(page)
     page.onLoad.call(state, { referenceId: 'reference-smartplc-f300-01' })
+    const setDataCount = state.setDataCalls.length
     page.onReaderScroll.call(state, { detail: { scrollTop: 300 } })
-    assert.equal(state.data.readerScrollTop, 300, 'controlled reader position tracks native scroll events')
+    assert.equal(state.setDataCalls.length, setDataCount, 'native scroll events do not write back to the bound scroll command')
+    assert.equal(state.data.readerScrollTop, 0, 'readerScrollTop remains the last deliberate restore command')
+    assert.equal(state._currentScrollTop, 300, 'native scroll position remains available for per-transport persistence')
     page.selectManualLoop.call(state, { detail: { value: '39' } })
     page.toggleManualWrites.call(state)
     page.selectManualTransport.call(state, { currentTarget: { dataset: { index: '0' } } })
     assert.equal(state.data.manualTransport.id, 'tcp')
+    assert.equal(harness.effects.selectorQueries.length, 1, 'an unchanged zero command is reissued after a reader switch')
+    assert.equal(harness.effects.selectorQueries[0].selector, '#protocol-reader')
+    assert.equal(harness.effects.selectorQueries[0].executed, true)
+    const firstScrollCalls = []
+    harness.effects.selectorQueries[0].nodeCallback({ node: { scrollTo: (options) => firstScrollCalls.push(options) } })
+    assert.deepEqual(firstScrollCalls, [{ top: 0, animated: false }], 'equal zero targets use the native ScrollViewContext')
     assert.equal(state.data.selectedLoopIndex, 39, 'switching transports preserves the selected loop number')
     assert.deepEqual(state.data.selectedLoopCommands.map((command) => command.label), ['第40路启动', '第40路关闭'])
     assert.equal(state.data.readerScrollTop, 0, 'an unread transport starts at its own saved/default position')
@@ -531,6 +560,8 @@ function loopAndRouteChecks() {
     assert.equal(state.data.selectedLoopIndex, 39)
     assert.equal(state.data.readerScrollTop, 300, 'switching back restores that transport reading position')
     assert.equal(state.data.showManualWrites, true, 'switching back restores that transport expansion state')
+    assert.equal(viewerState.getReading(state._viewerState, state.data.currentDeviceRef, 'tcp', catalog).scrollTop, 480,
+      'live offsets are persisted against the transport that was active while scrolling')
     page.onUnload.call(state)
   })
 
@@ -545,6 +576,37 @@ function loopAndRouteChecks() {
   })
 }
 
+function readerRestoreGenerationChecks() {
+  const harness = makeHarness({ reducedMotion: true, selectorQueries: true })
+  withWx(harness.api, () => {
+    const page = capturePage(detailPath)
+    const state = makePageState(page)
+    page.onLoad.call(state, { referenceId: 'reference-smartplc-f300-01' })
+    page.onReaderScroll.call(state, { detail: { scrollTop: 300 } })
+    page.selectManualTransport.call(state, { currentTarget: { dataset: { index: '0' } } })
+    page.loadDevice.call(state, { type: 'reference', id: 'reference-kylin-k100r-01' })
+    page.onReaderScroll.call(state, { detail: { scrollTop: 18 } })
+
+    assert.equal(harness.effects.selectorQueries.length, 2, 'each repeated zero restore gets a fresh guarded request')
+    const calls = []
+    const staleNode = { scrollTo: (options) => calls.push({ id: 'stale', ...options }) }
+    const currentNode = { scrollTo: (options) => calls.push({ id: 'current', ...options }) }
+    harness.effects.selectorQueries[0].nodeCallback({ node: staleNode })
+    assert.deepEqual(calls, [], 'a superseded reader selection cannot scroll the new reader')
+    harness.effects.selectorQueries[1].nodeCallback({ node: currentNode })
+    assert.deepEqual(calls, [{ id: 'current', top: 0, animated: false }],
+      'the latest reader restore survives a native scroll report delivered after the switch')
+
+    page.onReaderScroll.call(state, { detail: { scrollTop: 240 } })
+    page.selectManualTransport.call(state, { currentTarget: { dataset: { index: '1' } } })
+    const unloadQuery = harness.effects.selectorQueries.at(-1)
+    const beforeUnloadCallback = calls.length
+    page.onUnload.call(state)
+    unloadQuery.nodeCallback({ node: { scrollTo: (options) => calls.push(options) } })
+    assert.equal(calls.length, beforeUnloadCallback, 'unload invalidates pending native restoration callbacks')
+  })
+}
+
 async function main() {
   sanitizeAndStorageChecks()
   initialModeAndRestoreChecks()
@@ -553,6 +615,7 @@ async function main() {
   await overlayLifecycleChecks()
   await clipboardChecks()
   loopAndRouteChecks()
+  readerRestoreGenerationChecks()
   process.stdout.write('Control protocol viewer behavior checks passed.\n')
 }
 

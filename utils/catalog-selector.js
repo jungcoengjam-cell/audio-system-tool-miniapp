@@ -1,4 +1,5 @@
 const ALL_CATEGORY = '全部'
+const { findModelAliasMatches, formatModelAliasMatches } = require('./model-alias-search')
 
 function getModelCategory(model = '') {
   const prefix = String(model).replace(/\d.*$/, '').replace(/-$/, '')
@@ -25,12 +26,19 @@ function buildCatalogCategories(items) {
 function filterCatalogItems(items, categories, keyword, categoryIndex) {
   const category = categories[categoryIndex]?.label || ALL_CATEGORY
   const normalizedKeyword = String(keyword || '').trim().toLowerCase()
-  return items.filter((item) => (
-    (category === ALL_CATEGORY || item.category === category)
-    && (!normalizedKeyword
+  const matches = []
+  items.forEach((item) => {
+    if (category !== ALL_CATEGORY && item.category !== category) return
+    if (!normalizedKeyword
       || item.model.toLowerCase().includes(normalizedKeyword)
-      || item.category.toLowerCase().includes(normalizedKeyword))
-  ))
+      || item.category.toLowerCase().includes(normalizedKeyword)) {
+      matches.push(item)
+      return
+    }
+    const aliases = findModelAliasMatches(item.model, normalizedKeyword)
+    if (aliases.length) matches.push({ ...item, aliasMatch: formatModelAliasMatches(aliases) })
+  })
+  return matches
 }
 
 function findCatalogModelIndex(items, model, fallbackIndex = 0) {

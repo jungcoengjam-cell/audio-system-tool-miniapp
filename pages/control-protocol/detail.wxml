@@ -1,4 +1,4 @@
-<scroll-view class="protocol-page" scroll-y enhanced show-scrollbar="{{false}}" scroll-top="{{readerScrollTop}}" bindscroll="onReaderScroll">
+<scroll-view id="protocol-reader" class="protocol-page" scroll-y enhanced show-scrollbar="{{false}}" scroll-top="{{readerScrollTop}}" bindscroll="onReaderScroll">
   <view class="protocol-content">
     <view wx:if="{{invalidGroup}}" class="invalid-card">
       <view class="invalid-mark">⌕</view>
@@ -45,7 +45,7 @@
       <view wx:elif="{{protocol}}" class="parameter-summary">{{protocol.transportSummary}}</view>
       <view wx:if="{{!manual && !protocol && group}}" class="resolution-note">{{statusMessage}}</view>
 
-      <view wx:if="{{manualTransport && manualTransport.id == 'udp'}}" class="mac-input-card">
+      <view wx:if="{{manualTransport && manualTransport.id == 'udp' && manualTransport.requiresDeviceMac}}" class="mac-input-card">
         <view class="mac-input-label">现场控制器 MAC 地址</view>
         <view class="mac-input-row">
           <input class="mac-input" value="{{deviceMacInput}}" maxlength="12" placeholder="输入12位十六进制字符" confirm-type="done" bindinput="onDeviceMacInput" />

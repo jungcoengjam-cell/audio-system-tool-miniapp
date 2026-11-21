@@ -273,15 +273,18 @@ function getProjectReportSections(source) {
   const lines = (source.schedule.lines || []).map((line) => {
     const fromDevice = line.fromDeviceId ? devicesById.get(line.fromDeviceId) : null
     const toDevice = line.toDeviceId ? devicesById.get(line.toDeviceId) : null
+    const fromDeviceName = fromDevice?.name || line.fromDevice || ''
+    const toDeviceName = toDevice?.name || line.toDevice || ''
+    const route = wiringRouteLabel(line, fromDeviceName, toDeviceName)
     return {
       id: `line:${line.id}`,
       stableId: line.id,
       type: 'wiring',
-      title: `${line.code || '线路'} · ${line.fromDevice || fromDevice?.name || '来源设备'} → ${line.toDevice || toDevice?.name || '去向设备'}`,
+      title: [line.code || '线路', route].filter(Boolean).join(' · '),
       subtitle: `${line.spec || '规格待确认'} · ${line.lengthText ? `${line.lengthText} m` : '长度待确认'}`,
       line,
-      fromDeviceName: fromDevice?.name || line.fromDevice,
-      toDeviceName: toDevice?.name || line.toDevice,
+      fromDeviceName,
+      toDeviceName,
     }
   })
   if (lines.length) sections.push({ key: 'wiring', title: '线路', items: lines })
@@ -428,13 +431,43 @@ function linesForCalculation(record) {
   return lines
 }
 
+function wiringEndpointLabel(line, side, deviceName) {
+  const location = line[side + 'Location']
+  const device = deviceName || line[side + 'Device']
+  return [location, device].map((value) => value === null || value === undefined ? '' : String(value).trim())
+    .filter(Boolean).join(' / ')
+}
+
+function wiringRouteLabel(line, fromDeviceName, toDeviceName) {
+  const from = wiringEndpointLabel(line, 'from', fromDeviceName)
+  const to = wiringEndpointLabel(line, 'to', toDeviceName)
+  if (from && to) return from + ' → ' + to
+  return from || to
+}
+
+function wiringEndpointLine(item, side) {
+  const line = item.line
+  const isSource = side === 'from'
+  const locationValue = line[side + 'Location']
+  const location = locationValue === null || locationValue === undefined ? '' : String(locationValue).trim()
+  const device = String(item[side + 'DeviceName'] || line[side + 'Device'] || '').trim()
+  const portValue = line[side + 'Port']
+  const port = portValue === null || portValue === undefined ? '' : String(portValue)
+  const direction = isSource ? '来源' : '去向'
+  const endpoint = [location, device].filter(Boolean).join(' / ')
+  const prefix = device
+    ? direction + '设备：' + endpoint
+    : location ? direction + '位置：' + location : direction + '端口'
+  return { text: device || location ? prefix + ' · 端口：' + port : prefix + '：' + port, style: 'body' }
+}
+
 function linesForWiring(item) {
   const line = item.line
   return [
     { text: '线路', style: 'section' },
     { text: `${line.code || '线路'} · ${line.purpose || '用途未填写'}`, style: 'heading' },
-    { text: `来源设备：${item.fromDeviceName || line.fromDevice} · 端口：${line.fromPort}`, style: 'body' },
-    { text: `去向设备：${item.toDeviceName || line.toDevice} · 端口：${line.toPort}`, style: 'body' },
+    wiringEndpointLine(item, 'from'),
+    wiringEndpointLine(item, 'to'),
     { text: `线材类型：${mapLineValue(line.cableType, LINE_LABELS.cableType)}`, style: 'body' },
     { text: `规格：${line.spec || '待确认'} · 长度：${line.lengthText ? `${line.lengthText} m` : '待确认'}`, style: 'body' },
     { text: `制作方式：${mapLineValue(line.buildType, LINE_LABELS.buildType)}`, style: 'body' },

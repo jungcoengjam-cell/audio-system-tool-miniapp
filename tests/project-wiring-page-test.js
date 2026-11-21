@@ -102,6 +102,15 @@ function createRuntime() {
         ],
       }
     },
+    buildLongProjectReport: (projectName, schedule) => {
+      runtime.reportTypes.push('project')
+      return {
+        type: 'project',
+        title: 'project',
+        lineCount: schedule.lines.length,
+        page: { type: 'project', title: 'project', width: 720, height: 520, rows: [] },
+      }
+    },
     drawReport: (context, page) => { runtime.canvasContexts.push(page.title) },
   }
 
@@ -178,6 +187,7 @@ function createRuntime() {
   }
   runtime.report = {
     buildScheduleReportPages: runtime.buildReports,
+    buildProjectWiringLongReport: runtime.buildLongProjectReport,
     drawScheduleReport: runtime.drawReport,
   }
   return runtime
@@ -246,6 +256,13 @@ function chooseEndpoint(page, side, name) {
   const choices = side === 'from' ? page.data.fromDeviceChoices : page.data.toDeviceChoices
   const index = choices.findIndex((device) => device.name === name && device.id)
   assert(index > 0, 'expected selectable device ' + name)
+  page.selectEndpoint({ currentTarget: { dataset: { side } }, detail: { value: String(index) } })
+}
+
+function clearEndpoint(page, side) {
+  const choices = side === 'from' ? page.data.fromDeviceChoices : page.data.toDeviceChoices
+  const index = choices.findIndex((device) => device.clear)
+  assert.equal(index, 0, 'the first picker option clears an optional device')
   page.selectEndpoint({ currentTarget: { dataset: { side } }, detail: { value: String(index) } })
 }
 
@@ -671,30 +688,35 @@ function testAddSearchAndSaveFailure() {
   const page = installPage(runtime)
   page.openNewLine()
   page.saveLine()
-  assert.equal(runtime.saveCalls.length, 0, 'missing endpoints must be validated before storage')
-  assert.match(page.data.formError, /请选择两端设备.*每条线路.*端口/)
-  assert.deepEqual(page.data.formFieldErrors, {
-    fromDevice: '请选择设备',
-    toDevice: '请选择设备',
-  })
+  assert.equal(runtime.saveCalls.length, 0, 'missing ports must be validated before storage')
+  assert.match(page.data.formError, /端口/)
+  assert.deepEqual(page.data.formFieldErrors, {})
   assert.deepEqual(page.data.pairErrors, [{ fromPort: true, toPort: true }])
-  ;['fromDevice', 'fromPort', 'toDevice', 'toPort'].forEach((field, index) => {
-    input(page, field, ['调音台', 'MAIN L', '功放', 'INPUT 1'][index])
-  })
+  input(page, 'fromLocation', '桌面')
+  input(page, 'toLocation', '音频机柜')
+  pairInput(page, 0, 'fromPort', 'MAIN L')
+  pairInput(page, 0, 'toPort', 'INPUT 1')
   page.saveLine()
   assert.equal(runtime.schedule.lines.length, 1)
   assert.equal(runtime.schedule.lines[0].code, 'A001')
+  assert.equal(runtime.schedule.lines[0].fromDevice, '', 'a route can be saved without either device')
+  assert.equal(runtime.schedule.lines[0].toDevice, '')
+  assert.equal(runtime.schedule.lines[0].fromLocation, '桌面')
+  assert.equal(runtime.schedule.lines[0].toLocation, '音频机柜')
   assert.equal(runtime.schedule.lines[0].lengthText, '', 'empty length must remain unknown, not zero')
   assert.equal(runtime.schedule.lines[0].status, 'pending')
   assert.equal(runtime.schedule.lines[0].connectorA, '')
   assert.equal(runtime.schedule.lines[0].connectorB, '')
   assert.equal(runtime.schedule.lines[0].spec, '', 'new cable data remains blank until entered')
 
-  page.onSearchInput({ detail: { value: 'MAIN L' } })
-  page.applySearch({ detail: { value: 'MAIN L' } })
-  assert.equal(page.data.visibleLines.length, 1)
+  page.onSearchInput({ detail: { value: '桌面' } })
+  page.applySearch({ detail: { value: '桌面' } })
+  assert.equal(page.data.groups.flatMap((group) => group.lines).length, 1)
+  assert(page.data.groups.some((group) => group.showLocationHeading && group.locationHeadingLabel === '桌面 → 音频机柜'),
+    'searching by location keeps the position heading on the first visible group')
   page.applySearch({ detail: { value: 'no match' } })
-  assert.equal(page.data.visibleLines.length, 0)
+  assert.equal(page.data.groups.flatMap((group) => group.lines).length, 0)
+  assert.equal(page.data.groups.length, 0)
 
   const line = runtime.schedule.lines[0]
   page.editLine({ currentTarget: { dataset: { id: line.id } } })
@@ -711,35 +733,160 @@ function testAddSearchAndSaveFailure() {
 }
 
 function testRequiredEndpointErrorsAndHistoryClear() {
-  for (const missingField of ['fromDevice', 'fromPort', 'toDevice', 'toPort']) {
+  for (const missingField of ['fromPort', 'toPort']) {
     const runtime = createRuntime()
     const page = installPage(runtime)
-    addDevice(page, '来源调音台1', 'mixer')
-    addDevice(page, '目标功放1', 'amplifier')
     const writesBefore = runtime.saveCalls.length
     page.openNewLine()
-    if (missingField !== 'fromDevice') chooseEndpoint(page, 'from', '来源调音台1')
-    if (missingField !== 'toDevice') chooseEndpoint(page, 'to', '目标功放1')
     if (missingField !== 'fromPort') pairInput(page, 0, 'fromPort', 'OUT 1')
     if (missingField !== 'toPort') pairInput(page, 0, 'toPort', 'IN 1')
     page.saveLine()
-    if (missingField.endsWith('Device')) assert.equal(page.data.formFieldErrors[missingField], '请选择设备')
-    else assert.equal(page.data.pairErrors[0][missingField], true)
+    assert.equal(page.data.pairErrors[0][missingField], true)
     assert.equal(runtime.saveCalls.length, writesBefore, 'validation must not write partial lines')
     page.saveLine()
     assert.equal(runtime.saveCalls.length, writesBefore, 'repeated validation remains side effect free')
-    if (missingField.endsWith('Device')) {
-      chooseEndpoint(page, missingField === 'fromDevice' ? 'from' : 'to', missingField === 'fromDevice' ? '来源调音台1' : '目标功放1')
-      assert.equal(page.data.formFieldErrors[missingField], undefined, 'selecting a device clears its missing-field state')
-    } else {
-      pairInput(page, 0, missingField, '已填写端口')
-      assert.equal(page.data.pairErrors.some((error) => error.fromPort || error.toPort), false,
-        'editing a port clears stale pair errors')
-    }
+    pairInput(page, 0, missingField, '已填写端口')
+    assert.equal(page.data.pairErrors.some((error) => error.fromPort || error.toPort), false,
+      'editing a port clears stale pair errors')
     page.saveLine()
     assert.equal(runtime.schedule.lines.length, 1)
     assert.equal(runtime.saveCalls.length, writesBefore + 1)
   }
+}
+
+function testOptionalLocationsDeviceClearAndBatchPropagation() {
+  const runtime = createRuntime()
+  const page = installPage(runtime)
+  page.openNewLine()
+  input(page, 'fromLocation', '  控台桌面  ')
+  input(page, 'toLocation', '  音频机柜  ')
+  pairInput(page, 0, 'fromPort', 'OUT 1')
+  pairInput(page, 0, 'toPort', 'IN 1')
+  page.saveLine()
+  let saved = runtime.schedule.lines[0]
+  assert.equal(saved.fromLocation, '控台桌面', 'the model trims optional location strings when saving')
+  assert.equal(saved.toLocation, '音频机柜')
+  assert.equal(saved.fromDeviceId, undefined)
+  assert.equal(saved.toDeviceId, undefined)
+
+  addDevice(page, '调音台', 'mixer')
+  addDevice(page, '功放', 'amplifier')
+  page.editLine({ currentTarget: { dataset: { id: saved.id } } })
+  chooseEndpoint(page, 'from', '调音台')
+  chooseEndpoint(page, 'to', '功放')
+  page.saveLine()
+  saved = runtime.schedule.lines[0]
+  const sourceId = saved.fromDeviceId
+  const destinationId = saved.toDeviceId
+  assert(sourceId && destinationId)
+  assert.equal(saved.fromLocation, '控台桌面')
+  assert.equal(saved.toLocation, '音频机柜')
+
+  page.editLine({ currentTarget: { dataset: { id: saved.id } } })
+  clearEndpoint(page, 'from')
+  assert.equal(page.data.draft.fromDevice, '')
+  assert.equal(page.data.draft.fromDeviceId, null)
+  assert.equal(page.data.draft.toDeviceId, destinationId)
+  assert.equal(page.data.draft.fromLocation, '控台桌面')
+  page.saveLine()
+  saved = runtime.schedule.lines[0]
+  assert.equal(saved.fromDeviceId, undefined, 'clearing a linked picker explicitly removes the stored reference')
+  assert.equal(saved.toDeviceId, destinationId)
+  assert.equal(saved.fromLocation, '控台桌面')
+
+  page.editLine({ currentTarget: { dataset: { id: saved.id } } })
+  page.duplicateLine()
+  assert.equal(page.data.draft.fromLocation, '控台桌面', 'copy retains the source position')
+  assert.equal(page.data.draft.toLocation, '音频机柜', 'copy retains the destination position')
+  page.saveLine()
+  assert.equal(runtime.schedule.lines[1].fromLocation, '控台桌面')
+  assert.equal(runtime.schedule.lines[1].toLocation, '音频机柜')
+
+  page.openNewLine()
+  input(page, 'fromLocation', '设备间')
+  input(page, 'toLocation', '主机柜')
+  pairInput(page, 0, 'fromPort', 'OUT 01')
+  pairInput(page, 0, 'toPort', 'IN 01')
+  page.addDraftPair()
+  pairInput(page, 1, 'fromPort', 'OUT 02')
+  pairInput(page, 1, 'toPort', 'IN 02')
+  page.saveLine()
+  const batchLines = runtime.schedule.lines.slice(2)
+  assert.equal(batchLines.length, 2)
+  assert(batchLines.every((line) => line.fromLocation === '设备间' && line.toLocation === '主机柜'),
+    'multi-pair additions preserve both positions')
+
+  page.openNewLine()
+  input(page, 'fromLocation', '调音间')
+  input(page, 'toLocation', '机柜')
+  page.openContinuous()
+  ;[['fromPort', 'OUT05'], ['toPort', 'IN05'], ['count', '2']]
+    .forEach(([field, value]) => input(page, field, value, 'onContinuousInput'))
+  page.fillContinuous()
+  page.saveLine()
+  const continuousLines = runtime.schedule.lines.slice(4)
+  assert.equal(continuousLines.length, 2)
+  assert(continuousLines.every((line) => line.fromLocation === '调音间' && line.toLocation === '机柜'),
+    'continuous additions preserve both positions')
+}
+
+function testLegacyLineEditDoesNotAddEmptyLocationKeys() {
+  const runtime = createRuntime()
+  const result = projectWiring.applyScheduleChange(projectWiring.emptySchedule(), {
+    type: 'upsert', line: { fromDevice: '历史调音台', fromPort: 'OUT', toDevice: '历史功放', toPort: 'IN' },
+  })
+  assert.equal(result.ok, true)
+  runtime.schedule = clone(result.schedule)
+  runtime.projectStores.set('project-A', { project: clone(runtime.project), schedule: clone(result.schedule) })
+  const page = installPage(runtime)
+  const line = page._schedule.lines[0]
+  assert.equal(Object.hasOwn(line, 'fromLocation'), false)
+  assert.equal(Object.hasOwn(line, 'toLocation'), false)
+  page.editLine({ currentTarget: { dataset: { id: line.id } } })
+  assert.equal(Object.hasOwn(page.data.draft, 'fromLocation'), false)
+  assert.equal(Object.hasOwn(page.data.draft, 'toLocation'), false)
+  input(page, 'notes', '编辑旧线路备注')
+  page.saveLine()
+  const saved = runtime.schedule.lines[0]
+  assert.equal(saved.notes, '编辑旧线路备注')
+  assert.equal(Object.hasOwn(saved, 'fromLocation'), false, 'editing old data must not add an empty source location')
+  assert.equal(Object.hasOwn(saved, 'toLocation'), false, 'editing old data must not add an empty destination location')
+}
+
+function testChangingSourceClearsFormerDestinationReference() {
+  const runtime = createRuntime()
+  const page = installPage(runtime)
+  addDevice(page, '调音台', 'mixer')
+  addDevice(page, '功放', 'amplifier')
+  page.openNewLine()
+  input(page, 'fromLocation', '控台桌面')
+  input(page, 'toLocation', '音频机柜')
+  chooseEndpoint(page, 'from', '调音台')
+  chooseEndpoint(page, 'to', '功放')
+  pairInput(page, 0, 'fromPort', 'OUT 1')
+  pairInput(page, 0, 'toPort', 'IN 1')
+  page.saveLine()
+  const original = runtime.schedule.lines[0]
+  const formerDestinationId = original.toDeviceId
+
+  page.editLine({ currentTarget: { dataset: { id: original.id } } })
+  chooseEndpoint(page, 'from', '功放')
+  assert.equal(page.data.draft.fromDeviceId, formerDestinationId)
+  assert.equal(page.data.draft.toDevice, '')
+  assert.equal(page.data.draft.toDeviceId, null, 'clearing a conflicting old destination explicitly clears its reference')
+  assert.equal(page.data.draft.fromLocation, '控台桌面')
+  assert.equal(page.data.draft.toLocation, '音频机柜')
+  assert.equal(page.data.draft.fromPort, 'OUT 1')
+  assert.equal(page.data.draft.toPort, 'IN 1')
+  page.saveLine()
+
+  const saved = runtime.schedule.lines[0]
+  assert.equal(saved.fromDeviceId, formerDestinationId)
+  assert.equal(saved.toDeviceId, undefined, 'the optional destination remains cleared in storage')
+  assert.equal(saved.fromLocation, '控台桌面')
+  assert.equal(saved.toLocation, '音频机柜')
+  assert.equal(saved.fromPort, 'OUT 1')
+  assert.equal(saved.toPort, 'IN 1')
 }
 
 function testBatchDuplicateEndpointWarning() {
@@ -1080,6 +1227,10 @@ function testSharedProjectExportAcrossTabs() {
     reportInputs.push({ name, schedule: clone(schedule), type })
     return runtime.buildReports(name, schedule, type)
   }
+  runtime.report.buildProjectWiringLongReport = (name, schedule) => {
+    reportInputs.push({ name, schedule: clone(schedule), type: 'project' })
+    return runtime.buildLongProjectReport(name, schedule)
+  }
   page.onWorkspaceTab({ currentTarget: { dataset: { tab: 'devices' } } })
   page.shareProject()
   completeAllExports(runtime, 'shared-project')
@@ -1336,6 +1487,9 @@ try {
   testEndpointHistoryPickerTemplateBindings()
   testAddSearchAndSaveFailure()
   testRequiredEndpointErrorsAndHistoryClear()
+  testOptionalLocationsDeviceClearAndBatchPropagation()
+  testLegacyLineEditDoesNotAddEmptyLocationKeys()
+  testChangingSourceClearsFormerDestinationReference()
   testCustomConnectorAndCableDefaults()
   testSpecPresetsAndPreservation()
   testDevicePickersContinuousDraftAndAtomicSave()

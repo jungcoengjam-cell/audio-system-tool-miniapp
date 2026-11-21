@@ -8,6 +8,7 @@ const { developmentManual } = require('./fixtures/control-protocol/development-m
 const { developmentK100RManual } = require('./fixtures/control-protocol/development-k100r-manual')
 const { formalManual: formalSmartPlcF300Manual } = require('../pages/control-protocol/formal-smartplc-f300-manual')
 const { formalManual: formalKylinK100RManual } = require('../pages/control-protocol/formal-kylin-k100r-manual')
+const { formalManual: formalPowerCabinetManual } = require('../pages/control-protocol/formal-power-cabinet-manual')
 const {
   getDevelopmentDraftPhotos,
   getDevelopmentDraftPhotosForAppearanceGroup,
@@ -33,22 +34,24 @@ const automaticCatalog = Object.fromEntries(Object.keys(emptyCatalog)
 assert.deepEqual(automaticCatalog, Object.fromEntries(Object.keys(emptyCatalog)
   .filter((key) => key !== 'referenceManuals')
   .map((key) => [key, []])), '生产目录自动准入六个数组必须保持为空')
-assert.equal(productionCatalog.referenceManuals.length, 2, '生产目录只增加两条人工协议参考')
+assert.equal(productionCatalog.referenceManuals.length, 3, '生产目录包含三条人工协议参考')
 assert.deepEqual(productionCatalog.referenceManuals.map((reference) => reference.id), [
-  'reference-smartplc-f300-01', 'reference-kylin-k100r-01',
+  'reference-smartplc-f300-01', 'reference-kylin-k100r-01', 'reference-six-channel-power-cabinet-01',
 ], '正式参考 ID 稳定且不使用开发草稿 ID')
 assert.equal(searchGallery(productionCatalog).length, 0, '新增参考不得进入自动控制卡图库')
-assert.equal(searchReferenceManuals(productionCatalog).length, 2, '两条人工参考应可搜索展示')
+assert.equal(searchReferenceManuals(productionCatalog).length, 3, '三条人工参考应可搜索展示')
 assert.deepEqual(searchReferenceManuals(productionCatalog, { keyword: 'K100R' }).map((item) => item.referenceId),
   ['reference-kylin-k100r-01'], '人工参考搜索支持控制卡型号别名')
 assert.deepEqual(searchReferenceManuals(productionCatalog, { keyword: 'SmartPLC-F300', category: 'led-power' })
   .map((item) => item.referenceId), ['reference-smartplc-f300-01'], '人工参考可按标题/别名与类别组合筛选')
 assert.deepEqual(searchReferenceManuals(productionCatalog, { keyword: '麒麟', category: 'led-power' })
   .map((item) => item.referenceId), ['reference-kylin-k100r-01'], '人工参考继续匹配品牌别名与类别')
+assert.deepEqual(searchReferenceManuals(productionCatalog, { keyword: '六路电箱控制协议', category: 'power' })
+  .map((item) => item.referenceId), ['reference-six-channel-power-cabinet-01'], '新电箱参考可按别名与电源类别检索')
 assert.deepEqual(searchReferenceManuals(productionCatalog, { category: 'audio' }), [], '类别筛选仅显示匹配参考')
 const compactReferenceItems = searchReferenceManuals(productionCatalog)
 assert.deepEqual(compactReferenceItems.map((item) => Object.keys(item).sort()), [
-  ['photo', 'referenceId', 'title'], ['photo', 'referenceId', 'title'],
+  ['photo', 'referenceId', 'title'], ['photo', 'referenceId', 'title'], ['photo', 'referenceId', 'title'],
 ], '图库参考项只包含轻量展示字段')
 assert(compactReferenceItems.every((item) => item.photo === null
   || JSON.stringify(Object.keys(item.photo).sort()) === JSON.stringify(['path'])),
@@ -67,6 +70,24 @@ assert.equal(productionReferences[1].deviceModel, '未知', 'K100R 安装设备�
 assert.equal(productionReferences[1].controllerFirmwareVersion, '未知', 'K100R 固件版本保持未知')
 assert.equal(productionReferences[0].publicUseBasis, 'user-request-2026-10-05')
 assert.equal(productionReferences[1].publicUseBasis, 'user-request-2026-10-05')
+const powerCabinetReference = productionReferences[2]
+assert.equal(powerCabinetReference.id, 'reference-six-channel-power-cabinet-01')
+assert.equal(powerCabinetReference.categoryKey, 'power')
+assert.equal(powerCabinetReference.controllerBrand, '未知')
+assert.equal(powerCabinetReference.controllerModel, '未知')
+assert.equal(powerCabinetReference.deviceModel, '未知')
+assert.equal(powerCabinetReference.controllerFirmwareVersion, '未知')
+assert.equal(powerCabinetReference.documentVersion, 'V1.1（2026-01-06）')
+assert.match(powerCabinetReference.applicabilityNote, /对应关系未提供/)
+assert.equal(powerCabinetReference.publicUseBasis, 'user-request-2026-11-21')
+assert.equal(powerCabinetReference.sourceSha256, 'A7B2410B881F96287D71E8EE87BEBFC10287475D5A6D21B87C5487B5E5D6D6B4')
+assert.equal(powerCabinetReference.sourceWorkbookSha256, '14C76E03FF23C83F9050C4B463CDC956040B9AE890BD017E0396836BED553C8C')
+assert.equal(formalPowerCabinetManual.sourceFiles[0].sha256, powerCabinetReference.sourceSha256)
+assert.equal(formalPowerCabinetManual.sourceFiles[1].sha256, powerCabinetReference.sourceWorkbookSha256)
+assert.match(formalPowerCabinetManual.sourceFiles[1].references, /Sheet1.*5–12、19–24.*35–42、49–54/)
+assert.equal(powerCabinetReference.photo.sourceFileName, '1-Photo-1.jpg')
+assert.equal(powerCabinetReference.photo.sourceSha256, '7D636B51E6F20D2C1012D5B4ABB6A1775CC80BC25B3A964BBAE1F14617B01409')
+assert.equal(powerCabinetReference.photo.sha256, '076B5FF035A9A893278D1BCA215AA146B8083963B360C061778DA2E02ABF4085')
 productionReferences.forEach((reference) => {
   assert.equal(reference.photo.publicUseBasis, reference.publicUseBasis, '照片公开依据必须与所属参考一致')
   assert.match(reference.photo.visualCheck, /主代理实际查看原图/)
@@ -101,12 +122,50 @@ assert.deepEqual(commandRows(formalSmartPlcF300Manual), commandRows(developmentM
   'F300 正式参考保留 fixture 全部168条命令的传输、帧、ID、段落、原文标签和复制标记')
 assert.deepEqual(commandRows(formalKylinK100RManual), commandRows(developmentK100RManual),
   'K100R 正式参考保留 fixture 全部36条命令的传输、帧、ID、段落、原文标签和复制标记')
-assert.equal(commandRows(formalSmartPlcF300Manual).length + commandRows(formalKylinK100RManual).length, 204,
-  '生产人工参考仅包含核对过的204条控制请求')
+assert.equal(commandRows(formalSmartPlcF300Manual).length + commandRows(formalKylinK100RManual).length
+  + commandRows(formalPowerCabinetManual).length, 232,
+  '生产人工参考仅包含核对过的232条控制请求')
 assert.equal(formalSmartPlcF300Manual.sourceSha256, '3DEF2C2A5844F3D2D1424DE76B2BD77A6FFD13E6FD5322E9DF7F8F859CD0F6E4',
   'F300 正式参考追溯到实际说明书原件哈希')
 assert.equal(formalKylinK100RManual.sourceSha256, 'FB90C408CD18559C8534EF3721A1F13B4B563DB0A94F2EA43E0B01EE362D1FBA',
   'K100R 正式参考追溯到实际协议原件哈希')
+assert.equal(formalPowerCabinetManual.manualVersion, 'V1.1（2026-01-06）')
+assert.equal(formalPowerCabinetManual.sourceSha256, 'A7B2410B881F96287D71E8EE87BEBFC10287475D5A6D21B87C5487B5E5D6D6B4',
+  '电箱参考追溯到协议 PDF 原件哈希')
+assert.equal(formalPowerCabinetManual.sourceWorkbookSha256, '14C76E03FF23C83F9050C4B463CDC956040B9AE890BD017E0396836BED553C8C',
+  '电箱参考追溯到命令工作簿原件哈希')
+assert.equal(formalPowerCabinetManual.transports[0].commands.length, 14)
+assert.equal(formalPowerCabinetManual.transports[1].commands.length, 14)
+assert(formalPowerCabinetManual.transports.every((transport) => transport.commands.every((command) => (
+  command.category === 'write' && command.copyable === true && command.requiresDeviceMac !== true
+))))
+const powerSourceRows = formalPowerCabinetManual.transports[0].commands.map((rs485, index) => {
+  const udp = formalPowerCabinetManual.transports[1].commands[index]
+  assert.equal(udp.sourceWorkbookRow, rs485.sourceWorkbookRow + 30, 'UDP Excel 行号与 RS485 对应项相差 30')
+  assert.equal(rs485.sourcePdfPage, 9)
+  assert.equal(rs485.sourcePdfSection, '附录B：电力控制设备中控代码示例')
+  return [rs485.id.replace(/^rs485-/, ''), rs485.label, rs485.sourceLabel,
+    rs485.sourceWorkbookRow, rs485.frame, udp.frame]
+})
+assert.deepEqual(powerSourceRows, [
+  ['all-on', '全开', '全开', 5, '01 06 00 00 00 01 48 0A', '00 00 00 00 00 06 01 06 00 00 00 01'],
+  ['all-off', '全关', '全关', 6, '01 06 00 00 00 00 89 CA', '00 00 00 00 00 06 01 06 00 00 00 00'],
+  ['channel-01-on', '第1路通电', '第一台通道1电源通电', 7, '01 06 00 01 00 01 19 CA', '00 00 00 00 00 06 01 06 00 01 00 01'],
+  ['channel-02-on', '第2路通电', '第一台通道2电源通电', 8, '01 06 00 02 00 01 E9 CA', '00 00 00 00 00 06 01 06 00 02 00 01'],
+  ['channel-03-on', '第3路通电', '第一台通道3电源通电', 9, '01 06 00 03 00 01 B8 0A', '00 00 00 00 00 06 01 06 00 03 00 01'],
+  ['channel-04-on', '第4路通电', '第一台通道4电源通电', 10, '01 06 00 04 00 01 09 CB', '00 00 00 00 00 06 01 06 00 04 00 01'],
+  ['channel-05-on', '第5路通电', '第一台通道5电源通电', 11, '01 06 00 05 00 01 58 0B', '00 00 00 00 00 06 01 06 00 05 00 01'],
+  ['channel-06-on', '第6路通电', '第一台通道6电源通电', 12, '01 06 00 06 00 01 A8 0B', '00 00 00 00 00 06 01 06 00 06 00 01'],
+  ['channel-01-off', '第1路断电', '第一台通道1电源断电', 19, '01 06 00 01 00 00 D8 0A', '00 00 00 00 00 06 01 06 00 01 00 00'],
+  ['channel-02-off', '第2路断电', '第一台通道2电源断电', 20, '01 06 00 02 00 00 28 0A', '00 00 00 00 00 06 01 06 00 02 00 00'],
+  ['channel-03-off', '第3路断电', '第一台通道3电源断电', 21, '01 06 00 03 00 00 79 CA', '00 00 00 00 00 06 01 06 00 03 00 00'],
+  ['channel-04-off', '第4路断电', '第一台通道4电源断电', 22, '01 06 00 04 00 00 C8 0B', '00 00 00 00 00 06 01 06 00 04 00 00'],
+  ['channel-05-off', '第5路断电', '第一台通道5电源断电', 23, '01 06 00 05 00 00 99 CB', '00 00 00 00 00 06 01 06 00 05 00 00'],
+  ['channel-06-off', '第6路断电', '第一台通道6电源断电', 24, '01 06 00 06 00 00 69 CB', '00 00 00 00 00 06 01 06 00 06 00 00'],
+])
+const powerPhotoBytes = fs.readFileSync(path.join(__dirname, '../pages/control-protocol/assets/power-cabinet-reference.jpg'))
+assert.equal(crypto.createHash('sha256').update(powerPhotoBytes).digest('hex').toUpperCase(), powerCabinetReference.photo.sha256)
+assert.equal(powerPhotoBytes.includes(Buffer.from('Exif\0\0')), false, '电箱正式照片不包含 APP1 EXIF 数据')
 const formalPhotoFiles = [
   ['smartplc-f300-reference.jpg', 'smartplc-f300-sample.jpg', '2F4EEDFE79FDF8D7334970D7A4A5827D05A33C475FA1B48E5B7F5186D6AD9960'],
   ['kylin-k100r-reference.jpg', 'kylin-k100r-card-sample.jpg', 'B32D37BDE592DB722F9F20E5BD68C0AF562F6ADA06A840FC23C3D3CD0E4695CF'],
@@ -349,6 +408,10 @@ for (const envVersion of ['develop', 'trial', 'release', 'unknown']) {
     assert.equal(detailState.data.photos[0].path, reference.photo.path)
     assert.equal(detailState.data.photos[0].angleLabel, reference.photo.angleLabel,
       'Page preserves the source photo metadata without display decoration')
+    if (reference.id === 'reference-smartplc-f300-01') {
+      assert.equal(detailState.data.directoryItems.find((item) => item.id === reference.id).subtitle,
+        '未知 · SmartPLC-F300', `${envVersion} preserves the existing F300 directory subtitle`)
+    }
     detailPage.copyManualCommand.call(detailState, {
       currentTarget: { dataset: { commandId: detailState.data.commonManualCommands[0].id } },
     })
@@ -365,6 +428,8 @@ for (const envVersion of ['develop', 'trial', 'release', 'unknown']) {
     assert.notEqual(effects.photoPreview.at(-1).current, reference.photo.path)
     if (reference.id === 'reference-kylin-k100r-01') {
       detailPage.selectManualTransport.call(detailState, { currentTarget: { dataset: { index: '1' } } })
+      assert.equal(detailState.data.manualTransport.requiresDeviceMac, true,
+        `${envVersion} retains K100R UDP MAC prompt metadata`)
       assert(detailState.data.commonManualCommands.every((command) => !command.copyEnabled),
         `${envVersion} blocks K100R UDP frames without a current MAC`)
       const visibleUdpFrames = detailState.data.commonManualCommands.concat(detailState.data.selectedLoopCommands)
@@ -394,6 +459,26 @@ for (const envVersion of ['develop', 'trial', 'release', 'unknown']) {
         currentTarget: { dataset: { commandId: 'udp-relay-01-close' } },
       })
       assert.equal(effects.clipboard.length, clipboardAfterValidCopy, `${envVersion} cannot copy after clearing MAC`)
+    }
+    if (reference.id === 'reference-six-channel-power-cabinet-01') {
+      assert.equal(detailState.data.deviceTitle, '六路智能配电箱', `${envVersion} unknown controller uses the reference title`)
+      assert.equal(detailState.data.scopeSummary, formalPowerCabinetManual.applicabilityNote,
+        `${envVersion} displays the sample-only applicability caveat`)
+      assert.equal(detailState.data.loopOptions.length, 6, `${envVersion} only shows the six photo-confirmed channels`)
+      assert.equal(detailState.data.directoryItems.find((item) => item.id === reference.id).subtitle,
+        '人工协议参考', `${envVersion} does not render unknown model fields as a device identity`)
+      detailPage.selectManualTransport.call(detailState, { currentTarget: { dataset: { index: '1' } } })
+      assert.equal(detailState.data.manualTransport.requiresDeviceMac, false,
+        `${envVersion} Modbus UDP does not request a controller MAC`)
+      assert(detailState.data.commonManualCommands.every((command) => command.copyEnabled),
+        `${envVersion} source-backed Modbus UDP examples remain copyable`)
+      const channelCommand = detailState.data.selectedLoopCommands.find((command) => command.id === 'udp-channel-01-on')
+      assert.equal(channelCommand.displayFrame, '00 00 00 00 00 06 01 06 00 01 00 01')
+      detailPage.copyManualCommand.call(detailState, {
+        currentTarget: { dataset: { commandId: channelCommand.id } },
+      })
+      assert.equal(effects.clipboard.at(-1), channelCommand.frame,
+        `${envVersion} copies the selected Modbus UDP frame without network I/O`)
     }
   })
   assert.equal(effects.networkCalls, 0, `${envVersion} never sends or connects to a device`)
@@ -577,6 +662,7 @@ assert.equal(k100rDetailState.data.loopOptions.length, 8, 'K100R picker 只显�
 assert.deepEqual(k100rDetailState.data.commonManualCommands.map((command) => command.id), ['rs485-all-close', 'rs485-all-open'],
   'K100R 首屏展示两条一键控制请求')
 assert.equal(k100rDetailState.data.manualTransport.id, 'rs485', 'K100R 默认显示串口 RS485')
+assert.equal(k100rDetailState.data.manualTransport.requiresDeviceMac, false, 'K100R RS485 不请求 MAC')
 assert.deepEqual(k100rDetailState.data.manualTransportTabs.map((tab) => [tab.label, tab.sourceIndex]), [
   ['串口协议（RS485）', 0], ['网络协议（UDP）', 1],
 ], 'K100R 标签按串口在左、网络在右显示')
@@ -586,6 +672,7 @@ assert.equal(k100rDetailState.data.selectedLoopCommands[0].displayFrame, '32 05 
 developmentDetailPage.copyManualCommand.call(k100rDetailState, { currentTarget: { dataset: { commandId: 'rs485-all-close' } } })
 assert.equal(copiedText, '32 06 00 00 00 01 4D C9', 'K100R RS485 一键操作可复制正确功能码06帧')
 developmentDetailPage.selectManualTransport.call(k100rDetailState, { currentTarget: { dataset: { index: '1' } } })
+assert.equal(k100rDetailState.data.manualTransport.requiresDeviceMac, true, 'K100R UDP 继续请求现场 MAC')
 assert.equal(k100rDetailState.data.deviceMacValid, false, 'UDP MAC 初始为空且无效')
 assert(k100rDetailState.data.commonManualCommands.every((command) => !command.copyEnabled), '无 MAC 时 UDP 一键命令不可复制')
 assert(k100rDetailState.data.selectedLoopCommands.every((command) => !command.copyEnabled && command.displayFrame.includes('__')),
@@ -665,6 +752,7 @@ assert.equal(trialDetailState.data.manual, null, '体验版不得加载 K100R �
 
 const detailTemplate = fs.readFileSync(path.join(__dirname, '../pages/control-protocol/detail.wxml'), 'utf8')
 const detailStyles = fs.readFileSync(path.join(__dirname, '../pages/control-protocol/detail.wxss'), 'utf8')
+const toolUiTokens = fs.readFileSync(path.join(__dirname, '../styles/tool-ui-tokens.wxss'), 'utf8')
 const detailScript = fs.readFileSync(path.join(__dirname, '../pages/control-protocol/detail.js'), 'utf8')
 const detailConfig = JSON.parse(fs.readFileSync(path.join(__dirname, '../pages/control-protocol/detail.json'), 'utf8'))
 assert.equal(detailConfig.navigationBarTitleText, '控制协议', '唯一阅读器使用工具入口标题')
@@ -711,6 +799,7 @@ assert(detailTemplate.includes('mode="aspectFit"') && detailTemplate.includes('b
   '主图与目录照片使用原生预览并保留失败恢复态')
 assert(detailTemplate.includes('现场控制器 MAC 地址')
   && detailTemplate.includes('placeholder="输入12位十六进制字符"')
+  && detailTemplate.includes("manualTransport.id == 'udp' && manualTransport.requiresDeviceMac")
   && detailTemplate.includes('wx:if="{{deviceMacValid}}" class="mac-input-hint">{{deviceMacFormatted}}')
   && !detailTemplate.includes('不保存') && !detailTemplate.includes('待填写')
   && detailScript.includes("/^[0-9a-fA-F]{12}$/")
@@ -740,7 +829,10 @@ assert(detailStyles.includes('.device-sheet{height:auto}')
   && detailStyles.includes('.directory-copy{min-width:0;min-height:44px;flex:1}')
   && detailStyles.includes('.directory-select-control{display:flex;box-sizing:border-box;width:44px;min-width:44px;height:44px;')
   && detailStyles.includes('.selected-check{display:flex;box-sizing:border-box;width:20px;height:20px;')
-  && detailStyles.includes('min-width:48px!important;max-width:48px;height:48px!important')
+  && detailStyles.includes('@import "../../styles/tool-ui-tokens.wxss";')
+  && detailStyles.includes('.protocol-page button.copy-glyph{display:flex;box-sizing:border-box;width:var(--tool-inline-height);min-width:var(--tool-inline-height);max-width:var(--tool-inline-height);height:var(--tool-inline-height);min-height:var(--tool-inline-height);')
+  && detailStyles.includes('flex:0 0 var(--tool-inline-height);')
+  && toolUiTokens.includes('--tool-inline-height:44px;')
   && !detailStyles.includes('.bottom-sheet button.sheet-close')
   && detailStyles.includes('.bottom-sheet button.sheet-cancel{display:flex;box-sizing:border-box;width:100%!important')
   && detailStyles.includes('.protocol-page .mac-input-row button.mac-clear{')
@@ -979,4 +1071,4 @@ const duplicateGroupId = {
 assert.equal(resolveAppearanceGroupProtocol(duplicateGroupId, 'fixture-group').reason, 'unknown-appearance-group',
   '重复外观组 ID 必须拒绝自动解析')
 
-console.log('Control protocol checks passed (six empty automatic arrays; two independent manual references; strict auto-resolution gates).')
+console.log('Control protocol checks passed (six empty automatic arrays; three independent manual references; strict auto-resolution gates).')

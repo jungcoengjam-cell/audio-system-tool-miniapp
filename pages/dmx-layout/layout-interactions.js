@@ -1,6 +1,8 @@
 'use strict'
 
-const ADDRESS_DOMAIN_ORDER = { A: 0, B: 1, C: 2, D: 3 }
+const { findModelAliasMatches } = require('../../utils/model-alias-search')
+const { UNIVERSE_LABELS } = require('../../utils/dmx-address')
+
 const PLACEMENT_TAP_DELAY = 320
 
 function isGroundPosition(position) {
@@ -26,8 +28,10 @@ function showCrossTargetFeedback(wx, fixture, from) {
 }
 
 function fixtureAddressParts(fixture) {
-  const match = /^\s*([A-D])\s*0*(\d+)\s*$/i.exec(String(fixture && fixture.addressText || ''))
-  return match ? [ADDRESS_DOMAIN_ORDER[match[1].toUpperCase()], Number(match[2])] : null
+  const match = /^\s*([A-Z])\s*0*(\d+)\s*$/i.exec(String(fixture && fixture.addressText || ''))
+  if (!match) return null
+  const universeOrder = UNIVERSE_LABELS.indexOf(match[1].toUpperCase())
+  return universeOrder >= 0 ? [universeOrder, Number(match[2])] : null
 }
 
 function compareFixtureAddresses(a, b, fixtureSort) {
@@ -300,7 +304,7 @@ function createLayoutPlacementMethods(dependencies = {}) {
       const reverse = start > end
       wx.showModal({
         title: '按地址排序当前灯杆',
-        content: '仅重新排列 ' + entries.length + ' 台当前灯杆灯具，按 A、B、C、D 域及地址升序等距排列；其他灯位和地址不变。',
+        content: '仅重新排列 ' + entries.length + ' 台当前灯杆灯具，按 ' + UNIVERSE_LABELS.join('、') + ' 域及地址升序等距排列；其他灯位和地址不变。',
         confirmText: '确认排序',
         cancelText: '取消',
         success: (result) => {
@@ -1112,7 +1116,8 @@ function createLayoutLocateMethods(dependencies = {}) {
         return
       }
       const matches = this._fixtures.filter((fixture) => [fixture.addressText, fixture.groupName, fixture.fixtureModel, fixture.name]
-        .some((value) => String(value || '').toLocaleLowerCase().includes(keyword)))
+        .some((value) => String(value || '').toLocaleLowerCase().includes(keyword))
+        || findModelAliasMatches(fixture.fixtureModel, keyword).length > 0)
         .sort(fixtureSort)
         .map((fixture) => {
           const id = String(fixture.stableId)

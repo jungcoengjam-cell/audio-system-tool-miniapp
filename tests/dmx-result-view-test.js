@@ -99,6 +99,18 @@ const fullUniverse = plan([
 assert.strictEqual(build(fullUniverse).selectedUniverse.statusText, '已用满')
 assert.strictEqual(build(fullUniverse, { selectedUniverseLabel: 'D' }).selectedUniverse.statusText, '空闲')
 
+const sevenDomains = plan([
+  { name: 'seven-domain-limit', fixtureModel: 'custom-model', channelCount: 512, fixtureCount: 7 },
+])
+const gDomainView = build(sevenDomains, {
+  selectedUniverseLabel: 'G',
+  expandedUniverseLabels: new Set(['G']),
+})
+assert.deepStrictEqual(gDomainView.universes.map((universe) => universe.label), ['A', 'B', 'C', 'D', 'E', 'F', 'G'])
+assert.strictEqual(gDomainView.selectedUniverse.label, 'G')
+assert.strictEqual(gDomainView.selectedUniverse.fixtureCount, 1)
+assert.strictEqual(gDomainView.selectedUniverse.detailGroups[0].fixtures[0].addressText, 'G001')
+
 const many500 = plan([
   { name: 'many-500-1', fixtureModel: 'custom-model', channelCount: 1, fixtureCount: 200 },
   { name: 'many-500-2', fixtureModel: 'custom-model', channelCount: 1, fixtureCount: 200 },

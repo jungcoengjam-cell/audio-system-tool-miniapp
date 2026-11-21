@@ -1,0 +1,719 @@
+{
+  "title": "Audio wiring integrated solder photo provenance",
+  "createdOn": "2026-11-08",
+  "sourceRecords": [
+    "tmp/wiring-integrated-2026-11-08/integrated-photo-design.json",
+    "tmp/wiring-integrated-2026-11-08/generation-prompt-history.json",
+    "tmp/wiring-integrated-2026-11-08/prototype/integrated-assets/asset-candidates.json"
+  ],
+  "notes": [
+    "The six listed production PNGs are complete opened connector photos; their content rectangles cover the whole image.",
+    "For five assets, rawSource.path is the exact built-in ImageGen output path and rawSource.prompt is the adopted prompt recorded in generation-prompt-history.json.",
+    "The RCA source was an existing local photo and was rebuilt without ImageGen. Its archived source is the baseline copy recorded above.",
+    "Contact coordinates are illustrative visual anchors, not mechanical dimensions or tolerances.",
+    "The separate XLR female overview image remains available to endpoint selection cards; it is not a second photo in the wiring Canvas.",
+    "The ImageGen history records the exact generated output paths and adopted prompts, but does not record the local file path passed in as the reference-image input; the original reference URLs are listed per asset."
+  ],
+  "productionAssets": [
+    {
+      "connector": "tsMono",
+      "generation": "ts-open-full",
+      "productionPath": "pages/audio-wiring/assets/solder/ts-solder-open.png",
+      "originalReference": {
+        "description": "Switchcraft SW380 reference photo",
+        "url": "https://www.markertek.com/productImage/alternate-1/hi-res/SW380.JPG"
+      },
+      "rawSource": {
+        "type": "built-in ImageGen generated output",
+        "path": "C:\\Users\\wxx\\.codex\\generated_images\\01a1b66b-768e-7d31-8078-22ce2373f3b5\\exec-47795b5a-3da7-477e-9697-fc4c681c4475.png",
+        "dimensions": {
+          "width": 1024,
+          "height": 1536,
+          "colorType": 6,
+          "bytes": 1399346,
+          "chunks": [
+            "IHDR",
+            "caBX",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IEND"
+          ]
+        },
+        "generationName": "ts-open-full",
+        "adopted": true,
+        "prompt": "Use case: background-extraction / precise-object-edit. Asset type: transparent technical product cutout for an audio wiring diagram. The provided photograph is the sole edit target and physical geometry reference. Isolate the ONE COMPLETE opened 6.35 mm two-contact TS MALE CABLE PLUG from the photograph, including its entire long male insertion shaft and tip, the single black insulating band, threaded base, white insulating piece, and BOTH actual rear solder lugs and their two holes. Remove only the detached outer sleeve at upper right and the white backdrop. Unlike a solder-lug-only crop, keep the tip-to-rear assembly as ONE physically continuous object. Rotate the entire original plug as a rigid unit so its long insertion shaft points DOWN and exposed rear solder lugs are ABOVE; do not mirror. Preserve the original exact metal shapes, two hole locations relative to the plug, and correct physical connections: the upper shorter lug in the original is T and insulated from the barrel; the other longer lower lug is S and continuous with the barrel. Do not add contacts or invent a different jack. Real photographic materials, crisp contours, full object with 5-8 percent transparent margin, no clipping. No extra view, inset, magnification circle, annotation, label, dot, wire, number, text, logo, duplicate plug or detached component. True transparent alpha background. Complete recognizable opened male plug, not a panel jack and not an enlarged local terminal fragment.",
+        "referenceImageInputPath": null
+      },
+      "processing": {
+        "alphaBounds": {
+          "x": 338,
+          "y": 26,
+          "width": 348,
+          "height": 1465
+        },
+        "cropWithMargin": {
+          "x": 301,
+          "y": 0,
+          "width": 422,
+          "height": 1528
+        },
+        "alphaCropThreshold": 8,
+        "transparentMarginPercent": 0.025,
+        "outputDimensions": {
+          "width": 141,
+          "height": 512
+        },
+        "aspectPreserved": true,
+        "orientation": "preserved",
+        "sourcePolicy": "crop alpha bounds with margin and preserve complete connector object",
+        "indexedColorType": 3,
+        "paletteColors": 128,
+        "transparencyTable": true,
+        "transformedContactPixels": {
+          "T": {
+            "x": 48.586,
+            "y": 54.283
+          },
+          "S": {
+            "x": 99.853,
+            "y": 26.136
+          }
+        },
+        "transparencyTablePresent": true
+      },
+      "productionFile": {
+        "width": 141,
+        "height": 512,
+        "colorType": 3,
+        "bytes": 21816,
+        "chunks": [
+          "IHDR",
+          "PLTE",
+          "tRNS",
+          "IDAT",
+          "IEND"
+        ],
+        "sha256": "98da6c299a1b3fea460c8d246188336dfa2b72248017ff3d9835f54675e1be31",
+        "byteIdenticalToCandidate": true,
+        "candidatePath": "tmp/wiring-integrated-2026-11-08/prototype/integrated-assets/tsmono-h512-indexed.png",
+        "fullImageContentRect": {
+          "x": 0,
+          "y": 0,
+          "width": 141,
+          "height": 512
+        }
+      }
+    },
+    {
+      "connector": "trsBalanced",
+      "generation": "trs635-open-full",
+      "productionPath": "pages/audio-wiring/assets/solder/trs635-rear.png",
+      "originalReference": {
+        "description": "6.35 mm TRS reference photo from the connector lesson",
+        "url": "https://l3project.com/img/TRS-min.png",
+        "contextUrl": "https://l3project.com/kizai/2549/"
+      },
+      "rawSource": {
+        "type": "built-in ImageGen generated output",
+        "path": "C:\\Users\\wxx\\.codex\\generated_images\\01a1b66b-768e-7d31-8078-22ce2373f3b5\\exec-5f36ccec-48d8-45a9-a8cd-818b73041341.png",
+        "dimensions": {
+          "width": 1024,
+          "height": 1536,
+          "colorType": 6,
+          "bytes": 1350647,
+          "chunks": [
+            "IHDR",
+            "caBX",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IEND"
+          ]
+        },
+        "generationName": "trs635-open-full",
+        "adopted": true,
+        "prompt": "Use case: background-extraction / precise-object-edit. Asset type: transparent complete opened audio connector photograph for a wiring diagram. Use the supplied image as the sole edit target and physical geometry reference. Extract ONLY the ONE COMPLETE 6.35 mm three-contact TRS MALE PLUG visible in the upper-right of the supplied photograph. Keep its entire male tip, BOTH black insulating bands, all three T/R/S shaft sections, threaded base, original black insulator, both small side solder tabs, and long sleeve/ground clamp. The mating shaft and rear solder assembly MUST stay physically joined as ONE complete opened plug. Remove every other element: white backdrop, loose wire/cable, Japanese or English labels, dotted leaders and callouts; reconstruct only tiny spots previously covered by callouts. Rotate this COMPLETE plug exactly 180 degrees in the image plane as a rigid unit, so the male insertion tip points DOWN and exposed solder tabs are ABOVE. DO NOT mirror or rearrange the lugs. In the original reference T is the small LEFT tab, R is the small RIGHT tab, S is the low long ground clamp; after the whole 180 degree rotation those relationships rotate with the plug, never swap electrical identities. Preserve the actual photographed relative geometry and exactly three terminals. No additional view, inset, zoom circle, wire, text, label, number, logo, duplicate part or detached shell. Sharp realistic catalog cutout; whole object fully in frame with 5-8 percent transparent margin. True transparent alpha background. Do not crop away the long male insertion shaft or turn this into a jack socket.",
+        "referenceImageInputPath": null
+      },
+      "processing": {
+        "alphaBounds": {
+          "x": 376,
+          "y": 64,
+          "width": 273,
+          "height": 1407
+        },
+        "cropWithMargin": {
+          "x": 340,
+          "y": 28,
+          "width": 345,
+          "height": 1479
+        },
+        "alphaCropThreshold": 8,
+        "transparentMarginPercent": 0.025,
+        "outputDimensions": {
+          "width": 119,
+          "height": 512
+        },
+        "aspectPreserved": true,
+        "orientation": "preserved",
+        "sourcePolicy": "crop alpha bounds with margin and preserve complete connector object",
+        "indexedColorType": 3,
+        "paletteColors": 128,
+        "transparencyTable": true,
+        "transformedContactPixels": {
+          "T": {
+            "x": 81.698,
+            "y": 144.011
+          },
+          "R": {
+            "x": 37.734,
+            "y": 161.32
+          },
+          "S": {
+            "x": 52.273,
+            "y": 28.387
+          }
+        },
+        "transparencyTablePresent": true
+      },
+      "productionFile": {
+        "width": 119,
+        "height": 512,
+        "colorType": 3,
+        "bytes": 19628,
+        "chunks": [
+          "IHDR",
+          "PLTE",
+          "tRNS",
+          "IDAT",
+          "IEND"
+        ],
+        "sha256": "e1e07505a8c4099565d2d4ae9b4a43aee370659127d3987f24d9dbb16013a35b",
+        "byteIdenticalToCandidate": true,
+        "candidatePath": "tmp/wiring-integrated-2026-11-08/prototype/integrated-assets/trsbalanced-h512-indexed.png",
+        "fullImageContentRect": {
+          "x": 0,
+          "y": 0,
+          "width": 119,
+          "height": 512
+        }
+      }
+    },
+    {
+      "connector": "stereo35",
+      "generation": "stereo35-open-full",
+      "productionPath": "pages/audio-wiring/assets/solder/stereo35-rear.png",
+      "originalReference": {
+        "description": "Fancasee 3.5 mm TRS reference photo",
+        "url": "https://m.media-amazon.com/images/I/61synHZBo-L._SL1000_.jpg"
+      },
+      "rawSource": {
+        "type": "built-in ImageGen generated output",
+        "path": "C:\\Users\\wxx\\.codex\\generated_images\\01a1b66b-768e-7d31-8078-22ce2373f3b5\\exec-11968e39-28cd-4eb0-b76d-aa7b030fca96.png",
+        "dimensions": {
+          "width": 1024,
+          "height": 1536,
+          "colorType": 6,
+          "bytes": 1508217,
+          "chunks": [
+            "IHDR",
+            "caBX",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IEND"
+          ]
+        },
+        "generationName": "stereo35-open-full",
+        "adopted": true,
+        "prompt": "Use case: background-extraction / precise-object-edit. Asset type: transparent COMPLETE opened 3.5 mm TRS male plug photograph for an audio wiring diagram. The supplied real photograph is the sole edit target and geometry reference. Extract the ONE central COMPLETE metal plug assembly with the external sleeve removed: include the upper rear ground/sleeve lug, the small left ring lug, the small central tip solder tab and white insulator, threaded base, the ENTIRE downward male insertion shaft, BOTH black insulating rings, and male tip. Keep the original orientation and actual proportions, with solder lugs at TOP and insertion tip DOWN. Remove the separate black outer cover at left, white background, all blue dots, all blue callout lines and all text/labels/header. Reconstruct only tiny metal regions hidden by callout dots, following visible adjacent real metal. Preserve the actual soldering points: S is the top long ground sleeve contact, R the small left mid-height tab, T the small central lower tab on the white insulator. Do not mirror, redesign, move terminals, add any lug, or cut away the insertion tip. Show ONE physically continuous complete opened plug with transparent margin; not a diagram with separate overview and detail, not an inset, not only the rear half. Realistic sharp photographic cutout matching the reference. No wire, label, letter, number, logo, detached part, duplicate view or annotation. True transparent alpha background.",
+        "referenceImageInputPath": null
+      },
+      "processing": {
+        "alphaBounds": {
+          "x": 339,
+          "y": 47,
+          "width": 343,
+          "height": 1441
+        },
+        "cropWithMargin": {
+          "x": 302,
+          "y": 10,
+          "width": 417,
+          "height": 1515
+        },
+        "alphaCropThreshold": 8,
+        "transparentMarginPercent": 0.025,
+        "outputDimensions": {
+          "width": 141,
+          "height": 512
+        },
+        "aspectPreserved": true,
+        "orientation": "preserved",
+        "sourcePolicy": "crop alpha bounds with margin and preserve complete connector object",
+        "indexedColorType": 3,
+        "paletteColors": 128,
+        "transparencyTable": true,
+        "transformedContactPixels": {
+          "T": {
+            "x": 67.591,
+            "y": 182.157
+          },
+          "R": {
+            "x": 29.74,
+            "y": 143.292
+          },
+          "S": {
+            "x": 74.688,
+            "y": 58.466
+          }
+        },
+        "transparencyTablePresent": true
+      },
+      "productionFile": {
+        "width": 141,
+        "height": 512,
+        "colorType": 3,
+        "bytes": 22282,
+        "chunks": [
+          "IHDR",
+          "PLTE",
+          "tRNS",
+          "IDAT",
+          "IEND"
+        ],
+        "sha256": "67fa2e84236de6e0674817d5def3a73fbc96b62618201c847754cd214ec3c41b",
+        "byteIdenticalToCandidate": true,
+        "candidatePath": "tmp/wiring-integrated-2026-11-08/prototype/integrated-assets/stereo35-h512-indexed.png",
+        "fullImageContentRect": {
+          "x": 0,
+          "y": 0,
+          "width": 141,
+          "height": 512
+        }
+      }
+    },
+    {
+      "connector": "xlrFemale",
+      "generation": "xlr-female-open-rear-corrected",
+      "productionPath": "pages/audio-wiring/assets/solder/xlr-female-rear.png",
+      "originalReference": {
+        "description": "XLR reference photo",
+        "url": "https://img.alicdn.com/i2/3991554829/O1CN01Fv9jBR1lXjOVcMmt9_!!3991554829.jpg"
+      },
+      "rawSource": {
+        "type": "built-in ImageGen generated output",
+        "path": "C:\\Users\\wxx\\.codex\\generated_images\\01a1b66b-768e-7d31-8078-22ce2373f3b5\\exec-ed14507d-59d8-4e2f-b8a9-ed1dd8a2e68d.png",
+        "dimensions": {
+          "width": 1024,
+          "height": 1536,
+          "colorType": 6,
+          "bytes": 2262915,
+          "chunks": [
+            "IHDR",
+            "caBX",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IEND"
+          ]
+        },
+        "generationName": "xlr-female-open-rear-corrected",
+        "adopted": true,
+        "prompt": "Edit this supplied connector image to correct the physically impossible simultaneous view of its two opposite ends. Preserve the TOP real rear solder insert, its upright ground tab, all EXACTLY THREE existing gold solder cups and their current arrangement UNCHANGED. Keep a complete recognizable opened silver XLR female cable-connector body physically attached behind that insert. Change ONLY the lower housing/view: the long metal barrel extends AWAY from the viewer behind and below the exposed solder insert. The far mating opening is hidden by the barrel wall from this rear viewing angle; REMOVE the second black three-hole front face at the bottom entirely. Show a continuous curved silver exterior barrel and occluded far lip, NOT a cap, and never add any second contact array or terminal. One real coherent rear three-quarter view of ONE opened connector, not a double-ended adapter, no second plug, no collage, no inset or exploded parts. The side female latch remains recognizable on the shell. The rear insert is the nearest visible end; the rest of the actual barrel recedes behind it. Preserve connector proportions and silver/black materials. No extra details, wires, text or labels. True transparent background with NO halo, gray glow, haze, vignette, shadow or studio backdrop. All pixels outside the physical connector must have alpha zero.",
+        "referenceImageInputPath": null
+      },
+      "processing": {
+        "alphaBounds": {
+          "x": 187,
+          "y": 64,
+          "width": 646,
+          "height": 1447
+        },
+        "cropWithMargin": {
+          "x": 150,
+          "y": 27,
+          "width": 720,
+          "height": 1509
+        },
+        "alphaCropThreshold": 8,
+        "transparentMarginPercent": 0.025,
+        "outputDimensions": {
+          "width": 244,
+          "height": 512
+        },
+        "aspectPreserved": true,
+        "orientation": "preserved",
+        "sourcePolicy": "crop alpha bounds with margin and preserve complete connector object",
+        "indexedColorType": 3,
+        "paletteColors": 128,
+        "transparencyTable": true,
+        "transformedContactPixels": {
+          "1": {
+            "x": 63.449,
+            "y": 148.952
+          },
+          "2": {
+            "x": 179.149,
+            "y": 148.273
+          },
+          "3": {
+            "x": 121.808,
+            "y": 202.9
+          }
+        },
+        "transparencyTablePresent": true
+      },
+      "productionFile": {
+        "width": 244,
+        "height": 512,
+        "colorType": 3,
+        "bytes": 45105,
+        "chunks": [
+          "IHDR",
+          "PLTE",
+          "tRNS",
+          "IDAT",
+          "IEND"
+        ],
+        "sha256": "692a77ecf23b91ae9a0a023771f893fe5d616e7ceedbb6e8140f882ad171c9d9",
+        "byteIdenticalToCandidate": true,
+        "candidatePath": "tmp/wiring-integrated-2026-11-08/prototype/integrated-assets/xlrbalanced-female-h512-indexed.png",
+        "fullImageContentRect": {
+          "x": 0,
+          "y": 0,
+          "width": 244,
+          "height": 512
+        }
+      }
+    },
+    {
+      "connector": "xlrMale",
+      "generation": "xlr-male-open-rear-corrected",
+      "productionPath": "pages/audio-wiring/assets/solder/xlr-male-rear.png",
+      "originalReference": {
+        "description": "XLR reference photo",
+        "url": "https://img.alicdn.com/i2/3991554829/O1CN01Fv9jBR1lXjOVcMmt9_!!3991554829.jpg"
+      },
+      "rawSource": {
+        "type": "built-in ImageGen generated output",
+        "path": "C:\\Users\\wxx\\.codex\\generated_images\\01a1b66b-768e-7d31-8078-22ce2373f3b5\\exec-bf4a54a0-add1-45f0-a1d4-57cf2592c1c2.png",
+        "dimensions": {
+          "width": 1024,
+          "height": 1536,
+          "colorType": 6,
+          "bytes": 2228329,
+          "chunks": [
+            "IHDR",
+            "caBX",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IEND"
+          ]
+        },
+        "generationName": "xlr-male-open-rear-corrected",
+        "adopted": true,
+        "prompt": "Edit this supplied connector image to correct the physically impossible simultaneous view of its two opposite ends. Preserve the TOP actual rear solder insert, its upright key/latch structure, all EXACTLY THREE existing gold solder cups and their current arrangement UNCHANGED. Keep a complete recognizable opened silver XLR male cable-connector body physically attached behind the insert. Change ONLY the lower housing/view: the long metal barrel extends AWAY from the viewer behind and below the exposed solder insert. The far mating opening and its three male pins are hidden by the barrel wall from this rear viewing angle; REMOVE the entire second black three-pin front face at the bottom. Show a continuous curved silver exterior barrel and occluded far lip, NOT a closed end cap, and never add any second contact array or terminal. ONE coherent rear three-quarter view of ONE opened cable plug, not a double-ended adapter, not two plugs joined, not a collage, not an inset or exploded parts. The exposed rear insert is the nearest visible end and the remaining cylindrical housing recedes behind it. Preserve relative shapes of all three solder cups and existing metal/black materials; do not mirror the insert. No wire, label, text, number or invented contact. True transparent background, NO halo/glow/haze/vignette/cast shadow/backdrop. Pixels outside the physical connector must have alpha zero.",
+        "referenceImageInputPath": null
+      },
+      "processing": {
+        "alphaBounds": {
+          "x": 153,
+          "y": 42,
+          "width": 792,
+          "height": 1460
+        },
+        "cropWithMargin": {
+          "x": 116,
+          "y": 5,
+          "width": 866,
+          "height": 1531
+        },
+        "alphaCropThreshold": 8,
+        "transparentMarginPercent": 0.025,
+        "outputDimensions": {
+          "width": 290,
+          "height": 512
+        },
+        "aspectPreserved": true,
+        "orientation": "preserved",
+        "sourcePolicy": "crop alpha bounds with margin and preserve complete connector object",
+        "indexedColorType": 3,
+        "paletteColors": 128,
+        "transparencyTable": true,
+        "transformedContactPixels": {
+          "1": {
+            "x": 180.922,
+            "y": 123.736
+          },
+          "2": {
+            "x": 65.212,
+            "y": 115.376
+          },
+          "3": {
+            "x": 120.392,
+            "y": 172.227
+          }
+        },
+        "transparencyTablePresent": true
+      },
+      "productionFile": {
+        "width": 290,
+        "height": 512,
+        "colorType": 3,
+        "bytes": 53158,
+        "chunks": [
+          "IHDR",
+          "PLTE",
+          "tRNS",
+          "IDAT",
+          "IEND"
+        ],
+        "sha256": "8067b29d5ce08d559d11465536c24d231cc98e821ff5a837a795b09dadebb8ba",
+        "byteIdenticalToCandidate": true,
+        "candidatePath": "tmp/wiring-integrated-2026-11-08/prototype/integrated-assets/xlrbalanced-male-h512-indexed.png",
+        "fullImageContentRect": {
+          "x": 0,
+          "y": 0,
+          "width": 290,
+          "height": 512
+        }
+      }
+    },
+    {
+      "connector": "rcaMono",
+      "generation": null,
+      "productionPath": "pages/audio-wiring/assets/solder/rca-rear.png",
+      "originalReference": {
+        "description": "Neutrik/Rean NYS373-2 reference photo",
+        "url": "https://scemosystems.fi/image/catalog/products/electric_components/electric_connectors_%2C_adaptors/neutrik_rean_nys373-2_red_male_rca_plug_cinch_plug_with_solder_connection_3.JPG"
+      },
+      "rawSource": {
+        "type": "existing production photograph before this replacement",
+        "recordedSourcePath": "/pages/audio-wiring/assets/solder/rca-rear.png",
+        "archivedRawPath": "tmp/wiring-integrated-2026-11-08/baseline-2026-11-08/photos/solder/rca-rear.png",
+        "dimensions": {
+          "width": 384,
+          "height": 384,
+          "colorType": 6,
+          "bytes": 79641,
+          "chunks": [
+            "IHDR",
+            "sBIT",
+            "sRGB",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IDAT",
+            "IEND"
+          ]
+        },
+        "imageGenPrompt": null,
+        "note": "RCA was reprocessed from the existing complete plug image; no new ImageGen prompt was used for this asset."
+      },
+      "processing": {
+        "alphaBounds": {
+          "x": 33,
+          "y": 112,
+          "width": 318,
+          "height": 160
+        },
+        "cropWithMargin": {
+          "x": 25,
+          "y": 104,
+          "width": 334,
+          "height": 176
+        },
+        "alphaCropThreshold": 8,
+        "transparentMarginPercent": 0.025,
+        "outputDimensions": {
+          "width": 512,
+          "height": 972
+        },
+        "aspectPreserved": true,
+        "orientation": "rotate-ccw",
+        "sourcePolicy": "reuse complete existing image alpha bounds including front insertion pin; ignore old cropped contentRect",
+        "indexedColorType": 3,
+        "paletteColors": 128,
+        "transparencyTable": true,
+        "transformedContactPixels": {
+          "core": {
+            "x": 302.115,
+            "y": 280.844
+          },
+          "shell": {
+            "x": 373.673,
+            "y": 145.679
+          }
+        },
+        "transparencyTablePresent": true
+      },
+      "productionFile": {
+        "width": 512,
+        "height": 972,
+        "colorType": 3,
+        "bytes": 71372,
+        "chunks": [
+          "IHDR",
+          "PLTE",
+          "tRNS",
+          "IDAT",
+          "IEND"
+        ],
+        "sha256": "92c32f8564e758228e2ba7fe4db723471b62227a7ac86240f550b41ee61ab481",
+        "byteIdenticalToCandidate": true,
+        "candidatePath": "tmp/wiring-integrated-2026-11-08/prototype/integrated-assets/rca-rear-full-h512-indexed.png",
+        "fullImageContentRect": {
+          "x": 0,
+          "y": 0,
+          "width": 512,
+          "height": 972
+        }
+      }
+    }
+  ],
+  "unchangedTerminalAsset": {
+    "productionPath": "pages/audio-wiring/assets/terminal.png",
+    "status": "unchanged in this revision",
+    "dimensions": {
+      "width": 256,
+      "height": 256
+    },
+    "bytes": 23740,
+    "colorType": 3
+  },
+  "verification": {
+    "pngHeaderAndChunkMetadataReadFromProductionFiles": true,
+    "everyProductionFileByteMatchesItsRecordedCandidate": true,
+    "appRenderingAndRoutingStatus": "historical parallel-mapping build passed technical checks but was rejected by the user; direct-wiring integration is tracked in audio-wiring-integrated-2026-11-08.md",
+    "nativeWeChatDeviceTest": "not run in this round"
+  }
+}

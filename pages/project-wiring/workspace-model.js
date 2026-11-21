@@ -1,4 +1,4 @@
-const { CONNECTOR_OPTIONS, DEVICE_OPTIONS, MAX_BATCH, normalizeSchedule } = require('../../utils/project-wiring')
+const { CONNECTOR_OPTIONS, DEVICE_OPTIONS, MAX_BATCH, endpoint, normalizeSchedule } = require('../../utils/project-wiring')
 const { isPerformanceMeasurementEnabled, startMeasurement } = require('../../utils/performance')
 
 const connectorLabels = new Map(CONNECTOR_OPTIONS.map(({ id, label }) => [id, label]))
@@ -6,9 +6,27 @@ const deviceLabels = new Map(DEVICE_OPTIONS.map(({ id, label }) => [id, label]))
 
 function circleLabel(line, schedule) {
   if (schedule && Array.isArray(schedule.lines)) {
-    const index = line && line.id ? schedule.lines.findIndex((item) => item.id === line.id) : -1
-    if (index >= 0) return String(index + 1)
-    if (!line || !line.id) return String(schedule.lines.length + 1)
+    const storedLine = line && line.id
+      ? schedule.lines.find((item) => item.id === line.id)
+      : null
+    const target = storedLine || line
+    if (target) {
+      const targetRoute = routeKeys(target)
+      const directionLines = new Map()
+      const sourceLines = storedLine ? schedule.lines : [...schedule.lines, target]
+      sourceLines.forEach((item) => {
+        const route = routeKeys(item)
+        if (route.groupKey !== targetRoute.groupKey) return
+        if (!directionLines.has(route.directionKey)) directionLines.set(route.directionKey, [])
+        directionLines.get(route.directionKey).push(item)
+      })
+      let offset = 0
+      for (const items of directionLines.values()) {
+        const targetIndex = items.indexOf(target)
+        if (targetIndex >= 0) return String(offset + targetIndex + 1)
+        offset += items.length
+      }
+    }
   }
   const displayNumber = line && Number(line.displayNumber)
   if (Number.isSafeInteger(displayNumber) && displayNumber > 0) return String(displayNumber)
@@ -65,9 +83,31 @@ function projectDeviceNames(sourceDevices) {
   return projected
 }
 
-function endpointKey(line, side) {
+function deviceIdentityKey(line, side) {
   const id = line[`${side}DeviceId`]
   return id ? `device:${id}` : `legacy:${JSON.stringify(line[`${side}Device`] || '')}`
+}
+
+function endpointKey(line, side) {
+  const deviceKey = deviceIdentityKey(line, side)
+  const location = String(line[`${side}Location`] || '').trim()
+  return location ? JSON.stringify(['location', location, deviceKey]) : deviceKey
+}
+
+function routeKeys(line) {
+  const fromKey = endpointKey(line, 'from')
+  const toKey = endpointKey(line, 'to')
+  const fromLocation = String(line.fromLocation || '').trim()
+  const toLocation = String(line.toLocation || '').trim()
+  return {
+    fromKey,
+    toKey,
+    fromLocation,
+    toLocation,
+    directionKey: JSON.stringify([fromKey, toKey]),
+    groupKey: JSON.stringify([fromKey, toKey].sort()),
+    locationGroupKey: JSON.stringify([fromLocation, toLocation].sort()),
+  }
 }
 
 function buildWorkspace(value) {
@@ -90,15 +130,16 @@ function buildWorkspace(value) {
   const deviceMap = new Map(devices.map((device) => [device.key, device]))
   schedule.lines.forEach((line) => {
     for (const side of ['from', 'to']) {
-      const key = endpointKey(line, side)
-      if (!deviceMap.has(key)) {
+      const key = deviceIdentityKey(line, side)
+      const name = String(line[`${side}Device`] || '').trim()
+      if (!deviceMap.has(key) && !line[`${side}DeviceId`] && name) {
         const device = {
           id: key,
           key,
-          name: line[`${side}Device`] || '待补',
+          name,
           type: 'custom',
           typeLabel: '自定义',
-          legacy: !line[`${side}DeviceId`],
+          legacy: true,
           lineCount: 0,
           sourceLineCount: 0,
         }
@@ -107,53 +148,139 @@ function buildWorkspace(value) {
       }
     }
   })
-  const groups = []
-  const groupMap = new Map()
-  const lines = schedule.lines.map((line, index) => {
-    const fromKey = endpointKey(line, 'from')
-    const toKey = endpointKey(line, 'to')
-    const from = deviceMap.get(fromKey)
-    const to = deviceMap.get(toKey)
-    from.sourceLineCount += 1
-    new Set([fromKey, toKey]).forEach((key) => { deviceMap.get(key).lineCount += 1 })
-    const item = {
-      ...line,
-      displayNumber: index + 1,
-      circleLabel: String(index + 1),
-      fromDeviceName: from.name,
-      toDeviceName: to.name,
-      connectorALabel: connectorLabels.get(line.connectorA) || line.connectorA || '待补',
-      connectorBLabel: connectorLabels.get(line.connectorB) || line.connectorB || '待补',
-      specLabel: line.spec || '待补',
-      lengthLabel: line.lengthText ? `${line.lengthText} m` : '待补',
-    }
-    const key = JSON.stringify([fromKey, toKey])
-    if (!groupMap.has(key)) {
-      const group = {
-        key, id: key,
-        fromDevice: from.name,
-        toDevice: to.name,
-        fromDeviceId: from.id,
-        toDeviceId: to.id,
-        lines: [],
-        lineCount: 0,
-      }
-      groups.push(group)
-      groupMap.set(key, group)
-    }
-    const group = groupMap.get(key)
-    group.lines.push(item)
-    group.lineCount += 1
-    return item
-  })
   const nameCounts = new Map()
   devices.forEach(({ name }) => nameCounts.set(name, (nameCounts.get(name) || 0) + 1))
   devices.forEach((device, index) => {
     device.choiceLabel = nameCounts.get(device.name) > 1 ? `${device.name} · ${index + 1}` : device.name
   })
-  const result = { devices, groups, lines, lineCount: lines.length }
-  if (finishModel) finishModel({ lineCount: lines.length, deviceCount: devices.length, groupCount: groups.length })
-  if (finishTotal) finishTotal({ lineCount: lines.length, deviceCount: devices.length, groupCount: groups.length })
+  const groups = []
+  const groupMap = new Map()
+  const lines = schedule.lines.map((line) => {
+    const { fromKey, toKey, directionKey, groupKey, fromLocation, toLocation, locationGroupKey } = routeKeys(line)
+    const fromDeviceKey = deviceIdentityKey(line, 'from')
+    const toDeviceKey = deviceIdentityKey(line, 'to')
+    const from = deviceMap.get(fromDeviceKey) || {
+      id: String(line.fromDeviceId || ''), name: String(line.fromDevice || '').trim(),
+    }
+    const to = deviceMap.get(toDeviceKey) || {
+      id: String(line.toDeviceId || ''), name: String(line.toDevice || '').trim(),
+    }
+    if (deviceMap.has(fromDeviceKey)) deviceMap.get(fromDeviceKey).sourceLineCount += 1
+    new Set([fromDeviceKey, toDeviceKey]).forEach((key) => {
+      const device = deviceMap.get(key)
+      if (device) device.lineCount += 1
+    })
+    const fromDeviceLabel = from.choiceLabel || from.name
+    const toDeviceLabel = to.choiceLabel || to.name
+    const item = {
+      ...line,
+      displayNumber: 0,
+      circleLabel: '',
+      directionKey,
+      fromLocation,
+      toLocation,
+      fromDeviceName: from.name,
+      toDeviceName: to.name,
+      fromDeviceLabel,
+      toDeviceLabel,
+      fromEndpointLabel: endpoint(fromLocation, fromDeviceLabel, ''),
+      toEndpointLabel: endpoint(toLocation, toDeviceLabel, ''),
+      connectorALabel: connectorLabels.get(line.connectorA) || line.connectorA || '待补',
+      connectorBLabel: connectorLabels.get(line.connectorB) || line.connectorB || '待补',
+      specLabel: line.spec || '待补',
+      lengthLabel: line.lengthText ? `${line.lengthText} m` : '待补',
+    }
+    const key = groupKey
+    if (!groupMap.has(key)) {
+      const group = {
+        key, id: key,
+        locationGroupKey,
+        fromLocation,
+        toLocation,
+        fromDevice: from.name,
+        toDevice: to.name,
+        fromDeviceName: from.name,
+        toDeviceName: to.name,
+        fromDeviceLabel,
+        toDeviceLabel,
+        fromEndpointLabel: endpoint(fromLocation, fromDeviceLabel, ''),
+        toEndpointLabel: endpoint(toLocation, toDeviceLabel, ''),
+        fromDeviceId: from.id,
+        toDeviceId: to.id,
+        lines: [],
+        lineCount: 0,
+        directions: [],
+      }
+      groups.push(group)
+      groupMap.set(key, group)
+    }
+    const group = groupMap.get(key)
+    let direction = group.directions.find((candidate) => candidate.key === directionKey)
+    if (!direction) {
+      direction = {
+        key: directionKey,
+        fromLocation,
+        toLocation,
+        fromDevice: from.name,
+        toDevice: to.name,
+        fromDeviceName: from.name,
+        toDeviceName: to.name,
+        fromDeviceLabel,
+        toDeviceLabel,
+        fromEndpointLabel: endpoint(fromLocation, fromDeviceLabel, ''),
+        toEndpointLabel: endpoint(toLocation, toDeviceLabel, ''),
+        fromDeviceId: from.id,
+        toDeviceId: to.id,
+        lines: [],
+      }
+      group.directions.push(direction)
+    }
+    direction.lines.push(item)
+    group.lineCount += 1
+    return item
+  })
+  groups.forEach((group) => {
+    let displayNumber = 1
+    group.directions.forEach((direction) => {
+      direction.lines.forEach((line) => {
+        line.displayNumber = displayNumber
+        line.circleLabel = String(displayNumber)
+        displayNumber += 1
+      })
+    })
+    group.bidirectional = group.directions.length > 1
+    group.lines = group.directions.flatMap((direction) => direction.lines)
+  })
+  const locationGroups = []
+  const locationGroupMap = new Map()
+  groups.forEach((group) => {
+    let locationGroup = locationGroupMap.get(group.locationGroupKey)
+    if (!locationGroup) {
+      locationGroup = {
+        key: group.locationGroupKey,
+        fromLocation: group.fromLocation,
+        toLocation: group.toLocation,
+        lineCount: 0,
+        groups: [],
+        locationDirections: new Set(),
+      }
+      locationGroupMap.set(group.locationGroupKey, locationGroup)
+      locationGroups.push(locationGroup)
+    }
+    locationGroup.groups.push(group)
+    locationGroup.lineCount += group.lineCount
+    group.directions.forEach((direction) => {
+      locationGroup.locationDirections.add(JSON.stringify([direction.fromLocation, direction.toLocation]))
+    })
+  })
+  locationGroups.forEach((group) => {
+    group.bidirectional = group.locationDirections.size > 1
+    delete group.locationDirections
+  })
+  const orderedGroups = locationGroups.flatMap((group) => group.groups)
+  const result = { devices, groups: orderedGroups, locationGroups, lines, lineCount: lines.length }
+  if (finishModel) finishModel({ lineCount: lines.length, deviceCount: devices.length, groupCount: orderedGroups.length })
+  if (finishTotal) finishTotal({ lineCount: lines.length, deviceCount: devices.length, groupCount: orderedGroups.length })
   return result
 }
 

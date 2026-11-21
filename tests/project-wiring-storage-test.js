@@ -81,6 +81,65 @@ assert.equal(storage.get(ACTIVE_KEY), 'p2', '布线保存不看写入或变更 a
 assert.equal(storage.get(SCHEMA_KEY), 3, '布线不引入新的schema版本')
 assert.equal(Object.hasOwn(records.MODULES, 'projectWiring'), false)
 
+records = reset([project('p1', '位置项目')])
+const locationBase = records.saveProjectWiring('p1', { type: 'upsert', line: baseLine }, 0)
+assert.equal(locationBase.ok, true)
+const locationLineId = locationBase.schedule.lines[0].id
+const setLocations = records.saveProjectWiring('p1', { type: 'upsert', line: {
+  id: locationLineId, fromDevice: '', fromLocation: ' 桌面 ', toLocation: '机柜',
+} }, 1)
+assert.equal(setLocations.ok, true, setLocations.error)
+assert.equal(setLocations.schedule.lines[0].fromDevice, '')
+assert.equal(setLocations.schedule.lines[0].fromLocation, '桌面')
+assert.equal(records.getProjectWiring('p1').schedule.lines[0].toLocation, '机柜', 'location survives close/reopen')
+const omittedLocationEdit = records.saveProjectWiring('p1', { type: 'upsert', line: {
+  id: locationLineId, purpose: '位置数据保留',
+} }, 2)
+assert.equal(omittedLocationEdit.ok, true)
+assert.equal(omittedLocationEdit.schedule.lines[0].fromLocation, '桌面', 'omitted location remains on edit')
+const staleLocationWrite = records.saveProjectWiring('p1', { type: 'upsert', line: {
+  id: locationLineId, fromLocation: '旧位置',
+} }, 2)
+assert.equal(staleLocationWrite.ok, false, 'location edits retain revision conflict protection')
+assert.equal(records.getProjectWiring('p1').schedule.lines[0].fromLocation, '桌面')
+const clearLocation = records.saveProjectWiring('p1', { type: 'upsert', line: {
+  id: locationLineId, fromLocation: '',
+} }, 3)
+assert.equal(clearLocation.ok, true)
+assert.equal(clearLocation.schedule.lines[0].fromLocation, '')
+assert.equal(clearLocation.schedule.lines[0].toLocation, '机柜')
+const duplicateLocation = records.saveProjectWiring('p1', { type: 'duplicate', id: locationLineId }, 4)
+assert.equal(duplicateLocation.ok, true)
+assert.equal(duplicateLocation.schedule.lines[1].fromLocation, '')
+assert.equal(duplicateLocation.schedule.lines[1].toLocation, '机柜', 'duplicate retains endpoint positions')
+const beforeLocationFailure = clone(storage.get(PROJECTS_KEY))
+writeFailureKey = PROJECTS_KEY
+const failedLocationWrite = records.saveProjectWiring('p1', { type: 'upsert', line: {
+  id: locationLineId, toLocation: '新机柜',
+} }, 5)
+assert.equal(failedLocationWrite.ok, false)
+assert.deepEqual(storage.get(PROJECTS_KEY), beforeLocationFailure, 'failed position write remains atomic')
+writeFailureKey = ''
+
+records = reset([project('p1', '旧位置项目', { wiringSchedule: {
+  version: 1, revision: 7, nextNumber: 2,
+  lines: [{ ...baseLine, id: 'legacy-location', code: 'A001' }],
+} })])
+const beforeLegacyLocationRead = clone(storage.get(PROJECTS_KEY))
+const legacyLocationRead = records.getProjectWiring('p1')
+assert.equal(legacyLocationRead.ok, true)
+assert.equal(Object.hasOwn(legacyLocationRead.schedule.lines[0], 'fromLocation'), false)
+assert.equal(Object.hasOwn(legacyLocationRead.schedule.lines[0], 'toLocation'), false)
+assert.deepEqual(storage.get(PROJECTS_KEY), beforeLegacyLocationRead, 'opening an older schedule does not migrate or rewrite it')
+const invalidReferenceWithBlankDevice = records.saveProjectWiring('p1', { type: 'upsert', line: {
+  ...baseLine, fromDevice: '', fromDeviceId: 'missing-device', fromLocation: '桌面',
+} }, 7)
+assert.equal(invalidReferenceWithBlankDevice.ok, false, 'a supplied invalid device reference remains rejected')
+assert.deepEqual(storage.get(PROJECTS_KEY), beforeLegacyLocationRead)
+
+records = reset([project('p1', 'A 项目'), project('p2', 'B 项目')])
+saved = records.saveProjectWiring('p1', { type: 'upsert', line: baseLine }, 0)
+assert.equal(saved.ok, true)
 const stale = records.saveProjectWiring('p1', { type: 'upsert', line: { ...baseLine, purpose: '旧视图' } }, 0)
 assert.equal(stale.ok, false)
 assert.match(stale.error, /其他页面更新/)
@@ -158,6 +217,9 @@ for (const malformedSchedule of [
   { version: 1, revision: 0, nextNumber: 1, lines: [{ ...baseLine, id: 'x', code: 'A001', purpose: 'x'.repeat(101) }] },
   { version: 1, revision: 0, nextNumber: 1, lines: [{ ...baseLine, id: 'x', code: 'A001', lengthText: 8 }] },
   { version: 1, revision: 0, nextNumber: 1, lines: [{ ...baseLine, id: 'x', code: 'A001', notes: ' padded ' }] },
+  { version: 1, revision: 0, nextNumber: 1, lines: [{ ...baseLine, id: 'x', code: 'A001', fromLocation: 'x'.repeat(101) }] },
+  { version: 1, revision: 0, nextNumber: 1, lines: [{ ...baseLine, id: 'x', code: 'A001', toLocation: 5 }] },
+  { version: 1, revision: 0, nextNumber: 1, lines: [{ ...baseLine, id: 'x', code: 'A001', fromLocation: ' 桌面 ' }] },
   { version: 1, revision: 0, nextNumber: 1, lines: [{ ...baseLine, id: 'x', code: 'A001', extraData: 'preserve me?' }] },
   { version: 1, revision: 0, nextNumber: 1, lines: [
     { ...baseLine, id: 'x', code: 'A001' }, { ...baseLine, id: 'y', code: 'a001' },

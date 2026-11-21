@@ -1,10 +1,12 @@
 const assert = require('assert')
+const fs = require('fs')
+const path = require('path')
 const { OUTPUT_OPTIONS, INPUT_OPTIONS, getWiringModel } = require('../pages/audio-wiring/wiring-model')
 const {
   drawWiringDiagram, getDiagramHeight, getWiringHitAreas,
   drawWiringReport, getReportHeight,
 } = require('../pages/audio-wiring/wiring-renderer')
-const { getModelPhotoSpecs, getSolderPhotoSpec } = require('../pages/audio-wiring/wiring-photos')
+const { getModelPhotoSpecs, getSolderPhotoSpec, getConnectorOverviewPhotoSpec } = require('../pages/audio-wiring/wiring-photos')
 const { getWiringGuide, getCompactWiringConditions } = require('../pages/audio-wiring/wiring-display')
 
 function recorder() {
@@ -13,7 +15,7 @@ function recorder() {
   const ctx = {}
   ;['setFontSize', 'setTextAlign', 'setTextBaseline', 'setStrokeStyle', 'setLineWidth',
     'beginPath', 'moveTo', 'lineTo', 'quadraticCurveTo', 'bezierCurveTo', 'closePath', 'fill', 'stroke',
-    'fillRect', 'save', 'restore', 'rect', 'clip', 'scale', 'setLineCap'].forEach((method) => {
+    'fillRect', 'save', 'restore', 'rect', 'clip', 'scale', 'translate', 'rotate', 'setLineCap'].forEach((method) => {
     ctx[method] = (...args) => calls.push([method, ...args])
   })
   ctx.drawImage = (...args) => calls.push(['drawImage', ...args])
@@ -110,44 +112,127 @@ function allReadyModels() {
   return models
 }
 
-function angleGap(first, second) {
-  const difference = Math.atan2(first.y, first.x) - Math.atan2(second.y, second.x)
-  return Math.abs((((difference + (3 * Math.PI)) % (2 * Math.PI)) - Math.PI) * 180 / Math.PI)
+function assertPointObjectMatches(actual, expected, message) {
+  assert(actual && Number.isFinite(actual.x) && Number.isFinite(actual.y), `${message}: point is finite`)
+  assert.deepStrictEqual([actual.x, actual.y], [expected.x, expected.y], message)
 }
 
-function assertSharedInputApproaches(model, width, avoidRail = false) {
-  const options = { layout: 'solder-wiring', showTitle: false, avoidRail, theme: 'light' }
-  const height = getDiagramHeight(width, model, options)
-  const metrics = drawWiringDiagram(recorder().ctx, model, width, height, options)
-  assert.strictEqual(metrics.connectionAnchors.length, model.connections.length,
-    `${model.output.id} → ${model.input.id} has complete routes at ${width}px`)
-  const byTarget = new Map()
-  metrics.connectionAnchors.forEach((wire) => {
-    const key = String(wire.connection.toPin)
-    if (!byTarget.has(key)) byTarget.set(key, [])
-    byTarget.get(key).push(wire)
-  })
-  byTarget.forEach((wires, pin) => wires.forEach((wire, index) => {
-    wires.slice(index + 1).forEach((other) => {
-      if (String(wire.connection.fromPin) === String(other.connection.fromPin)) return
-      const direction = (item) => ({
-        x: item.curve.control2[0] - item.to.x,
-        y: item.curve.control2[1] - item.to.y,
+function assertPhotoPinLabelClearance(metrics, label) {
+  ;['output', 'input'].forEach((side) => {
+    const endpoint = metrics[side]
+    if (!endpoint.photoSpec) return
+    const photoAnchors = [...endpoint.anchors.values()].filter((point) => point.photo)
+    photoAnchors.forEach((point) => {
+      const rect = point.labelRect
+      assert(rect && Number.isFinite(rect.x) && Number.isFinite(rect.y)
+        && Number.isFinite(rect.width) && Number.isFinite(rect.height),
+      `${label} ${side} photo pin ${point.pin} has a label rectangle`)
+      photoAnchors.forEach((other) => {
+        const nearestX = Math.max(rect.x, Math.min(other.x, rect.x + rect.width))
+        const nearestY = Math.max(rect.y, Math.min(other.y, rect.y + rect.height))
+        assert(Math.hypot(other.x - nearestX, other.y - nearestY) >= 6 - 1e-6,
+          `${label} ${side} ${point.pin} photo badge clears weld ${other.pin} and its highlight ring`)
       })
-      const separation = angleGap(direction(wire), direction(other))
-      assert.ok(separation >= 60 - 1e-6,
-        `${model.output.id} → ${model.input.id} routes approach input ${pin} at least 60° apart ` +
-        `(${width}px, ${separation.toFixed(2)}°)`)
     })
-  }))
+  })
 }
 
-const routeAuditModels = allReadyModels()
-assert.strictEqual(routeAuditModels.length, 63, 'shared input approach audit covers every supported connection plan')
-routeAuditModels.forEach((model) => {
-  ;[[216, false], [274, true], [720, false]].forEach(([width, avoidRail]) =>
-    assertSharedInputApproaches(model, width, avoidRail))
-})
+function assertTerminalPhotoLabels(metrics, calls, label) {
+  ;['output', 'input'].forEach((side) => {
+    const endpoint = metrics[side]
+    if (!endpoint.photoSpec || endpoint.photoSpec.kind !== 'terminal') return
+    const terminalAnchors = [...endpoint.anchors.values()].filter((point) => point.photo)
+    terminalAnchors.forEach((point) => {
+      const rect = point.labelRect
+      assert(rect && rect.width === 14 && rect.height === 14,
+        `${label} ${side} terminal ${point.pin} has a 14×14 label badge`)
+      const expectedPinLabel = String(point.pin).split('·').at(-1)
+      const actualLabel = rect.label || point.label
+      assert.strictEqual(actualLabel, expectedPinLabel,
+        `${label} ${side} terminal ${point.pin} badge uses its actual +/−/G contact label`)
+      const matchingCalls = calls.filter((call) => call[0] === 'fillText' && call[1] === actualLabel
+        && Math.abs(call[2] - rect.textX) < 0.01 && Math.abs(call[3] - rect.textY) < 0.01)
+      assert.strictEqual(matchingCalls.length, 1,
+        `${label} ${side} terminal ${point.pin} label is drawn once at its current badge position`)
+      const box = point.box
+      assert(rect.x >= box.columnX + 2 - 1e-6
+        && rect.x + rect.width <= box.columnX + box.columnWidth - 2 + 1e-6,
+      `${label} ${side} terminal ${point.pin} badge stays inside its physical head column`)
+      terminalAnchors.forEach((other) => {
+        const nearestX = Math.max(rect.x, Math.min(other.x, rect.x + rect.width))
+        const nearestY = Math.max(rect.y, Math.min(other.y, rect.y + rect.height))
+        assert(Math.hypot(other.x - nearestX, other.y - nearestY) >= 6 - 1e-6,
+          `${label} ${side} terminal ${point.pin} badge does not cover weld ${other.pin}`)
+      })
+    })
+  })
+}
+
+function assertTerminalCaptionDrawn(calls, caption, label, originX = 0, originY = 0) {
+  assert(caption && Array.isArray(caption.lines) && caption.lines.length > 0,
+    `${label} retains terminal caption lines`)
+  caption.lines.forEach((line, index) => {
+    const x = originX + caption.x
+    const y = originY + caption.y + (index * caption.size * 1.35)
+    const matchingCalls = calls.filter((call) => call[0] === 'fillText' && call[1] === line
+      && Math.abs(call[2] - x) < 0.01 && Math.abs(call[3] - y) < 0.01)
+    assert.strictEqual(matchingCalls.length, 1,
+      `${label} terminal caption line ${index + 1} is drawn at its measured position`)
+  })
+}
+
+function assertPhysicalWirePaths(model, width) {
+  const options = { layout: 'solder-wiring', showTitle: false, theme: 'light', photos: photosFor(model) }
+  const height = getDiagramHeight(width, model, options)
+  const canvas = recorder()
+  const metrics = drawWiringDiagram(canvas.ctx, model, width, height, options)
+  assertBounds(canvas.calls, width, height)
+  assert.strictEqual(metrics.connectionAnchors.length, model.connections.length,
+    `${model.output.id} → ${model.input.id} has one physical wire per model connection at ${width}px`)
+  const hitAreas = getWiringHitAreas(model, width, height, options)
+  assert.strictEqual(hitAreas.length, model.connections.length,
+    `${model.output.id} → ${model.input.id} has one wire hit path per connection at ${width}px`)
+  assertCompleteEndpointPhotos(metrics, `${model.output.id} → ${model.input.id} at ${width}px`)
+  assert.strictEqual(canvas.calls.filter((call) => call[0] === 'drawImage').length,
+    metrics.output.photoBoxes.length + metrics.input.photoBoxes.length,
+  `${model.output.id} → ${model.input.id} draws each physical photo head once at ${width}px`)
+  metrics.connectionAnchors.forEach((wire, index) => {
+    const connection = model.connections[index]
+    assert.strictEqual(wire.id, connection.id, `${wire.id} retains model connection order`)
+    assert.strictEqual(wire.connection.id, connection.id, `${wire.id} keeps its model connection identity`)
+    assert.strictEqual(wire.connection.fromPin, connection.fromPin, `${wire.id} retains its exact source pin`)
+    assert.strictEqual(wire.connection.toPin, connection.toPin, `${wire.id} retains its exact destination pin`)
+    assert.strictEqual(wire.connection.fromLabel, connection.fromLabel,
+      `${wire.id} keeps the model's original source pin label`)
+    assert.strictEqual(wire.connection.toLabel, connection.toLabel,
+      `${wire.id} keeps the model's original destination pin label`)
+    const outputPin = metrics.output.anchors.get(String(connection.fromPin))
+    const inputPin = metrics.input.anchors.get(String(connection.toPin))
+    assertPointObjectMatches(wire.from, outputPin,
+      `${wire.id} wire begins at its actual output photo pin ${connection.fromPin}`)
+    assertPointObjectMatches(wire.to, inputPin,
+      `${wire.id} wire ends at its actual input photo pin ${connection.toPin}`)
+    assert(Array.isArray(wire.points) && wire.points.length >= 2,
+      `${wire.id} carries its complete source-to-destination polyline`)
+    assert.deepStrictEqual(wire.points[0], [outputPin.x, outputPin.y],
+      `${wire.id} first stroke point is the real output weld`)
+    assert.deepStrictEqual(wire.points.at(-1), [inputPin.x, inputPin.y],
+      `${wire.id} final stroke point is the real input weld`)
+    const hit = hitAreas.find((area) => area.id === wire.id)
+    assert(hit, `${wire.id} has a matching physical-wire hit path`)
+    assert.deepStrictEqual(hit.pathPoints, wire.points, `${wire.id} hit testing uses every drawn point in order`)
+  })
+  assertRoutePolylinesDoNotCross(metrics.connectionAnchors,
+    `${model.output.id} → ${model.input.id} at ${width}px`)
+  assertDrawnRoutesMatch(canvas.calls, metrics.connectionAnchors,
+    `${model.output.id} → ${model.input.id} at ${width}px`)
+  assertRoutesAvoidTerminalCaptions(metrics.connectionAnchors, [metrics.output, metrics.input],
+    `${model.output.id} → ${model.input.id} at ${width}px`)
+  assertPhotoPinLabelClearance(metrics, `${model.output.id} → ${model.input.id} at ${width}px`)
+  assertTerminalPhotoLabels(metrics, canvas.calls, `${model.output.id} → ${model.input.id} at ${width}px`)
+  assertNoUndefinedOrNaNText(canvas.calls,
+    `${model.output.id} → ${model.input.id} complete solder layout at ${width}px`)
+}
 
 function closedPathBounds(calls) {
   const rectangles = []
@@ -196,6 +281,209 @@ function openStrokePathEntries(calls) {
   return paths
 }
 
+function pointDistance(first, second) {
+  return Math.hypot(first[0] - second[0], first[1] - second[1])
+}
+
+function segmentIntersection(start, end, otherStart, otherEnd) {
+  const rx = end[0] - start[0], ry = end[1] - start[1]
+  const sx = otherEnd[0] - otherStart[0], sy = otherEnd[1] - otherStart[1]
+  const determinant = (rx * sy) - (ry * sx)
+  const qx = otherStart[0] - start[0], qy = otherStart[1] - start[1]
+  if (Math.abs(determinant) < 1e-8) {
+    if (Math.abs((qx * ry) - (qy * rx)) > 1e-7) return null
+    const length = (rx * rx) + (ry * ry)
+    if (length < 1e-8) return null
+    const t0 = ((qx * rx) + (qy * ry)) / length
+    const t1 = (((otherEnd[0] - start[0]) * rx) + ((otherEnd[1] - start[1]) * ry)) / length
+    const low = Math.max(0, Math.min(t0, t1)), high = Math.min(1, Math.max(t0, t1))
+    if (high < low - 1e-8) return null
+    return [
+      [start[0] + (low * rx), start[1] + (low * ry)],
+      [start[0] + (high * rx), start[1] + (high * ry)],
+    ]
+  }
+  const t = ((qx * sy) - (qy * sx)) / determinant
+  const u = ((qx * ry) - (qy * rx)) / determinant
+  if (t < -1e-8 || t > 1 + 1e-8 || u < -1e-8 || u > 1 + 1e-8) return null
+  const point = [start[0] + (t * rx), start[1] + (t * ry)]
+  return [point, point]
+}
+
+function pointsMatch(first, second) {
+  return Array.isArray(first) && Array.isArray(second)
+    && Math.abs(first[0] - second[0]) < 1e-7 && Math.abs(first[1] - second[1]) < 1e-7
+}
+
+function routePin(route, key) {
+  return route.connection && route.connection[key] !== undefined
+    ? String(route.connection[key]) : ''
+}
+
+function commonRouteEnds(first, second) {
+  const firstPoints = first.points
+  const secondPoints = second.points
+  const sharesFrom = routePin(first, 'fromPin') !== ''
+    && routePin(first, 'fromPin') === routePin(second, 'fromPin')
+    && pointsMatch(firstPoints[0], secondPoints[0])
+  const sharesTo = routePin(first, 'toPin') !== ''
+    && routePin(first, 'toPin') === routePin(second, 'toPin')
+    && pointsMatch(firstPoints.at(-1), secondPoints.at(-1))
+  let prefixCount = 0
+  if (sharesFrom) {
+    while (prefixCount < firstPoints.length && prefixCount < secondPoints.length
+      && pointsMatch(firstPoints[prefixCount], secondPoints[prefixCount])) prefixCount += 1
+  }
+  let suffixCount = 0
+  if (sharesTo) {
+    while (suffixCount < firstPoints.length && suffixCount < secondPoints.length
+      && pointsMatch(firstPoints[firstPoints.length - 1 - suffixCount],
+        secondPoints[secondPoints.length - 1 - suffixCount])) suffixCount += 1
+  }
+  return { sharesFrom, sharesTo, prefixCount, suffixCount }
+}
+
+function isCommonPrefixSegment(first, second, firstIndex, secondIndex, prefixCount) {
+  return prefixCount > 1 && firstIndex === secondIndex && firstIndex < prefixCount - 1
+    && pointsMatch(first.points[firstIndex], second.points[secondIndex])
+    && pointsMatch(first.points[firstIndex + 1], second.points[secondIndex + 1])
+}
+
+function isCommonSuffixSegment(first, second, firstIndex, secondIndex, suffixCount) {
+  const firstStart = first.points.length - suffixCount
+  const secondStart = second.points.length - suffixCount
+  return suffixCount > 1 && firstIndex >= firstStart && secondIndex >= secondStart
+    && firstIndex - firstStart === secondIndex - secondStart
+    && pointsMatch(first.points[firstIndex], second.points[secondIndex])
+    && pointsMatch(first.points[firstIndex + 1], second.points[secondIndex + 1])
+}
+
+function isSharedJunction(point, first, second, sharedEnds) {
+  if (sharedEnds.sharesFrom && sharedEnds.prefixCount > 0
+    && first.points.slice(0, sharedEnds.prefixCount).some((candidate) => pointsMatch(candidate, point))) return true
+  if (sharedEnds.sharesTo && sharedEnds.suffixCount > 0
+    && first.points.slice(first.points.length - sharedEnds.suffixCount)
+      .some((candidate) => pointsMatch(candidate, point))) return true
+  return false
+}
+
+function assertRoutePolylinesDoNotCross(routes, label) {
+  for (let routeIndex = 0; routeIndex < routes.length; routeIndex += 1) {
+    const route = routes[routeIndex]
+    assert(Array.isArray(route.points) && route.points.length >= 2,
+      `${label}: ${route.id} has a complete photo-to-photo polyline`)
+    route.points.forEach((point, pointIndex) => {
+      assert(Array.isArray(point) && point.length === 2 && point.every(Number.isFinite),
+        `${label}: ${route.id} point ${pointIndex} is finite`)
+      if (pointIndex) assert(pointDistance(point, route.points[pointIndex - 1]) > 1e-8,
+        `${label}: ${route.id} has no zero-length segment at ${pointIndex}`)
+    })
+    assert.deepStrictEqual(route.points[0], [route.from.x, route.from.y],
+      `${label}: ${route.id} starts at its real output weld point`)
+    assert.deepStrictEqual(route.points.at(-1), [route.to.x, route.to.y],
+      `${label}: ${route.id} ends at its real input weld point`)
+    for (let first = 1; first < route.points.length; first += 1) {
+      for (let second = first + 2; second < route.points.length; second += 1) {
+        assert.strictEqual(segmentIntersection(route.points[first - 1], route.points[first],
+          route.points[second - 1], route.points[second]), null,
+        `${label}: ${route.id} does not cross itself at segments ${first - 1}/${second - 1}`)
+      }
+    }
+    for (let otherIndex = routeIndex + 1; otherIndex < routes.length; otherIndex += 1) {
+      const other = routes[otherIndex]
+      const sharedEnds = commonRouteEnds(route, other)
+      for (let first = 1; first < route.points.length; first += 1) {
+        for (let second = 1; second < other.points.length; second += 1) {
+          const intersection = segmentIntersection(route.points[first - 1], route.points[first],
+            other.points[second - 1], other.points[second])
+          if (!intersection) continue
+          const overlapLength = pointDistance(intersection[0], intersection[1])
+          if (overlapLength > 1e-7) {
+            const sharedPrefix = isCommonPrefixSegment(route, other, first - 1, second - 1, sharedEnds.prefixCount)
+            const sharedSuffix = isCommonSuffixSegment(route, other, first - 1, second - 1, sharedEnds.suffixCount)
+            assert(sharedPrefix || sharedSuffix,
+              `${label}: ${route.id}/${other.id} may overlap only on a continuous shared source prefix or destination suffix`)
+            continue
+          }
+          assert(isSharedJunction(intersection[0], route, other, sharedEnds),
+            `${label}: ${route.id}/${other.id} may meet only at a shared real source/destination or a shared branch point`)
+        }
+      }
+    }
+  }
+}
+
+function assertNoUndefinedOrNaNText(calls, label) {
+  const invalidText = calls.filter((call) => call[0] === 'fillText'
+    && /undefined|NaN/i.test(String(call[1])))
+  assert.strictEqual(invalidText.length, 0, `${label} contains no undefined or NaN Canvas text`)
+}
+
+function routeStrokeGroups(calls) {
+  return strokeCallGroups(calls).filter((group) =>
+    group.some((call) => call[0] === 'setLineWidth' && [1.6, 2.3, 5.8].includes(call[1]))
+    && group.some((call) => call[0] === 'moveTo') && group.some((call) => call[0] === 'lineTo'))
+}
+
+function routePathFromPoints(points) {
+  return [['moveTo', ...points[0]], ...points.slice(1).map((point) => ['lineTo', ...point])]
+}
+
+function assertDrawnRoutesMatch(calls, routes, label) {
+  const groups = routeStrokeGroups(calls)
+  assert.strictEqual(groups.length, routes.length, `${label} draws one continuous stroke per connection`)
+  groups.forEach((group, index) => {
+    const path = group.filter((call) => call[0] === 'moveTo' || call[0] === 'lineTo')
+    assert.deepStrictEqual(path, routePathFromPoints(routes[index].points),
+      `${label} draws every route point in order with no crossing gap`)
+  })
+}
+
+function assertPhotoRotationScopes(calls, label, expectedRotations) {
+  const stack = []
+  const angles = []
+  let translationCalls = 0
+  let rotatedImageDraws = 0
+  calls.forEach((call) => {
+    if (call[0] === 'save') stack.push({ stage: 0, rotated: false })
+    else if (call[0] === 'translate') {
+      assert(stack.length > 0, `${label}: translate is scoped by save/restore`)
+      assert(call.slice(1).length >= 2 && call.slice(1).every(Number.isFinite),
+        `${label}: photo translation uses finite Canvas coordinates`)
+      assert.strictEqual(stack.at(-1).stage, 0, `${label}: each photo save is followed by one translation`)
+      stack.at(-1).stage = 1
+      translationCalls += 1
+    } else if (call[0] === 'rotate') {
+      assert(stack.length > 0, `${label}: rotate is scoped by save/restore`)
+      assert(Number.isFinite(call[1]), `${label}: photo rotation angle is finite`)
+      assert.strictEqual(stack.at(-1).stage, 1, `${label}: photo rotation immediately follows its translation`)
+      stack.at(-1).stage = 2
+      stack.at(-1).rotated = true
+      angles.push(call[1])
+    } else if (call[0] === 'drawImage' && stack.at(-1)?.rotated) {
+      assert.strictEqual(stack.at(-1).stage, 2, `${label}: rotated photo is drawn immediately after rotate`)
+      stack.at(-1).stage = 3
+      rotatedImageDraws += 1
+    } else if (call[0] === 'restore') {
+      const scope = stack.pop()
+      assert(scope, `${label}: restore never underflows the Canvas state stack`)
+      if (scope.rotated) assert.strictEqual(scope.stage, 3,
+        `${label}: each photo follows save → translate → rotate → drawImage → restore`)
+    }
+  })
+  assert.strictEqual(stack.length, 0, `${label}: all Canvas save scopes are restored`)
+  assert.strictEqual(translationCalls, expectedRotations,
+    `${label}: each rotated physical photo receives exactly one Canvas translation`)
+  assert.strictEqual(angles.length, expectedRotations,
+    `${label}: records the expected number of real rotation calls`)
+  assert.strictEqual(rotatedImageDraws, expectedRotations,
+    `${label}: each rotated physical photo reaches exactly one drawImage call inside its saved transform`)
+  angles.forEach((angle) => {
+    assert.strictEqual(angle, Math.PI,
+      `${label}: complete connector photos rotate by Math.PI radians without mirroring`)
+  })
+}
+
 function assertNoStrokeThroughCaption(calls, caption, centerX, baseline, message) {
   const textWidth = [...caption].reduce((sum, character) => sum + (character.codePointAt(0) > 0xff ? 9 : 4.5), 0)
   const left = centerX - (textWidth / 2) - 4
@@ -213,6 +501,39 @@ function assertNoStrokeThroughCaption(calls, caption, centerX, baseline, message
       assert.ok(!crossesVertically && !crossesHorizontally,
         `${message}: stroke segment ${JSON.stringify([points[index - 1], points[index]])}`)
     }
+  })
+}
+
+function segmentIntersectsRect(start, end, rect) {
+  const left = rect.x, right = rect.x + rect.width
+  const top = rect.y, bottom = rect.y + rect.height
+  const inside = ([x, y]) => x >= left && x <= right && y >= top && y <= bottom
+  if (inside(start) || inside(end)) return true
+  const corners = [[left, top], [right, top], [right, bottom], [left, bottom]]
+  return corners.some((corner, index) => segmentIntersection(start, end,
+    corner, corners[(index + 1) % corners.length]) !== null)
+}
+
+function assertRoutesAvoidTerminalCaptions(routes, endpoints, label) {
+  endpoints.forEach((endpoint) => {
+    const caption = endpoint && endpoint.terminalCaption
+    if (!caption) return
+    caption.lines.forEach((line, index) => {
+      const baseline = caption.y + (index * caption.size * 1.35)
+      const textWidth = [...line].length * caption.size
+      const textRect = {
+        x: caption.x - (textWidth / 2) - 2,
+        y: baseline - caption.size - 1,
+        width: textWidth + 4,
+        height: caption.size + 4,
+      }
+      routes.forEach((route) => {
+        for (let pointIndex = 1; pointIndex < route.points.length; pointIndex += 1) {
+          assert(!segmentIntersectsRect(route.points[pointIndex - 1], route.points[pointIndex], textRect),
+            `${label}: ${route.id} does not cross terminal caption line ${index + 1}`)
+        }
+      })
+    })
   })
 }
 
@@ -303,27 +624,92 @@ const photoPairs = [
   ['stereo35', 'rcaMono', { sourceChannel: 'right' }],
   ['stereo35', 'tsMono', { sourceChannel: 'left' }],
 ]
-const photoOptions = { layout: 'solder-wiring', theme: 'dark', showTitle: false, avoidRail: true }
+const photoOptions = { layout: 'solder-wiring', theme: 'dark', showTitle: false, avoidRail: false }
 function geometrySnapshot(metrics) {
   return {
     height: metrics.height,
     endpoints: ['output', 'input'].map((side) => {
       const endpoint = metrics[side]
       return {
-        boxes: endpoint.photoBoxes.map(({ key, x, y, size }) => ({ key, x, y, size })),
+        photoSpec: endpoint.photoSpec && {
+          key: endpoint.photoSpec.key, width: endpoint.photoSpec.width, height: endpoint.photoSpec.height,
+          contentRect: endpoint.photoSpec.contentRect,
+        },
+        boxes: endpoint.photoBoxes.map(({ key, x, y, width, height }) => ({ key, x, y, width, height })),
         anchors: [...endpoint.anchors.entries()].map(([pin, point]) => [pin, point.x, point.y]),
       }
     }),
     wires: metrics.connectionAnchors.map((wire) => ({
-      id: wire.id, points: wire.points, from: [wire.from.x, wire.from.y], to: [wire.to.x, wire.to.y],
+      id: wire.id, fromPin: wire.connection.fromPin, toPin: wire.connection.toPin,
+      fromLabel: wire.connection.fromLabel, toLabel: wire.connection.toLabel,
+      points: wire.points,
+      from: [wire.from.x, wire.from.y], to: [wire.to.x, wire.to.y],
     })),
   }
 }
+
+const photoDimensionsByPath = new Map()
+
+function assertCompleteEndpointPhotos(metrics, label) {
+  ;['output', 'input'].forEach((side) => {
+    const endpoint = metrics[side]
+    if (!endpoint.photoSpec) {
+      assert.strictEqual(endpoint.photoBoxes.length, 0, `${label} ${side} has no photo boxes without a solder photo`)
+      return
+    }
+    const spec = endpoint.photoSpec
+    if (!photoDimensionsByPath.has(spec.path)) {
+      const assetPath = path.resolve(__dirname, '..', String(spec.path).replace(/^\/+/, ''))
+      const bytes = fs.readFileSync(assetPath)
+      assert.strictEqual(bytes.toString('ascii', 1, 4), 'PNG', `${label} ${side} asset is a PNG`)
+      photoDimensionsByPath.set(spec.path, { width: bytes.readUInt32BE(16), height: bytes.readUInt32BE(20) })
+    }
+    assert.deepStrictEqual(photoDimensionsByPath.get(spec.path), { width: spec.width, height: spec.height },
+      `${label} ${side} manifest uses the actual complete PNG dimensions`)
+    assert.deepStrictEqual(spec.contentRect, { x: 0, y: 0, width: spec.width, height: spec.height },
+      `${label} ${side} uses the complete source image rectangle`)
+    assert(!String(spec.key).startsWith('overview-'), `${label} ${side} draws only its complete opened solder photo`)
+    endpoint.photoBoxes.forEach((box) => {
+      const imageRect = box.destination || box
+      assert(Math.abs((imageRect.width / imageRect.height) - (spec.width / spec.height)) < 1e-8,
+        `${label} ${side} preserves the full source photo aspect ratio`)
+    })
+  })
+}
+
+const routeAuditModels = allReadyModels()
+assert.strictEqual(routeAuditModels.length, 63, 'physical wire audit covers every supported connection plan')
+const rotatedPhotoModel = getWiringModel('stereo635', 'terminalBalanced')
+const rotatedPhotoDiagram = render(rotatedPhotoModel, 319, {
+  layout: 'solder-wiring', avoidRail: true, theme: 'light', selectedId: rotatedPhotoModel.connections[0].id,
+  photos: photosFor(rotatedPhotoModel),
+})
+assertPhotoRotationScopes(rotatedPhotoDiagram.calls, 'stereo635 → terminal renderer', 3)
+const rotatedPhotoDraws = rotatedPhotoDiagram.calls.filter((call) => call[0] === 'drawImage')
+assert.strictEqual(rotatedPhotoDraws.length, 3,
+  'stereo635 → terminal draws the source plug and both physical terminal input heads once')
+assert(rotatedPhotoDraws.every((call) => call[4] > 0 && call[5] > 0),
+  '180-degree orientation preserves positive full-photo dimensions instead of flipping an image axis')
+assert(!rotatedPhotoDiagram.calls.some((call) => call[0] === 'scale' && call.slice(1).some((value) => value < 0)),
+  'photo orientation does not mirror the connector image with a negative scale')
+
+routeAuditModels.forEach((model) => {
+  ;[274, 319, 369].forEach((width) => {
+    try {
+      assertPhysicalWirePaths(model, width)
+    } catch (error) {
+      error.message = `${model.output.id} → ${model.input.id} at ${width}px: ${error.message}`
+      throw error
+    }
+  })
+})
 
 for (const [outputId, inputId, selections] of photoPairs) {
   const model = getWiringModel(outputId, inputId, selections)
   assert.strictEqual(model.status, 'ready', `${outputId} → ${inputId} photo layout case is ready`)
   const specs = getModelPhotoSpecs(model)
+  assert(specs.every((spec) => !String(spec.key).startsWith('overview-')),
+    `${outputId} → ${inputId} screen photo loader excludes independent connector overviews`)
   const photos = Object.fromEntries(specs.map((spec) => [spec.key, { key: spec.key }]))
   for (const width of [216, 272, 320]) {
     for (const theme of ['light', 'dark']) {
@@ -342,42 +728,82 @@ for (const [outputId, inputId, selections] of photoPairs) {
       assert.deepStrictEqual(geometrySnapshot(loadedMetrics), geometrySnapshot(noPhotoMetrics),
         `${outputId} → ${inputId} anchors are manifest-derived, independent of image objects at ${width}px ${theme}`)
       assertBounds(loadedCanvas.calls, width, heightWithPhotos)
+      assertCompleteEndpointPhotos(loadedMetrics, `${outputId} → ${inputId}`)
       const expectedPhotoDraws = loadedMetrics.output.photoBoxes.length + loadedMetrics.input.photoBoxes.length
       assert.strictEqual(loadedCanvas.calls.filter((call) => call[0] === 'drawImage').length, expectedPhotoDraws,
-        'each manifest-derived endpoint photo box is drawn once when its image is loaded')
-      if (model.input.channelCount === 2) {
+        'each physical connector head draws its one complete solder-side photo')
+      loadedCanvas.calls.filter((call) => call[0] === 'drawImage').forEach((call) => {
+        assert.strictEqual(call.length, 6, 'complete photos use the portable uncropped 5-argument drawImage API')
+      })
+      assert.strictEqual(loadedCanvas.calls.filter((call) => call[0] === 'clip').length, 0,
+        'complete solder photos are not clipped to a cropped detail viewport')
+      assertNoUndefinedOrNaNText(loadedCanvas.calls, `${outputId} → ${inputId} photo rendering`)
+      assertTerminalPhotoLabels(loadedMetrics, loadedCanvas.calls, `${outputId} → ${inputId}`)
+      assertRoutePolylinesDoNotCross(loadedMetrics.connectionAnchors,
+        `${outputId} → ${inputId} photo routes at ${width}px ${theme}`)
+      assertDrawnRoutesMatch(loadedCanvas.calls, loadedMetrics.connectionAnchors,
+        `${outputId} → ${inputId} photo routes at ${width}px ${theme}`)
+      const inputHeadChannels = loadedMetrics.gallery.heads.filter((head) => head.side === 'input')
+        .map((head) => head.channel)
+      if (inputHeadChannels.length === 2 && inputHeadChannels.includes('L') && inputHeadChannels.includes('R')) {
         assert.deepStrictEqual(loadedMetrics.input.photoBoxes.map((box) => box.key), ['L', 'R'],
           `${inputId} renders separate L and R connector heads`)
         const channelCaptions = loadedCanvas.calls.filter((call) => call[0] === 'fillText'
-          && ['L', 'R'].includes(call[1]) && call[2] === loadedMetrics.input.centerX)
-        assert.deepStrictEqual(channelCaptions.map((call) => call[3]),
-          loadedMetrics.input.photoBoxes.map((box) => box.y - 4),
-          `${inputId} channel captions sit above each photo body`)
-        if (model.input.id === 'terminalBalanced') {
-          assert.strictEqual(loadedCanvas.calls.filter((call) => call[0] === 'fillText' && ['+', '−', 'G'].includes(call[1])).length, 6,
-            'both terminal photos label their three functional terminals')
-        }
+          && ['L头', 'R头'].includes(call[1]))
+        assert.deepStrictEqual(channelCaptions.map((call) => call[1]), ['L头', 'R头'],
+          `${inputId} gives both physical input heads explicit L/R labels`)
       }
       if (model.output.id === 'stereo635' || model.input.id === 'stereo635') {
         const endpointText = loadedCanvas.calls.filter((call) => call[0] === 'fillText').map((call) => call[1])
-        assert(endpointText.includes('L') && endpointText.includes('R') && endpointText.includes('G'),
-          '6.35 mm stereo TRS photo labels its physical contacts by L/R/G function')
-        assert(!endpointText.includes('T·L') && !endpointText.includes('R·R') && !endpointText.includes('S·G'),
-          '6.35 mm stereo TRS photo avoids crowded physical-plus-function labels')
+        assert(['T L', 'R R', 'S G'].every((label) => endpointText.includes(label)),
+          '6.35 mm stereo TRS photos show each physical T/R/S contact with its L/R/G function')
       }
       if (model.output.id === 'trsBalanced' || model.input.id === 'trsBalanced') {
         const endpointText = loadedCanvas.calls.filter((call) => call[0] === 'fillText').map((call) => call[1])
-        assert(endpointText.includes('+') && endpointText.includes('−') && endpointText.includes('G'),
-          '6.35 mm balanced TRS photo labels its physical contacts by +/−/G function')
+        assert(['T +', 'R −', 'S G'].every((label) => endpointText.includes(label)),
+          '6.35 mm balanced TRS photos show each physical T/R/S contact with its +/−/G function')
       }
       loadedMetrics.connectionAnchors.forEach((wire) => {
         const hit = hitsWithPhotos.find((area) => area.id === wire.id)
-        assert.deepStrictEqual(hit.pathPoints[0], [wire.from.x, wire.from.y], 'hit path starts at the manifest contact anchor')
-        assert.deepStrictEqual(hit.pathPoints.at(-1), [wire.to.x, wire.to.y], 'hit path ends at the manifest contact anchor')
+        assert(hit, `${wire.id} has a matching complete-polyline hit region`)
+        assert.deepStrictEqual(hit.pathPoints, wire.points, 'hit testing uses the same complete route polyline')
+        assert.deepStrictEqual(hit.pathPoints[0], [wire.from.x, wire.from.y], 'hit path begins at the actual output weld')
+        assert.deepStrictEqual(hit.pathPoints.at(-1), [wire.to.x, wire.to.y], 'hit path ends at the actual input weld')
+        assertPointObjectMatches(wire.from,
+          loadedMetrics.output.anchors.get(String(wire.connection.fromPin)), `${wire.id} begins at its actual output pin`)
+        assertPointObjectMatches(wire.to,
+          loadedMetrics.input.anchors.get(String(wire.connection.toPin)), `${wire.id} ends at its actual input pin`)
       })
     }
   }
 }
+
+const stereo35ToDualRcaLayout = render(getWiringModel('stereo35', 'rcaStereo'), 320, {
+  layout: 'solder-wiring', avoidRail: false, theme: 'light',
+  photos: photosFor(getWiringModel('stereo35', 'rcaStereo')),
+})
+const singleHeadRLabel = stereo35ToDualRcaLayout.metrics.output.anchors.get('R').label
+const singleHeadRWire = stereo35ToDualRcaLayout.metrics.connectionAnchors.find((wire) => wire.connection.fromPin === 'R')
+assert.strictEqual(singleHeadRLabel, 'R R',
+  'the single stereo35 photo labels its physical R ring with the right-channel R function exactly once')
+assertPointObjectMatches(singleHeadRWire.from, stereo35ToDualRcaLayout.metrics.output.anchors.get('R'),
+  'a single-head physical R wire starts at the actual R solder contact')
+assert.deepStrictEqual(
+  stereo35ToDualRcaLayout.metrics.gallery.heads.filter((head) => head.side === 'input').map((head) => head.channel),
+  ['L', 'R'], 'the dual-RCA gallery retains separate L and R physical heads')
+assert.deepStrictEqual(stereo35ToDualRcaLayout.metrics.connectionAnchors.map((wire) => wire.connection.toPin),
+  ['L中心', 'R中心', 'L外壳', 'R外壳'],
+  'dual-RCA physical wires preserve their original L/R center and shell pin identities')
+
+const balancedTrsLayout = render(getWiringModel('trsBalanced', 'xlrBalanced'), 320, {
+  layout: 'solder-wiring', avoidRail: false, theme: 'light',
+  photos: photosFor(getWiringModel('trsBalanced', 'xlrBalanced')),
+})
+const balancedTrsR = balancedTrsLayout.metrics.output.anchors.get('R').label
+const balancedTrsRWire = balancedTrsLayout.metrics.connectionAnchors.find((wire) => wire.connection.fromPin === 'R')
+assert.strictEqual(balancedTrsR, 'R −', 'balanced TRS photo identifies its R contact as cold (−)')
+assertPointObjectMatches(balancedTrsRWire.from, balancedTrsLayout.metrics.output.anchors.get('R'),
+  'balanced TRS R wire starts at the actual cold-ring solder contact')
 
 const titledDiagram = render(basic, 375, { viewMode: 'wiring', showTitle: true })
 const untitledDiagram = render(basic, 375, { viewMode: 'wiring', showTitle: false })
@@ -518,35 +944,64 @@ assert.ok(!oneChannel.connections.some((wire) => wire.fromPin === 'R'), 'the syn
 const oneChannelView = render(oneChannel, 320, { viewMode: 'wiring', theme: 'light' })
 assert.ok(oneChannelView.calls.some((call) => call[0] === 'fillText' && String(call[1]).includes('悬空')),
   'legacy synthetic fixture still exercises open-pin rendering')
-const fixedStereoSolder = render(getWiringModel('stereo35', 'xlrBalanced', { sourceChannel: 'right' }), 320,
-  { layout: 'solder-wiring', avoidRail: true, theme: 'light' })
-assert.ok(fixedStereoSolder.calls.some((call) => call[0] === 'fillText' && call[1] === 'T') &&
-  fixedStereoSolder.calls.some((call) => call[0] === 'fillText' && call[1] === 'R') &&
-  !fixedStereoSolder.calls.some((call) => call[0] === 'fillText' && String(call[1]).includes('R · 未接')),
-  'the fixed stereo-to-balanced diagram labels both source channels as connected')
+const fixedStereoModel = getWiringModel('stereo35', 'xlrBalanced', { sourceChannel: 'right' })
+const fixedStereoSolder = render(fixedStereoModel, 320,
+  { layout: 'solder-wiring', avoidRail: false, theme: 'light' })
+assert.strictEqual(fixedStereoSolder.metrics.output.photoBoxes.length, 1,
+  'the fixed stereo source appears as one physical connector head')
+assert.strictEqual(fixedStereoSolder.metrics.output.anchors.get('T').label, 'T L')
+assert.strictEqual(fixedStereoSolder.metrics.output.anchors.get('R').label, 'R R',
+  'the fixed stereo-to-balanced diagram labels its physical source contacts and functions')
+assert(fixedStereoSolder.metrics.connectionAnchors.some((wire) => wire.connection.fromPin === 'R'),
+  'the selected right-channel R contact remains connected in the fixed mapping')
 assert.deepStrictEqual(fixedStereoSolder.metrics.input.photoBoxes.map((box) => box.key), ['L', 'R'])
 assert.strictEqual(fixedStereoSolder.metrics.connectionAnchors.length, 6)
+assert.deepStrictEqual(fixedStereoSolder.metrics.connectionAnchors.map((wire) => [wire.connection.fromPin, wire.connection.toPin]),
+  fixedStereoModel.connections.map((wire) => [wire.fromPin, wire.toPin]),
+  'each physical wire retains its exact source and destination model pins')
 
 const xlrModel = getWiringModel('xlrBalanced', 'xlrBalanced')
 const xlrSolder = render(xlrModel, 320, { layout: 'solder-wiring', theme: 'light' })
 const xlrSolderWithPhotos = render(xlrModel, 320,
   { layout: 'solder-wiring', theme: 'light', photos: photosFor(xlrModel) })
+assert.strictEqual(getConnectorOverviewPhotoSpec(xlrModel.output).path,
+  '/pages/audio-wiring/assets/overview/xlr-female-v1.png', 'the output overview follows the cable female gender')
+assert.strictEqual(getConnectorOverviewPhotoSpec(xlrModel.input).path,
+  '/assets/home/module-audio-wiring-catalog.png', 'the input overview reuses the existing XLR male catalog image')
+;[null, {}, { id: 'unknown' }, { id: 'constructor' }, { id: 'toString' }, { id: '__proto__' }, { id: 7 }]
+  .forEach((endpoint) => assert.strictEqual(getConnectorOverviewPhotoSpec(endpoint), null,
+    'unknown and inherited property names cannot resolve as connector overview specs'))
 const photoDrawCalls = xlrSolderWithPhotos.calls.filter((call) => call[0] === 'drawImage')
-assert.strictEqual(photoDrawCalls.length, 2)
-assert.strictEqual(xlrSolderWithPhotos.calls.filter((call) => call[0] === 'clip').length, photoDrawCalls.length,
-  'each solder photo uses a clipped draw so the cropped connector body remains visible in exports')
-assert.strictEqual(xlrSolderWithPhotos.calls.filter((call) => call[0] === 'rect').length, photoDrawCalls.length)
+assert.strictEqual(photoDrawCalls.length, 2, 'each XLR physical head has one complete opened solder-side photo')
+assert.strictEqual(xlrSolderWithPhotos.calls.filter((call) => call[0] === 'clip').length, 0,
+  'the complete XLR photos are not cropped or clipped into a second detail view')
 photoDrawCalls.forEach((call) => {
-  assert.strictEqual(call.length, 6, 'the full source photo is drawn with the portable 5-argument API')
+  assert.strictEqual(call.length, 6, 'the complete source photo is drawn with the portable 5-argument API')
 })
-assert.ok(xlrSolderWithPhotos.metrics.output.photoBoxes.every((box) => box.y === 44 && box.size === 128),
-  'single connector photos begin below the compact title without a large blank gap')
-assert.ok(xlrSolder.height < 200, 'the compact top placement keeps the single-pair diagram height bounded')
-assert.ok(xlrSolder.height + 44 + 12 + 42 >= 204,
-  'the diagram card retains enough content height for the four-button action rail')
+assert.strictEqual(xlrSolderWithPhotos.metrics.output.photoBoxes.length, 1)
+assert.strictEqual(xlrSolderWithPhotos.metrics.input.photoBoxes.length, 1)
+assertCompleteEndpointPhotos(xlrSolderWithPhotos.metrics, 'XLR pair')
+assert(!xlrSolderWithPhotos.calls.some((call) => call[0] === 'fillText'
+  && ['接头外形', '↓ 焊接面 · 局部'].includes(call[1])),
+'the wiring canvas does not repeat a separate full-head overview beside its complete opened image')
+const numberedPins = xlrSolderWithPhotos.calls.filter((call) => call[0] === 'fillText' && ['1', '2', '3'].includes(call[1]))
+assert(numberedPins.length === 0,
+  'XLR contact labels pair pin numbers with their signal functions on the complete photos')
+const xlrPhotoBoxes = [...xlrSolderWithPhotos.metrics.output.photoBoxes, ...xlrSolderWithPhotos.metrics.input.photoBoxes]
+const xlrPhotoContactCalls = xlrSolderWithPhotos.calls.filter((call) => call[0] === 'fillText'
+  && ['1 G', '2 +', '3 −'].includes(call[1])
+  && xlrPhotoBoxes.some((box) => call[2] >= box.x && call[2] <= box.x + box.width
+    && call[3] >= box.y && call[3] <= box.y + box.height))
+assert.strictEqual(xlrPhotoContactCalls.length, 6,
+  'XLR complete photos show each physical pin number with its signal function')
+assert(xlrPhotoContactCalls.every((call) => {
+  const index = xlrSolderWithPhotos.calls.indexOf(call)
+  return xlrSolderWithPhotos.calls[index - 1]?.[0] === 'font'
+    && xlrSolderWithPhotos.calls[index - 1]?.[1] === '700 9px sans-serif'
+}), 'connected XLR contact/function labels keep the existing readable 9px treatment')
 const mixedDualModel = getWiringModel('stereo35', 'rcaStereo')
 const mixedDual = render(mixedDualModel, 274,
-  { layout: 'solder-wiring', avoidRail: true, theme: 'light', photos: photosFor(mixedDualModel) })
+  { layout: 'solder-wiring', avoidRail: false, theme: 'light', photos: photosFor(mixedDualModel) })
 const mixedDualImages = mixedDual.calls.filter((call) => call[0] === 'drawImage')
 const singleBox = mixedDual.metrics.output.photoBoxes[0]
 const dualBoxes = mixedDual.metrics.input.photoBoxes
@@ -556,18 +1011,15 @@ assert.strictEqual(singleCenterY, dualCenterY,
   'single output photo aligns to the actual vertical center of the two input photos')
 
 const phoneWidthDiagram = render(xlrModel, 274,
-  { layout: 'solder-wiring', avoidRail: true, theme: 'dark', photos: photosFor(xlrModel) })
-assert.ok(phoneWidthDiagram.metrics.output.photoBoxes.every((box) => box.size === 96 && box.y === 44),
-  'the 274px content-area diagram enlarges both XLR photos while preserving a compact top gap')
+  { layout: 'solder-wiring', avoidRail: false, theme: 'dark', photos: photosFor(xlrModel) })
+assertCompleteEndpointPhotos(phoneWidthDiagram.metrics, '274px XLR pair')
 
 const selectedConnection = xlrModel.connections[1]
-const routeGroupsFrom = (calls) => strokeCallGroups(calls).filter((group) =>
-  group.some((call) => call[0] === 'setLineWidth' && [1.6, 2.3, 5.8].includes(call[1]))
-  && group.some((call) => call[0] === 'bezierCurveTo'))
+const routeGroupsFrom = routeStrokeGroups
 const routeStyle = (group) => ({
   color: group.find((call) => call[0] === 'setStrokeStyle')[1],
   width: group.find((call) => call[0] === 'setLineWidth')[1],
-  path: group.filter((call) => ['moveTo', 'bezierCurveTo'].includes(call[0])),
+  path: group.filter((call) => ['moveTo', 'lineTo'].includes(call[0])),
 })
 ;['light', 'dark'].forEach((theme) => {
   const options = { layout: 'solder-wiring', theme, photos: photosFor(xlrModel) }
@@ -585,23 +1037,42 @@ const routeStyle = (group) => ({
   const selectedRoutes = routeGroupsFrom(highlighted.calls)
   assert.strictEqual(baselineRoutes.length, xlrModel.connections.length)
   assert.strictEqual(selectedRoutes.length, xlrModel.connections.length)
-  assert.deepStrictEqual(selectedRoutes.slice(0, 2).map((route) => routeStyle(route).path),
-    [routeStyle(baselineRoutes[0]).path, routeStyle(baselineRoutes[2]).path],
-  'unselected routes retain their exact curves and move into the neutral underlay')
-  assert.strictEqual(routeStyle(selectedRoutes[0]).color, theme === 'dark' ? '#454a52' : '#d9dde2')
-  assert.strictEqual(routeStyle(selectedRoutes[0]).width, 1.6)
-  assert.deepStrictEqual({
-    color: routeStyle(selectedRoutes[2]).color,
-    path: routeStyle(selectedRoutes[2]).path,
-  }, {
-    color: routeStyle(baselineRoutes[1]).color,
-    path: routeStyle(baselineRoutes[1]).path,
-  }, 'the selected route keeps its original semantic color and exact curve')
-  assert.strictEqual(routeStyle(selectedRoutes[2]).width, 5.8,
-    'the selected wire is visibly thicker and is drawn last')
-
+  assert(baselineRoutes.every((route) => routeStyle(route).width === 2.3),
+    'normal connection strokes keep their 2.3px width')
+  assertDrawnRoutesMatch(baseline.calls, baseline.metrics.connectionAnchors, 'normal XLR routes')
   const outputPinPoint = highlighted.metrics.output.anchors.get(String(selectedConnection.fromPin))
   const inputPinPoint = highlighted.metrics.input.anchors.get(String(selectedConnection.toPin))
+  const selectedGeometry = highlighted.metrics.connectionAnchors.find((item) => item.id === selectedConnection.id)
+  assert(selectedGeometry, 'selected connection keeps its physical photo-to-photo geometry')
+  assertPointObjectMatches(selectedGeometry.from, outputPinPoint,
+    'selected wire starts at its actual photographed output weld pin')
+  assertPointObjectMatches(selectedGeometry.to, inputPinPoint,
+    'selected wire ends at its actual photographed input weld pin')
+  assert.strictEqual(selectedGeometry.connection.fromPin, selectedConnection.fromPin)
+  assert.strictEqual(selectedGeometry.connection.toPin, selectedConnection.toPin)
+  const selectedPath = routePathFromPoints(selectedGeometry.points)
+  const pathKey = (route) => JSON.stringify(routeStyle(route).path)
+  const selectedPathKey = JSON.stringify(selectedPath)
+  const baselineSelectedIndex = baselineRoutes.findIndex((route) => pathKey(route) === selectedPathKey)
+  assert(baselineSelectedIndex >= 0, 'normal diagram draws the same actual path that selection will emphasize')
+  const selectedInk = selectedRoutes.at(-1)
+  assert.deepStrictEqual(routeStyle(selectedInk).path, selectedPath,
+    'the selected wire remains the complete actual photo-to-photo polyline')
+  assert.strictEqual(routeStyle(selectedInk).color, routeStyle(baselineRoutes[baselineSelectedIndex]).color,
+    'the selected wire keeps its original semantic color')
+  assert.strictEqual(routeStyle(selectedInk).width, 5.8,
+    'the selected wire is visibly thicker and is drawn last')
+  const unselectedInk = selectedRoutes.slice(0, -1)
+  assert(unselectedInk.every((route) => routeStyle(route).width === 1.6),
+    'every other connection is reduced to the 1.6px underlay')
+  assert.deepStrictEqual(
+    unselectedInk.map((route) => [pathKey(route), routeStyle(route).color]).sort((a, b) => a[0].localeCompare(b[0])),
+    baselineRoutes.filter((_, index) => index !== baselineSelectedIndex)
+      .map((route) => [pathKey(route), routeStyle(route).color]).sort((a, b) => a[0].localeCompare(b[0])),
+    'unselected wires keep their own semantic colors while selection changes only their width')
+  assert.deepStrictEqual(unselectedInk.map(pathKey).sort(),
+    baselineRoutes.filter((_, index) => index !== baselineSelectedIndex).map(pathKey).sort(),
+    'unselected wires retain their exact complete polylines')
   const selectedRings = highlighted.calls.filter((call) => call[0] === 'arc' && call[3] === 5)
   assert.strictEqual(selectedRings.length, 2, 'selection adds one small ring at each actual photo weld point')
   ;[[outputPinPoint, selectedConnection.fromPin], [inputPinPoint, selectedConnection.toPin]].forEach(([point, pin]) => {
@@ -609,15 +1080,20 @@ const routeStyle = (group) => ({
       `selected wire ring sits at its actual ${pin} anchor`)
     const ringIndex = highlighted.calls.findIndex((call) => call[0] === 'arc'
       && call[1] === point.x && call[2] === point.y && call[3] === 5)
+    assert(point.labelRect && Number.isFinite(point.labelRect.textX) && Number.isFinite(point.labelRect.textY),
+      `selected ${pin} weld has its physical-photo label rectangle`)
+    const expectedLabel = point.labelRect.label || point.label
     const labelIndex = highlighted.calls.findIndex((call) => call[0] === 'fillText'
-      && String(call[1]) === String(pin)
-      && Math.hypot(call[2] - point.x, call[3] - point.y) < 20)
-    assert(ringIndex >= 0 && labelIndex > ringIndex, `the selected ${pin} pin label is drawn over its ring`)
+      && String(call[1]) === String(expectedLabel)
+      && Math.abs(call[2] - point.labelRect.textX) < 0.01
+      && Math.abs(call[3] - point.labelRect.textY) < 0.01)
+    assert(ringIndex >= 0 && labelIndex > ringIndex,
+      `the selected ${pin} photo label is drawn after the weld highlight ring`)
   })
 
   const invalid = render(xlrModel, 320, { ...options, selectedId: 'missing-connection' })
   assert.deepStrictEqual(routeGroupsFrom(invalid.calls).map(routeStyle), baselineRoutes.map(routeStyle),
-    'an invalid selection restores the original colors, widths, ordering, and curves')
+    'an invalid selection restores the original colors, widths, ordering, and polylines')
   assert.strictEqual(invalid.calls.filter((call) => call[0] === 'arc' && call[3] === 5).length, 0)
 
   const report = recorder()
@@ -632,78 +1108,185 @@ const selectedSolderText = render(xlrModel, 320,
 assert(selectedSolderText.some((call) => call[0] === 'setLineWidth' && call[1] === 5.8),
   'selected wire state is drawn without requiring a photo object')
 
+const stereo35ToDualRca = getWiringModel('stereo35', 'rcaMono')
+const stereo35RightSignal = stereo35ToDualRca.connections.find((connection) => connection.id === 'right-signal')
+;[274, 319, 369].forEach((width) => ['light', 'dark'].forEach((theme) => {
+  const diagram = render(stereo35ToDualRca, width, {
+    layout: 'solder-wiring', avoidRail: false, theme, selectedId: stereo35RightSignal.id,
+    photos: photosFor(stereo35ToDualRca),
+  })
+  const tPoint = diagram.metrics.output.anchors.get('T')
+  const rPoint = diagram.metrics.output.anchors.get('R')
+  assert.strictEqual(tPoint.label, 'T L',
+    `stereo35 photo identifies its T contact as left-channel L at ${width}px ${theme}`)
+  const labelRect = tPoint.labelRect
+  assert(labelRect && labelRect.width > 0 && labelRect.height > 0,
+    `stereo35 T label has visible photo bounds at ${width}px ${theme}`)
+  const tLabelIndex = diagram.calls.findIndex((call) => call[0] === 'fillText' && call[1] === 'T L'
+    && Math.abs(call[2] - labelRect.textX) < 0.01 && Math.abs(call[3] - labelRect.textY) < 0.01)
+  assert(tLabelIndex >= 0,
+    `stereo35 T L function label is drawn at the actual photo label position at ${width}px ${theme}`)
+  const nearestX = Math.max(labelRect.x, Math.min(rPoint.x, labelRect.x + labelRect.width))
+  const nearestY = Math.max(labelRect.y, Math.min(rPoint.y, labelRect.y + labelRect.height))
+  assert(Math.hypot(rPoint.x - nearestX, rPoint.y - nearestY) >= 6 - 1e-6,
+    `stereo35 T L label clears the neighboring R weld point and its 5px highlight ring at ${width}px ${theme}`)
+}))
+
 const terminalSplitModel = getWiringModel('terminalBalanced', 'rcaStereo', {
   outputMode: 'coldReturn', destinationChannel: 'both',
 })
 assert.ok(terminalSplitModel.supported, 'terminal to dual RCA fixture uses explicit supported conditions')
+;['rcaStereo', 'tsStereo'].forEach((inputId) => {
+  const model = getWiringModel('terminalBalanced', inputId, {
+    outputMode: 'coldReturn', destinationChannel: 'both',
+  })
+  assert.strictEqual(model.status, 'ready', `terminal → ${inputId} is a supported three-column case`)
+  const diagram = render(model, 274, {
+    layout: 'solder-wiring', avoidRail: false, theme: 'dark', photos: photosFor(model),
+  })
+  assert.strictEqual(diagram.metrics.gallery.heads.length, 3,
+    `terminal → ${inputId} shows one output and two physical input heads`)
+  const terminal = diagram.metrics.output
+  assert.strictEqual(terminal.photoSpec.kind, 'terminal')
+  ;['+', '−', 'G'].forEach((pin) => {
+    const point = terminal.anchors.get(pin)
+    const rect = point.labelRect
+    assert(rect && rect.label === pin, `${inputId} terminal photo keeps its ${pin} label`)
+    assert.strictEqual(rect.width, 14, `${inputId} terminal ${pin} badge retains its 14px width`)
+    assert.strictEqual(rect.height, 14, `${inputId} terminal ${pin} badge retains its 14px height`)
+    terminal.anchors.forEach((other) => {
+      const nearestX = Math.max(rect.x, Math.min(other.x, rect.x + rect.width))
+      const nearestY = Math.max(rect.y, Math.min(other.y, rect.y + rect.height))
+      assert(Math.hypot(other.x - nearestX, other.y - nearestY) >= 6 - 1e-6,
+        `${inputId} terminal ${pin} badge clears its own and neighboring actual weld points`)
+    })
+  })
+})
 const terminalOriginHeight = getDiagramHeight(720, terminalSplitModel, { layout: 'solder-wiring' })
 const terminalOriginCanvas = recorder()
-drawWiringDiagram(terminalOriginCanvas.ctx, terminalSplitModel, 720, terminalOriginHeight, {
+const terminalOriginMetrics = drawWiringDiagram(terminalOriginCanvas.ctx, terminalSplitModel, 720, terminalOriginHeight, {
   layout: 'solder-wiring', x: 180, y: 20, photos: photosFor(terminalSplitModel),
 })
+assertTerminalCaptionDrawn(terminalOriginCanvas.calls, terminalOriginMetrics.output.terminalCaption,
+  'terminal-origin canvas', 180, 20)
 const terminalLabels = terminalOriginCanvas.calls.filter((call) => call[0] === 'fillText' && ['+', '−', 'G'].includes(call[1]))
 assert.ok(terminalLabels.length >= 3 && terminalLabels.every((call) => call[2] > 180),
   'terminal photo labels include the diagram origin when drawing a shared report canvas')
-assert(terminalLabels.every((call) => call[4] === '#1d2329')
-  && terminalOriginCanvas.calls.filter((call) => call[0] === 'setFillStyle' && call[1] === '#ffffff').length >= 3,
-'terminal labels use opaque white badges and fixed dark text for clear contrast on both themes')
-const terminalPageDiagram = render(terminalSplitModel, 274, {
-  layout: 'solder-wiring', avoidRail: true, theme: 'light', photos: photosFor(terminalSplitModel),
+const relativeLuminance = (color) => {
+  assert(/^#[0-9a-f]{6}$/i.test(color), `terminal badge color ${color} is an opaque six-digit color`)
+  const components = [1, 3, 5].map((offset) => parseInt(color.slice(offset, offset + 2), 16) / 255)
+    .map((value) => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4)
+  return (components[0] * 0.2126) + (components[1] * 0.7152) + (components[2] * 0.0722)
+}
+;['light', 'dark'].forEach((theme) => {
+  const diagram = render(terminalSplitModel, 320, {
+    layout: 'solder-wiring', avoidRail: false, theme, photos: photosFor(terminalSplitModel),
+  })
+  const background = diagram.calls.find((call) => call[0] === 'setFillStyle')[1]
+  const backgroundLuminance = relativeLuminance(background)
+  ;['+', '−', 'G'].forEach((pin) => {
+    const point = diagram.metrics.output.anchors.get(pin)
+    const rect = point.labelRect
+    const label = rect.label || point.label
+    const labelIndex = diagram.calls.findIndex((call) => call[0] === 'fillText' && call[1] === label
+      && Math.abs(call[2] - rect.textX) < 0.01 && Math.abs(call[3] - rect.textY) < 0.01)
+    assert(labelIndex >= 0, `${theme} terminal ${pin} photo label is present`)
+    const textColor = diagram.calls[labelIndex][4]
+    const textLuminance = relativeLuminance(textColor)
+    const contrast = (Math.max(backgroundLuminance, textLuminance) + 0.05)
+      / (Math.min(backgroundLuminance, textLuminance) + 0.05)
+    assert(contrast >= 4.5, `${theme} terminal ${pin} label has strong text contrast`)
+    let fillIndex = labelIndex - 1
+    while (fillIndex >= 0 && diagram.calls[fillIndex][0] !== 'fill') fillIndex -= 1
+    assert(fillIndex > 0 && diagram.calls[fillIndex - 1][0] === 'setFillStyle'
+      && diagram.calls[fillIndex - 1][1] === background,
+    `${theme} terminal ${pin} label has a solid theme-background badge`)
+    const badge = closedPathBounds(diagram.calls.slice(0, fillIndex)).at(-1)
+    assert(badge && Math.abs(badge.left - rect.x) < 0.01 && Math.abs(badge.right - rect.x - rect.width) < 0.01
+      && Math.abs(badge.top - rect.y) < 0.01 && Math.abs(badge.bottom - rect.y - rect.height) < 0.01,
+    `${theme} terminal ${pin} badge bounds match the physical-photo label rectangle`)
+  })
 })
-const terminalCaption = terminalPageDiagram.calls.find((call) => call[0] === 'fillText'
-  && String(call[1]).includes('示意顺序，按设备丝印'))
-assert(terminalCaption && terminalPageDiagram.height >= terminalCaption[3] + 15,
+const terminalPageDiagram = render(terminalSplitModel, 274, {
+  layout: 'solder-wiring', avoidRail: false, theme: 'light', photos: photosFor(terminalSplitModel),
+})
+const terminalCaption = terminalPageDiagram.metrics.output.terminalCaption
+assertTerminalCaptionDrawn(terminalPageDiagram.calls, terminalCaption, '274px terminal page')
+const terminalCaptionLastBaseline = terminalCaption.y + ((terminalCaption.lines.length - 1) * terminalCaption.size * 1.35)
+assert(terminalCaption && terminalPageDiagram.height >= terminalCaptionLastBaseline + 15,
   'terminal caption and its lower padding are inside the page diagram canvas')
+;[216, 274, 319].forEach((width) => {
+  const diagram = render(terminalSplitModel, width, {
+    layout: 'solder-wiring', avoidRail: false, theme: 'dark', photos: photosFor(terminalSplitModel),
+  })
+  const caption = diagram.metrics.output.terminalCaption
+  assert(caption && caption.lines.length > 0, `terminal → dual RCA keeps its caption at ${width}px`)
+  assertTerminalCaptionDrawn(diagram.calls, caption, `terminal → dual RCA at ${width}px`)
+  if (width === 216) assert(caption.lines.length > 1,
+    'the 216px terminal-to-RCA case exercises a wrapped multi-line terminal caption')
+  assert(caption.rect.y >= 0 && caption.rect.y + caption.rect.height <= diagram.height,
+    `the ${width}px terminal caption stays fully inside the Canvas`)
+  assertRoutesAvoidTerminalCaptions(diagram.metrics.connectionAnchors,
+    [diagram.metrics.output, diagram.metrics.input], `terminal → dual RCA at ${width}px`)
+  assertRoutePolylinesDoNotCross(diagram.metrics.connectionAnchors,
+    `terminal → dual RCA at ${width}px`)
+  assertDrawnRoutesMatch(diagram.calls, diagram.metrics.connectionAnchors,
+    `terminal → dual RCA drawn strokes at ${width}px`)
+})
 const terminalCompactReport = recorder()
 const terminalCompactOptions = { layout: 'solder-wiring', compact: true, theme: 'light', photos: photosFor(terminalSplitModel) }
 const terminalCompactHeight = getReportHeight(720, terminalSplitModel, terminalCompactOptions)
 drawWiringReport(terminalCompactReport.ctx, terminalSplitModel, 720, terminalCompactHeight, terminalCompactOptions)
 const terminalCompactTexts = terminalCompactReport.calls.filter((call) => call[0] === 'fillText')
-const compactTerminalCaption = terminalCompactTexts.find((call) => String(call[1]).includes('示意顺序，按设备丝印'))
+const compactTerminalCaptionStart = terminalCompactTexts.findIndex((call) =>
+  String(call[1]).includes('端子示意顺序'))
+assert(compactTerminalCaptionStart >= 0, 'compact report retains the terminal photo caption')
+const compactTerminalCaptionLines = []
+let compactTerminalCaptionText = ''
+for (let index = compactTerminalCaptionStart; index < terminalCompactTexts.length; index += 1) {
+  compactTerminalCaptionLines.push(terminalCompactTexts[index])
+  compactTerminalCaptionText += String(terminalCompactTexts[index][1])
+  if (compactTerminalCaptionText.includes('端子示意顺序，按设备丝印')) break
+}
+assert(compactTerminalCaptionText.includes('端子示意顺序，按设备丝印'),
+  'compact report keeps the complete terminal caption across its drawn lines')
 const compactTerminalGuide = terminalCompactTexts.find((call) => String(call[1]).includes('冷端') && String(call[1]).includes('汇接'))
-assert(compactTerminalCaption && compactTerminalGuide && compactTerminalGuide[3] > compactTerminalCaption[3] + 15,
-  'compact guide begins below the fully visible terminal caption')
+assert(compactTerminalGuide && compactTerminalCaptionLines.length > 0
+  && compactTerminalGuide[3] > compactTerminalCaptionLines.at(-1)[3] + 15,
+'compact guide begins below the final line of the fully visible terminal caption')
 
 const xlrRouteGroups = strokeCallGroups(xlrSolder.calls).filter((group) =>
   group.some((call) => call[0] === 'setLineWidth' && [1.6, 2.3, 5.8].includes(call[1])) &&
-  group.some((call) => call[0] === 'bezierCurveTo'))
+  group.some((call) => call[0] === 'moveTo') && group.some((call) => call[0] === 'lineTo'))
 assert.strictEqual(xlrRouteGroups.length, xlrModel.connections.length,
-  'each connection keeps one stroke operation even when its path has crossing gaps')
+  'each connection keeps one stroke operation for its complete polyline')
 xlrRouteGroups.forEach((group) => {
   const moveCount = group.filter((call) => call[0] === 'moveTo').length
-  const curveCount = group.filter((call) => call[0] === 'bezierCurveTo').length
-  assert.strictEqual(moveCount, curveCount, 'every split path piece remains one cubic segment')
-  assert.ok(curveCount >= 1)
+  assert.strictEqual(moveCount, 1, 'each connection path remains continuous across every segment')
 })
 const crossingCase = render(getWiringModel('stereo35', 'rcaStereo'), 320,
-  { layout: 'solder-wiring', avoidRail: true, theme: 'light' })
+  { layout: 'solder-wiring', avoidRail: false, theme: 'light' })
 const crossingRouteGroups = strokeCallGroups(crossingCase.calls).filter((group) =>
   group.some((call) => call[0] === 'setLineWidth' && [1.6, 2.3, 5.8].includes(call[1])) &&
-  group.some((call) => call[0] === 'bezierCurveTo'))
-const crossingGaps = []
-crossingRouteGroups.forEach((group) => {
-  let lastEnd = null
-  group.forEach((call) => {
-    if (call[0] === 'moveTo') {
-      if (lastEnd) crossingGaps.push(Math.hypot(call[1] - lastEnd[0], call[2] - lastEnd[1]))
-    } else if (call[0] === 'bezierCurveTo') lastEnd = [call[5], call[6]]
-  })
-})
-assert.ok(crossingGaps.some((gap) => gap >= 3 && gap <= 4.5),
-  'isolated route crossings leave a short 3–4px interruption in one cubic path')
+  group.some((call) => call[0] === 'moveTo') && group.some((call) => call[0] === 'lineTo'))
+assert.strictEqual(crossingRouteGroups.length, crossingCase.metrics.connectionAnchors.length)
+assertRoutePolylinesDoNotCross(crossingCase.metrics.connectionAnchors, 'stereo35 to dual RCA')
+assertDrawnRoutesMatch(crossingCase.calls, crossingCase.metrics.connectionAnchors, 'stereo35 to dual RCA')
+assertNoUndefinedOrNaNText(crossingCase.calls, 'stereo35 to dual RCA photo rendering')
 assert.ok(xlrSolder.calls.some((call) => call[0] === 'fillText' && call[1] === 'XLR 母头'),
   'solder photo heading identifies the output cable connector as female')
 assert.ok(xlrSolder.calls.some((call) => call[0] === 'fillText' && call[1] === 'XLR 公头'),
   'solder photo heading identifies the input cable connector as male')
 const rcaPhoto = getSolderPhotoSpec(getWiringModel('rcaMono', 'rcaMono').output)
-assert.deepStrictEqual(rcaPhoto.contentRect, { x: 215, y: 150, width: 147, height: 133 },
-  'RCA photo display crops to the rear solder assembly and omits the front insertion pin')
+assert.deepStrictEqual(rcaPhoto.contentRect, { x: 0, y: 0, width: rcaPhoto.width, height: rcaPhoto.height },
+  'RCA solder view keeps the full connector object, including its insertion pin')
+assert.strictEqual(rcaPhoto.width / rcaPhoto.height, 512 / 972,
+  'RCA complete photo retains its actual tall image proportions')
 ;['core', 'shell'].forEach((key) => {
   const point = rcaPhoto.pinPoints[key]
   const px = point.x * rcaPhoto.width, py = point.y * rcaPhoto.height
-  assert(px >= rcaPhoto.contentRect.x && px <= rcaPhoto.contentRect.x + rcaPhoto.contentRect.width &&
-    py >= rcaPhoto.contentRect.y && py <= rcaPhoto.contentRect.y + rcaPhoto.contentRect.height,
-  `RCA ${key} anchor remains inside the solder-end crop`)
+  assert(px >= 0 && px <= rcaPhoto.width && py >= 0 && py <= rcaPhoto.height,
+    `RCA ${key} anchor remains inside the complete connector photo`)
 })
 
 const compactOptions = { layout: 'solder-wiring', compact: true, viewMode: 'connectors', face: 'solder', theme: 'dark', scale: 2 }
@@ -722,6 +1305,9 @@ assert(!compactText.includes('悬空不接') && !compactText.includes('未连接
 assert(compactText.includes('端口、针位以设备丝印和手册为准'))
 assert(compactText.includes('T（L）接L信号，R接R信号；S接两头回路。'),
   'compact share reuses the short on-page guide for fixed mono selection')
+compactMono.connections.forEach((connection) => assert(compactText.includes(
+  `${connection.fromLabel}→${connection.toLabel}`.replace(/\s/g, '')),
+`compact share preserves the complete line mapping ${connection.id}`))
 compactMono.selectionSummary.forEach((summary) => assert(!compactText.includes(summary.replace(/\s/g, '')),
   `compact solder report does not repeat the selection summary: ${summary}`))
 compactMono.criticalNotes.forEach((note) => assert(!compactText.includes(note.replace(/\s/g, '')),

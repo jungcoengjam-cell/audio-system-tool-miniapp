@@ -1,5 +1,5 @@
 const DMX_UNIVERSE_SIZE = 512
-const UNIVERSE_LABELS = ['A', 'B', 'C', 'D']
+const UNIVERSE_LABELS = ['A', 'B', 'C', 'D', 'E', 'F', 'G']
 const MAX_UNIVERSE = UNIVERSE_LABELS.length
 const MAX_GROUPS = 20
 const MAX_FIXTURES_PER_GROUP = 200
@@ -110,22 +110,22 @@ function calculateDmxAddressPlan(options = {}) {
   }
 
   if (allocationMode === 'manual') {
-    const cursors = [null, startAddress, 1, 1, 1]
+    const cursors = [null, ...UNIVERSE_LABELS.map((_, index) => index === 0 ? startAddress : 1)]
     const fixtures = []
     let globalFixtureIndex = 0
     let manualError = null
     const groupResults = normalizedGroups.map((group, groupIndex) => {
       if (manualError) return { ...group, groupIndex, totalChannels: group.channelCount * group.fixtureCount, fixtures: [] }
-      const targetUniverse = UNIVERSE_LABELS.indexOf(group.targetUniverse) + 1
-      const address = cursors[targetUniverse]
+      let universe = UNIVERSE_LABELS.indexOf(group.targetUniverse) + 1
       const requiredChannels = group.channelCount * group.fixtureCount
-      if (address + requiredChannels - 1 > DMX_UNIVERSE_SIZE) {
-        manualError = `第 ${groupIndex + 1} 组“${group.name}”无法完整放入 ${group.targetUniverse} 域（从 ${formatDmxAddress(targetUniverse, address)} 开始还需要 ${requiredChannels} 个通道）。请拆分本组或改用其他域。`
-        return { ...group, groupIndex, totalChannels: requiredChannels, fixtures: [] }
-      }
       const groupFixtures = []
       for (let fixtureIndex = 1; fixtureIndex <= group.fixtureCount; fixtureIndex += 1) {
-        const start = cursors[targetUniverse]
+        while (universe <= MAX_UNIVERSE && cursors[universe] + group.channelCount - 1 > DMX_UNIVERSE_SIZE) universe += 1
+        if (universe > MAX_UNIVERSE) {
+          manualError = `第 ${groupIndex + 1} 组“${group.name}”从 ${group.targetUniverse} 域起排后超过 ${getUniverseLabel(MAX_UNIVERSE)}512。请减少数量或调整起排域。`
+          break
+        }
+        const start = cursors[universe]
         const end = start + group.channelCount - 1
         globalFixtureIndex += 1
         const fixture = {
@@ -136,16 +136,16 @@ function calculateDmxAddressPlan(options = {}) {
           fixtureModel: group.fixtureModel,
           fixtureIndex,
           channelCount: group.channelCount,
-          universe: targetUniverse,
-          universeLabel: group.targetUniverse,
+          universe,
+          universeLabel: getUniverseLabel(universe),
           startAddress: start,
           endAddress: end,
-          addressText: formatDmxAddress(targetUniverse, start),
-          rangeText: `${formatDmxAddress(targetUniverse, start)}–${formatDmxAddress(targetUniverse, end)}`,
+          addressText: formatDmxAddress(universe, start),
+          rangeText: `${formatDmxAddress(universe, start)}–${formatDmxAddress(universe, end)}`,
         }
         groupFixtures.push(fixture)
         fixtures.push(fixture)
-        cursors[targetUniverse] = end + 1
+        cursors[universe] = end + 1
       }
       return {
         ...group,
@@ -180,9 +180,9 @@ function calculateDmxAddressPlan(options = {}) {
       fixtures,
       universeSummaries,
       warnings: [
-        '按组分域：同一灯具组固定在指定域内，不会自动跨域；请分别核对各域信号主线与分配器输出。',
+        '按组分域：灯组按列表顺序从起排域向后顺延，单台灯具不跨域；请核对各域信号主线与分配器输出。',
       ],
-      ruleText: '按组指定域并在域内连续编址；单台灯具和整组灯具均不得跨域或与其他组重叠。',
+      ruleText: '按灯组顺序从起排域编址，单台灯具不跨域，不回绕。',
     }
   }
 
@@ -298,5 +298,6 @@ module.exports = {
   DMX_UNIVERSE_SIZE,
   MAX_GROUPS,
   MAX_TOTAL_FIXTURES,
+  UNIVERSE_LABELS,
   calculateDmxAddressPlan,
 }

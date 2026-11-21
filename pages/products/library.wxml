@@ -25,7 +25,7 @@
       <input
         class="search-input"
         value="{{keyword}}"
-        placeholder="输入型号、设备名称或参数"
+        placeholder="输入常规或其他型号、名称、参数"
         confirm-type="search"
         bindinput="onSearchInput"
         bindconfirm="onSearchConfirm"
@@ -121,6 +121,7 @@
           <view class="product-model">{{item.model}}</view>
           <view class="product-meta">{{item.meta}} · {{item.category}}</view>
           <view wx:if="{{item.verifiedType}}" class="product-verified-type">{{item.verifiedType}}</view>
+          <view wx:if="{{item.crossReferenceMatched}}" class="product-reference-match">对照型号：{{item.crossReferenceHint}}</view>
           <view wx:if="{{item.abilityLabels.length}}" class="product-abilities">
             <text wx:for="{{item.abilityLabels}}" wx:key="*this" class="product-ability">{{item}}</text>
           </view>

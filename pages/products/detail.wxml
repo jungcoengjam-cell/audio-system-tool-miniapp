@@ -161,6 +161,32 @@
       <view class="data-note-text">{{product.note}}</view>
     </view>
 
+    <view wx:if="{{product.modelCrossReferences.length}}" class="card cross-reference-card">
+      <view class="card-title">型号对照</view>
+      <view class="cross-reference-note">只记录原表中的型号关系，不代表参数相同或当前可供货。</view>
+      <view class="cross-reference-source-version">来源：{{product.modelCrossReferenceSourceText}}</view>
+      <view wx:for="{{product.modelCrossReferences}}" wx:for-item="reference" wx:key="key" class="cross-reference-row">
+        <view class="cross-reference-heading">
+          <text>{{reference.sourceLabel}}</text>
+          <text wx:if="{{reference.row}}">第 {{reference.row}} 行</text>
+          <text wx:if="{{reference.statusLabel}}" class="cross-reference-status">{{reference.statusLabel}}</text>
+        </view>
+        <view wx:if="{{reference.kind == 'history'}}" class="cross-reference-history">
+          <text class="cross-reference-history-label">{{reference.kindLabel}}</text>
+          <text wx:if="{{reference.kindLabel == '旧型号'}}">{{reference.targetModel}}</text>
+          <text wx:else>{{product.model}} → {{reference.targetModel}}</text>
+        </view>
+        <view wx:if="{{reference.noteSummary}}" class="cross-reference-history-note">{{reference.noteSummary}}</view>
+        <view wx:for="{{reference.groups}}" wx:for-item="group" wx:key="brand" class="cross-reference-group">
+          <view class="cross-reference-brand">{{group.brand}}</view>
+          <view wx:for="{{group.fields}}" wx:for-item="field" wx:key="label" class="cross-reference-field">
+            <text class="cross-reference-field-label">{{field.label}}</text>
+            <text class="cross-reference-field-value">{{field.value}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
     <view wx:if="{{product.missingParameters.length}}" class="card missing-card">
       <view class="card-title">待补充参数</view>
       <view class="missing-list">

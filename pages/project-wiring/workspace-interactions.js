@@ -5,7 +5,7 @@ const WORKSPACE_INTERACTION_TRACE_BUILD = 'workspace-touch-2026-10-16-r1'
 const WORKSPACE_INTERACTION_TRACE_LIMIT = 80
 const WORKSPACE_SUPPRESSED_TOUCH_MS = 300
 const WORKSPACE_TRACE_ENUMS = {
-  control: new Set(['action', 'connect', 'device', 'line', 'delete-device', 'delete-line']),
+  control: new Set(['action', 'connect', 'device', 'line', 'group', 'delete-device', 'delete-line', 'delete-group']),
   reason: new Set(['explicit', 'recent-drag', 'no-action-touch', 'action-touch-moved', 'action-touch-match',
     'action-touch-target-mismatch', 'action-touch-not-matched', 'cancelled', 'background-tap', 'list-scroll',
     'stale-target', 'busy', 'ready', 'capture-rejected', 'target-missing', 'destroyed', 'hidden',
@@ -79,6 +79,7 @@ function createWorkspaceInteractionMethods(runtime) {
       if (data.actionType === 'rename-device') return 'device'
       if (data.deleteType === 'device') return 'delete-device'
       if (data.deleteType === 'line') return 'delete-line'
+      if (data.deleteType === 'group') return 'delete-group'
       return 'action'
     },
 
@@ -94,6 +95,7 @@ function createWorkspaceInteractionMethods(runtime) {
       const id = text(data.id)
       if (!id || !this._workspace) return false
       if (data.deleteType === 'line') return this._workspace.groups.some((group) => group.lines.some((line) => line.id === id))
+      if (data.deleteType === 'group') return this._workspace.groups.some((group) => group.key === id)
       if (data.actionType === 'rename-device' || data.actionType === 'connect' || data.deleteType === 'device') {
         const matches = this._workspace.devices.filter((device) => device.id === id)
         const key = text(data.deviceKey)
@@ -208,13 +210,13 @@ function createWorkspaceInteractionMethods(runtime) {
       const id = text(dataset(event).swipeId)
       const busy = Boolean(this.data.saving || !this.data.project || datasetBoolean(dataset(event).retiring))
       this.traceWorkspaceInteraction('row-touch-start', {
-        control: type === 'line' ? 'line' : 'device', touchPresent: Boolean(point),
+        control: type === 'line' ? 'line' : type === 'group' ? 'group' : 'device', touchPresent: Boolean(point),
         identifierPresent: Boolean(point && touchIdentifier(point) !== ''),
         identifierZero: Boolean(point && touchIdentifier(point) === '0'),
         targetPresent: Boolean(id), busy,
       })
       if (busy) return
-      if (!['device', 'line'].includes(type) || !id || !point) return
+      if (!['device', 'line', 'group'].includes(type) || !id || !point) return
       const key = `${type}:${id}`
       if (this._workspaceOpenSwipe && this._workspaceOpenSwipe.key !== key) this.closeWorkspaceSwipeRow()
       const openOffset = this._workspaceOpenSwipe && this._workspaceOpenSwipe.key === key
@@ -225,6 +227,7 @@ function createWorkspaceInteractionMethods(runtime) {
         startX: Number(point.clientX), startY: Number(point.clientY),
         lastX: Number(point.clientX), lastY: Number(point.clientY),
         startOffset: openOffset, lastOffset: openOffset, axis: '',
+        suppressTap: false,
         touchId: touchIdentifier(point),
       }
     },
@@ -239,6 +242,7 @@ function createWorkspaceInteractionMethods(runtime) {
       const deltaY = y - gesture.startY
       gesture.lastX = x
       gesture.lastY = y
+      if (gesture.type === 'group' && Math.max(Math.abs(deltaX), Math.abs(deltaY)) > 6) gesture.suppressTap = true
       if (!gesture.axis) {
         if (Math.max(Math.abs(deltaX), Math.abs(deltaY)) < SWIPE_START_THRESHOLD) return
         if (Math.abs(deltaX) >= Math.abs(deltaY) * 1.3) {
@@ -265,6 +269,9 @@ function createWorkspaceInteractionMethods(runtime) {
       if (gesture.type === 'device') {
         const index = this.data.devices.findIndex((item) => item && item.id === gesture.id && !item.retiring)
         if (index >= 0) path = `devices[${index}]`
+      } else if (gesture.type === 'group') {
+        const index = this.data.groups.findIndex((item) => item && item.key === gesture.id && !item.retiring)
+        if (index >= 0) path = `groups[${index}]`
       } else {
         const groupIndex = this.data.groups.findIndex((item) => item && Array.isArray(item.lines)
           && item.lines.some((line) => line && line.id === gesture.id && !line.retiring))
@@ -290,13 +297,15 @@ function createWorkspaceInteractionMethods(runtime) {
       } else if (gesture.axis === 'vertical') {
         this.applyWorkspaceSwipeOffset(gesture, 0, false)
         this.rememberWorkspaceSuppressedTouch(event, gesture.key)
+      } else if (gesture.suppressTap) {
+        this.rememberWorkspaceSuppressedTouch(event, gesture.key)
       }
       this.traceWorkspaceInteraction('row-touch-end', {
         control: gesture.type, axis: gesture.axis || 'tap',
         touchPresent: Boolean(firstTouch(event, 'changedTouches') || firstTouch(event)),
         identifierPresent: Boolean(touchIdentifier(firstTouch(event, 'changedTouches')) || touchIdentifier(firstTouch(event))),
         identifierZero: (touchIdentifier(firstTouch(event, 'changedTouches')) || touchIdentifier(firstTouch(event))) === '0',
-        suppressed: gesture.axis === 'horizontal' || gesture.axis === 'vertical',
+        suppressed: gesture.axis === 'horizontal' || gesture.axis === 'vertical' || gesture.suppressTap,
       })
       this._workspaceSwipeGesture = null
     },
@@ -304,7 +313,7 @@ function createWorkspaceInteractionMethods(runtime) {
     onSwipeTouchCancel(event) {
       const gesture = this._workspaceSwipeGesture
       this.traceWorkspaceInteraction('row-touch-cancel', {
-        control: gesture && gesture.type === 'line' ? 'line' : 'device',
+        control: gesture ? gesture.type : 'device',
         touchPresent: Boolean(firstTouch(event, 'changedTouches') || firstTouch(event)),
         suppressed: false, reason: 'cancelled',
       })
@@ -403,24 +412,7 @@ function createWorkspaceInteractionMethods(runtime) {
       this.cancelWorkspaceSwipeGesture()
       const openSwipe = this._workspaceOpenSwipe
       if (!openSwipe) return
-      const gesture = {
-        key: openSwipe.key, type: openSwipe.type, id: openSwipe.id,
-        groupIndex: this.data.groups.findIndex((group) => group.lines.some((line) => line.id === openSwipe.id)),
-      }
-      this._workspaceOpenSwipe = null
-      const index = this.data.devices.findIndex((item) => item.id === openSwipe.id && !item.retiring)
-      if (openSwipe.type === 'device' && index >= 0) {
-        this.setData({ [`devices[${index}].swipeOpen`]: false, [`devices[${index}].swipeOffset`]: 0, [`devices[${index}].swipeDragging`]: false })
-        return
-      }
-      if (openSwipe.type === 'line' && gesture.groupIndex >= 0) {
-        const lineIndex = this.data.groups[gesture.groupIndex].lines.findIndex((line) => line.id === openSwipe.id && !line.retiring)
-        if (lineIndex >= 0) this.setData({
-          [`groups[${gesture.groupIndex}].lines[${lineIndex}].swipeOpen`]: false,
-          [`groups[${gesture.groupIndex}].lines[${lineIndex}].swipeOffset`]: 0,
-          [`groups[${gesture.groupIndex}].lines[${lineIndex}].swipeDragging`]: false,
-        })
-      }
+      this.applyWorkspaceSwipeOffset(openSwipe, 0, false)
     },
 
     cancelWorkspaceSwipeGesture() {

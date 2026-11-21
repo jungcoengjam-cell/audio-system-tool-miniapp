@@ -636,13 +636,18 @@ assert.match(wxss, /\.action-button\.action-button:active\{[^}]*background:var\(
   'the pressed feedback must match the limiter style')
 assert.match(wxss, /\.result-details-scroll\{[^}]*padding:0 44px/,
   'secondary results must retain symmetric gutters around the whole-card center')
-assert.match(wxss, /\.action-rail\{[^}]*top:calc\(8px - var\(--gain-page-top-gap\)\);right:12px/,
-  'normal action coordinates must match limiter without changing page padding')
-assert.match(wxss, /@media\(max-height:600px\)\{[^}]*\.action-rail\{top:calc\(1px - var\(--gain-page-top-gap\)\);right:6px;gap:1px/,
+assert.match(wxss, /\.action-rail\{[^}]*top:20px;right:28px/,
+  'normal action coordinates must match the approved result-card inset')
+assert.match(wxss, /@media\(max-height:600px\)\{[^}]*\.action-rail\{top:20px;right:28px;gap:1px/,
   'short-screen action coordinates must match limiter')
-for (const alias of ['--theme-surface:var(--tv)', '--theme-text-secondary:var(--ts)', '--theme-divider:var(--td)', '--theme-accent-text:var(--ta)', '--theme-accent-soft:var(--as)']) {
-  assert(wxss.includes(alias), 'action rail must reuse global theme alias ' + alias)
-}
+assert.match(wxss, /\.page-root\{[^}]*background:var\(--theme-page-bg\);color:var\(--theme-text\)/,
+  'the gain workspace must use shared app page and text tokens')
+assert.doesNotMatch(wxss, /\.page-root\{[^}]*--theme-[\w-]+:/,
+  'the gain workspace must not redefine the app theme palette locally')
+assert.match(wxss, /\.result-card\{[^}]*background:var\(--theme-surface\)/,
+  'the gain result card must use the shared app surface token')
+assert.match(wxss, /\.result-value\{[^}]*color:var\(--theme-accent-text\)/,
+  'the gain primary value must use the shared app accent text token')
 assert.doesNotMatch(wxss, /\.page-root\{height:auto;overflow-y:auto\}/,
   'short screens must not become whole-page scrolling layouts')
 assert.match(pageSource, /onTargetPeakTap\(event\)[\s\S]*?setSelectionAndCalculate\('targetPeakIndex', index\)/,

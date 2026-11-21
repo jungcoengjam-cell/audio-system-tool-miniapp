@@ -413,6 +413,19 @@ function withoutSplSelectorAnimationClasses(source) {
     .replace(panelClass, 'class="selector-panel"')
 }
 
+// The alias hint is a deliberate selector extension. Validate its exact row,
+// then remove it before checking the frozen historical picker markup.
+function withoutSplModelAliasHint(source) {
+  const aliasRow = '<view wx:if="{{item.aliasMatch}}" class="selector-meta device-picker-item-meta device-picker-alias-match">对照型号：{{item.aliasMatch}}</view>'
+  const aliasRowPattern = /^[\t ]*<view wx:if="\{\{item\.aliasMatch\}\}" class="selector-meta device-picker-item-meta device-picker-alias-match">对照型号：\{\{item\.aliasMatch\}\}<\/view>\r?\n/gm
+  const rowMatches = source.match(aliasRowPattern) || []
+  assert.equal(source.split(aliasRow).length - 1, 1,
+    'SPL selector must bind one visible alias hint to the selected real model')
+  assert.equal(rowMatches.length, 1,
+    'SPL selector alias hint must occupy one complete line')
+  return source.replace(aliasRowPattern, '')
+}
+
 // The shared picker skin adds a bounded set of presentation-only classes to
 // the SPL selector. Validate every token count, then remove only those tokens
 // before comparing the frozen historical markup hash.
@@ -844,7 +857,8 @@ for (const [relativePath, expectedHash] of Object.entries({
     'SPL local report must use the 750px cable-report side margin and card padding')
     const approvedSplHash = baseline.approvedSplRefactorExpandedWxmlSha256
     assert.match(approvedSplHash || '', /^[0-9a-f]{64}$/, 'missing approved SPL refactor WXML hash')
-    const splMarkupWithoutPickerClasses = withoutSplDevicePickerClasses(hashInput)
+    const splMarkupWithoutAliasHint = withoutSplModelAliasHint(hashInput)
+    const splMarkupWithoutPickerClasses = withoutSplDevicePickerClasses(splMarkupWithoutAliasHint)
     const splMarkupWithoutAnimationTokens = withoutSplSelectorAnimationClasses(splMarkupWithoutPickerClasses)
     const splMarkupWithoutClosePresentation = withoutPanelClosePresentation(splMarkupWithoutAnimationTokens, relativePath)
     const splMarkupWithoutCompactSelection = withoutApprovedCompactProjectSelection(splMarkupWithoutClosePresentation, relativePath)

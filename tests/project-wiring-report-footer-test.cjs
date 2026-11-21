@@ -22,12 +22,17 @@ async function main() {
   assert.doesNotMatch(reportFooter, /closeReportPreview|panel-close-control/,
     'report close remains outside the share/save action footer')
   assert.match(markup, /class="wiring-report-page-hint"[\s\S]*?左右滑动切换/)
-  assert.match(markup, /<swiper class="wiring-report-swiper result-scroll-swiper" current="\{\{reportPageIndex\}\}"[^>]*bindchange="onReportPageSwipe"/)
+  assert.match(markup, /<view wx:if="\{\{reportImages\.length === 1\}\}" class="wiring-report-page-hint wiring-report-long-hint"[\s\S]*?上下滚动查看/,
+    'one-image preview shows vertical-scroll guidance without a 1/1 counter')
+  assert.match(markup, /<scroll-view wx:if="\{\{reportImages\.length === 1\}\}" class="wiring-report-long-scroll" scroll-y/)
+  assert.match(markup, /<swiper wx:else class="wiring-report-swiper result-scroll-swiper" current="\{\{reportPageIndex\}\}"[^>]*bindchange="onReportPageSwipe"/,
+    'multi-page reports retain their horizontal pager')
   assert.match(markup, /<scroll-view class="wiring-report-image-scroll" scroll-y/)
+  assert.match(markup, /class="wiring-report-image" src="\{\{reportImagePath\}\}"[^>]*bindtap="previewReportImage"/)
   assert.match(markup, /class="wiring-report-image" src="\{\{reportImage\.path\}\}"[^>]*bindtap="previewReportImage"/)
   assert.match(markup, /wx:if="\{\{reportSaveError\}\}" class="wiring-report-save-error result-copy"/,
     'save failures and permission guidance are rendered as text')
-  const statusStart = markup.indexOf('<view class="wiring-report-save-status">')
+  const statusStart = markup.indexOf('class="wiring-report-save-status"')
   const footerStart = markup.indexOf('<view class="wiring-sheet-actions wiring-report-actions result-footer">')
   const statusMarkup = markup.slice(statusStart, footerStart)
   assert.ok(statusStart >= 0 && footerStart > statusStart)
@@ -35,6 +40,8 @@ async function main() {
     'saving progress and permission/error states are non-button text')
   assert.match(styles, /\.wiring-report-swiper\{[^}]*flex:1/)
   assert.match(styles, /\.wiring-report-image-scroll\{height:100%/)
+  assert.match(styles, /\.wiring-report-long-scroll\{[^}]*flex:1/)
+  assert.match(styles, /\.wiring-report-long-hint \.wiring-report-swipe-help\{[^}]*max-width:none[^}]*text-align:left/)
 
   const env = createRuntime()
   const page = env.page()
@@ -101,6 +108,23 @@ async function main() {
   assert.equal(routingPage.data.reportSaveRunning, true,
     'pending save state is represented by status text, not a stop button')
   routingPage.onUnload()
+
+  const singleEnv = createRuntime()
+  const singlePage = singleEnv.page()
+  const singleRequests = []
+  singlePage._reportSignature = 'single-long-image'
+  singleEnv.wx.showShareImageMenu = (options) => singleRequests.push({ type: 'share', path: options.path })
+  singleEnv.wx.saveImageToPhotosAlbum = (options) => singleRequests.push({ type: 'save', path: options.filePath })
+  singlePage.setData({ reportImages: [{ title: '项目线路清单', path: '/fixture/project-long.png' }],
+    reportPreviewVisible: true, reportPageIndex: 0 })
+  singlePage.showReportPage(0)
+  singlePage.shareReportImage()
+  singlePage.saveReportImage()
+  assert.deepEqual(singleRequests, [
+    { type: 'share', path: '/fixture/project-long.png' },
+    { type: 'save', path: '/fixture/project-long.png' },
+  ], 'single long-image actions use the one cached path')
+  singlePage.onUnload()
 
   console.log('PASS project wiring report footer and safe swiper navigation')
 }

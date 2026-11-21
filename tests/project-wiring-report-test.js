@@ -141,6 +141,39 @@ assert.strictEqual(tokenReport.pages[0].subtitleLines[0], '共 1 条 · 已核�
 assert.strictEqual(tokenRow.fields.status, '待施工', '单条状态沿用现有状态标签')
 assert.ok(tokenReport.pages[0].nameFontSize >= 28, '项目名字号至少28px')
 assert.ok(tokenReport.pages[0].summaryFontSize >= 24, '汇总行字号至少24px')
+
+const optionalEndpointSchedule = {
+  version: 1,
+  revision: 0,
+  nextNumber: 2,
+  lines: [makeLine(1, {
+    fromDevice: '调音台',
+    toDevice: '',
+    fromLocation: '控制室',
+    toLocation: '',
+  })],
+}
+const optionalEndpointProject = buildScheduleReportPages('位置端点', optionalEndpointSchedule, 'project')
+const optionalEndpointHeader = getRows(optionalEndpointProject.pages, 'project-group')[0]
+assert.ok(optionalEndpointProject.text.includes('控制室 / 调音台'))
+assert.deepStrictEqual(optionalEndpointHeader.drawItems.map((item) => item.text), ['控制室 / 调音台'])
+assert.ok(!optionalEndpointHeader.drawItems.some((item) => item.fieldId === 'group.direction'),
+  'paged project reports omit the arrow when only one endpoint is named')
+assert.ok(!optionalEndpointProject.text.includes('来源设备') && !optionalEndpointProject.text.includes('未填写'))
+for (const type of ['lines', 'materials', 'labels']) {
+  const optionalExport = buildScheduleReportPages('位置端点', optionalEndpointSchedule, type)
+  assert.ok(optionalExport.text.includes('控制室 / 调音台 / OUT 1 → IN 1'),
+    type + ' export keeps location beside port data when device names are optional')
+}
+
+const noEndpointProject = buildScheduleReportPages('空端点', {
+  version: 1, revision: 0, nextNumber: 2,
+  lines: [makeLine(1, { fromDevice: '', toDevice: '', fromLocation: '', toLocation: '' })],
+}, 'project')
+assert.equal(getRows(noEndpointProject.pages, 'project-group').length, 0,
+  'paged project reports omit an empty device/location heading')
+assert.equal(getRows(noEndpointProject.pages, 'project-line').length, 1,
+  'paged project reports keep the line details when all optional endpoints are empty')
 assert.ok(tokenRow.drawItems.find((item) => item.fieldId === 'status').fontSize >= 28,
   '线路状态字号至少28px')
 const normalizedTokenLine = normalizeSchedule(tokenSchedule).lines[0]

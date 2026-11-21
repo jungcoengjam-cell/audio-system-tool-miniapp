@@ -7,7 +7,7 @@
   <text class="selector-count device-picker-count">匹配 {{selectorTotalCount}} 个型号</text>
   <scroll-view class="selector-list device-picker-list" scroll-y bindscrolltolower="appendSelectorItems">
     <view wx:for="{{selectorItems}}" wx:key="model" class="selector-row device-picker-row" data-index="{{item.index}}" catchtap="selectEquipment">
-      <view class="selector-row-copy"><text class="selector-model device-picker-item-title">{{item.model}}</text><text class="selector-meta device-picker-item-meta">{{item.category}}</text></view>
+      <view class="selector-row-copy"><text class="selector-model device-picker-item-title">{{item.model}}</text><text class="selector-meta device-picker-item-meta">{{item.category}}</text><text wx:if="{{item.aliasMatch}}" class="selector-meta device-picker-item-meta device-picker-alias-match">对照型号：{{item.aliasMatch}}</text></view>
       <button class="selector-detail device-picker-detail" data-model="{{item.model}}" catchtap="openEquipmentDetail">资料</button>
     </view>
     <view wx:if="{{selectorItems.length === 0}}" class="selector-empty device-picker-empty">没有匹配型号，请换一个关键词或分类。</view>

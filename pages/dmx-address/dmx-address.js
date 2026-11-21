@@ -11,6 +11,7 @@ markToolLoadStage('/pages/dmx-address/dmx-address', 'module')
 
 const {
 calculateDmxAddressPlan,
+DMX_UNIVERSE_SIZE,
 MAX_GROUPS,
 MAX_TOTAL_FIXTURES,
 } = require('../../utils/dmx-address')
@@ -215,21 +216,11 @@ return [
 'rgba(0,184,186,0.15)',
 ][index % LIGHTING_GROUP_COLORS.length]
 }
-function buildAddressCardPreviewChips(fixtures = [], columns = 8, color = '#007aff') {
+function buildAddressCardPreviewChips(fixtures = [], columns = 8) {
 const visible = (fixtures || []).slice(0, Math.max(1, Number(columns) || 1) * 2).map((fixture) => ({ ...fixture }))
 if (visible.length && visible.length < (fixtures || []).length) {
 const last = visible[visible.length - 1]
-const rgb = /^#([0-9a-f]{6})$/i.exec(color)?.[1] || '007aff'
-const red = parseInt(rgb.slice(0, 2), 16)
-const green = parseInt(rgb.slice(2, 4), 16)
-const blue = parseInt(rgb.slice(4, 6), 16)
-const address = String(last.addressText || '')
 last.previewOverflow = true
-last.previewAddressCharacters = Array.from(address).map((value, index) => ({
-id: `${last.stableId}:${index}`,
-value,
-color: `rgba(${red}, ${green}, ${blue}, ${Math.max(0.38, 1 - index * 0.16)})`,
-}))
 }
 return visible
 }
@@ -537,7 +528,7 @@ if (chipColumnsChanged && Array.isArray(this.data.groupCards)) {
 nextMetrics.groupCards = this.data.groupCards.map((group) => ({
 ...group,
 cardChipColumns: chipColumns,
-cardFixtureChips: buildAddressCardPreviewChips(group.fixtureChips, chipColumns, group.color),
+cardFixtureChips: buildAddressCardPreviewChips(group.fixtureChips, chipColumns),
 }))
 }
 if (options.submit !== false) this.setData(nextMetrics, callback)
@@ -729,7 +720,7 @@ addressMarkCountText: `已设 ${checkedCount}/${fixtures.length}`,
 hasChannelGuide: fixtures.some((item) => item.channelGuideAvailable),
 fixtureChips: fixtures,
 cardChipColumns,
-cardFixtureChips: buildAddressCardPreviewChips(fixtures, cardChipColumns, LIGHTING_GROUP_COLORS[index % LIGHTING_GROUP_COLORS.length]),
+cardFixtureChips: buildAddressCardPreviewChips(fixtures, cardChipColumns),
 calculatedGroup: calculated || null,
 }
 })
@@ -747,6 +738,18 @@ fixtures: [],
 }))
 const selectedUniverse = occupancyUniverses.find((item) => item.label === this._selectedUniverseLabel)
 const selectedOccupancyUniverse = selectedUniverse || occupancyUniverses[0]
+const selectedUniverseSummary = validResult?.universeSummaries?.find((item) => item.universeLabel === this._selectedUniverseLabel)
+let nextAvailableAddress = validResult?.nextText || '—'
+if (validResult?.allocationMode === 'manual') {
+const configuredStartAddress = Number(scheme?.preferences?.startAddressText || this.data.startAddressText || 1)
+let nextAddress = selectedUniverseSummary ? selectedUniverseSummary.lastAddress + 1 : 1
+if (!selectedUniverseSummary && this._selectedUniverseLabel === 'A' && Number.isInteger(configuredStartAddress)) {
+nextAddress = configuredStartAddress
+}
+nextAvailableAddress = nextAddress > DMX_UNIVERSE_SIZE
+? '已满'
+: `${this._selectedUniverseLabel}${String(nextAddress).padStart(3, '0')}`
+}
 const selectedUniverseFixtures = (selectedUniverse?.fixtures || []).map((item) => {
 const checked = scheme?.checksById?.[item.stableId]?.fingerprint === fixtureFingerprint(item)
 return { ...item, checked }
@@ -759,7 +762,7 @@ selectedUniverseFixtures,
 selectedUniverseLabel: this._selectedUniverseLabel,
 selectedOccupancyUniverse,
 selectedUniverseIndex: UNIVERSE_LABELS.indexOf(this._selectedUniverseLabel),
-nextAvailableAddress: validResult?.nextText || '—',
+nextAvailableAddress,
 }
 },
 buildSchemeFromState(state) {
@@ -1206,6 +1209,7 @@ allocationModeLabel: this.data.allocationModeOptions[allocationModeIndex],
 })
 },
 onGroupUniverseChange(event) {
+if (this.data.allocationMode !== 'manual') return
 const index = Number(event.currentTarget.dataset.index)
 const targetUniverseIndex = Number(event.detail.value)
 const targetUniverse = UNIVERSE_LABELS[targetUniverseIndex]
@@ -1544,8 +1548,8 @@ return !next || checked.fingerprint !== fixtureFingerprint(next)
 }).length
 const beforeRange = getFixtureRange(beforeFixtures)
 const afterRange = getFixtureRange(afterFixtures)
-const beforeUniverse = beforeGroup?.targetUniverse || beforeFixtures[0]?.universeLabel || ''
-const afterUniverse = afterGroup?.targetUniverse || afterFixtures[0]?.universeLabel || ''
+const beforeUniverse = [...new Set(beforeFixtures.map((fixture) => fixture.universeLabel))].join('、') || beforeGroup?.targetUniverse || ''
+const afterUniverse = [...new Set(afterFixtures.map((fixture) => fixture.universeLabel))].join('、') || afterGroup?.targetUniverse || ''
 const groupChanged = !beforeGroup || !afterGroup
 || beforeGroup.fixtureModel !== afterGroup.fixtureModel
 || Number(beforeGroup.channelCount) !== Number(afterGroup.channelCount)
@@ -1584,6 +1588,13 @@ const beforeRange = primaryRow?.beforeRange
 const afterRange = calculation.valid
 ? (primaryRow?.afterRange || `${calculation.result.startText}–${calculation.result.endText}`)
 : '—'
+const pendingGroupIndex = Number(descriptor.groupIndex)
+const pendingGroup = Number.isInteger(pendingGroupIndex)
+? candidate.preferences?.groups?.[pendingGroupIndex]
+: null
+const pendingTargetUniverse = UNIVERSE_LABELS.includes(pendingGroup?.targetUniverse)
+? pendingGroup.targetUniverse
+: 'A'
 let addPreview = null
 if (descriptor.kind === 'add') {
 const previewScheme = calculation.scheme || candidate
@@ -1627,6 +1638,21 @@ removedFixtures,
 removedFixtureCount: removedFixtures.length,
 removedPlacedCount: removedFixtures.filter((fixture) => fixture.placementText !== '未放置').length,
 addPreview,
+targetUniverse: pendingTargetUniverse,
+targetUniverseIndex: UNIVERSE_LABELS.indexOf(pendingTargetUniverse),
+universeGroups: descriptor.kind === 'allocationMode' && candidate.preferences?.allocationMode === 'manual'
+? (candidate.preferences?.groups || []).map((group, groupIndex) => {
+const targetUniverse = UNIVERSE_LABELS.includes(group.targetUniverse) ? group.targetUniverse : 'A'
+return {
+groupIndex,
+name: `第 ${groupIndex + 1} 组 · ${this.data.groups[groupIndex]?.name || group.name || '灯具组'}`,
+targetUniverse,
+targetUniverseIndex: UNIVERSE_LABELS.indexOf(targetUniverse),
+}
+})
+: [],
+showEffectPreview: calculation.valid || !(candidate.preferences?.allocationMode === 'manual'
+&& ['allocationMode', 'groupUniverse'].includes(descriptor.kind)),
 error: calculation.valid ? '' : calculation.error || calculation.result?.error || '请检查型号、模式和数量。',
 valid: Boolean(calculation.ok && calculation.valid),
 }
@@ -1742,6 +1768,23 @@ group.channelCount = String(channelCount)
 group.libraryChannelCount = String(channelCount)
 pending.channelCount = channelCount
 pending.channelModeIndex = modeIndex
+this.buildPendingPreview(candidate, pending)
+},
+onPendingUniverseChange(event) {
+if (this.data.pendingChangeClosing || !this._pendingScheme || !this.data.pendingChange) return
+const pending = { ...this.data.pendingChange }
+if (!['add', 'groupUniverse', 'allocationMode'].includes(pending.kind)) return
+const groupIndex = Number(event.currentTarget?.dataset?.index)
+const targetUniverseIndex = Number(event.detail.value)
+const targetUniverse = UNIVERSE_LABELS[targetUniverseIndex]
+if (!Number.isInteger(groupIndex) || !targetUniverse) return
+const candidate = JSON.parse(JSON.stringify(this._pendingScheme))
+if (candidate.preferences?.allocationMode !== 'manual') return
+if (pending.kind !== 'allocationMode' && groupIndex !== Number(pending.groupIndex)) return
+const group = candidate.preferences?.groups?.[groupIndex]
+if (!group || group.targetUniverse === targetUniverse) return
+group.targetUniverse = targetUniverse
+vibrate('light')
 this.buildPendingPreview(candidate, pending)
 },
 onPendingQuantityInput(event) {
@@ -2397,7 +2440,7 @@ getResultText() {
 const result = this._calculationResult
 if (!result?.valid) return ''
 const groupDomain = (group) => result.allocationMode === 'manual'
-? ` · ${group.targetUniverse}域`
+? ` · ${[...new Set(group.fixtures.map((fixture) => fixture.universeLabel))].join('、')}域`
 : ''
 const groupLines = result.groups.flatMap((group) => [
 '',

@@ -24,6 +24,8 @@ function decorateProducts(products, selectedModels) {
     statusKey: item.statusKey,
     abilityLabels: item.abilityLabels,
     verifiedType: item.verifiedType,
+    crossReferenceMatched: Boolean(item.crossReferenceMatched),
+    crossReferenceHint: item.crossReferenceHint || '',
     compareSelected: selectedSet.has(item.model),
   }))
 }

@@ -122,6 +122,23 @@ function validateDistinctDeviceReferences(line) {
     : ''
 }
 
+function validateLineLocations(line) {
+  for (const field of ['fromLocation', 'toLocation']) {
+    if (line[field] === undefined) continue
+    if (typeof line[field] !== 'string' || line[field].trim().length > 100) {
+      return '线路位置需为不超过 100 个字符的文本'
+    }
+  }
+  return ''
+}
+
+function validateLineDeviceNames(line) {
+  for (const field of ['fromDevice', 'toDevice']) {
+    if (line[field] !== undefined && typeof line[field] !== 'string') return '线路设备名称需为文本'
+  }
+  return ''
+}
+
 function validateDeviceData(schedule) {
   if (!schedule || typeof schedule !== 'object') return ''
   const devices = Object.prototype.hasOwnProperty.call(schedule, 'devices') ? schedule.devices : []
@@ -149,6 +166,7 @@ function validateDeviceData(schedule) {
 
 function normalizeLine(input) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) return null
+  if (validateLineLocations(input)) return null
   const rawLengthText = input.lengthText === undefined ? ''
     : (typeof input.lengthText === 'string' ? input.lengthText.trim() : null)
   if (rawLengthText === null || rawLengthText.length > MAX_LENGTH_TEXT || !validLengthText(rawLengthText)) return null
@@ -172,7 +190,10 @@ function normalizeLine(input) {
   DEVICE_REFERENCE_FIELDS.forEach((field) => {
     if (input[field] !== undefined) line[field] = asText(input[field], 100)
   })
-  if (!line.id || !line.code || !line.fromDevice || !line.fromPort || !line.toDevice || !line.toPort) return null
+  for (const field of ['fromLocation', 'toLocation']) {
+    if (input[field] !== undefined) line[field] = input[field].trim()
+  }
+  if (!line.id || !line.code || !line.fromPort || !line.toPort) return null
   if (!validLengthText(line.lengthText)) return null
   return line
 }
@@ -348,7 +369,9 @@ function applyDeletionChange(scheduleValue, command) {
 }
 
 function validateLine(line) {
-  if (!line.fromDevice || !line.fromPort || !line.toDevice || !line.toPort) return '请填写线路两端的设备和端口'
+  if (!line.fromPort || !line.toPort) return '请填写线路两端的端口'
+  const locationError = validateLineLocations(line)
+  if (locationError) return locationError
   if (!BUILD_IDS.has(line.buildType)) return '请选择有效的制作方式'
   if (!['balanced', 'unbalanced', 'speaker', 'custom'].includes(line.cableType)) return '请选择有效的线材类型'
   if (!STATUS_IDS.has(line.status)) return '请选择有效的线路状态'
@@ -537,6 +560,10 @@ function applyScheduleChange(scheduleValue, command) {
   } else if (command.type === 'upsert') {
     const input = command.line
     if (!input || typeof input !== 'object' || Array.isArray(input)) return failSchedule(schedule, '线路资料无效')
+    const deviceNameError = validateLineDeviceNames(input)
+    if (deviceNameError) return failSchedule(schedule, deviceNameError)
+    const locationError = validateLineLocations(input)
+    if (locationError) return failSchedule(schedule, locationError)
     const index = input.id ? lines.findIndex((line) => line.id === input.id) : -1
     if (input.id && index < 0) return failSchedule(schedule, '找不到这条线路，请刷新后重试')
     const previous = index >= 0 ? lines[index] : null
@@ -558,6 +585,11 @@ function applyScheduleChange(scheduleValue, command) {
       lengthText: asText(input.lengthText === undefined ? previous?.lengthText : input.lengthText, MAX_LENGTH_TEXT),
       status: input.status === undefined ? (previous?.status || 'pending') : input.status,
       notes: asText(input.notes === undefined ? previous?.notes : input.notes, 300),
+    }
+    for (const field of ['fromLocation', 'toLocation']) {
+      if (input[field] !== undefined) candidate[field] = input[field].trim()
+      else if (previous && Object.prototype.hasOwnProperty.call(previous, field)) candidate[field] = previous[field]
+      else delete candidate[field]
     }
     DEVICE_REFERENCE_FIELDS.forEach((field) => {
       if (Object.prototype.hasOwnProperty.call(input, field) && input[field] === null) delete candidate[field]
@@ -626,6 +658,10 @@ function applyScheduleChange(scheduleValue, command) {
     if (batch.line.id !== undefined && batch.line.id !== null && batch.line.id !== '') {
       return failSchedule(schedule, '批量新增不能带已有线路编号')
     }
+    const deviceNameError = validateLineDeviceNames(batch.line)
+    if (deviceNameError) return failSchedule(schedule, deviceNameError)
+    const locationError = validateLineLocations(batch.line)
+    if (locationError) return failSchedule(schedule, locationError)
     const count = parseIntegerInput(batch.count)
     if (count === null || count < 1 || count > MAX_BATCH) return failSchedule(schedule, '一次可批量新增 1 到 32 条线路')
     if (lines.length + count > MAX_LINES) return failSchedule(schedule, '项目最多可保存 200 条线路')
@@ -694,8 +730,8 @@ function formatLength(value) {
   return `${prettyNumber(value)} m`
 }
 
-function endpoint(device, port) {
-  return [device, port].filter(Boolean).join(' / ')
+function endpoint(location, device, port) {
+  return [location, device, port].filter(Boolean).join(' / ')
 }
 
 function optionLabel(map, value) {
@@ -721,8 +757,8 @@ function buildMaterialSummary(scheduleValue) {
   const labels = []
 
   lines.forEach((line) => {
-    const local = endpoint(line.fromDevice, line.fromPort)
-    const remote = endpoint(line.toDevice, line.toPort)
+    const local = endpoint(line.fromLocation, line.fromDevice, line.fromPort)
+    const remote = endpoint(line.toLocation, line.toDevice, line.toPort)
     labels.push(
       { code: line.code, local, remote, direction: 'to' },
       { code: line.code, local: remote, remote: local, direction: 'from' },
@@ -859,6 +895,7 @@ module.exports = {
   applyScheduleChange,
   buildMaterialSummary,
   buildScheduleText,
+  endpoint,
   emptySchedule,
   normalizeSchedule,
   validateDeviceData,

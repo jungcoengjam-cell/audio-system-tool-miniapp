@@ -1,144 +1,155 @@
-# Apple iOS 26 Liquid Glass Design System
+# 项目 UI 设计规范
 
-## Purpose
+更新日期：2026-11-09
 
-本文件是本微信小程序的 UI 设计语言规范，约束视觉表现与界面交互体验。
+## 目的与边界
 
-Design language: Apple iOS 26 inspired Liquid Glass.
+本规范描述微信小程序的视觉层级、组件状态、响应式、可访问性和平台适配。
 
-Goals:
-- Premium
-- Clear hierarchy
-- Content first
-- Functional glass
-- Responsive
-- Accessible
+- 内容优先，界面克制清晰。
+- Liquid Glass 只作可选设计灵感，不是微信平台要求。
+- 不要求页面普遍使用模糊、透明材质或装饰反射。
+- 原生微信导航栏和 tabBar 优先使用小程序配置。
+- 页面默认使用不透明实色表面；只有确有层级作用的功能浮层才考虑模糊，并提供实色降级样式。
 
-## Core Rules
+本文件只约束 UI。算法、产品数据、输入校验和存储语义遵循[项目协作与业务边界](AGENTS.md)、[README](README.md)及对应业务代码和回归测试。视觉修改不得改变计算结果或持久化数据。
 
-1. Liquid Glass 仅用于有功能意义的浮层。
-2. 不要让每个组件都使用玻璃效果。
-3. 保持可读性、可用性和性能。
-4. 不复制 Apple 商标或专有资源。
+## 主题颜色
 
-## Glass Usage
+页面颜色以 [app.wxss](app.wxss) 中的 `--theme-*` 语义 token 为源。
 
-Use glass for:
-- Navigation bars
-- Tab bars
-- Toolbars
-- Floating buttons
-- Search controls
-- Sheets
-- Context menus
+共享页面适配样式见 [styles/theme-page-shared.wxss](styles/theme-page-shared.wxss)。
 
-Avoid:
-- Glass everywhere
-- Multiple blur layers
-- Decorative reflections
+微信原生导航栏和 tabBar 的颜色由 [theme.json](theme.json) 配置。
 
-## Typography
+页面组件优先引用语义 token，不复制固定颜色值，也不把旧玻璃透明度设为统一规范。
 
-Use system fonts:
+| Token | 浅色 | 深色 | 用途 |
+| --- | --- | --- | --- |
+| `--theme-page-bg` | `#f2f2f7` | `#000000` | 页面背景 |
+| `--theme-surface` | `#ffffff` | `#1c1c1e` | 卡片、面板 |
+| `--theme-text` | `#1d1d1f` | `#ffffff` | 主要文字 |
+| `--theme-accent` | `#007aff` | `#0a84ff` | 强调与交互状态 |
+| `--theme-accent-text` | `#005eb8` | `#8ac8ff` | 彩色表面上的强调文字 |
+| `--theme-primary-fill` | `#0066cc` | `#0066cc` | 主要操作填充 |
+| `--theme-control` | `#e8e8ed` | `#2c2c2e` | 次级控件表面 |
 
-```text
--apple-system,
-BlinkMacSystemFont,
-SF Pro Display,
-SF Pro Text,
-Helvetica Neue,
-Arial
-```
+需要表达次级文字、分隔线、警告、错误和成功时，使用 `--theme-text-secondary`、`--theme-divider`、`--theme-warning`、`--theme-danger`、`--theme-success` 等语义 token。
 
-Prioritize:
-- Large readable titles
-- Clear hierarchy
-- Limited font weights
+检查文字、图标和控件在浅色、深色主题下均可辨认；不要为了装饰降低对比度。
 
-## Colors
+## 字体、布局与交互
 
-Accent:
-`#007AFF`
+- 页面继承 [app.wxss](app.wxss) 的系统字体栈及中文回退字体。
+- 字号、字重和行高沿用对应页面的现有组件层级，不新增一组强制全局字号。
+- 固定数值读数可用 `px` 保持易读；布局和相对尺寸优先用 `rpx`。
+- 交互触区至少为 `44px × 44px`，底部操作预留安全区。
+- 长名称、较大系统字体和窄屏下应可换行或滚动，不得裁掉关键值、操作或错误信息。
+- 通用页面的圆角和阴影沿用邻近组件；11 个工具页的主工作区按下方工具样式 token 执行。
+- 同一行的操作应保持一致的高度和清楚的间隔；普通按钮不依赖醒目的描边分组。
+- 触感反馈复用 [utils/haptics.js](utils/haptics.js)：有效的离散选择用 `light`，成功复制、保存、收藏、恢复、删除和报告完成用 `medium`。失败、取消、无效重复、输入、滚动、导航和后台刷新不触发；共享操作 helper 已反馈时，页面不重复触发。设备不支持时静默继续，不增加独立设置。
 
-Light background:
-`#F5F5F7`
+按钮和可操作图标应有明确文字或读屏标签。
 
-Dark background:
-`#000000`
+加载、禁用、失败和空状态要能区分；不要只用颜色传达状态。
 
-Glass light:
-`rgba(255,255,255,0.58)`
+动画保持轻量；`100–160ms` 可作为按钮反馈的参考值，不强制改变微信原生导航时长。
 
-Glass dark:
-`rgba(24,24,27,0.58)`
+遵循减少动态偏好；动画不可成为理解状态的唯一线索。
 
-## Geometry
+## 工具输入与结果区
 
-Rounded continuous shapes.
+11 个工具页的主工作区使用 [styles/tool-ui-tokens.wxss](styles/tool-ui-tokens.wxss) 中的共享尺寸变量。该文件只声明变量，颜色继续引用 `app.wxss` 的 `--theme-*` 语义 token。它统一主要卡片与控件的几何，不要求重排既有列表、图示或功能分组。
 
-Radius:
-- 10px
-- 14px
-- 20px
-- 28px
-- 999px capsule
+| Token | 值 | 用途 |
+| --- | --- | --- |
+| `--tool-card-radius` | `22px` | 主要结果卡和输入卡 |
+| `--tool-list-radius` | `16px` | 密集列表卡片与次级容器 |
+| `--tool-control-radius` | `12px` | 普通输入控件 |
+| `--tool-control-height` | `48px` | 普通输入控件高度 |
+| `--tool-inline-height` | `44px` | 胶囊页签及紧凑触控项 |
+| `--tool-gutter` | `16px` | 页面左右留白 |
+| `--tool-gap` | `12px` | 主要卡片之间的间距 |
+| `--tool-card-shadow` | `0 5px 18px var(--theme-shadow)` | 主要卡片阴影 |
 
-## Components
+主要输入卡片和数值结果卡片使用不透明的 `--theme-surface`，采用 `22px` 圆角和共享阴影。页面左右留白为 `16px`，主要卡片间距为 `12px`。主要数值使用 `--theme-accent-text`；单位和说明文字使用 `--theme-text-secondary`，普通次级数值使用 `--theme-text`。成功绿色只表示状态。字号可随视口调整以避免读数溢出。
 
-交互组件按实际能力提供适用状态，例如 Default、Pressed、Disabled、Loading、Focused；需要时提供 Error 状态。
+普通输入控件高度为 `48px`、圆角为 `12px`；输入标签为 `13px`、值为 `16px`。分组页签保留 `44px` 触区并采用胶囊选中态。窄屏或短屏时允许页面纵向滚动，不能裁掉读数、输入项或操作。
 
-Touch target:
-minimum 44x44
+线材规格的次级截面积值使用正文色；LED 净屏尺寸使用强调色。摄像机工具仅将输入卡片纳入共享输入样式，整个图示结果区保持现有结构和语义颜色。列表与图示内容保留既有信息结构；上述规则只约束视觉呈现，不改变计算、输入含义、数据或校验。
 
-- Primary actions use a blue fill; secondary actions use a soft neutral or light blue fill.
-- Ordinary buttons should not use a prominent outline; use spacing to keep adjacent actions distinct.
-- Buttons in the same row share a height, use `box-sizing: border-box`, and remain at least 44px tall.
-- Generation, copy, favorite, and project actions share the public `result-image-button`, `copy-result-button`, and `result-record-button` geometry; output and record rows use two equal columns with a 10px horizontal gap and a 10px vertical gap.
-- These four result actions use `height: 88rpx`, `min-height: 44px`, `font-size: 27rpx`, `font-weight: 600`, `border-radius: 22rpx`, and `box-sizing: border-box`; keep at least 32rpx of viewport-side space and do not override this geometry per page.
+## 共享结果操作
 
-## Motion
+计算结果中的生成图片、复制、收藏和项目操作复用 [app.wxss](app.wxss) 定义的 `result-image-button`、`copy-result-button` 和 `result-record-button` 样式；共享页面适配见 [styles/theme-page-shared.wxss](styles/theme-page-shared.wxss)。
 
-Recommended:
+这四种操作使用相同几何：
 
-Button feedback:
-100-160ms
+- `height: 88rpx`，`min-height: 44px`。
+- `font-size: 27rpx`，`font-weight: 600`。
+- `border-radius: 22rpx`，`box-sizing: border-box`。
+- 输出和记录操作各按两列等宽排列，行距和列距均为 `10px`。
+- 操作行视口左右留白至少 `32rpx`。
 
-Navigation:
-240-360ms
+这些尺寸只适用于共享结果操作。项目报告有独立的紧凑工具栏和 PDF 底栏，不套用上述按钮字号或两列间距合同。
 
-Sheets:
-300-450ms
+## 工具目录与显示设置
 
-Support reduced motion.
+工具页当前布局合同见[工具页布局说明](docs/tools-grid-current-contract-2026-10-20.md)。
 
-## Accessibility
+- 默认目录为四列网格，行列间距均为 `16rpx`，卡片高 `200rpx`。
+- 卡片圆角为 `26rpx`，标题为 `13px` 两行；同一网格图标保持一致的显示尺寸。
+- 当前 11 项默认按 `4/4/3` 排列；隐藏工具后按剩余项目自然重排。
+- 产品资料库位于网格末尾，标题分两行显示“产品”“资料库”，使用“资料”分类。
+- 产品资料库使用设置中的工具显示开关管理，不再使用独立横条。
 
-Ensure:
+工具 ID、路径和分类来自 [utils/tool-registry.js](utils/tool-registry.js)；持久显示设置由 [utils/tool-visibility.js](utils/tool-visibility.js) 提供。
 
-- Text contrast
-- Large text support
-- Clear labels
-- Keyboard support
-- Safe touch areas
+依据页只显示注册表中确有计算依据的工具，并在 `onShow` 时按相同工具 ID 应用显示设置。产品资料库没有计算依据，不新增依据页条目。
 
-If glass reduces readability:
-increase opacity or replace with solid surface.
+隐藏入口不得改写依据内容或业务数据。全部关闭时提供可返回设置的空状态；设置读取失败时按现行实现展示全部工具和依据入口，并保留错误提示。
 
-## WeChat Mini Program
+相关页面为[工具页](pages/tools/tools.wxml)、[设置页](pages/settings/settings.js)和[依据页](pages/index/index.js)。
 
-When adapting:
+## 项目报告
 
-- Use rpx
-- Respect safe areas
-- Provide blur fallback
-- Avoid heavy blur effects
+项目报告预览采用紧凑的“返回选择 / 上一页 / 页码 / 下一页”工具栏。
 
-## Final Direction
+报告纸张单独显示在主题背景的可滚动区域，底部展示 PDF 状态和操作。
 
-Clear content
-+ functional glass
-+ precise typography
-+ smooth motion
-+ accessibility
+具体实现见[报告模板](pages/records/report.wxml)、[报告样式](pages/records/report.wxss)及[报告控制器](pages/records/report.js)。
 
-= Apple iOS 26 inspired Liquid Glass experience
+PDF 按所选报告页的顺序合并，页面维持原始比例和长页尺寸，不承诺套入 A4。
+
+当前 PDF 以页面图像承载内容，没有可搜索或选择的文字层。
+
+预览中的页内图片仅用于阅读和翻页，不等于向用户导出图片；项目报告的对外操作是生成、打开或分享 PDF。
+
+这一要求只适用于项目报告，不取消其他工具已有的图片导出功能。
+
+灯位方案只有在格式与计算校验通过且实际包含已编址灯具时才进入报告候选。
+
+空结果不增加灯位报告项或报告页；有灯具但尚未摆放的有效方案仍保留为报告候选。
+
+灯位边界实现见 [pages/records/report-model.js](pages/records/report-model.js)。本规范不重述或改变其算法、校验和存储语义。
+
+## 验收目标与设备检查
+
+在以下逻辑宽度和主题下检查主要页面：
+
+- 宽度：`320px`、`390px`、`430px`。
+- 主题：浅色、深色。
+- 内容：长文本、换行、页面纵向滚动和列表空状态。
+- 布局：底部安全区、横向溢出和窄屏工具行。
+- 操作：触区至少 `44px × 44px`、读屏标签、禁用和失败状态。
+- 辅助：减少动态偏好、系统字体放大后的排版。
+
+浏览器映射和模板编译可用于开发预检，不能据此宣称真机通过。
+
+微信真机仍需确认以下流程：
+
+- 系统字体放大后的排版和微信原生导航栏、tabBar 显示。
+- 工具显示开关与依据页同步，以及全关和设置读取失败状态。
+- 项目报告 PDF 首页非空、长页显示和多页翻阅。
+- PDF 文件打开与微信系统分享流程。
+
+逐项记录实际设备和结果，不以模拟证据代替真机结论。

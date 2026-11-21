@@ -1,6 +1,7 @@
 const { printPerformanceSummary, startMeasurement } = require('../../utils/performance')
 const finishCameraModuleLoad = startMeasurement('摄像机/脚本加载')
 const { cameras } = require('../../data/cameras')
+const { findModelAliasMatches, formatModelAliasMatches } = require('../../utils/model-alias-search')
 const {
   calculateGroundAreaPlacement,
   calculateHorizontalOnlyPlacement,
@@ -276,8 +277,12 @@ const cameraOptions = buildCameraOptions()
 function filterCameras(items, keyword) {
   const normalized = String(keyword || '').trim().toLowerCase()
   if (!normalized) return items
-  return items.filter((camera) => [camera.model, camera.category, camera.sensor]
-    .some((value) => String(value || '').toLowerCase().includes(normalized)))
+  return items.map((camera) => {
+    if ([camera.model, camera.category, camera.sensor]
+      .some((value) => String(value || '').toLowerCase().includes(normalized))) return camera
+    const aliases = findModelAliasMatches(camera.model, normalized)
+    return aliases.length ? { ...camera, aliasMatch: formatModelAliasMatches(aliases) } : null
+  }).filter(Boolean)
 }
 
 function buildViewOptions(camera) {

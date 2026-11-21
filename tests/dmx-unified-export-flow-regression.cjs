@@ -186,17 +186,17 @@ function installWx() {
   return { wx, actions, exportContext, exportCanvas }
 }
 
-function makePreferences(counts) {
+function makePreferences(counts, groupNames = []) {
   return {
     startAddressText: '1',
     allocationMode: 'auto',
     groupSummary: counts.map((count, index) => '测试组' + (index + 1) + '×' + count + '（1CH）').join('；'),
     groups: counts.map((count, index) => ({
-      name: '测试组' + (index + 1),
+      name: groupNames[index] || '测试组' + (index + 1),
       fixtureSource: 'custom',
       fixtureModel: '',
       libraryChannelCount: '',
-      customName: '测试组' + (index + 1),
+      customName: groupNames[index] || '测试组' + (index + 1),
       customChannelCount: '1',
       channelCount: '1',
       fixtureCount: String(count),
@@ -294,13 +294,13 @@ async function waitFor(predicate, message) {
   assert(predicate(), message)
 }
 
-async function runCase(label, counts) {
+async function runCase(label, counts, groupNames = []) {
   storage.clear()
   routeEvents.length = 0
   exportSequence = 0
   activeExportContext = null
   const runtime = installWx()
-  storage.set('audioTool.dmxAddress.preferences', makePreferences(counts))
+  storage.set('audioTool.dmxAddress.preferences', makePreferences(counts, groupNames))
 
   const addressPage = instantiateRegisteredPage('pages/dmx-address/dmx-address.js')
   addressPage.onLoad({ lightingCatalogImport: true })
@@ -370,20 +370,40 @@ async function runCase(label, counts) {
       label + ': output omitted internal rod group ' + rodLabel)
   }
   assert(outputTexts.has('面光杆1'), label + ': output omitted the front-light rod label')
+  assert(outputTexts.has('TuneBuddy'), label + ': output omitted the diagram footnote')
   const exportPage = layoutPage._exportPages[0]
   const baseDerivedDiagramMinimum = assertBaseDiagramFloor(exportPage, label)
-  assert(exportPage.addressLayout && exportPage.addressLayout.sections.length > 0,
-    label + ': unified image omitted the complete grouped address list')
-  assert(outputTexts.has('完整地址清单（' + expectedAddresses.length + ' 台）'),
-    label + ': output omitted the address-list heading')
-  assert(outputTexts.has('未上杆（1台）'), label + ': output omitted the unplaced fixture section/count')
-  const appendixCalls = textCalls.filter((call) => call.y > exportPage.diagramTop + exportPage.diagramHeight)
-  const appendixText = appendixCalls.map((call) => call.text).join(' ')
-  const appendixTokens = new Set(appendixText.split(/\s+/).filter(Boolean))
-  const missingAddresses = expectedAddresses.filter((address) => !appendixTokens.has(address))
-  assert.deepStrictEqual(missingAddresses, [], label + ': address appendix omitted addresses: ' + missingAddresses.slice(0, 8).join(', '))
-  assert(appendixCalls.some((call) => call.text.includes(placement.unplaced[0].addressText)),
-    label + ': address appendix omitted the unplaced fixture address')
+  assert.deepStrictEqual(exportPage.addressLayout, { sections: [], columns: 0, height: 0 },
+    label + ': direct image export must not lay out an address appendix')
+  assert.strictEqual(exportPage.addressListTop, exportPage.diagramTop + exportPage.diagramHeight,
+    label + ': omitted address appendix must not leave a gap below the diagram')
+  const fixtureLegend = exportPage.fixtureLegend || []
+  const rodIds = new Set(['internalRods', 'frontRods', 'legacySideRods'].flatMap((key) => layoutPage._layout[key] || []).map((rod) => String(rod.id)))
+  const placedGroupCounts = new Map()
+  layoutPage._fixtures.forEach((fixture) => {
+    const position = layoutPage._layout.positionsById[fixture.stableId]
+    if (!position || !(position.kind === 'ground' || position.ground === true || position.rodId && rodIds.has(String(position.rodId)))) return
+    const key = String(fixture.groupId || fixture.groupIndex || fixture.id || fixture.stableId)
+    placedGroupCounts.set(key, (placedGroupCounts.get(key) || 0) + 1)
+  })
+  assert.deepStrictEqual(fixtureLegend.map((group) => [String(group.fixtures[0].groupId || group.fixtures[0].groupIndex || group.fixtures[0].id || group.fixtures[0].stableId), group.fixtures.length]),
+    [...placedGroupCounts.entries()], label + ': legend must list only placed groups and fixture counts in group order')
+  assert.strictEqual(outputTexts.has('灯具图例'), fixtureLegend.length > 0,
+    label + ': legend title must be present only when a group is drawn')
+  assert.strictEqual(exportPage.fixtureLegendTop, exportPage.diagramTop + exportPage.diagramHeight,
+    label + ': legend must start in the reserved space below the diagram')
+  assert(exportPage.height <= 4096, label + ': diagram and legend exceeded the image height limit')
+  if (label === 'many-groups') assert([...outputTexts].some((text) => text.includes('…  1台')),
+    label + ': long group name was not shortened while retaining its count')
+  assert(![...outputTexts].some((text) => text.startsWith('完整地址清单') || text.includes('未上杆')),
+    label + ': direct image export included address appendix text')
+  assert(!outputTexts.has(placement.unplaced[0].addressText),
+    label + ': direct image export included an unplaced fixture address')
+  if (label === 'small') {
+    const placedFixture = layoutPage._fixtures.find((fixture) => layoutPage._layout.positionsById[fixture.stableId])
+    assert(placedFixture && outputTexts.has(placedFixture.addressText),
+      label + ': output omitted the address label of a placed fixture')
+  }
   assert(exportPage.width <= 4096 && exportPage.height <= 4096, label + ': export dimensions exceed the canvas bounds')
   textCalls.forEach((call) => assertTextBounds(call, exportPage.width, exportPage.height))
   assert.strictEqual(JSON.stringify(layoutPage._layout.positionsById), positionsBefore,
@@ -419,13 +439,8 @@ async function runCase(label, counts) {
     canvas: { width: exportPage.width, height: exportPage.height },
     diagramHeight: exportPage.diagramHeight,
     baseDerivedDiagramMinimum,
-    addressSections: exportPage.addressLayout.sections.map((section) => ({
-      label: section.label,
-      fixtures: section.addresses.length,
-      lines: section.lines.length,
-    })),
+    addressAppendix: exportPage.addressLayout.sections.length > 0,
     textCalls: textCalls.length,
-    allAddressesPresent: true,
     actions: { preview: 1, forward: 1, save: 1 },
   }
 }
@@ -436,10 +451,13 @@ async function main() {
   const single = await runCase('single', [1])
   const onePerRod = await runCase('one-per-rod', [1, 1, 1, 1])
   const dense = await runCase('dense', [200, 200, 100])
+  const many = await runCase('many-groups', Array.from({ length: 20 }, () => 1), [
+    '超长灯具组名称'.repeat(12), ...Array.from({ length: 19 }, (_, index) => '多组' + (index + 2)),
+  ])
   process.stdout.write(JSON.stringify({
     status: 'PASS',
     flow: 'address WXML route -> layout Page -> WXML share binding -> real draw/export callback -> preview/forward/save',
-    cases: [empty, small, single, onePerRod, dense],
+    cases: [empty, small, single, onePerRod, dense, many],
   }) + '\n')
 }
 

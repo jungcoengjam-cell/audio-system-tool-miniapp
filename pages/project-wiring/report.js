@@ -709,6 +709,12 @@ const PROJECT_REPORT = Object.freeze({
     { id: 'connectors', fieldId: 'header.connectors', label: 'A \u63a5\u5934 \u2192 B \u63a5\u5934', x: 490, width: 210 },
   ],
 })
+const LONG_PROJECT_REPORT = Object.freeze({
+  groupGap: 32,
+  directionGap: 24,
+  directionStartGap: 8,
+  outerPadding: 12,
+})
 
 function estimateProjectPortLineWidth(value, size) {
   const characterWidth = [...String(value || '')].reduce((total, character) => {
@@ -784,20 +790,187 @@ function projectTextItems(value, fieldId, x, top, width, size, lineHeight, optio
   }
 }
 
-function projectGroupRow(group) {
-  const left = projectTextItems(group.fromDevice || '\u672a\u586b\u5199', 'from.device', 30, 7, 282, 18, 24,
-    { weight: 600, inset: 4 })
-  const arrow = projectTextItems('\u2192', 'group.direction', 318, 7, 72, 18, 24,
-    { align: 'center', colorRole: 'secondary' })
-  const right = projectTextItems(group.toDevice || '\u672a\u586b\u5199', 'to.device', 408, 7, 282, 18, 24,
-    { weight: 600, inset: 4 })
+function cleanProjectLabel(value) {
+  return value === null || value === undefined ? '' : String(value).trim()
+}
+
+function joinProjectEndpoint(location, device) {
+  return [cleanProjectLabel(location), cleanProjectLabel(device)].filter(Boolean).join(' / ')
+}
+
+function projectRouteText(from, to, directionMark = '\u2192') {
+  const left = cleanProjectLabel(from)
+  const right = cleanProjectLabel(to)
+  if (left && right) return left + ' ' + (directionMark || '\u2192') + ' ' + right
+  return left || right
+}
+
+function projectEndpointLabel(value, side) {
+  const endpoint = cleanProjectLabel(value[side + 'EndpointLabel'])
+  if (endpoint) return endpoint
+  const location = value[side + 'Location']
+  const device = value[side + 'DeviceLabel'] || value[side + 'DeviceName'] || value[side + 'Device']
+  return joinProjectEndpoint(location, device)
+}
+
+function projectReportEndpointLabel(value, side) {
+  const location = cleanProjectLabel(value[side + 'Location'])
+  const device = cleanProjectLabel(value[side + 'Device'] || value[side + 'DeviceName'])
+  return location ? joinProjectEndpoint(location, device) : device
+}
+
+function projectDeviceLabel(value, side) {
+  return cleanProjectLabel(value[side + 'DeviceLabel'] || value[side + 'DeviceName'] || value[side + 'Device'])
+}
+
+function projectGroupRow(group, directionMark = '\u2192', options = {}) {
+  const longImage = Boolean(options.longImage)
+  const fromDevice = cleanProjectLabel(options.fromLabel !== undefined
+    ? options.fromLabel : (group.fromDeviceLabel || group.fromDeviceName || group.fromDevice))
+  const toDevice = cleanProjectLabel(options.toLabel !== undefined
+    ? options.toLabel : (group.toDeviceLabel || group.toDeviceName || group.toDevice))
+  if (!fromDevice && !toDevice) return null
+  const fontSize = longImage ? (options.longImageStyle === 'device' ? 22 : 26) : 18
+  const lineHeight = longImage ? (options.longImageStyle === 'device' ? 29 : 32) : 24
+  const colorRole = longImage ? (options.longImageStyle === 'device' ? 'deviceText' : 'inverse') : 'text'
+  const textTop = longImage ? 13 : 7
+  const fieldWidth = longImage ? 262 : 282
+  const left = projectTextItems(fromDevice, 'from.device',
+    longImage ? 36 : 30, textTop, fieldWidth, fontSize, lineHeight,
+    { weight: longImage ? 700 : 600, inset: 4, colorRole })
+  const right = projectTextItems(toDevice, 'to.device',
+    longImage ? 382 : 408, textTop, fieldWidth, fontSize, lineHeight,
+    { weight: longImage ? 700 : 600, inset: 4, colorRole })
+  const bothSides = Boolean(fromDevice && toDevice)
+  const singleLabel = bothSides ? null : projectTextItems(fromDevice || toDevice, 'group.route',
+    longImage ? PROJECT_REPORT.innerLeft + 20 : PROJECT_REPORT.innerLeft + 10,
+    textTop, longImage ? PROJECT_REPORT.innerRight - PROJECT_REPORT.innerLeft - 40
+      : PROJECT_REPORT.innerRight - PROJECT_REPORT.innerLeft - 20,
+    fontSize, lineHeight, { weight: longImage ? 700 : 600, inset: 4, colorRole })
+  const contentHeight = singleLabel ? singleLabel.height : Math.max(left.height, right.height)
+  const height = longImage
+    ? Math.max(options.longImageStyle === 'device' ? 58 : 66, contentHeight + 26)
+    : Math.max(38, contentHeight + 14)
+  const arrowTop = longImage ? Math.max(13, (height - 30) / 2) : 7
+  const arrow = bothSides ? projectTextItems(directionMark, 'group.direction',
+    longImage ? 298 : 318, arrowTop, longImage ? 84 : 72,
+    longImage ? (options.longImageStyle === 'device' ? 21 : 24) : 18,
+    longImage ? 30 : 24,
+    { align: 'center', colorRole: longImage ? colorRole : 'secondary', weight: longImage ? 700 : 500 }) : null
   return {
-    kind: 'project-group', key: group.key, groupKey: group.key,
-    fromDevice: group.fromDevice || '\u672a\u586b\u5199', toDevice: group.toDevice || '\u672a\u586b\u5199',
+    kind: options.kind || 'project-group', key: group.groupKey || group.key,
+    groupKey: group.groupKey || group.key,
+    fromDevice: cleanProjectLabel(group.fromDevice || group.fromDeviceName),
+    toDevice: cleanProjectLabel(group.toDevice || group.toDeviceName),
     fromDeviceId: group.fromDeviceId, toDeviceId: group.toDeviceId,
-    drawItems: [...left.items, ...arrow.items, ...right.items],
-    height: Math.max(38, Math.max(left.height, right.height) + 14),
+    drawItems: singleLabel ? singleLabel.items : [...left.items, ...arrow.items, ...right.items],
+    height,
+    ...(longImage ? { longImageStyle: options.longImageStyle || 'major' } : {}),
   }
+}
+
+function projectLocationHeadingRow(locationGroup) {
+  const fromLocation = cleanProjectLabel(locationGroup.fromLocation)
+  const toLocation = cleanProjectLabel(locationGroup.toLocation)
+  const text = fromLocation && fromLocation === toLocation
+    ? fromLocation
+    : projectRouteText(fromLocation, toLocation, locationGroup.bidirectional ? '\u2194' : '\u2192')
+  if (!text) return null
+  const result = projectTextItems(text, 'location.title', PROJECT_REPORT.innerLeft + 20, 13,
+    PROJECT_REPORT.innerRight - PROJECT_REPORT.innerLeft - 40, 26, 32,
+    { weight: 700, colorRole: 'inverse' })
+  return {
+    kind: 'project-location', key: locationGroup.key, groupKey: locationGroup.key,
+    drawItems: result.items, height: Math.max(66, result.height + 26), longImageStyle: 'major',
+  }
+}
+
+function projectDirectionHeadingRow(direction) {
+  const text = projectRouteText(projectEndpointLabel(direction, 'from'), projectEndpointLabel(direction, 'to'))
+  if (!text) return null
+  const result = projectTextItems(text, 'direction.title', PROJECT_REPORT.innerLeft + 22, 9,
+    PROJECT_REPORT.innerRight - PROJECT_REPORT.innerLeft - 34, 21, 29,
+    { weight: 700, colorRole: 'directionText' })
+  return {
+    kind: 'project-direction', key: direction.key, directionKey: direction.key,
+    fromDevice: direction.fromDevice, toDevice: direction.toDevice,
+    fromDeviceId: direction.fromDeviceId, toDeviceId: direction.toDeviceId,
+    drawItems: result.items, height: Math.max(54, result.height + 18),
+    longImageStyle: 'direction',
+  }
+}
+
+function projectLocationGroups(workspace) {
+  if (Array.isArray(workspace.locationGroups)) return workspace.locationGroups
+  return [{
+    key: '__legacy-location-group__',
+    fromLocation: '',
+    toLocation: '',
+    bidirectional: false,
+    groups: workspace.groups || [],
+  }]
+}
+
+function projectWorkspaceDirections(workspace) {
+  return projectLocationGroups(workspace).flatMap((locationGroup) =>
+    (locationGroup.groups || []).flatMap((group) => group.directions.map((direction) => ({
+      ...locationGroup,
+      ...group,
+      ...direction,
+      key: direction.key,
+      groupKey: group.key,
+      locationGroupKey: locationGroup.key,
+      locationBidirectional: locationGroup.bidirectional,
+      fromLocation: direction.fromLocation || group.fromLocation || locationGroup.fromLocation || '',
+      toLocation: direction.toLocation || group.toLocation || locationGroup.toLocation || '',
+    }))))
+}
+
+function projectCableSummaryRows(direction, groupKey) {
+  const countBySpec = new Map()
+  direction.lines.forEach((line) => {
+    const spec = String(line.spec || '').trim() || '\u89c4\u683c\u5f85\u586b\u5199'
+    countBySpec.set(spec, (countBySpec.get(spec) || 0) + 1)
+  })
+  const values = []
+  const summaryX = PROJECT_REPORT.innerLeft + 20
+  const summaryWidth = PROJECT_REPORT.innerRight - PROJECT_REPORT.innerLeft - 36
+  const countWidth = 176
+  const summaryGap = 16
+  const specWidth = summaryWidth - countWidth - summaryGap
+  const summaryItems = []
+  let contentTop = 5
+  let entryIndex = 0
+  countBySpec.forEach((countValue, specValue) => {
+    values.push(specValue + ' \u00d7 ' + countValue + ' \u6761')
+    const spec = projectTextItems(specValue, 'cable-summary.spec', summaryX, contentTop + 9,
+      specWidth, 21, 30, { colorRole: 'secondary', weight: 600 })
+    summaryItems.push(...spec.items)
+    const count = projectTextItems('\u00d7 ' + countValue + ' \u6761', 'cable-summary.count',
+      summaryX + specWidth + summaryGap, contentTop,
+      countWidth, 30, 36, { align: 'right', colorRole: 'summaryCount', weight: 700 })
+    summaryItems.push(...count.items)
+    contentTop += Math.max(45, 15 + spec.height) + (entryIndex < countBySpec.size - 1 ? 7 : 0)
+    entryIndex += 1
+  })
+  if (!countBySpec.size) {
+    const empty = projectTextItems('\u6682\u65e0\u7ebf\u8def', 'cable-summary.spec', summaryX, contentTop + 9,
+      specWidth, 21, 30, { colorRole: 'secondary', weight: 600 })
+    summaryItems.push(...empty.items)
+    contentTop += Math.max(45, 15 + empty.height)
+  }
+  const summaryHeight = contentTop + 5
+  return [
+    { kind: 'project-cable-summary-title', key: `${groupKey}:${direction.key}:summary-title`,
+      groupKey, directionKey: direction.key, drawItems: projectTextItems('\u7ebf\u7f06\u603b\u89c8',
+        'cable-summary.title', PROJECT_REPORT.innerLeft + 20, 5,
+        PROJECT_REPORT.innerRight - PROJECT_REPORT.innerLeft - 36, 20, 26,
+        { weight: 600, colorRole: 'secondary' }).items,
+      height: 32, longImageStyle: 'summary-label' },
+    { kind: 'project-cable-summary', key: `${groupKey}:${direction.key}:summary`, groupKey,
+      directionKey: direction.key, summary: values, drawItems: summaryItems,
+      height: Math.max(45, summaryHeight), longImageStyle: 'summary' },
+  ]
 }
 
 function projectColumnsRow() {
@@ -919,26 +1092,37 @@ function buildProjectWiringReportPages(projectName, scheduleValue) {
     rows = []
     y = startY
   }
-  workspace.groups.forEach((group) => {
-    const heading = projectGroupRow(group)
+  const directions = projectWorkspaceDirections(workspace)
+  directions.forEach((direction) => {
+    const heading = projectGroupRow(direction, '\u2192', {
+      fromLabel: projectReportEndpointLabel(direction, 'from'),
+      toLabel: projectReportEndpointLabel(direction, 'to'),
+    })
     const columns = projectColumnsRow()
-    const lineRows = group.lines.map((line) => projectLineRow(line, group.key))
+    const lineRows = direction.lines.map((line) => projectLineRow(line, direction.groupKey))
     let needsHeading = true
     lineRows.forEach((lineRow) => {
-      const prefixHeight = needsHeading ? heading.height + columns.height + (rows.length ? PROJECT_REPORT.groupGap : 0) : 0
+      const prefixHeight = needsHeading ? (heading ? heading.height : 0) + columns.height
+        + (rows.length ? PROJECT_REPORT.groupGap : 0) : 0
       if (rows.length && y + prefixHeight + lineRow.height > PROJECT_REPORT.bottom) {
         finishPage()
         needsHeading = true
       }
       if (needsHeading) {
         if (rows.length) y += PROJECT_REPORT.groupGap
-        rows.push(positionProjectRow(heading, y)); y += heading.height
+        if (heading) {
+          rows.push(positionProjectRow(heading, y))
+          y += heading.height
+        }
         rows.push(positionProjectRow(columns, y)); y += columns.height
         needsHeading = false
       }
       if (y + lineRow.height > PROJECT_REPORT.bottom) {
         finishPage()
-        rows.push(positionProjectRow(heading, y)); y += heading.height
+        if (heading) {
+          rows.push(positionProjectRow(heading, y))
+          y += heading.height
+        }
         rows.push(positionProjectRow(columns, y)); y += columns.height
       }
       if (y + lineRow.height > PROJECT_REPORT.bottom) throw new RangeError('\u7ebf\u8def\u884c\u8d85\u51fa\u9875\u9762\u53ef\u7528\u533a\u57df')
@@ -947,15 +1131,137 @@ function buildProjectWiringReportPages(projectName, scheduleValue) {
   })
   finishPage()
   pages.forEach((page, index) => { page.pageNumber = index + 1; page.pageCount = pages.length })
+  const directionsForText = projectWorkspaceDirections(workspace)
   const text = [name, '\u9879\u76ee\u7ebf\u8def\u6e05\u5355', '\u5171 ' + workspace.lineCount + ' \u6761\u7ebf\u8def',
-    ...workspace.groups.flatMap((group) => [
-      group.fromDevice + ' \u2192 ' + group.toDevice,
-      ...group.lines.map((line) => {
-        const row = projectLineRow(line, group.key)
+    ...directionsForText.flatMap((direction) => [
+      projectRouteText(projectReportEndpointLabel(direction, 'from'), projectReportEndpointLabel(direction, 'to')),
+      ...direction.lines.map((line) => {
+        const row = projectLineRow(line, direction.groupKey)
         return [row.fields.displayNumber, row.fields.ports, row.fields.spec, row.fields.length, row.fields.connectors].join(' | ')
       }),
-    ])].join('\n')
+    ]).filter(Boolean)].join('\n')
   return freezeDeep({ pages, text, title: '\u9879\u76ee\u7ebf\u8def\u6e05\u5355', lineCount: workspace.lineCount, type: 'project' })
+}
+
+function buildProjectWiringLongReport(projectName, scheduleValue) {
+  const workspace = buildWorkspace(scheduleValue)
+  const name = String(projectName || '').trim() || '\u672a\u547d\u540d\u9879\u76ee'
+  const nameLines = wrapProjectText(name, PROJECT_REPORT.innerRight - PROJECT_REPORT.innerLeft, PROJECT_REPORT.nameSize)
+  const nameY = 32
+  const titleY = nameY + nameLines.length * PROJECT_REPORT.nameLineHeight + 14
+  const startY = titleY + 42
+  const rows = []
+  const groupBounds = []
+  let y = startY
+  const append = (row, gap = 0) => {
+    if (!row) return
+    if (rows.length && gap) y += gap
+    const positioned = positionProjectRow(row, y)
+    rows.push(positioned)
+    y += row.height
+  }
+  const locationGroups = projectLocationGroups(workspace)
+  locationGroups.forEach((locationGroup) => {
+    const locationHeading = projectLocationHeadingRow(locationGroup)
+    const hasLocationHeading = Boolean(locationHeading)
+    const groups = locationGroup.groups || []
+    if (!groups.length) return
+    if (hasLocationHeading) {
+      if (rows.length) y += LONG_PROJECT_REPORT.groupGap
+      const frameTop = y
+      y += LONG_PROJECT_REPORT.outerPadding
+      append(locationHeading)
+      groups.forEach((group, groupIndex) => {
+        if (!group.directions.length) return
+        const groupHeading = projectGroupRow(group, group.bidirectional ? '\u2194' : '\u2192', {
+          longImage: true,
+          kind: 'project-device',
+          longImageStyle: 'device',
+        })
+        append(groupHeading, groupIndex ? 16 : 8)
+        group.directions.forEach((direction, directionIndex) => {
+          let directionHeading = projectDirectionHeadingRow(direction)
+          if (!groupHeading && group.directions.length === 1) directionHeading = null
+          if (directionHeading) {
+            append(directionHeading, directionIndex ? LONG_PROJECT_REPORT.directionGap
+              : LONG_PROJECT_REPORT.directionStartGap)
+          } else if (directionIndex) {
+            y += LONG_PROJECT_REPORT.directionGap
+          }
+          projectCableSummaryRows(direction, group.key).forEach((row, index) => append(row, index ? 0 : 5))
+          append(projectColumnsRow(), 4)
+          direction.lines.forEach((line) => append(projectLineRow(line, direction.key)))
+        })
+      })
+      y += LONG_PROJECT_REPORT.outerPadding
+      groupBounds.push({
+        key: locationGroup.key,
+        x: PROJECT_REPORT.margin,
+        y: frameTop,
+        width: PROJECT_REPORT.innerRight - PROJECT_REPORT.innerLeft,
+        height: y - frameTop,
+      })
+      return
+    }
+
+    groups.forEach((group) => {
+      if (!group.directions.length) return
+      if (groupBounds.length) y += LONG_PROJECT_REPORT.groupGap
+      const frameTop = y
+      y += LONG_PROJECT_REPORT.outerPadding
+      const groupHeading = projectGroupRow(group, group.bidirectional ? '\u2194' : '\u2192', {
+        longImage: true,
+        longImageStyle: 'major',
+      })
+      append(groupHeading)
+      group.directions.forEach((direction, directionIndex) => {
+        const directionHeading = group.directions.length > 1 ? projectDirectionHeadingRow(direction) : null
+        if (directionHeading) {
+          append(directionHeading, directionIndex ? LONG_PROJECT_REPORT.directionGap
+            : LONG_PROJECT_REPORT.directionStartGap)
+        } else if (directionIndex) {
+          y += LONG_PROJECT_REPORT.directionGap
+        }
+        projectCableSummaryRows(direction, group.key).forEach((row, index) => append(row, index ? 0 : 5))
+        append(projectColumnsRow(), 4)
+        direction.lines.forEach((line) => append(projectLineRow(line, direction.key)))
+      })
+      y += LONG_PROJECT_REPORT.outerPadding
+      groupBounds.push({
+        key: group.key,
+        x: PROJECT_REPORT.margin,
+        y: frameTop,
+        width: PROJECT_REPORT.innerRight - PROJECT_REPORT.innerLeft,
+        height: y - frameTop,
+      })
+    })
+  })
+  if (!rows.length) {
+    const empty = projectTextItems('\u6682\u65e0\u7ebf\u8def', 'empty.message', PROJECT_REPORT.innerLeft + 5,
+      8, PROJECT_REPORT.innerRight - PROJECT_REPORT.innerLeft - 10, 18, 26, { colorRole: 'secondary' })
+    append({ kind: 'project-empty', key: 'project-empty', drawItems: empty.items,
+      height: Math.max(44, empty.height + 16) }, 8)
+  }
+  const page = freezeDeep({
+    type: 'project',
+    title: '\u9879\u76ee\u7ebf\u8def\u6e05\u5355',
+    projectName: name,
+    width: PROJECT_REPORT.width,
+    height: Math.max(1, y + 32),
+    lineCount: workspace.lineCount,
+    nameLines,
+    nameY,
+    nameFontSize: PROJECT_REPORT.nameSize,
+    nameLineHeight: PROJECT_REPORT.nameLineHeight,
+    titleY,
+    startY,
+    contentBottom: y,
+    layout: 'long-image',
+    groupBounds,
+    subtitleLines: [`\u5171 ${workspace.lineCount} \u6761\u7ebf\u8def`],
+    rows,
+  })
+  return freezeDeep({ page, type: 'project', title: page.title, lineCount: workspace.lineCount })
 }
 
 function strokeProjectLine(context, x1, y1, x2, y2, color, width) {
@@ -967,37 +1273,121 @@ function strokeProjectLine(context, x1, y1, x2, y2, color, width) {
   context.stroke()
 }
 
-function drawProjectWiringReport(context, page, theme = 'light') {
-  const colors = theme === 'dark' ? {
+function drawProjectWiringReport(context, page, options = {}) {
+  const longImage = page.layout === 'long-image'
+  const theme = typeof options === 'string' ? options : options.theme
+  const pageHeight = Number(page.height)
+  const top = typeof options === 'object' && Number.isFinite(options.top) ? options.top : 0
+  const requestedHeight = typeof options === 'object' && Number.isFinite(options.height) && options.height > 0
+    ? options.height : pageHeight - top
+  if (!Number.isFinite(pageHeight) || pageHeight < 1 || !Number.isFinite(top) || top < 0 || top >= pageHeight
+    || !Number.isFinite(requestedHeight) || requestedHeight < 1) {
+    throw new RangeError('项目长图分段坐标无效')
+  }
+  const renderHeight = Math.min(requestedHeight, pageHeight - top)
+  const bottom = top + renderHeight
+  const intersects = (itemTop, itemHeight) => itemTop + itemHeight >= top - 1 && itemTop <= bottom + 1
+  const darkColors = {
     background: '#000000', groupHeader: '#1c1c1e', columnHeader: '#2c2c2e',
     text: '#f5f5f7', secondary: '#c5c5cb', border: '#38383a',
-  } : PROJECT_REPORT
+  }
+  const colors = longImage
+    ? (theme === 'dark' ? {
+      ...darkColors,
+      groupCard: '#17191d',
+      groupBorder: '#49505a',
+      majorHeader: '#0066cc',
+      majorHeaderText: '#ffffff',
+      deviceSurface: '#292d33',
+      deviceText: '#f5f5f7',
+      directionSurface: '#193454',
+      directionText: '#e2efff',
+      directionStripe: '#69aef7',
+      summarySurface: '#22252a',
+      summaryCountText: '#8ac8ff',
+      rowSurface: '#1c1c1e',
+    } : {
+      ...PROJECT_REPORT,
+      background: '#f4f6f8',
+      groupCard: '#ffffff',
+      groupBorder: '#c4ceda',
+      majorHeader: '#0066cc',
+      majorHeaderText: '#ffffff',
+      deviceSurface: '#edf1f5',
+      deviceText: '#263341',
+      directionSurface: '#eaf3ff',
+      directionText: '#173e66',
+      directionStripe: '#0066cc',
+      summarySurface: '#f7f9fc',
+      summaryCountText: '#005eb8',
+      rowSurface: '#ffffff',
+    })
+    : (theme === 'dark' ? darkColors : PROJECT_REPORT)
   context.setFillStyle(colors.background)
-  context.fillRect(0, 0, page.width, page.height)
-  page.nameLines.forEach((line, index) => drawText(context, line, PROJECT_REPORT.innerLeft,
-    page.nameY + page.nameFontSize + index * page.nameLineHeight,
-    page.nameFontSize, colors.text, 700))
-  drawText(context, page.title, PROJECT_REPORT.innerLeft, page.titleY + 22, 22, colors.secondary, 600)
-  drawText(context, page.subtitleLines[0], PROJECT_REPORT.innerRight, page.titleY + 21, 14, colors.secondary, 500, 'right')
+  context.fillRect(0, 0, page.width, renderHeight)
+  if (longImage) (page.groupBounds || []).forEach((frame) => {
+    if (!intersects(frame.y, frame.height)) return
+    roundedRect(context, frame.x, frame.y - top, frame.width, frame.height, 14, colors.groupCard)
+  })
+  page.nameLines.forEach((line, index) => {
+    const baseline = page.nameY + page.nameFontSize + index * page.nameLineHeight
+    if (intersects(baseline - page.nameFontSize, page.nameLineHeight)) {
+      drawText(context, line, PROJECT_REPORT.innerLeft, baseline - top, page.nameFontSize, colors.text, 700)
+    }
+  })
+  if (intersects(page.titleY, 28)) {
+    drawText(context, page.title, PROJECT_REPORT.innerLeft, page.titleY + 22 - top, 22, colors.secondary, 600)
+    drawText(context, page.subtitleLines[0], PROJECT_REPORT.innerRight, page.titleY + 21 - top,
+      14, colors.secondary, 500, 'right')
+  }
   page.rows.forEach((row) => {
-    if (row.kind === 'project-group') {
-      roundedRect(context, row.x, row.y, row.width, row.height, 10, colors.groupHeader)
+    if (!intersects(row.y, row.height)) return
+    const rowY = row.y - top
+    if (row.kind === 'project-location') {
+      roundedRect(context, row.x, rowY, row.width, row.height, 12, colors.majorHeader)
+    } else if (row.kind === 'project-group') {
+      roundedRect(context, row.x, rowY, row.width, row.height, longImage ? 12 : 10,
+        row.longImageStyle === 'major' ? colors.majorHeader : colors.groupHeader)
+    } else if (row.kind === 'project-device') {
+      roundedRect(context, row.x + 8, rowY, row.width - 16, row.height, 8, colors.deviceSurface)
+    } else if (row.kind === 'project-direction') {
+      context.setFillStyle(colors.directionSurface)
+      context.fillRect(row.x, rowY, row.width, row.height)
+      context.setFillStyle(colors.directionStripe)
+      context.fillRect(row.x + 12, rowY + 8, 5, Math.max(1, row.height - 16))
     } else if (row.kind === 'project-columns') {
       context.setFillStyle(colors.columnHeader)
-      context.fillRect(row.x, row.y, row.width, row.height)
-      strokeProjectLine(context, row.x, row.y + row.height, row.x + row.width, row.y + row.height, colors.border, 1)
+      context.fillRect(row.x, rowY, row.width, row.height)
+      strokeProjectLine(context, row.x, rowY + row.height, row.x + row.width, rowY + row.height, colors.border, 1)
     } else if (row.kind === 'project-line') {
-      context.setFillStyle(colors.background)
-      context.fillRect(row.x, row.y, row.width, row.height)
-      strokeProjectLine(context, row.x, row.y + row.height, row.x + row.width, row.y + row.height, colors.border, 1)
+      context.setFillStyle(longImage ? colors.rowSurface : colors.background)
+      context.fillRect(row.x, rowY, row.width, row.height)
+      strokeProjectLine(context, row.x, rowY + row.height, row.x + row.width, rowY + row.height, colors.border, 1)
       PROJECT_REPORT.columns.slice(1).forEach((column) => {
-        strokeProjectLine(context, column.x, row.y + 5, column.x, row.y + row.height - 5, colors.border, 1)
+        strokeProjectLine(context, column.x, rowY + 5, column.x, rowY + row.height - 5, colors.border, 1)
       })
+    } else if (row.kind === 'project-cable-summary') {
+      roundedRect(context, row.x + 8, rowY, row.width - 16, row.height, 8,
+        longImage ? colors.summarySurface : colors.groupHeader)
     }
-    row.drawItems.forEach((item) => drawText(context, item.text, item.x, item.y, item.fontSize,
-      item.colorRole === 'secondary' ? colors.secondary : colors.text, item.weight, item.align))
+    row.drawItems.forEach((item) => {
+      const bounds = item.bounds || { y: item.y - item.fontSize, height: item.fontSize + 4 }
+      if (!intersects(bounds.y, bounds.height)) return
+      const color = item.colorRole === 'secondary' ? colors.secondary
+        : item.colorRole === 'inverse' ? colors.majorHeaderText
+          : item.colorRole === 'deviceText' ? colors.deviceText
+          : item.colorRole === 'directionText' ? colors.directionText
+            : item.colorRole === 'summaryCount' ? colors.summaryCountText
+              : colors.text
+      drawText(context, item.text, item.x, item.y - top, item.fontSize,
+        color, item.weight, item.align)
+    })
   })
-  return { height: page.height, contentHeight: page.height }
+  if (longImage) (page.groupBounds || []).forEach((frame) => {
+    if (!intersects(frame.y, frame.height)) return
+    roundedRect(context, frame.x, frame.y - top, frame.width, frame.height, 14, null, colors.groupBorder)
+  })
+  return { height: renderHeight, contentHeight: page.height }
 }
 function buildScheduleReportPages(projectName, scheduleValue, type = 'lines') {
   if (type === 'project') return buildProjectWiringReportPages(projectName, scheduleValue)
@@ -1094,7 +1484,7 @@ function drawLineScheduleReport(context, page, colors) {
 
 function drawScheduleReport(context, page, options = {}) {
   if (!context || !page || !Array.isArray(page.rows)) throw new TypeError('布线报告页面无效')
-  if (page.type === 'project') return drawProjectWiringReport(context, page, options.theme)
+  if (page.type === 'project') return drawProjectWiringReport(context, page, options)
   const colors = palette(options.theme)
   if (page.type === 'lines') return drawLineScheduleReport(context, page, colors)
   context.setFillStyle(colors.background)
@@ -1138,6 +1528,7 @@ function drawScheduleReport(context, page, options = {}) {
 }
 
 module.exports = {
+  buildProjectWiringLongReport,
   buildScheduleReportPages,
   drawScheduleReport,
 }

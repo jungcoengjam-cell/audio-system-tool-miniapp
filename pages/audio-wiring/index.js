@@ -37,6 +37,7 @@ const {
   getLoadedScreenPhotos,
   loadScreenSolderPhotos,
   loadReportSolderPhotos,
+  getConnectorOverviewPhotoSpec,
 } = require('./wiring-photos')
 const {
   previewGeneratedImage,
@@ -135,6 +136,8 @@ function createScreenRendererContext(context) {
     arc: (...args) => context.arc(...args),
     drawImage: (...args) => context.drawImage(...args),
     fillRect: (...args) => context.fillRect(...args),
+    translate: (...args) => context.translate(...args),
+    rotate: (...args) => context.rotate(...args),
     setFillStyle(value) { context.fillStyle = value },
     setStrokeStyle(value) { context.strokeStyle = value },
     setLineWidth(value) { context.lineWidth = value },
@@ -395,9 +398,14 @@ function getEndpointCard(endpoint) {
     stereo635: '6.35 mm 大三芯 TRS · 立体声',
     stereo35: '3.5 mm 立体声',
   }
-  const label = labelById[endpoint.id] || endpoint.connectorType || endpoint.label
+  const overviewSpec = getConnectorOverviewPhotoSpec(endpoint)
+  const label = endpoint.id === 'xlrBalanced' && ['公头', '母头'].includes(endpoint.cableConnectorGender)
+    ? `XLR 线缆${endpoint.cableConnectorGender}`
+    : labelById[endpoint.id] || endpoint.connectorType || endpoint.label
   const pairSuffix = endpoint.channelCount === 2 && !String(label).includes('×2') ? ' ×2' : ''
-  return { ...endpoint, displayConnectorType: `${label}${pairSuffix}` }
+  const image = endpoint.id === 'xlrBalanced' ? (overviewSpec && overviewSpec.path || '')
+    : overviewSpec && overviewSpec.path || endpoint.image
+  return { ...endpoint, image, displayConnectorType: `${label}${pairSuffix}` }
 }
 
 function buildSelectorOptions(options, side, outputId) {
@@ -556,7 +564,7 @@ Page({
       initialData = {
         outputId,
         inputId,
-        outputEndpoint: getEndpointCard(getEndpointOption(OUTPUT_OPTIONS, outputId)),
+        outputEndpoint: getEndpointCard(outputId && model && model.output ? model.output : getEndpointOption(OUTPUT_OPTIONS, outputId)),
         inputEndpoint: getEndpointCard(model && model.input ? model.input : getEndpointOption(INPUT_OPTIONS, inputId)),
         manualSelected: preferences.manualSelected,
         selections,
@@ -1114,7 +1122,7 @@ Page({
     this.setData({
       outputId,
       inputId,
-      outputEndpoint: getEndpointCard(output || {}),
+      outputEndpoint: getEndpointCard(outputId && model && model.output ? model.output : output || {}),
       inputEndpoint: getEndpointCard(model && model.input ? model.input : input || {}),
       ...endpointReview,
       selections,
@@ -1128,6 +1136,7 @@ Page({
       selectedConnection: null,
       diagramCanvasHeight: getSafeDiagramHeight(this.data.diagramCanvasWidth, model, {
         layout: 'solder-wiring',
+        avoidRail: true,
         viewMode: 'connectors',
         face: 'solder',
         theme: this.data.theme,
@@ -1241,8 +1250,15 @@ Page({
       }
     }
     if (!hit) return
-    const connection = model.connections.find((item) => item.id === hit.id)
-    if (!connection) return
+    return this.selectWiringConnection(hit.id)
+  },
+
+  selectWiringConnection(connectionId) {
+    if (!this.isWiringPageInteractive()) return false
+    const model = this.data.model
+    if (!model || !model.supported || !Array.isArray(model.connections)) return false
+    const connection = model.connections.find((item) => item.id === connectionId)
+    if (!connection) return false
     this.invalidateWiringGeneration()
     this.invalidateDiagramRender()
     const selectedId = this.data.selectedId === connection.id ? '' : connection.id
@@ -1256,6 +1272,7 @@ Page({
         getReportOptions({ ...this.data, selectedId })),
     }, () => this.renderDiagram())
     vibrate('light')
+    return true
   },
 
   copyConnection() {

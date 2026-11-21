@@ -46,7 +46,6 @@ function createLayoutExportMethods(dependencies = {}) {
           id: fixture.stableId,
           groupName: fixture.groupName || group && group.name || '',
           fixtureModel: fixture.fixtureModel || group && group.fixtureModel || '',
-          modeName: (fixture.channelCount || group && group.channelCount || 0) + ' CH',
         }
       })
       return {
@@ -76,7 +75,7 @@ function createLayoutExportMethods(dependencies = {}) {
         return false
       }
       this._exportSnapshot = snapshot
-      this._exportPages = buildLightingExportPages(this._exportSnapshot, { width: EXPORT_WIDTH, height: EXPORT_HEIGHT })
+      this._exportPages = buildLightingExportPages(this._exportSnapshot, { width: EXPORT_WIDTH, height: EXPORT_HEIGHT, includeAddressList: false, includeFixtureLegend: true })
       this._exportPaths = []
       this._exportCanvasNode = null
       this._exportCanvasContext = null

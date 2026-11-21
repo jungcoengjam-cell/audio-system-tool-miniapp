@@ -1,0 +1,101 @@
+{
+  "verifiedAt": "2026-11-07T20:37:54.538Z",
+  "independentReview": "historical technical checks passed for the parallel mapping layout; the user rejected this product design",
+  "acceptanceStatus": "rejected by the user; not current direct-wiring acceptance evidence",
+  "sourceHashes": {
+    "pages/audio-wiring/wiring-renderer.js": "8d58a83ee6d168a57d7b289924071cdfdb3426a6ca09fa287de1b702daca6aad",
+    "pages/audio-wiring/wiring-photos.js": "e8bba5581dc7e3b5533b97c682c1e863b08755ac0f8276197209b555e03ac2ea",
+    "pages/audio-wiring/index.js": "42d20bead40091a2758abc7cf66c7e6493174ed80ef9ac3921819d5ca6387479",
+    "pages/audio-wiring/index.wxml": "ff748de8bcef9f090469d461c78382b7bb1ec96578d99ed76e1a4a8bf4358f3b",
+    "pages/audio-wiring/index.wxss": "18324b3a670e9f57ddd3459caeffd91be2f94c324409be85644f7c623935c9ab",
+    "pages/audio-wiring/assets/solder/rca-rear.png": "92c32f8564e758228e2ba7fe4db723471b62227a7ac86240f550b41ee61ab481",
+    "pages/audio-wiring/assets/solder/stereo35-rear.png": "67fa2e84236de6e0674817d5def3a73fbc96b62618201c847754cd214ec3c41b",
+    "pages/audio-wiring/assets/solder/trs635-rear.png": "e1e07505a8c4099565d2d4ae9b4a43aee370659127d3987f24d9dbb16013a35b",
+    "pages/audio-wiring/assets/solder/ts-solder-open.png": "98da6c299a1b3fea460c8d246188336dfa2b72248017ff3d9835f54675e1be31",
+    "pages/audio-wiring/assets/solder/xlr-female-rear.png": "692a77ecf23b91ae9a0a023771f893fe5d616e7ceedbb6e8140f882ad171c9d9",
+    "pages/audio-wiring/assets/solder/xlr-male-rear.png": "8067b29d5ce08d559d11465536c24d231cc98e821ff5a837a795b09dadebb8ba"
+  },
+  "testHashes": {
+    "tests/audio-wiring-renderer-test.js": "040769f0546d26d56c3e1706067a80df0dad2cc3c015090579e887c7a5013601",
+    "tests/audio-wiring-page-test.js": "bfe24caa6fffa75c75bcb366a24f15128fffc123d910ca1c576cd6c601b0b0e0",
+    "tests/audio-wiring-geometry-cache-regression.cjs": "6e820ed2a760a37b0f640b92f074998361b704b3acfbfdf0093c2358ce0eafa4"
+  },
+  "geometry": {
+    "passed": true,
+    "factoryModels": 63,
+    "samples": 252,
+    "canvasWidths": [
+      274,
+      319,
+      369,
+      336
+    ],
+    "avoidRail": false,
+    "checks": [
+      "actual drawn paths equal hit paths",
+      "parallel non-crossing rows",
+      "exact pin and photo-anchor identity",
+      "complete image aspect ratios",
+      "pin labels clear all photo welds by 6px",
+      "terminal captions clear the next heading"
+    ]
+  },
+  "browser": {
+    "passed": true,
+    "simulation": true,
+    "physicalDevice": false,
+    "cases": [
+      "xlr-light",
+      "xlr-dark",
+      "dual-rca-dark",
+      "ts-to-balanced-light",
+      "terminal-to-rca-dark",
+      "dual-xlr-light",
+      "dual-ts-dark",
+      "dual-terminal-dark",
+      "dual-rca-large-text"
+    ],
+    "checks": [
+      "actual pointer wire selection and repeat clearing",
+      "selected width and dimmed other lines",
+      "correct photo weld highlights",
+      "one full opened photo per physical head",
+      "real PNG exports",
+      "narrow screens and large text without horizontal overflow"
+    ]
+  },
+  "protectedBusiness": {
+    "passed": true,
+    "protectedFiles": 42,
+    "models": 63,
+    "electricalChanges": false,
+    "modelMutation": false
+  },
+  "javascriptSyntax": {
+    "command": "node --check",
+    "productionFiles": 3,
+    "passed": true
+  },
+  "cacheRegression": {
+    "command": "node tests/audio-wiring-geometry-cache-regression.cjs",
+    "passed": true
+  },
+  "nativeCompilation": {
+    "passed": true,
+    "wxml": 40,
+    "wxss": 35,
+    "compiledSourceHashesCurrent": true,
+    "nativeRuntime": false,
+    "physicalDevice": false
+  },
+  "release": {
+    "command": "node tests/release-check.js",
+    "exitCode": 0,
+    "passed": true,
+    "sourcePackageKiB": 4634.7,
+    "sourcePackageLimitKiB": 5120,
+    "wechatCompiledPackageMeasured": false
+  },
+  "evidenceDirectory": "tmp/wiring-integrated-2026-11-08",
+  "realDeviceTest": "not run"
+}

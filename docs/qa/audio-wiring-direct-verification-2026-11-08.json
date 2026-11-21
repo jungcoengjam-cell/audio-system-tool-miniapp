@@ -1,0 +1,156 @@
+{
+  "revision": "direct-photo-wires-vertical-actions-2026-11-08",
+  "generatedAt": "2026-11-08T02:24:16.755Z",
+  "status": "independent-review-passed-awaiting-user-device-acceptance",
+  "reviewedAt": "2026-11-08T02:18:35.202Z",
+  "passed": true,
+  "sourceHashes": {
+    "pages/audio-wiring/index.js": "2fea7af60dc191daafef7fb0fca1244a0f44629ad3451167ac98ef263837bb6f",
+    "pages/audio-wiring/index.wxml": "525a6d7c52680178c0569e5b11235c5e479d54b18e36f5e68907e36457cbe27e",
+    "pages/audio-wiring/index.wxss": "ef4388d2e0e1ed7295ff054afdd616e19daeb2c316bb75df972f2498df1c7dc2",
+    "pages/audio-wiring/report-bridge.js": "bf8ced6bb0f9762fb48efb7862956a11b7a5157a8e114e2d8b0fa59bd249b1d9",
+    "pages/audio-wiring/report-bridge.wxml": "6f0514825c3e8bca181f8effc0de1bed5e83dae186363e27a2e213911f145d37",
+    "pages/audio-wiring/report-bridge.wxss": "12312aab9b9e36a91728b99b9732c97513a5cfd03db4c24dadfe7ad78d349ffd",
+    "pages/audio-wiring/wiring-display.js": "12026ebc5fb8a1c6c358f6aa5c05fcdec6ddeb965287e561f67383e84ad8b53d",
+    "pages/audio-wiring/wiring-model.js": "0bbc19b4211e7a06eae58afbe77017ed879b6f5a062e82d6c1d7f31ddd474a93",
+    "pages/audio-wiring/wiring-overlays.wxml": "feeee775e57b6848bc5d913174b2d60df4a12fd9b102bff4901b174f148951c7",
+    "pages/audio-wiring/wiring-photos.js": "e8bba5581dc7e3b5533b97c682c1e863b08755ac0f8276197209b555e03ac2ea",
+    "pages/audio-wiring/wiring-project.js": "0e9602d3e708acfa94f17d2cdf55b9e52247c11cfd45ee95fa03043e38af8490",
+    "pages/audio-wiring/wiring-renderer.js": "d0e3ebd614fa530717a09c9a9db754723afb53919da4104b61c21376a0865998",
+    "pages/audio-wiring/assets/solder/rca-rear.png": "92c32f8564e758228e2ba7fe4db723471b62227a7ac86240f550b41ee61ab481",
+    "pages/audio-wiring/assets/solder/stereo35-rear.png": "67fa2e84236de6e0674817d5def3a73fbc96b62618201c847754cd214ec3c41b",
+    "pages/audio-wiring/assets/solder/trs635-rear.png": "e1e07505a8c4099565d2d4ae9b4a43aee370659127d3987f24d9dbb16013a35b",
+    "pages/audio-wiring/assets/solder/ts-solder-open.png": "98da6c299a1b3fea460c8d246188336dfa2b72248017ff3d9835f54675e1be31",
+    "pages/audio-wiring/assets/solder/xlr-female-rear.png": "692a77ecf23b91ae9a0a023771f893fe5d616e7ceedbb6e8140f882ad171c9d9",
+    "pages/audio-wiring/assets/solder/xlr-male-rear.png": "8067b29d5ce08d559d11465536c24d231cc98e821ff5a837a795b09dadebb8ba"
+  },
+  "routeCases": 315,
+  "physicalPhotoAnchorAudit": true,
+  "fullPathCrossingAudit": true,
+  "uiCases": 12,
+  "actualWireSelections": 51,
+  "originalVerticalButtons": 4,
+  "protectedBusinessFiles": 42,
+  "unchangedPhotoAssetsAndManifest": 7,
+  "release": {
+    "startedAt": "2026-11-08T02:13:33.453Z",
+    "finishedAt": "2026-11-08T02:16:33.332Z",
+    "exitCode": 0,
+    "logPath": "C:\\Users\\wxx\\Documents\\Codex\\audio-system-tool-miniapp\\tmp\\wiring-direct-correction-2026-11-08\\release-check.log"
+  },
+  "nativeCompile": {
+    "wxml": 40,
+    "wxss": 35,
+    "matchingSourceHashes": true
+  },
+  "physicalDevice": "NOT RUN",
+  "acceptance": "awaiting-user-device-acceptance",
+  "changedFiles": [
+    "pages/audio-wiring/index.js",
+    "pages/audio-wiring/index.wxml",
+    "pages/audio-wiring/index.wxss",
+    "pages/audio-wiring/wiring-renderer.js",
+    "tests/audio-wiring-page-test.js",
+    "tests/audio-wiring-renderer-test.js",
+    "tests/audio-wiring-geometry-cache-regression.cjs",
+    "docs/audio-wiring-photo-assets.md",
+    "docs/qa/audio-wiring-integrated-2026-11-08.md",
+    "docs/qa/audio-wiring-direct-verification-2026-11-08.json"
+  ],
+  "testSourceHashes": {
+    "tests/audio-wiring-page-test.js": "7feb7e138db4932be0000df8b3a4bdaeeaffef1342940862741d0d608209ac46",
+    "tests/audio-wiring-renderer-test.js": "01674a41dc64c2b5aab025ef726d2dce0fa9cccfa29c0c80cf79c7170c8a5ab2",
+    "tests/audio-wiring-geometry-cache-regression.cjs": "0b2f4a3a1199b86775ed3734bbadd8078b90c930682eac5f5afa4e223db7f719"
+  },
+  "cacheRegression": {
+    "passed": true,
+    "command": "node tests/audio-wiring-geometry-cache-regression.cjs"
+  },
+  "preview": {
+    "generation": "passed",
+    "cliExitCode": 0,
+    "qr": "tmp/wiring-direct-correction-2026-11-08/phone-preview/preview.png",
+    "qrSha256": "7f5a52ce22dd09e7287f8a8bf5d5ba7875b2a0b9360ce06897a27f4126245897",
+    "dimensions": [
+      470,
+      470
+    ],
+    "size": {
+      "total": 3963547,
+      "packages": [
+        {
+          "name": "TOTAL",
+          "size": 3963547
+        },
+        {
+          "name": "main",
+          "size": 1979234
+        },
+        {
+          "name": "/pages/audio-wiring/",
+          "size": 518286
+        },
+        {
+          "name": "/pages/basis/",
+          "size": 143150
+        },
+        {
+          "name": "/pages/control-protocol/",
+          "size": 422491
+        },
+        {
+          "name": "/pages/dmx-address/",
+          "size": 387492
+        },
+        {
+          "name": "/pages/products/",
+          "size": 203645
+        },
+        {
+          "name": "/pages/project-wiring/",
+          "size": 309249
+        }
+      ]
+    },
+    "deviceScan": "NOT RUN",
+    "physicalDevice": "NOT RUN"
+  },
+  "evidence": {
+    "tmp/wiring-direct-correction-2026-11-08/independent-route-matrix.json": {
+      "sha256": "ed0f2f86b63e7dcf8974020ac7ec871608e831e07d6595a0e9e7222ad478b5aa"
+    },
+    "tmp/wiring-direct-correction-2026-11-08/independent-full-path-result.json": {
+      "sha256": "f3395d5a7c6d0213205b844088b8fbbd539aed1e262e44531a87f2b468843020"
+    },
+    "tmp/wiring-direct-correction-2026-11-08/independent-photo-result.json": {
+      "sha256": "9693cbf1af477853b3c5a35d0abc1e65be6a3925a26a443249ba375930ee352a"
+    },
+    "tmp/wiring-direct-correction-2026-11-08/independent-business-result.json": {
+      "sha256": "b35d13b01cd45cc167c8b69d20404cd7432d9ac1973d37bf9cd4e8518e55065e"
+    },
+    "tmp/wiring-direct-correction-2026-11-08/independent-ui-final/result.json": {
+      "sha256": "41f64168fccaae044bf984e1a32212d7a6059f7770d7d05aaf612cba7e10c269"
+    },
+    "tmp/wiring-direct-correction-2026-11-08/independent-final-review.json": {
+      "sha256": "9d187f8288791275fa55467b58b2a1f80de20cb213049aded8ad85de92ed5e1d"
+    },
+    "tmp/wiring-direct-correction-2026-11-08/release-result.json": {
+      "sha256": "a54b5e5596ece50f4ef52c1367dab04954fd3051eedd4bb72601cb6e3a89001d"
+    },
+    "tmp/wiring-direct-correction-2026-11-08/release-check.log": {
+      "sha256": "928dec47da9b7d257e9f425c74ac1f28343cf757dbb34e911012d7677c4ecd92"
+    },
+    "tmp/wiring-direct-correction-2026-11-08/phone-preview/preview.png": {
+      "sha256": "7f5a52ce22dd09e7287f8a8bf5d5ba7875b2a0b9360ce06897a27f4126245897"
+    },
+    "tmp/wiring-direct-correction-2026-11-08/phone-preview/preview-info.json": {
+      "sha256": "5a3a42542b2b7fcaa59b8003c842dfaee953d07904d873fb7b58fe69ea6c457a"
+    }
+  },
+  "nativeCompileEvidence": "tmp/wiring-integrated-2026-11-08/compile/compile.json",
+  "nativeCompileEvidenceSha256": "57ce9bf60fb05d43f8a588c5b4bc237b7984fb793f0be8d68281000f73ccd932",
+  "limits": [
+    "Browser interaction uses the repository WeChat harness, not a physical device.",
+    "Native WXML/WXSS compile and preview upload passed; device rendering, performance, album permissions and system share UI await user testing."
+  ]
+}

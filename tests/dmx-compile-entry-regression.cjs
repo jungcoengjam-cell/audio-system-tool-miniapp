@@ -56,7 +56,12 @@ const FIXED_NOW = '2026-10-25T12:34:56.000Z'
 // Only the app.json hash changes in the frozen digest; compiler commands, inputs, outputs, and exit codes match.
 // Previous/current app.json SHA-256: d6ebafed9ef4c9edb2b6ab06787026e56b79baac2de3c7b882db93d5fc5479ba / 1488791e84c1b4d5337351f7291b408c0364050ed5e7e26f2ff3fe29ab22281d.
 // Previous frozen digest before this app.json update: 8fa90aee0114bc6bd0149b051170ce7e37568c23c49a022955f7450b04cbf946
-const FROZEN_TRACE_SHA256 = '900bcacbbb5cc43f9dc4730e5f9c78f2bde6fa386f5095680b92ebb3ddacfba6'
+// 2026-11-09 approved UI unification changed only DMX address WXSS and added one approved token input.
+// All 16 traces were matched to baseline after reverting those two trace fields; the token remains digest-protected.
+// Previous frozen digest before this approved UI update: 900bcacbbb5cc43f9dc4730e5f9c78f2bde6fa386f5095680b92ebb3ddacfba6
+// 2026-11-17 approved group-domain controls add only the exact card, add, and confirmation selectors below.
+// 2026-11-21 approved sticky 灯位图 footer: normalize only its exact WXML relocation and footer spacing styles.
+const FROZEN_TRACE_SHA256 = 'ea91545935b473ad504ac1d39a9f6824d218f79f2edd2d2b757ee061c8c95267'
 // Hash of the approved result-subwindow CSS block in app.wxss. Any further
 // changes in that block require review before this narrowly scoped removal.
 const RESULT_PANEL_CSS_SHA256 = '7b8246563970fd68ac61a2ae4401b4810f564c936bc93d1df66b19ab89d63589'
@@ -231,28 +236,41 @@ function verifyApprovedDmxDevicePickerChanges() {
   const wxml = fs.readFileSync(wxmlPath, 'utf8')
   const wxss = fs.readFileSync(wxssPath, 'utf8')
   assertApprovedDmxDevicePickerMarkup(wxml)
-  assert.equal(wxss.split('@import "../../styles/device-picker-shared.wxss";').length - 1, 1,
+  const sharedPickerImport = '@import "../../styles/device-picker-shared.wxss";'
+  const toolUiTokensImport = '@import "../../styles/tool-ui-tokens.wxss";'
+  assert.equal(wxss.split(sharedPickerImport).length - 1, 1,
     'DMX picker must import the reviewed shared visual styles exactly once')
+  assert.equal(wxss.split(toolUiTokensImport).length - 1, 1,
+    'DMX page must import the approved shared UI tokens exactly once')
+  assert.ok(wxss.indexOf(toolUiTokensImport) > wxss.indexOf(sharedPickerImport),
+    'DMX page tokens must follow the shared picker stylesheet import')
 }
 
 function normalizeApprovedDevicePickerCompileInput(trace) {
   const sharedPickerStyle = 'styles/device-picker-shared.wxss'
+  const toolUiTokensStyle = 'styles/tool-ui-tokens.wxss'
   const args = trace.summary.results[1].args
   const occurrences = args.slice(3).filter((file) => file === sharedPickerStyle).length
   if (occurrences === 0) return trace
   assert.equal(occurrences, 1, 'DMX compiler input must include one shared picker stylesheet')
-  assert.equal(args[2], '7', 'DMX compiler input count must include exactly one shared picker stylesheet')
+  assert.equal(args.slice(3).filter((file) => file === toolUiTokensStyle).length, 1,
+    'DMX compiler input must include one approved shared token stylesheet')
+  assert.equal(args[2], '8', 'DMX compiler input count must include exactly one shared token stylesheet')
   assert.equal(args[6], sharedPickerStyle,
     'shared picker stylesheet must follow the page theme stylesheet in compiler inputs')
+  assert.equal(args[7], toolUiTokensStyle,
+    'shared token stylesheet must follow the shared picker stylesheet in compiler inputs')
   assert.ok(Object.hasOwn(trace.summary.sources, sharedPickerStyle),
     'compiler summary must record the shared picker stylesheet source hash')
+  assert.ok(Object.hasOwn(trace.summary.sources, toolUiTokensStyle),
+    'compiler summary must record the shared token stylesheet source hash')
   assert.deepEqual(trace.spawnCalls[1].args, args,
     'the executed style compiler input list must match its recorded summary')
 
   const normalizedTrace = JSON.parse(JSON.stringify(trace))
   const normalizedArgs = normalizedTrace.summary.results[1].args
   normalizedArgs.splice(6, 1)
-  normalizedArgs[2] = '6'
+  normalizedArgs[2] = '7'
   normalizedTrace.spawnCalls[1].args = normalizedArgs.slice()
   delete normalizedTrace.summary.sources[sharedPickerStyle]
   const serializedSummary = JSON.stringify(normalizedTrace.summary, null, 2)
@@ -279,6 +297,42 @@ function normalizeAuthorizedAnimationSource(relativePath, source) {
   }
 
   if (relativePath === 'pages/dmx-address/dmx-address.wxml') {
+    const layoutEntry = '<view class="layout-entry" bindtap="openFixtureLayout"><view class="layout-entry-icon"><view class="layout-map-panel layout-map-left"></view><view class="layout-map-panel layout-map-middle"></view><view class="layout-map-panel layout-map-right"></view></view><text class="layout-entry-title">灯位图</text><text class="layout-entry-arrow">›</text></view>'
+    replaceExactlyOnce(
+      `    </view>\n  </scroll-view>\n\n  <view class="layout-footer">${layoutEntry}</view>\n`,
+      `      ${layoutEntry}\n    </view>\n  </scroll-view>\n`,
+    )
+    replaceExactlyOnce(
+      `aria-label="{{chip.addressText}}{{chip.checked ? ' 地址已设置' : ''}}{{chip.previewOverflow ? '，后面还有更多地址' : ''}}"><text class="address-chip-preview-label">{{chip.addressText}}</text>`,
+      `aria-label="{{chip.addressText}}{{chip.checked ? ' 地址已设置' : ''}}"><text wx:if="{{chip.previewOverflow}}" class="address-chip-preview-label"><text wx:for="{{chip.previewAddressCharacters}}" wx:for-item="character" wx:key="id" style="color: {{character.color}};">{{character.value}}</text></text><text wx:else class="address-chip-preview-label">{{chip.addressText}}</text>`,
+    )
+    replaceExactlyOnce(
+      '<text wx:if="{{fixture.aliasMatch}}" class="fixture-result-alias">对照型号：{{fixture.aliasMatch}}</text>',
+      '',
+    )
+    replaceExactlyOnce(
+      `                <view wx:if="{{allocationMode == 'manual'}}" class="fixture-control-row" data-gesture-ignore="true">\n                  <text class="fixture-control-label" data-gesture-ignore="true">起排域</text>\n                  <picker class="fixture-control-picker" mode="selector" range="{{universeOptions}}" value="{{group.targetUniverseIndex}}" data-index="{{groupIndex}}" data-gesture-ignore="true" aria-label="灯组起排域" bindchange="onGroupUniverseChange"><view class="fixture-control-box" data-gesture-ignore="true">{{group.targetUniverse}}域<text class="select-chevron" data-gesture-ignore="true">⌄</text></view></picker>\n                </view>\n`,
+      '',
+    )
+    replaceExactlyOnce(
+      `      <view wx:if="{{pendingChange.kind == 'allocationMode' && pendingChange.universeGroups.length}}" class="pending-universe-list">\n        <view wx:for="{{pendingChange.universeGroups}}" wx:for-item="item" wx:key="groupIndex" class="pending-universe-row" data-gesture-ignore="true">\n          <text class="pending-universe-name" data-gesture-ignore="true">{{item.name}}</text>\n          <picker class="pending-universe-picker" mode="selector" range="{{universeOptions}}" value="{{item.targetUniverseIndex}}" data-index="{{item.groupIndex}}" data-gesture-ignore="true" bindchange="onPendingUniverseChange"><view class="pending-picker" data-gesture-ignore="true">{{item.targetUniverse}}域<text data-gesture-ignore="true">⌄</text></view></picker>\n        </view>\n      </view>\n`,
+      '',
+    )
+    replaceExactlyOnce(
+      `      <view wx:if="{{pendingChange.kind == 'groupUniverse'}}" class="pending-universe-list">\n        <view class="pending-universe-row" data-gesture-ignore="true">\n          <text class="pending-universe-name" data-gesture-ignore="true">起排域</text>\n          <picker class="pending-universe-picker" mode="selector" range="{{universeOptions}}" value="{{pendingChange.targetUniverseIndex}}" data-index="{{pendingChange.groupIndex}}" data-gesture-ignore="true" bindchange="onPendingUniverseChange"><view class="pending-picker" data-gesture-ignore="true">{{pendingChange.targetUniverse}}域<text data-gesture-ignore="true">⌄</text></view></picker>\n        </view>\n      </view>\n`,
+      '',
+    )
+    replaceExactlyOnce(
+      '<view wx:if="{{pendingChange.kind != \'groupUniverse\' && pendingChange.groupIndex >= 0}}" class="pending-fields">',
+      '<view wx:if="{{pendingChange.groupIndex >= 0}}" class="pending-fields">',
+    )
+    replaceExactlyOnce('      <block wx:if="{{pendingChange.showEffectPreview}}">\n', '')
+    replaceExactlyOnce('      </block>\n      <view wx:if="{{pendingChange.error}}" class="pending-error">{{pendingChange.error}}</view>\n      </block>\n      </scroll-view>',
+      '      <view wx:if="{{pendingChange.error}}" class="pending-error">{{pendingChange.error}}</view>\n      </block>\n      </scroll-view>')
+    replaceExactlyOnce(
+      '        <view wx:if="{{allocationMode == \'manual\'}}" class="fixture-control-row" data-gesture-ignore="true"><text class="fixture-control-label" data-gesture-ignore="true">起排域</text><picker class="fixture-control-picker" mode="selector" range="{{universeOptions}}" value="{{pendingChange.targetUniverseIndex}}" data-index="{{pendingChange.groupIndex}}" data-gesture-ignore="true" aria-label="灯组起排域" bindchange="onPendingUniverseChange"><view class="fixture-control-box" data-gesture-ignore="true">{{pendingChange.targetUniverse}}域<text class="select-chevron" data-gesture-ignore="true">⌄</text></view></picker></view>\n',
+      '',
+    )
     replaceExactlyOnce(
       `class="floating-backdrop {{floatingClosing ? 'floating-backdrop-closing' : ''}}"`,
       'class="floating-backdrop"',
@@ -292,6 +346,39 @@ function normalizeAuthorizedAnimationSource(relativePath, source) {
       '<view class="sheet-dismiss" bindtap="onUserCloseSaveProjectDialog">完成</view>',
     )
   } else if (relativePath === 'pages/dmx-address/dmx-address.wxss') {
+    replaceExactlyOnce(
+      '.page-content{box-sizing:border-box;width:100%;padding:0 var(--tool-gutter) 12px}',
+      '.page-content{box-sizing:border-box;width:100%;padding:0 var(--tool-gutter) calc(28px + env(safe-area-inset-bottom))}',
+    )
+    replaceExactlyOnce(
+      '.layout-footer{box-sizing:border-box;width:100%;flex-shrink:0;padding:8px var(--tool-gutter) calc(8px + env(safe-area-inset-bottom));background:var(--page-bg)}\n',
+      '',
+    )
+    replaceExactlyOnce(
+      '.layout-entry{display:flex;box-sizing:border-box;width:100%;min-height:48px;margin:0;padding:0 13px;align-items:center;gap:14px;border:1px solid var(--theme-divider);border-radius:var(--tool-list-radius);background:var(--theme-surface);color:var(--theme-text);font-size:16px;font-weight:600}',
+      '.layout-entry{display:flex;box-sizing:border-box;min-height:56px;margin-top:11px;padding:0 13px;align-items:center;gap:14px;border:1px solid var(--theme-divider);border-radius:var(--tool-list-radius);background:var(--theme-surface);color:var(--theme-text);font-size:16px;font-weight:600}',
+    )
+    replaceExactlyOnce('  .layout-footer{padding-right:12px;padding-left:12px}\n', '')
+    replaceExactlyOnce(
+      '.address-chip-preview.address-chip-overflow{background:linear-gradient(to right,var(--group-tint),transparent)}\n.address-chip-overflow .address-chip-preview-label{opacity:.52}\n',
+      '',
+    )
+    replaceExactlyOnce(
+      '.fixture-control-row{display:grid;height:var(--tool-inline-height);min-height:var(--tool-inline-height);grid-template-columns:36px minmax(0,1fr);align-items:center;gap:4px}\n',
+      '.fixture-control-row{display:grid;height:var(--tool-inline-height);min-height:var(--tool-inline-height);grid-template-columns:28px minmax(0,1fr);align-items:center;gap:4px}\n',
+    )
+    replaceExactlyOnce(
+      '.add-confirm-product .fixture-control-row{grid-template-columns:27px minmax(0,1fr);gap:2px}',
+      '.add-confirm-product .fixture-control-row{grid-template-columns:25px minmax(0,1fr)}',
+    )
+    replaceExactlyOnce(
+      '.pending-universe-list{display:flex;min-width:0;margin-top:10px;flex-direction:column}\n.pending-universe-row{display:grid;min-width:0;grid-template-columns:minmax(0,1fr) minmax(88px,118px);align-items:center;gap:8px;padding:5px 0}\n.pending-universe-name{min-width:0;color:var(--text);font-size:12px;line-height:1.35;overflow-wrap:anywhere}\n.pending-universe-picker{display:block;min-width:0}\n',
+      '',
+    )
+    replaceExactlyOnce(
+      '.fixture-result-alias{color:var(--theme-text-secondary);font-size:11px;line-height:1.35;white-space:normal;overflow-wrap:anywhere}\n',
+      '',
+    )
     replaceExactlyOnce(
       '.floating-backdrop.floating-backdrop-closing{animation:backdrop-out .23s ease-in both}\n',
       '',
@@ -579,7 +666,14 @@ function verifyTrace(trace) {
   assert.equal(wcsc.exe, path.join(expectedBinaryDirectory, 'wcsc.exe'))
   assert.deepEqual(wcsc.args.slice(0, 3), ['-js', '-pc', String(wcsc.args.length - 3)])
   assert.equal(Number(wcsc.args[2]), wcsc.args.length - 3)
-  assert.equal(wcsc.args[2], '7', 'DMX compiler must count the shared picker stylesheet input')
+  assert.equal(wcsc.args[2], '8', 'DMX compiler must count the shared picker and token stylesheet inputs')
+  const toolUiTokensStyle = 'styles/tool-ui-tokens.wxss'
+  assert.equal(wcsc.args.slice(3).filter((file) => file === toolUiTokensStyle).length, 1,
+    'DMX compiler must include exactly one shared token stylesheet')
+  assert.equal(wcsc.args[7], toolUiTokensStyle,
+    'shared token stylesheet must follow the shared picker stylesheet')
+  assert.ok(Object.hasOwn(summary.sources, toolUiTokensStyle),
+    'compiler summary must record the shared token stylesheet source hash')
   assert.equal(wcsc.args.slice(3).filter((file) => file === 'styles/device-picker-shared.wxss').length, 1,
     'DMX compiler must include exactly one shared picker stylesheet')
   assert.equal(wcsc.args[6], 'styles/device-picker-shared.wxss',

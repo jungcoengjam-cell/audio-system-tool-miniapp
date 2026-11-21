@@ -180,6 +180,7 @@
           <view class="selector-row-copy">
             <view class="selector-model device-picker-item-title">{{item.model}}</view>
             <view class="selector-meta device-picker-item-meta">{{item.sensitivityDb}} dB @ 1W/1m · {{item.category}}</view>
+            <view wx:if="{{item.aliasMatch}}" class="selector-meta device-picker-item-meta device-picker-alias-match">对照型号：{{item.aliasMatch}}</view>
           </view>
           <view class="selector-row-actions">
             <button class="selector-detail device-picker-detail" data-model="{{item.model}}" catchtap="openSpeakerDetail">资料</button>

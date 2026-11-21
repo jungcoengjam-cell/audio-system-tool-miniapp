@@ -12,28 +12,27 @@ const originalRendererCache = require.cache[rendererPath]
 const originalPageCache = require.cache[pagePath]
 const previousWx = global.wx
 const previousPage = global.Page
-const previousSolverCalls = global.__audioWiringGeometrySolverCalls
-const previousSolverBehavior = global.__audioWiringGeometrySolverBehavior
+const previousBuilderCalls = global.__audioWiringGeometryBuilderCalls
+const previousBuilderBehavior = global.__audioWiringGeometryBuilderBehavior
 const previousCacheFailure = global.__audioWiringGeometryCacheFailure
 
 function instrumentRenderer() {
   const source = fs.readFileSync(rendererPath, 'utf8')
-  const functionMarker = 'function selectSolderRoutes(connections, output, input, width, maxHeight) {'
-  const returnMarker = "if (choose(0)) return { routes: chosen.slice(), error: '' }"
+  const functionMarker = 'function selectSolderRoutes(model, layout) {'
+  const returnMarker = "  return { routes, error: '' }"
   const failureMarkers = [
     ['function makeOnLoadSolderGeometryKey(model, width, contentWidth, options, output, input, photoBottom, maxHeight) {', 'key'],
     ['function getOnLoadSolderGeometry(key, connections, output, input) {', 'get'],
-    ['function storeOnLoadSolderGeometry(key, routeSelection, connections) {', 'store'],
+    ['function storeOnLoadSolderGeometry(key, routeSelection, connections, output, input) {', 'store'],
   ]
-  assert(source.includes(functionMarker), 'the solder solver instrumentation point must exist')
-  assert(source.includes(returnMarker), 'the successful solver result instrumentation point must exist')
+  assert(source.includes(functionMarker), 'the direct solder solver instrumentation point must exist')
+  assert(source.includes(returnMarker), 'the successful direct route result instrumentation point must exist')
   let instrumented = source
-    .replace(functionMarker, `${functionMarker}\n  global.__audioWiringGeometrySolverCalls += 1\n  if (global.__audioWiringGeometrySolverBehavior === 'throw') throw new Error('injected solver exception')\n  if (global.__audioWiringGeometrySolverBehavior === 'error') return { routes: [], error: 'injected route failure' }`)
-    .replace(returnMarker, `if (choose(0)) {
-    const result = { routes: chosen.slice(), error: '' }
-    if (global.__audioWiringGeometrySolverBehavior === 'invalid' && result.routes[0]) result.routes[0].curve.score = Infinity
-    return result
-  }`)
+    .replace(functionMarker, `${functionMarker}\n  global.__audioWiringGeometryBuilderCalls += 1\n  if (global.__audioWiringGeometryBuilderBehavior === 'throw') throw new Error('injected direct solver exception')\n  if (global.__audioWiringGeometryBuilderBehavior === 'error') return { routes: [], error: 'injected route build failure' }`)
+    .replace(returnMarker, `  const result = { routes, error: '' }
+  if (global.__audioWiringGeometryBuilderBehavior === 'invalid' && result.routes[0]) result.routes[0].points[0][0] = Infinity
+  if (global.__audioWiringGeometryBuilderBehavior === 'reverse') result.routes.reverse()
+  return result`)
   for (const [marker, failure] of failureMarkers) {
     assert(source.includes(marker), `the ${failure} cache failure injection point must exist`)
     instrumented = instrumented.replace(marker,
@@ -90,23 +89,48 @@ function routeGeometry(metrics) {
     inputAnchors: anchors(metrics.input),
     connections: metrics.connectionAnchors.map((item) => ({
       id: item.id,
+      fromPin: item.fromPin,
+      toPin: item.toPin,
       from: { x: item.from.x, y: item.from.y },
       to: { x: item.to.x, y: item.to.y },
-      curve: {
-        control1: item.curve.control1,
-        control2: item.curve.control2,
-        points: item.curve.points,
-        cumulativeLengths: item.curve.cumulativeLengths,
-        score: item.curve.score,
-      },
-      drawSegments: item.drawSegments.map((segment) => ({
-        from: segment.from,
-        control1: segment.control1,
-        control2: segment.control2,
-        to: segment.to,
-      })),
+      photoFrom: { x: item.photoFrom.x, y: item.photoFrom.y },
+      photoTo: { x: item.photoTo.x, y: item.photoTo.y },
+      points: item.points,
+      length: item.length,
     })),
   }))
+}
+
+function assertRouteEndpoints(metrics, model, label) {
+  const outputs = metrics.output.anchors
+  const inputs = metrics.input.anchors
+  const byId = new Map(model.connections.map((connection) => [connection.id, connection]))
+  assert.strictEqual(metrics.connectionAnchors.length, model.connections.length,
+    `${label}: every model connection must have a route`)
+  for (const route of metrics.connectionAnchors) {
+    const connection = byId.get(route.id)
+    assert(connection, `${label}: route id ${route.id} must belong to the current model`)
+    const source = outputs.get(String(connection.fromPin))
+    const target = inputs.get(String(connection.toPin))
+    assert(source && target, `${label}: both physical pin anchors must exist for ${route.id}`)
+    assert.strictEqual(route.fromPin, connection.fromPin, `${label}: ${route.id} must retain its named output pin`)
+    assert.strictEqual(route.toPin, connection.toPin, `${label}: ${route.id} must retain its named input pin`)
+    assert(Math.hypot(route.photoFrom.x - source.x, route.photoFrom.y - source.y) <= 0.01,
+      `${label}: ${route.id} must identify the real output photo pin ${connection.fromPin}`)
+    assert(Math.hypot(route.photoTo.x - target.x, route.photoTo.y - target.y) <= 0.01,
+      `${label}: ${route.id} must identify the real input photo pin ${connection.toPin}`)
+    const first = route.points[0]
+    const last = route.points[route.points.length - 1]
+    assert(route.points.length >= 2, `${label}: ${route.id} must contain a complete path`)
+    assert(Math.hypot(route.from.x - source.x, route.from.y - source.y) <= 0.01,
+      `${label}: ${route.id} from must be its actual output photo pin`)
+    assert(Math.hypot(route.to.x - target.x, route.to.y - target.y) <= 0.01,
+      `${label}: ${route.id} to must be its actual input photo pin`)
+    assert(Math.hypot(first[0] - route.from.x, first[1] - route.from.y) <= 0.01,
+      `${label}: ${route.id} must start at its real output photo pin`)
+    assert(Math.hypot(last[0] - route.to.x, last[1] - route.to.y) <= 0.01,
+      `${label}: ${route.id} must end at its real input photo pin`)
+  }
 }
 
 function commandsWithoutImageIdentity(commands) {
@@ -207,8 +231,8 @@ function makePreferences(outputId, inputId) {
 }
 
 async function main() {
-  global.__audioWiringGeometrySolverCalls = 0
-  global.__audioWiringGeometrySolverBehavior = 'normal'
+  global.__audioWiringGeometryBuilderCalls = 0
+  global.__audioWiringGeometryBuilderBehavior = 'normal'
   global.__audioWiringGeometryCacheFailure = ''
   const renderer = instrumentRenderer()
   const photoModule = require(path.join(root, 'pages/audio-wiring/wiring-photos.js'))
@@ -231,12 +255,12 @@ async function main() {
 
   const cold = makePage(definition)
   cold.onLoad({})
-  assert.strictEqual(global.__audioWiringGeometrySolverCalls, 2,
+  assert.strictEqual(global.__audioWiringGeometryBuilderCalls, 2,
     'the cold audio onLoad must solve screen and report geometry once each')
   assert.strictEqual(cold.data.model.status, 'ready')
   const warm = makePage(definition)
   warm.onLoad({})
-  assert.strictEqual(global.__audioWiringGeometrySolverCalls, 2,
+  assert.strictEqual(global.__audioWiringGeometryBuilderCalls, 2,
     'the second real factory model must hit both successful onLoad geometry slots')
   assert.notStrictEqual(cold.data.model, warm.data.model, 'page entries must keep distinct mutable model objects')
   assert.strictEqual(warm.data.diagramCanvasHeight, cold.data.diagramCanvasHeight)
@@ -246,7 +270,7 @@ async function main() {
   const warmScreen = await renderFromOnReady(warm, 'warm', renderer)
   assert.deepStrictEqual(commandsWithoutImageIdentity(coldScreen.recorder.commands),
     commandsWithoutImageIdentity(warmScreen.recorder.commands),
-  'real onReady Canvas instructions must match between cold solver and cross-model cache hit')
+  'real onReady Canvas instructions must match between cold direct solve and cross-model cache hit')
   assert(imageTokens(coldScreen.recorder.commands).some((token) => token && token.startsWith('cold:screen:')))
   assert(imageTokens(warmScreen.recorder.commands).some((token) => token && token.startsWith('warm:screen:')))
   assert.notDeepStrictEqual(imageTokens(coldScreen.recorder.commands), imageTokens(warmScreen.recorder.commands),
@@ -273,12 +297,12 @@ async function main() {
     warm.data.diagramCanvasWidth, warm.data.diagramCanvasHeight,
     { ...diagramOptions(warm), photos: canvasPhotos(photoModule, warm.data.model, 'warm-metrics') })
   const coldGeometry = routeGeometry(coldMetrics)
+  assertRouteEndpoints(coldMetrics, cold.data.model, 'cold route mapping')
+  assertRouteEndpoints(warmMetrics, warm.data.model, 'warm route mapping')
   assert.deepStrictEqual(routeGeometry(warmMetrics), coldGeometry,
-    'cold and hot route curves, anchors, crossing-gap segments, and heights must be numerically identical')
-  assert.notStrictEqual(coldMetrics.connectionAnchors[0].curve, warmMetrics.connectionAnchors[0].curve,
-    'geometry curves must be copied into each page instead of shared')
-  assert.notStrictEqual(coldMetrics.connectionAnchors[0].curve.points, warmMetrics.connectionAnchors[0].curve.points,
-    'sampled route points must be copied into each page')
+    'cold and hot route polylines, anchors, and heights must be numerically identical')
+  assert.notStrictEqual(coldMetrics.connectionAnchors[0].points, warmMetrics.connectionAnchors[0].points,
+    'route points must be copied into each page instead of shared')
   assert.deepStrictEqual(renderer.getWiringHitAreas(cold.data.model, cold.data.diagramCanvasWidth,
     cold.data.diagramCanvasHeight, diagramOptions(cold)),
   renderer.getWiringHitAreas(warm.data.model, warm.data.diagramCanvasWidth,
@@ -296,19 +320,44 @@ async function main() {
   'full report Canvas instructions and embedded geometry must match')
   assert(imageTokens(coldReport.recorder.commands).some((token) => token && token.startsWith('cold-report:')))
   assert(imageTokens(warmReport.recorder.commands).some((token) => token && token.startsWith('warm-report:')))
-  assert.strictEqual(global.__audioWiringGeometrySolverCalls, 2,
-    'onReady drawing, hit areas, and report generation must not defer solver work to later')
+  assert.strictEqual(global.__audioWiringGeometryBuilderCalls, 2,
+  'onReady drawing, hit areas, and report generation must not defer direct route solving to later')
 
-  coldMetrics.connectionAnchors[0].curve.points[0][0] = 123456
+  coldMetrics.connectionAnchors[0].points[0][0] = 123456
   const afterMutation = makePage(definition)
   afterMutation.onLoad({})
-  assert.strictEqual(global.__audioWiringGeometrySolverCalls, 2,
-    'mutating a caller-owned curve must not poison the frozen cross-model geometry snapshot')
+  assert.strictEqual(global.__audioWiringGeometryBuilderCalls, 2,
+    'mutating caller-owned route points must not poison the frozen cross-model geometry snapshot')
   const afterMutationMetrics = renderer.drawWiringDiagram(makeCanvasRecorder().context, afterMutation.data.model,
     afterMutation.data.diagramCanvasWidth, afterMutation.data.diagramCanvasHeight,
     diagramOptions(afterMutation))
   assert.deepStrictEqual(routeGeometry(afterMutationMetrics), coldGeometry,
     'a later page must still receive the original unmutated geometry')
+
+  preferences = makePreferences('xlrBalanced', 'xlrBalanced')
+  global.__audioWiringGeometryBuilderBehavior = 'reverse'
+  const reorderedCold = makePage(definition)
+  const beforeReorderedSolve = global.__audioWiringGeometryBuilderCalls
+  reorderedCold.onLoad({})
+  assert.strictEqual(global.__audioWiringGeometryBuilderCalls, beforeReorderedSolve + 2,
+    'reversed direct-solver output must cold-build screen and report geometry')
+  global.__audioWiringGeometryBuilderBehavior = 'normal'
+  const reorderedMetrics = renderer.drawWiringDiagram(makeCanvasRecorder().context, reorderedCold.data.model,
+    reorderedCold.data.diagramCanvasWidth, reorderedCold.data.diagramCanvasHeight,
+    { layout: 'solder-wiring', avoidRail: true, selectedId: '', theme: reorderedCold.data.theme, showTitle: false })
+  assertRouteEndpoints(reorderedMetrics, reorderedCold.data.model, 'reordered cold row result')
+  const reorderedHot = makePage(definition)
+  const beforeReorderedHit = global.__audioWiringGeometryBuilderCalls
+  reorderedHot.onLoad({})
+  assert.strictEqual(global.__audioWiringGeometryBuilderCalls, beforeReorderedHit,
+    'stable connection IDs must hit both on-load slots regardless of row array order')
+  const reorderedHotMetrics = renderer.drawWiringDiagram(makeCanvasRecorder().context, reorderedHot.data.model,
+    reorderedHot.data.diagramCanvasWidth, reorderedHot.data.diagramCanvasHeight,
+    { layout: 'solder-wiring', avoidRail: true, selectedId: '', theme: reorderedHot.data.theme, showTitle: false })
+  assertRouteEndpoints(reorderedHotMetrics, reorderedHot.data.model, 'reordered warm row cache result')
+  assert.deepStrictEqual(routeGeometry(reorderedHotMetrics), routeGeometry(reorderedMetrics),
+    'the cache must preserve each route’s actual physical endpoint pins after order normalization')
+  preferences = undefined
 
   for (const failure of ['key', 'get']) {
     preferences = undefined
@@ -316,10 +365,10 @@ async function main() {
     theme = 'light'
     global.__audioWiringGeometryCacheFailure = failure
     const cacheFailurePage = makePage(definition)
-    const beforeFailure = global.__audioWiringGeometrySolverCalls
+    const beforeFailure = global.__audioWiringGeometryBuilderCalls
     cacheFailurePage.onLoad({})
     global.__audioWiringGeometryCacheFailure = ''
-    assert.strictEqual(global.__audioWiringGeometrySolverCalls, beforeFailure + 2,
+    assert.strictEqual(global.__audioWiringGeometryBuilderCalls, beforeFailure + 2,
       `${failure} cache exceptions must cold-solve both layouts`)
     assert.strictEqual(cacheFailurePage.data.diagramCanvasHeight, cold.data.diagramCanvasHeight,
       `${failure} cache exceptions must preserve the cold diagram height`)
@@ -339,17 +388,17 @@ async function main() {
   windowWidth = 379
   global.__audioWiringGeometryCacheFailure = 'store'
   const storeFailurePage = makePage(definition)
-  const beforeStoreFailure = global.__audioWiringGeometrySolverCalls
+  const beforeStoreFailure = global.__audioWiringGeometryBuilderCalls
   storeFailurePage.onLoad({})
   global.__audioWiringGeometryCacheFailure = ''
-  assert.strictEqual(global.__audioWiringGeometrySolverCalls, beforeStoreFailure + 1,
+  assert.strictEqual(global.__audioWiringGeometryBuilderCalls, beforeStoreFailure + 1,
     'a store exception must occur after the uncached screen solver succeeds')
   assert.notStrictEqual(storeFailurePage.data.diagramCanvasHeight, 340,
     'a store exception must retain the solver-computed screen height')
   assert.strictEqual(storeFailurePage.data.resultReportCanvasHeight, cold.data.resultReportCanvasHeight)
   const storeRetry = makePage(definition)
   storeRetry.onLoad({})
-  assert.strictEqual(global.__audioWiringGeometrySolverCalls, beforeStoreFailure + 2,
+  assert.strictEqual(global.__audioWiringGeometryBuilderCalls, beforeStoreFailure + 2,
     'a failed store must not leave an entry that suppresses the next screen solver call')
   assert.strictEqual(storeFailurePage.data.diagramCanvasHeight, storeRetry.data.diagramCanvasHeight)
   assert.strictEqual(storeFailurePage.data.resultReportCanvasHeight, storeRetry.data.resultReportCanvasHeight)
@@ -366,36 +415,36 @@ async function main() {
   'a store exception must preserve the rendered report')
   windowWidth = 375
 
-  let previousCalls = global.__audioWiringGeometrySolverCalls
+  let previousCalls = global.__audioWiringGeometryBuilderCalls
   theme = 'dark'
   const dark = makePage(definition)
   dark.onLoad({})
-  assert.strictEqual(global.__audioWiringGeometrySolverCalls, previousCalls + 1,
+  assert.strictEqual(global.__audioWiringGeometryBuilderCalls, previousCalls + 1,
     'theme changes must miss screen geometry while retaining theme-independent report geometry')
-  previousCalls = global.__audioWiringGeometrySolverCalls
+  previousCalls = global.__audioWiringGeometryBuilderCalls
   windowWidth = 390
   const wider = makePage(definition)
   wider.onLoad({})
-  assert.strictEqual(global.__audioWiringGeometrySolverCalls, previousCalls + 1,
+  assert.strictEqual(global.__audioWiringGeometryBuilderCalls, previousCalls + 1,
     'a changed screen width must miss while the unchanged report layout may hit')
-  previousCalls = global.__audioWiringGeometrySolverCalls
+  previousCalls = global.__audioWiringGeometryBuilderCalls
   windowWidth = 400
   const wideAgain = makePage(definition)
   wideAgain.onLoad({})
-  assert.strictEqual(global.__audioWiringGeometrySolverCalls, previousCalls + 1,
+  assert.strictEqual(global.__audioWiringGeometryBuilderCalls, previousCalls + 1,
     'a second distinct screen width must also miss')
-  previousCalls = global.__audioWiringGeometrySolverCalls
+  previousCalls = global.__audioWiringGeometryBuilderCalls
   windowWidth = 375
   theme = 'light'
   const originalWidthAgain = makePage(definition)
   originalWidthAgain.onLoad({})
-  assert.strictEqual(global.__audioWiringGeometrySolverCalls, previousCalls + 1,
+  assert.strictEqual(global.__audioWiringGeometryBuilderCalls, previousCalls + 1,
     'the bounded two-slot LRU must evict older screen widths instead of growing without bound')
-  previousCalls = global.__audioWiringGeometrySolverCalls
+  previousCalls = global.__audioWiringGeometryBuilderCalls
   preferences = makePreferences('stereo35', 'terminalBalanced')
   const changedInterface = makePage(definition)
   changedInterface.onLoad({})
-  assert.strictEqual(global.__audioWiringGeometrySolverCalls, previousCalls + 2,
+  assert.strictEqual(global.__audioWiringGeometryBuilderCalls, previousCalls + 2,
     'changing the factory endpoint combination must miss both screen and report geometry')
 
   const getterModel = { ...cold.data.model }
@@ -408,42 +457,42 @@ async function main() {
   const endRejectedScope = renderer.registerOnLoadSolderGeometryCacheModel(getterModel)
   endRejectedScope()
   assert.strictEqual(getterReads, 0, 'a getter-bearing model must be rejected from the cache without invoking it')
-  previousCalls = global.__audioWiringGeometrySolverCalls
+  previousCalls = global.__audioWiringGeometryBuilderCalls
   renderer.getDiagramHeight(283, getterModel, { layout: 'solder-wiring', avoidRail: true, theme: 'light' })
-  assert.strictEqual(global.__audioWiringGeometrySolverCalls, previousCalls + 1,
+  assert.strictEqual(global.__audioWiringGeometryBuilderCalls, previousCalls + 1,
     'a model without an accepted factory lease must take the original solver path')
 
   const runNoCacheFailureCase = (behavior, outputId, inputId) => {
     preferences = makePreferences(outputId, inputId)
-    global.__audioWiringGeometrySolverBehavior = behavior
+    global.__audioWiringGeometryBuilderBehavior = behavior
     const failing = makePage(definition)
-    const beforeFailure = global.__audioWiringGeometrySolverCalls
+    const beforeFailure = global.__audioWiringGeometryBuilderCalls
     failing.onLoad({})
-    assert.strictEqual(global.__audioWiringGeometrySolverCalls, beforeFailure + 2,
+    assert.strictEqual(global.__audioWiringGeometryBuilderCalls, beforeFailure + 2,
       `${behavior} samples must attempt both initial layouts`)
-    global.__audioWiringGeometrySolverBehavior = 'normal'
+    global.__audioWiringGeometryBuilderBehavior = 'normal'
     const retry = makePage(definition)
     retry.onLoad({})
-    assert.strictEqual(global.__audioWiringGeometrySolverCalls, beforeFailure + 4,
+    assert.strictEqual(global.__audioWiringGeometryBuilderCalls, beforeFailure + 4,
       `${behavior} route results must not be written into the cross-model cache`)
   }
-  runNoCacheFailureCase('error', 'stereo35', 'rcaMono')
+  runNoCacheFailureCase('error', 'xlrBalanced', 'rcaStereo')
   runNoCacheFailureCase('invalid', 'stereo35', 'tsMono')
 
   preferences = makePreferences('stereo635', 'rcaStereo')
-  global.__audioWiringGeometrySolverBehavior = 'throw'
+  global.__audioWiringGeometryBuilderBehavior = 'throw'
   const solverFailure = makePage(definition)
-  const beforeSolverFailure = global.__audioWiringGeometrySolverCalls
+  const beforeSolverFailure = global.__audioWiringGeometryBuilderCalls
   solverFailure.onLoad({})
-  assert.strictEqual(global.__audioWiringGeometrySolverCalls, beforeSolverFailure + 2)
+  assert.strictEqual(global.__audioWiringGeometryBuilderCalls, beforeSolverFailure + 2)
   assert.strictEqual(solverFailure.data.diagramCanvasHeight, 340,
     'a solver exception must retain the existing diagram fallback')
   assert.strictEqual(solverFailure.data.resultReportCanvasHeight, 960,
     'a solver exception must retain the existing report fallback')
-  global.__audioWiringGeometrySolverBehavior = 'normal'
+  global.__audioWiringGeometryBuilderBehavior = 'normal'
   const solverRetry = makePage(definition)
   solverRetry.onLoad({})
-  assert.strictEqual(global.__audioWiringGeometrySolverCalls, beforeSolverFailure + 4,
+  assert.strictEqual(global.__audioWiringGeometryBuilderCalls, beforeSolverFailure + 4,
     'cache guards must not swallow solver exceptions or cache failed solver results')
   assert.notStrictEqual(solverRetry.data.diagramCanvasHeight, 340)
   assert.notStrictEqual(solverRetry.data.resultReportCanvasHeight, 960)
@@ -463,10 +512,10 @@ main().catch((error) => {
   else global.wx = previousWx
   if (previousPage === undefined) delete global.Page
   else global.Page = previousPage
-  if (previousSolverCalls === undefined) delete global.__audioWiringGeometrySolverCalls
-  else global.__audioWiringGeometrySolverCalls = previousSolverCalls
-  if (previousSolverBehavior === undefined) delete global.__audioWiringGeometrySolverBehavior
-  else global.__audioWiringGeometrySolverBehavior = previousSolverBehavior
+  if (previousBuilderCalls === undefined) delete global.__audioWiringGeometryBuilderCalls
+  else global.__audioWiringGeometryBuilderCalls = previousBuilderCalls
+  if (previousBuilderBehavior === undefined) delete global.__audioWiringGeometryBuilderBehavior
+  else global.__audioWiringGeometryBuilderBehavior = previousBuilderBehavior
   if (previousCacheFailure === undefined) delete global.__audioWiringGeometryCacheFailure
   else global.__audioWiringGeometryCacheFailure = previousCacheFailure
 })

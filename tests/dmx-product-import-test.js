@@ -316,7 +316,39 @@ try {
     fixtureCountText: '1',
     action: 'append',
   })
-  assert.equal(noSpace.ok, false, 'existing DMX allocator rejects an unencodable append')
+  assert.equal(noSpace.ok, true, 'A full A domain must append into the next domain')
+  assert.deepEqual(noSpace.result.fixtures.map((fixture) => fixture.addressText), ['A001', 'B001'])
+  assert.equal(noSpace.preferences.groups.at(-1).targetUniverse, 'A',
+    'The imported group keeps its selected starting domain when its fixture spills forward')
+
+  const pastG = buildDmxProductImport({
+    preferences: {
+      startAddressText: '1',
+      allocationMode: 'manual',
+      groups: [{ name: '满 G 域', channelCount: '512', fixtureCount: '1', targetUniverse: 'G' }],
+    },
+    product,
+    channelCountText: String(multiModeFixture.channelModes[0]),
+    fixtureCountText: '1',
+    action: 'append',
+  })
+  assert.equal(pastG.ok, false, 'A manual import past the final G slot must still be rejected')
+  assert.match(pastG.error, /G512/)
+
+  const appendToG = buildDmxProductImport({
+    preferences: {
+      startAddressText: '1',
+      allocationMode: 'manual',
+      groups: [{ name: '已有 G 域', channelCount: '1', fixtureCount: '1', targetUniverse: 'G' }],
+    },
+    product,
+    channelCountText: String(multiModeFixture.channelModes[0]),
+    fixtureCountText: '1',
+    action: 'append',
+  })
+  assert.equal(appendToG.ok, true, 'A manual product import after a G-domain group remains valid')
+  assert.equal(appendToG.preferences.groups.at(-1).targetUniverse, 'G',
+    'Appending a product in manual mode must keep the last supported target domain')
 
   console.log('dmx-product-import-test: ok')
 } finally {

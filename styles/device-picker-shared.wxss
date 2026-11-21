@@ -65,6 +65,10 @@
 .device-picker-scope.device-picker-scope .device-picker-item-meta{
   color:var(--theme-text-secondary);
 }
+.device-picker-scope.device-picker-scope .device-picker-alias-match{
+  white-space:normal;
+  overflow-wrap:anywhere;
+}
 .device-picker-scope.device-picker-scope .device-picker-detail{
   background:var(--theme-accent-soft);
   color:var(--theme-accent-text);
